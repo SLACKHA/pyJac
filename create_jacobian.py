@@ -310,7 +310,7 @@ def write_jacobian(lang, specs, reacs):
                 file.write(line)
                 
                 if rxn.troe:
-                    file.write('  logPr = log10(Pr)' + line_end_lang)
+                    file.write('  logPr = log10(Pr)' + line_end(lang))
                     
                     line = '  Fcent = {:.4e} * exp(-T / {:.4e})'.format(1.0 - rxn.troe_par[0], rxn.troe_par[1])
                     line += ' + {:.4e} * exp(T / {:.4e})'.format(rxn.troe_par[0], rxn.troe_par[2])
@@ -331,7 +331,7 @@ def write_jacobian(lang, specs, reacs):
                     line += line_end(lang)
                     file.write(line)
                     
-                    line = '  FlnF_AB = {:.8e} * logFcent * A / (B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'.format(2.0 * log(10.0))
+                    line = '  FlnF_AB = {:.8e} * logFcent * A / (B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'.format(2.0 * math.log(10.0))
                     line += line_end(lang)
                     file.write(line)
                     
@@ -366,7 +366,7 @@ def write_jacobian(lang, specs, reacs):
                 jline += '({:.4e} + ({:.4e} / T)) / (T * (1.0 + Pr))'.format(beta_0minf, E_0minf)
                 
                 if rxn.troe:
-                    jline += ' + ( ( (1.0 / (Fcent * (1.0 + A * A / (B * B)))) - FlnF_AB * (-{:.4e} * B + {:.4e} * A) / Fcent )'.format(0.67 / log(10.0), 1.1762 / log(10.0))
+                    jline += ' + ( ( (1.0 / (Fcent * (1.0 + A * A / (B * B)))) - FlnF_AB * (-{:.4e} * B + {:.4e} * A) / Fcent )'.format(0.67 / math.log(10.0), 1.1762 / math.log(10.0))
                     jline += ' * ( {:.4e} * exp(-T / {:.4e}) - {:.4e} * exp(T / {:.4e})'.format( -(1.0 - rxn.troe_par[0]) / rxn.troe_par[1], rxn.troe_par[1], rxn.troe_par[0] / rxn.troe_par[2], rxn.troe_par[2])
                     if len(reac.troe_par) == 4:
                         line += ' + ({:.4e} / (T * T)) * exp(-{:.4e} / T)'.format(rxn.troe_par[3], rxn.troe_par[3])
@@ -377,7 +377,7 @@ def write_jacobian(lang, specs, reacs):
                     
                 elif rxn.sri:
                     jline += ' + X * ( (({:.4} / (T * T)) * aexp_bT - {:.4e} * exp_Tc) / (aexp_bT + exp_Tc)'.format(rxn.sri[1], 1.0 / rxn.sri[2])
-                    jline += ' - log(aexp_bT + exp_Tc) * {:.6} * X * logPr * ({:.4e} + ({:.4e} / T)) / T )'.format(2.0 / log(10.0), beta_0minf, E_0minf)
+                    jline += ' - log(aexp_bT + exp_Tc) * {:.6} * X * logPr * ({:.4e} + ({:.4e} / T)) / T )'.format(2.0 / math.log(10.0), beta_0minf, E_0minf)
                     
                     if len(rxn.sri) == 5:
                         jline += ' + {:.4} / T'
@@ -459,7 +459,7 @@ def write_jacobian(lang, specs, reacs):
                         jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
                     jline += ' * ('
                     for rxn_sp in rxn.reac:
-                        sp_ind = next((s for s in specs if s.name == rxn_sp), None)
+                        sp_ind = next((specs.index(s) for s in specs if s.name == rxn_sp), None)
                         
                         if rxn_sp in rxn.prod:
                             nu = rxn.prod_nu[rxn.prod.index(rxn_sp)] - rxn.reac_nu[rxn.reac.index(rxn_sp)]
@@ -505,7 +505,7 @@ def write_jacobian(lang, specs, reacs):
                             file.write('  end\n\n')
                         
                     for rxn_sp in rxn.prod:
-                        sp_ind = next((s for s in specs if s.name == rxn_sp), None)
+                        sp_ind = next((specs.index(s) for s in specs if s.name == rxn_sp), None)
                         
                         if rxn_sp in rxn.reac:
                             # skip, already done
@@ -689,7 +689,7 @@ def write_jacobian(lang, specs, reacs):
                     file.write(line)
                     
                     if rxn.troe:
-                        file.write('  logPr = log10(Pr)' + line_end_lang)
+                        file.write('  logPr = log10(Pr)' + line_end(lang))
                         
                         line = '  Fcent = {:.4e} * exp(-T / {:.4e})'.format(1.0 - rxn.troe_par[0], rxn.troe_par[1])
                         line += ' + {:.4e} * exp(T / {:.4e})'.format(rxn.troe_par[0], rxn.troe_par[2])
@@ -740,10 +740,10 @@ def write_jacobian(lang, specs, reacs):
                             if rxn.high:
                                 # bimolecular
                                 jline += '(Pr'
-                            jline += ' * B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'.format(1.0 / log(10.0), 0.14 / log(10.0))
+                            jline += ' * B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
                             
                         elif rxn.sri:
-                            jline += ' - X * X * {:.6} * logPr * log({:.4} * exp(-{:.4} / T) + exp(-T / {:.4}))'.format(2.0 / log(10.0), rxn.sri[0], rxn.sri[1], rxn.sri[2])
+                            jline += ' - X * X * {:.6} * logPr * log({:.4} * exp(-{:.4} / T) + exp(-T / {:.4}))'.format(2.0 / math.log(10.0), rxn.sri[0], rxn.sri[1], rxn.sri[2])
                         
                         jline += ') * '
                         
@@ -1148,7 +1148,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
     if lang not in langs:
         print 'Error: language needs to be one of: '
         for l in langs:
-            print lan
+            print l
         sys.exit()
     
     # interpret reaction mechanism file
@@ -1193,7 +1193,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
     write_rxn_rates(lang, specs, reacs)
     
     # if third-body/pressure-dependent reactions, print modification subroutine
-    if next((r for r in reacs if (r.thd or r.pdep), None):
+    if next((r for r in reacs if (r.thd or r.pdep)), None):
         write_rxn_pressure_mod(lang, specs, reacs)
     
     # write species rates subroutine

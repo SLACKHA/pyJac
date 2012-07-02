@@ -194,17 +194,23 @@ def write_rxn_rates(lang, specs, reacs):
                 sum_nu = 0
                 
                 # go through product species
-                for sp in rxn.prod:
-                    isp = rxn.prod.index(sp)
+                for prod_sp in rxn.prod:
+                    isp = rxn.prod.index(prod_sp)
                     
                     # check if species also in reactants
-                    if sp in rxn.reac:
-                        isp2 = rxn.reac.index(sp)
+                    if prod_sp in rxn.reac:
+                        isp2 = rxn.reac.index(prod_sp)
                         nu = rxn.prod_nu[isp] - rxn.reac_nu[isp2]
                     else:
                         nu = rxn.prod_nu[isp]
                     sum_nu += nu
-                        
+                    
+                    # get species object
+                    sp = next((sp for sp in specs if sp.name == prod_sp), None)
+                    if not sp:
+                        print 'Error: species ' + prod_sp + ' in reaction ' + str(reacs.index(rxn)) + ' not found.\n'
+                        sys.exit()
+                    
                     # need temperature conditional for equilibrium constants
                     line = '  if (T <= {:})'.format(sp.Trange[1])
                     if lang in ['c', 'cuda']:
@@ -240,14 +246,20 @@ def write_rxn_rates(lang, specs, reacs):
                         file.write('  end\n\n')
                 
                 # now loop through reactants
-                for sp in rxn.reac:
-                    isp = rxn.prod.index(sp)
+                for reac_sp in rxn.reac:
+                    isp = rxn.reac.index(reac_sp)
                     
                     # check if species also in products (if so, already considered)
-                    if sp in rxn.prod: continue
+                    if reac_sp in rxn.prod: continue
                     
                     nu = rxn.reac_nu[isp]
                     sum_nu -= nu
+                    
+                    # get species object
+                    sp = next((sp for sp in specs if sp.name == reac_sp), None)
+                    if not sp:
+                        print 'Error: species ' + reac_sp + ' in reaction ' + str(reacs.index(rxn)) + ' not found.\n'
+                        sys.exit()
                         
                     # need temperature conditional for equilibrium constants
                     line = '  if (T <= {:})'.format(sp.Trange[1])
@@ -905,8 +917,9 @@ def write_chem_utils(lang, specs):
     ######################
     # enthalpy subroutine
     ######################
+    line = pre
     if lang in ['c', 'cuda']:
-        line += pre + 'void eval_h ( Real T, Real * h ) {\n\n'
+        line += 'void eval_h ( Real T, Real * h ) {\n\n'
     elif lang == 'fortran':
         line += 'subroutine eval_h ( T, h )\n\n'
         
@@ -970,8 +983,9 @@ def write_chem_utils(lang, specs):
     #################################
     # internal energy subroutine
     #################################
+    line = pre
     if lang in ['c', 'cuda']:
-        line += pre + 'void eval_u ( Real T, Real * u ) {\n\n'
+        line += 'void eval_u ( Real T, Real * u ) {\n\n'
     elif lang == 'fortran':
         line += 'subroutine eval_u ( T, u )\n\n'
         
@@ -1171,14 +1185,12 @@ def write_derivs(lang, specs, num_r):
     
     
     """
-    if lang == 'cpu':
-        filename = 'dydt_cpu.c'
-        pre = ''
-    elif lang == 'gpu':
-        filename = 'dydt_gpu.cu'
-        pre = '__device__ '
     
+    filename = file_lang_app('dydt', lang)
     file = open(filename, 'w')
+
+    pre = ''
+    if lang == 'cuda': pre = '__device__ '
     
     # constant pressure
     file.write('#if defined(CONP)\n\n')

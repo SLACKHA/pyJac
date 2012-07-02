@@ -67,8 +67,9 @@ class ReacInfo:
         # pressure dependence
         self.pdep = False
         self.pdep_sp = ''
-        self.low = []
-        self.high = []
+        # one of these defined
+        self.low = []   # for unimolecular/recombination fall-off rxn
+        self.high = []  # for chemically-activated bimolecular rxn
         
         self.troe = False
         self.troe_par = []

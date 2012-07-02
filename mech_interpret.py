@@ -171,6 +171,10 @@ def read_mech(filename, elems, specs, reacs):
                     pdep_sp = reac_str[ind1 + 1 : ind2].replace('+', ' ')
                     pdep_sp = pdep_sp.strip()
                     
+                    if pdep_sp.lower() == 'm':
+                        thd = True
+                        pdep_sp = ''
+                    
                     # now remove from string
                     reac_str = reac_str[0:ind1] + reac_str[ind2 + 1:]
                 
@@ -202,7 +206,7 @@ def read_mech(filename, elems, specs, reacs):
                         nu = 1
                     
                     # check for third body
-                    if sp == 'm' or sp == 'M':
+                    if sp.lower() == 'm':
                         thd = True
                         continue
                     
@@ -227,6 +231,10 @@ def read_mech(filename, elems, specs, reacs):
                     # either 'm' or a specific species
                     pdep_sp = prod_str[ind1 + 1 : ind2].replace('+', ' ')
                     pdep_sp = pdep_sp.strip()
+                    
+                    if pdep_sp.lower() == 'm':
+                        thd = True
+                        pdep_sp = ''
                     
                     # now remove from string
                     prod_str = prod_str[0:ind1] + prod_str[ind2 + 1:]

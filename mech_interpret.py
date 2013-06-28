@@ -84,6 +84,7 @@ def read_mech(filename, elems, specs, reacs):
             
             continue
         elif line[0:3].lower() == 'end':
+            key = ''
             continue
         
         line = line.strip()
@@ -162,23 +163,56 @@ def read_mech(filename, elems, specs, reacs):
                 # reactants
                 
                 # look for third-body species
-                if '(' in reac_str: 
-                    pdep = True
-                    ind1 = reac_str.find('(')
-                    ind2 = reac_str.find(')')
+                sub_str = reac_str
+                while '(' in sub_str:
+                    ind1 = sub_str.find('(')
+                    ind2 = sub_str.find(')')
                     
-                    # either 'm' or a specific species
-                    pdep_sp = reac_str[ind1 + 1 : ind2].replace('+', ' ')
-                    pdep_sp = pdep_sp.strip()
+                    # need to check if '+' is first character inside parentheses
+                    # and not embedded within parentheses (e.g., '(+)')
+                    # if not, part of species name
+                    inParen = sub_str[ind1 + 1 : ind2].strip()
+                    if inParen is '+':
+                        # '+' embedded within parentheses
+                        sub_str = sub_str[ind2 + 1:]
+                    elif inParen[0] is '+':
+                        pdep = True
+                        
+                        # either 'm' or a specific species
+                        pdep_sp = sub_str[ind1 + 1 : ind2].replace('+', ' ')
+                        pdep_sp = pdep_sp.strip()
+                        
+                        if pdep_sp.lower() == 'm':
+                            thd = True
+                            pdep_sp = ''
                     
-                    if pdep_sp.lower() == 'm':
-                        thd = True
-                        pdep_sp = ''
-                    
-                    # now remove from string
-                    reac_str = reac_str[0:ind1] + reac_str[ind2 + 1:]
+                        # now remove from string
+                        ind = reac_str.find(sub_str)
+                        reac_str = reac_str[0 : ind1 + ind] + reac_str[ind2 + ind + 1 :]
+                        break
+                    else:
+                        # part of species name, remove from substring and look at rest of reactant line
+                        sub_str = sub_str[ind2 + 1:]
                 
                 reac_list = reac_str.split('+')
+                
+                # check for empty list elements, meaning there were multiple '+' in a row
+                # indicates species name ended in '+'
+                while '' in reac_list:
+                    ind = reac_list.index('')
+                    reac_list[ind - 1] = reac_list[ind - 1] + '+'
+                    del reac_list[ind]
+                
+                # check for any species with '(+)' that was split apart
+                for sp in reac_list:
+                    ind = reac_list.index(sp)
+                    
+                    # ensure not last entry
+                    if (ind < len(reac_list) - 1):
+                        spNext = reac_list[ind + 1]
+                        if sp[len(sp) - 1] is '(' and spNext[0] is ')':
+                            reac_list[ind] = sp + '+' + spNext
+                            del reac_list[ind + 1]
                 
                 for sp in reac_list:
                     
@@ -223,23 +257,56 @@ def read_mech(filename, elems, specs, reacs):
                 # products
                 
                 # look for third-body species
-                if '(' in prod_str: 
-                    pdep = True
-                    ind1 = prod_str.find('(')
-                    ind2 = prod_str.find(')')
-                    
-                    # either 'm' or a specific species
-                    pdep_sp = prod_str[ind1 + 1 : ind2].replace('+', ' ')
-                    pdep_sp = pdep_sp.strip()
-                    
-                    if pdep_sp.lower() == 'm':
-                        thd = True
-                        pdep_sp = ''
-                    
-                    # now remove from string
-                    prod_str = prod_str[0:ind1] + prod_str[ind2 + 1:]
+                sub_str = prod_str
+                while '(' in sub_str:
+                    ind1 = sub_str.find('(')
+                    ind2 = sub_str.find(')')
+
+                    # need to check if '+' is first character inside parentheses
+                    # and not embedded within parentheses (e.g., '(+)')
+                    # if not, part of species name
+                    inParen = sub_str[ind1 + 1 : ind2].strip()
+                    if inParen is '+':
+                        # '+' embedded within parentheses
+                        sub_str = sub_str[ind2 + 1:]
+                    elif inParen[0] is '+':
+                        pdep = True
+
+                        # either 'm' or a specific species
+                        pdep_sp = sub_str[ind1 + 1 : ind2].replace('+', ' ')
+                        pdep_sp = pdep_sp.strip()
+
+                        if pdep_sp.lower() == 'm':
+                            thd = True
+                            pdep_sp = ''
+
+                        # now remove from string
+                        ind = prod_str.find(sub_str)
+                        prod_str = prod_str[0 : ind1 + ind] + prod_str[ind2 + ind + 1 :]
+                        break
+                    else:
+                        # part of species name, remove from substring and look at rest of product line
+                        sub_str = sub_str[ind2 + 1:]
                 
                 prod_list = prod_str.split('+')
+                
+                # check for empty list elements, meaning there were multiple '+' in a row
+                # indicates species name ended in '+'
+                while '' in prod_list:
+                    ind = prod_list.index('')
+                    prod_list[ind - 1] = prod_list[ind - 1] + '+'
+                    del prod_list[ind]
+                
+                # check for any species with '(+)' that was split apart
+                for sp in prod_list:
+                    ind = prod_list.index(sp)
+
+                    # ensure not last entry
+                    if (ind < len(prod_list) - 1):
+                        spNext = prod_list[ind + 1]
+                        if sp[len(sp) - 1] is '(' and spNext[0] is ')':
+                            prod_list[ind] = sp + '+' + spNext
+                            del prod_list[ind + 1]
                 
                 for sp in prod_list:
                     
@@ -296,6 +363,7 @@ def read_mech(filename, elems, specs, reacs):
                     
                 elif aux == 'rev':
                     line = line.replace('/', ' ')
+                    line = line.replace(',', ' ')
                     line_split = line.split()
                     reacs[num_r - 1].rev_par.append( float( line_split[1] ) )
                     reacs[num_r - 1].rev_par.append( float( line_split[2] ) )
@@ -303,6 +371,7 @@ def read_mech(filename, elems, specs, reacs):
                     
                 elif aux == 'low':
                     line = line.replace('/', ' ')
+                    line = line.replace(',', ' ')
                     line_split = line.split()
                     reacs[num_r - 1].low.append( float( line_split[1] ) )
                     reacs[num_r - 1].low.append( float( line_split[2] ) )
@@ -310,6 +379,7 @@ def read_mech(filename, elems, specs, reacs):
                     
                 elif aux == 'hig':
                     line = line.replace('/', ' ')
+                    line = line.replace(',', ' ')
                     line_split = line.split()
                     reacs[num_r - 1].high.append( float( line_split[1] ) )
                     reacs[num_r - 1].high.append( float( line_split[2] ) )
@@ -317,6 +387,7 @@ def read_mech(filename, elems, specs, reacs):
                     
                 elif aux == 'tro':
                     line = line.replace('/', ' ')
+                    line = line.replace(',', ' ')
                     line_split = line.split()
                     reacs[num_r - 1].troe = True
                     reacs[num_r - 1].troe_par.append( float( line_split[1] ) )
@@ -329,6 +400,7 @@ def read_mech(filename, elems, specs, reacs):
                     
                 elif aux == 'sri':
                     line = line.replace('/', ' ')
+                    line = line.replace(',', ' ')
                     line_split = line.split()
                     reacs[num_r - 1].sri = True
                     reacs[num_r - 1].sri_par.append( float( line_split[1] ) )
@@ -342,7 +414,6 @@ def read_mech(filename, elems, specs, reacs):
                 else:
                     # enhanced third body efficiencies
                     line = line.replace('/', ' ')
-                    
                     line_split = line.split()
                     for i in range(0, len(line_split), 2):
                         reacs[num_r - 1].thd_body.append( [line_split[i], float(line_split[i + 1])] )
@@ -383,7 +454,7 @@ def read_thermo(file, elems, specs):
         # no common temperature info
         file.seek(last_line)
         # default
-        Tranges = [300.0, 1000.0, 5000,0]
+        T_ranges = [300.0, 1000.0, 5000,0]
     
     # now start reading species thermo info
     while True:
@@ -427,7 +498,7 @@ def read_thermo(file, elems, specs):
         for e_str in elem_str:
             e = e_str[0:2].strip()
             # skip if blank
-            if e == '': continue
+            if e == '' or e == '0': continue
             # may need to convert to float first, in case of e.g. "1."
             e_num = float( e_str[2:].strip() )
             e_num = int(e_num)
@@ -442,7 +513,7 @@ def read_thermo(file, elems, specs):
         T_low  = T_spec[0]
         T_high = T_spec[1]
         if len(T_spec) == 3: T_com = T_spec[2]
-        else: T_com = T_common[1]
+        else: T_com = T_ranges[1]
         
         spec.Trange = [T_low, T_com, T_high]
         

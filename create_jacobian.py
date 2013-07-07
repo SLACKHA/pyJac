@@ -681,9 +681,9 @@ def write_jacobian(lang, specs, reacs):
                     
                     jline += '))'
                    
-            else:
+            #else:
                 # irreversible reaction
-                jline += ')'
+                #jline += ')'
             
             jline += '))'
             

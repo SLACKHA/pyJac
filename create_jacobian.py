@@ -330,6 +330,16 @@ def write_jacobian(lang, specs, reacs):
         ######################################
         k_sp = specs.index(sp_k)
         
+        if lang in ['c', 'cuda']:
+            line = '  //'
+        elif lang == 'fortran':
+            line = '  !'
+        elif lang == 'matlab':
+            line = '  %'
+        line += 'partial of dT wrt Y_' + sp_k.name
+        line += line_end(lang)
+        file.write(line)
+        
         isfirst = True
         
         for rxn in reacs:
@@ -718,6 +728,16 @@ def write_jacobian(lang, specs, reacs):
         ###############################
         for sp_j in specs:
             j_sp = specs.index(sp_j)
+            
+            if lang in ['c', 'cuda']:
+                line = '  //'
+            elif lang == 'fortran':
+                line = '  !'
+            elif lang == 'matlab':
+                line = '  %'
+            line += 'partial of omega_' + sp_k.name + ' wrt Y_' + sp_j.name
+            line += line_end(lang)
+            file.write(line)
             
             isfirst = True
             
@@ -1316,6 +1336,16 @@ def write_jacobian(lang, specs, reacs):
     # w.r.t. temperature
     ######################################
     
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += 'partial of dT wrt T'
+    line += line_end(lang)
+    file.write(line)
+    
     # set to zero
     line = '  jac'
     if lang in ['c', 'cuda']:
@@ -1469,6 +1499,16 @@ def write_jacobian(lang, specs, reacs):
     ######################################
     for sp in specs:
         isp = specs.index(sp)
+        
+        if lang in ['c', 'cuda']:
+            line = '  //'
+        elif lang == 'fortran':
+            line = '  !'
+        elif lang == 'matlab':
+            line = '  %'
+        line += 'partial of dT wrt Y_' + sp.name
+        line += line_end(lang)
+        file.write(line)
         
         line = '  jac'
         if lang in ['c', 'cuda']:

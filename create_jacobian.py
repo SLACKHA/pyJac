@@ -441,14 +441,14 @@ def write_jacobian(lang, specs, reacs):
                 file.write(line)
                 
                 # dPr/dT
-                jline += '({:.4e} + ({:.4e} / T) - 1.0) / (T * (1.0 + Pr)))'.format(beta_0minf, E_0minf)
+                jline += '({:.4e} + ({:.8e} / T) - 1.0) / (T * (1.0 + Pr)))'.format(beta_0minf, E_0minf)
                 
                 # dF/dT
                 if rxn.troe:
-                    line = '  Fcent = {:.4e} * exp(-T / {:.4e})'.format(1.0 - rxn.troe_par[0], rxn.troe_par[1])
-                    line += ' + {:.4e} * exp(T / {:.4e})'.format(rxn.troe_par[0], rxn.troe_par[2])
+                    line = '  Fcent = {:.8e} * exp(-T / {:.8e})'.format(1.0 - rxn.troe_par[0], rxn.troe_par[1])
+                    line += ' + {:.8e} * exp(T / {:.8e})'.format(rxn.troe_par[0], rxn.troe_par[2])
                     if len(rxn.troe_par) == 4:
-                        line += ' + exp(-{:.4e} / T)'.format(rxn.troe_par[3])
+                        line += ' + exp(-{:.8e} / T)'.format(rxn.troe_par[3])
                     line += line_end(lang)
                     file.write(line)
                     
@@ -464,26 +464,26 @@ def write_jacobian(lang, specs, reacs):
                     line += line_end(lang)
                     file.write(line)
                     
-                    jline += ' + (((1.0 / (Fcent * (1.0 + A * A / (B * B)))) - lnF_AB * (-{:.4e} * B + {:.4e} * A) / Fcent)'.format(0.67 / math.log(10.0), 1.1762 / math.log(10.0))
-                    jline += ' * ({:.4e} * exp(-T / {:.4e}) - {:.4e} * exp(-T / {:.4e})'.format( -(1.0 - rxn.troe_par[0]) / rxn.troe_par[1], rxn.troe_par[1], rxn.troe_par[0] / rxn.troe_par[2], rxn.troe_par[2])
+                    jline += ' + (((1.0 / (Fcent * (1.0 + A * A / (B * B)))) - lnF_AB * (-{:.8e} * B + {:.8e} * A) / Fcent)'.format(0.67 / math.log(10.0), 1.1762 / math.log(10.0))
+                    jline += ' * ({:.8e} * exp(-T / {:.8e}) - {:.8e} * exp(-T / {:.8e})'.format( -(1.0 - rxn.troe_par[0]) / rxn.troe_par[1], rxn.troe_par[1], rxn.troe_par[0] / rxn.troe_par[2], rxn.troe_par[2])
                     if len(rxn.troe_par) == 4:
-                        line += ' + ({:.4e} / (T * T)) * exp(-{:.4e} / T)'.format(rxn.troe_par[3], rxn.troe_par[3])
+                        line += ' + ({:.8e} / (T * T)) * exp(-{:.8e} / T)'.format(rxn.troe_par[3], rxn.troe_par[3])
                     jline += '))'
                     
                     #jline += ' - (lnF_AB * ({:.4e} * B + {:.4e} * A) / Pr) * '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
-                    jline += ' - lnF_AB * ({:.4e} * B + {:.4e} * A) * '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
-                    jline += '({:.4e} + ({:.4e} / T) - 1.0) / T'.format(beta_0minf, E_0minf)
+                    jline += ' - lnF_AB * ({:.8e} * B + {:.8e} * A) * '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
+                    jline += '({:.8e} + ({:.8e} / T) - 1.0) / T'.format(beta_0minf, E_0minf)
                     
                 elif rxn.sri:
                     line = '  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end(lang)
                     file.write(line)
                     
-                    jline += ' + X * ((({:.4} / (T * T)) * exp(-{:.4} / T) - {:.4e} * exp(-T / {:.4})) / '.format(rxn.sri[0] * rxn.sri[1], rxn.sri[1], 1.0 / rxn.sri[2], rxn.sri[2])
-                    jline += '({:.4} * exp(-{:.4} / T) + exp(-T / {:.4}))'.format(rxn.sri[0], rxn.sri[1], rxn.sri[2])
-                    jline += ' - X * {:.6} * log10(Pr) * ({:.4e} + ({:.4e} / T) - 1.0) * log({:4} * exp(-{:.4} / T) + exp(-T / {:4})) / T)'.format(2.0 / math.log(10.0), beta_0minf, E_0minf, rxn.sri[0], rxn.sri[1], rxn.sri[2])
+                    jline += ' + X * ((({:.8} / (T * T)) * exp(-{:.8} / T) - {:.8e} * exp(-T / {:.8})) / '.format(rxn.sri[0] * rxn.sri[1], rxn.sri[1], 1.0 / rxn.sri[2], rxn.sri[2])
+                    jline += '({:.8} * exp(-{:.8} / T) + exp(-T / {:.8}))'.format(rxn.sri[0], rxn.sri[1], rxn.sri[2])
+                    jline += ' - X * {:.8} * log10(Pr) * ({:.8e} + ({:.8e} / T) - 1.0) * log({:8} * exp(-{:.8} / T) + exp(-T / {:8})) / T)'.format(2.0 / math.log(10.0), beta_0minf, E_0minf, rxn.sri[0], rxn.sri[1], rxn.sri[2])
                     
                     if len(rxn.sri) == 5:
-                        jline += ' + ({:.4} / T)'.format(rxn.sri[4])
+                        jline += ' + ({:.8} / T)'.format(rxn.sri[4])
                 # lindemann, dF/dT = 0
                 
                 jline += ') * '
@@ -496,7 +496,7 @@ def write_jacobian(lang, specs, reacs):
                     elif lang in ['fortran', 'cuda']:
                         jline += '(' + str(rind + 1) + ')'
                     
-                    jline += '- rev_rxn_rates'
+                    jline += ' - rev_rxn_rates'
                     if lang in ['c', 'cuda']:
                         jline += '[' + str(rev_reacs.index(rxn)) + ']'
                     elif lang in ['fortran', 'cuda']:
@@ -574,12 +574,12 @@ def write_jacobian(lang, specs, reacs):
                 jline += '(' + str(rind + 1) + ')'
             
             jline += ' * ('
-            if (abs(rxn.b) > 1.0e-90) and (rxn.E > 1.0e-90):
-                jline += '{:.4e} + ({:.4e} / T)'.format(rxn.b, rxn.E)
+            if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
+                jline += '{:.8e} + ({:.8e} / T)'.format(rxn.b, rxn.E)
             elif abs(rxn.b) > 1.0e-90:
-                jline += '{:.4e}'.format(rxn.b)
+                jline += '{:.8e}'.format(rxn.b)
             elif abs(rxn.E) > 1.0e-90:
-                jline += '({:.4e} / T)'.format(rxn.E)
+                jline += '({:.8e} / T)'.format(rxn.E)
             jline += ' + 1.0 - ('
             
             # loop over reactants
@@ -609,12 +609,12 @@ def write_jacobian(lang, specs, reacs):
                     # explicit reverse parameters
                                         
                     jline += ' * ('
-                    if abs(rxn.rev_par[1]) > 1.0e-90 and rxn.rev_par[2] > 1.0e-90:
-                        jline += '{:.4e} + ({:.4e} / T)'.format(rxn.rev_par[1], rxn.rev_par[2])
+                    if abs(rxn.rev_par[1]) > 1.0e-90 and abs(rxn.rev_par[2]) > 1.0e-90:
+                        jline += '{:.8e} + ({:.8e} / T)'.format(rxn.rev_par[1], rxn.rev_par[2])
                     elif abs(rxn.rev_par[1]) > 1.0e-90:
-                        jline += '{:.4e}'.format(rxn.rev_par[1])
+                        jline += '{:.8e}'.format(rxn.rev_par[1])
                     elif abs(rxn.rev_par[2]) > 1.0e-90:
-                        jline += '({:.4e} / T)'.format(rxn.rev_par[2])
+                        jline += '({:.8e} / T)'.format(rxn.rev_par[2])
                     jline += ' + 1.0 - ('
                     
                     notfirst = False
@@ -634,12 +634,12 @@ def write_jacobian(lang, specs, reacs):
                     # reverse rate constant from forward and equilibrium
                     
                     jline += ' * ('
-                    if abs(rxn.b) > 1.0e-90 and rxn.E > 1.0e-90:
-                        jline += '{:.4e} + ({:.4e} / T)'.format(rxn.b, rxn.E)
+                    if abs(rxn.b) > 1.0e-90 and abs(rxn.E) > 1.0e-90:
+                        jline += '{:.8e} + ({:.8e} / T)'.format(rxn.b, rxn.E)
                     elif abs(rxn.b) > 1.0e-90:
-                        jline += '{:.4e}'.format(rxn.b)
+                        jline += '{:.8e}'.format(rxn.b)
                     elif abs(rxn.E) > 1.0e-90:
-                        jline += '({:.4e} / T)'.format(rxn.E)
+                        jline += '({:.8e} / T)'.format(rxn.E)
                     jline += ' + 1.0 - ('
                     
                     notfirst = False
@@ -788,14 +788,16 @@ def write_jacobian(lang, specs, reacs):
                         jline += '[' + str(pind) + ']'
                     elif lang in ['fortran', 'cuda']:
                         jline += '(' + str(pind + 1) + ')'
-                    jline += ' / {:.8e} + '.format(sp_j.mw)
+                    jline += ' / {:.8e}'.format(sp_j.mw)
                     
                     # check if species of interest is third body in reaction
                     alphaij = next((thd[1] for thd in rxn.thd_body if thd[0] == sp_j.name), None)
-                    if alphaij:
-                        jline += str(float(alphaij)) + ' * '
-                    # default is 1.0
-                    jline += 'rho / {:.8e}'.format(sp_j.mw)
+                    if alphaij != 0.0:
+                        jline += ' + '
+                        if alphaij:
+                            jline += str(float(alphaij)) + ' * '
+                        # default is 1.0
+                        jline += 'rho / {:.8e}'.format(sp_j.mw)
                     jline += ') * '
                     
                     if rxn.rev:
@@ -910,27 +912,31 @@ def write_jacobian(lang, specs, reacs):
                     jline += '(-mw_avg / {:.8e}'.format(sp_j.mw)
                     
                     if rxn.thd_body:
-                        jline += ' + rho'
-                        alphaij = next((thd[1] for thd in rxn.thd_body if thd[0] == sp_j.name), None)
-                        if alphaij:
-                            jline += ' * ' + str(float(alphaij))
                         
-                        jline += ' / ((m'
-                        for thd_sp in rxn.thd_body:
-                            isp = specs.index( next((s for s in specs if s.name == thd_sp[0]), None) )
-                            if thd_sp[1] > 1.0:
-                                jline += ' + ' + str(thd_sp[1] - 1.0) + ' * conc'
-                                if lang in ['c', 'cuda']:
-                                    jline += '[' + str(isp) + ']'
-                                elif lang in ['fortran', 'matlab']:
-                                    jline += '(' + str(isp + 1) + ')'
-                            elif thd_sp[1] < 1.0:
-                                jline += ' - ' + str(1.0 - thd_sp[1]) + ' * conc'
-                                if lang in ['c', 'cuda']:
-                                    jline += '[' + str(isp) + ']'
-                                elif lang in ['fortran', 'matlab']:
-                                    jline += '(' + str(isp + 1) + ')'
-                        jline += ') * {:.8e})'.format(sp_j.mw)
+                        alphaij = next((thd[1] for thd in rxn.thd_body if thd[0] == sp_j.name), None)
+                        
+                        # need to make sure alpha isn't 0.0
+                        if alphaij != 0.0:
+                            jline += ' + rho'
+                            if alphaij:
+                                jline += ' * ' + str(float(alphaij))
+                            
+                            jline += ' / ((m'
+                            for thd_sp in rxn.thd_body:
+                                isp = specs.index( next((s for s in specs if s.name == thd_sp[0]), None) )
+                                if thd_sp[1] > 1.0:
+                                    jline += ' + ' + str(thd_sp[1] - 1.0) + ' * conc'
+                                    if lang in ['c', 'cuda']:
+                                        jline += '[' + str(isp) + ']'
+                                    elif lang in ['fortran', 'matlab']:
+                                        jline += '(' + str(isp + 1) + ')'
+                                elif thd_sp[1] < 1.0:
+                                    jline += ' - ' + str(1.0 - thd_sp[1]) + ' * conc'
+                                    if lang in ['c', 'cuda']:
+                                        jline += '[' + str(isp) + ']'
+                                    elif lang in ['fortran', 'matlab']:
+                                        jline += '(' + str(isp + 1) + ')'
+                            jline += ') * {:.8e})'.format(sp_j.mw)
                     elif rxn.pdep and rxn.pdep_sp == sp_j.name:
                         jline += ' + (1.0 / Y'
                         if lang in ['c', 'cuda']:

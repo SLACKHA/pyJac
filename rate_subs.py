@@ -92,6 +92,12 @@ def write_rxn_rates(lang, specs, reacs):
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
     num_rev = len(rev_reacs)
     
+    pdep_reacs = []
+    for reac in reacs:
+        if reac.thd or reac.pdep:
+            # add reaction index to list
+            pdep_reacs.append(reacs.index(reac))
+    
     # first write header file
     if lang == 'c':
         file = open('rates.h', 'w')
@@ -106,7 +112,8 @@ def write_rxn_rates(lang, specs, reacs):
         else:
             file.write('void eval_rxn_rates (const Real, const Real*, Real*);\n')
             file.write('void eval_spec_rates (const Real*, const Real*, Real*);\n')
-        file.write('void get_rxn_pres_mod (const Real, const Real, const Real*, Real*);\n')
+        if pdep_reacs:
+            file.write('void get_rxn_pres_mod (const Real, const Real, const Real*, Real*);\n')
         file.write('\n')
         file.write('#endif\n')
         file.close()
@@ -143,9 +150,9 @@ def write_rxn_rates(lang, specs, reacs):
     
     if lang in ['c', 'cuda']:
         if rev_reacs:
-            line += 'void eval_rxn_rates (Real T, Real * C, Real * fwd_rxn_rates, Real * rev_rxn_rates) {\n'
+            line += 'void eval_rxn_rates (const Real T, const Real * C, Real * fwd_rxn_rates, Real * rev_rxn_rates) {\n'
         else:
-            line += 'void eval_rxn_rates (Real T, Real * C, Real * fwd_rxn_rates) {\n'
+            line += 'void eval_rxn_rates (const Real T, const Real * C, Real * fwd_rxn_rates) {\n'
     elif lang == 'fortran':
         if rev_reacs:
             line += 'subroutine eval_rxn_rates (T, C, fwd_rxn_rates, rev_rxn_rates)\n\n'
@@ -449,7 +456,7 @@ def write_rxn_pressure_mod(lang, specs, reacs):
     if lang == 'cuda': line = '__device__ '
     
     if lang in ['c', 'cuda']:
-        line += 'void get_rxn_pres_mod ( Real T, Real pres, Real * C, Real * pres_mod ) {\n'
+        line += 'void get_rxn_pres_mod (const Real T, const Real pres, const Real * C, Real * pres_mod) {\n'
     elif lang == 'fortran':
         line += 'subroutine get_rxn_pres_mod ( T, pres, C, pres_mod )\n\n'
         
@@ -764,9 +771,9 @@ def write_spec_rates(lang, specs, reacs):
     
     if lang in ['c', 'cuda']:
         if rev_reacs:
-            line += 'void eval_spec_rates ( Real * fwd_rates, Real * rev_rates, Real * pres_mod, Real * sp_rates ) {\n'
+            line += 'void eval_spec_rates (const Real * fwd_rates, const Real * rev_rates, const Real * pres_mod, Real * sp_rates) {\n'
         else:
-            line += 'void eval_spec_rates ( Real * fwd_rates, Real * pres_mod, Real * sp_rates ) {\n'
+            line += 'void eval_spec_rates (const Real * fwd_rates, const Real * pres_mod, Real * sp_rates) {\n'
     elif lang == 'fortran':
         if rev_reacs:
             line += 'subroutine eval_spec_rates ( fwd_rates, rev_rates, pres_mod, sp_rates )\n\n'
@@ -1317,7 +1324,7 @@ def write_chem_utils(lang, specs):
     
     return
 
-def write_derivs(lang, specs, num_r):
+def write_derivs(lang, specs, reacs, num_r):
     """
     
     
@@ -1328,6 +1335,15 @@ def write_derivs(lang, specs, num_r):
 
     pre = ''
     if lang == 'cuda': pre = '__device__ '
+    
+    file.write('#include "header.h"\n')
+    if lang == 'c':
+        file.write('#include "chem_utils.h"\n')
+        file.write('#include "rates.h"\n')
+    elif lang == 'cuda':
+        file.write('#include "chem_utils.cuh"\n')
+        file.write('#include "rates.cuh"\n')
+    file.write('\n')
     
     # constant pressure
     file.write('#if defined(CONP)\n\n')
@@ -1370,13 +1386,45 @@ def write_derivs(lang, specs, num_r):
     file.write('\n')
     
     # evaluate reaction rates
-    file.write('  // local array holding reaction rates\n')
-    file.write('  Real rates[{:}];\n'.format(num_r) )
-    file.write('  eval_rxn_rates ( T, pres, conc, rates );\n\n')
+    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    if rev_reacs:
+        file.write('  // local arrays holding reaction rates\n')
+        file.write('  Real fwd_rates[{:}];\n'.format(num_r) )
+        file.write('  Real rev_rates[{:}];\n'.format(num_r) )
+        file.write('  eval_rxn_rates (T, conc, fwd_rates, rev_rates);\n\n')
+    else:
+        file.write('  // local array holding reaction rates\n')
+        file.write('  Real rates[{:}];\n'.format(num_r) )
+        file.write('  eval_rxn_rates ( T, conc, rates );\n\n')
+    
+    # reaction pressure dependence
+    pdep_reacs = []
+    for reac in reacs:
+        if reac.thd or reac.pdep:
+            # add reaction index to list
+            pdep_reacs.append(reacs.index(reac))
+    num_pdep = len(pdep_reacs)
+    if pdep_reacs:
+        if lang in ['c', 'cuda']:
+            file.write('  // get pressure modifications to reaction rates\n')
+            file.write('  Real pres_mod[' + str(num_pdep) + '];\n')
+            file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+        elif lang == 'fortran':
+            file.write('  ! get and evaluate pressure modifications to reaction rates\n')
+            file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod)\n')
+        elif lang == 'matlab':
+            file.write('  % get and evaluate pressure modifications to reaction rates\n')
+            file.write('  pres_mod = get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+        file.write('\n')
     
     # species rate of change of molar concentration
     file.write('  // evaluate rate of change of species molar concentration\n')
-    file.write('  eval_spec_rates ( rates, &dy[1] );\n\n')
+    if rev_reacs and pdep_reacs:
+        file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, &dy[1]);\n\n')
+    elif rev_reacs:
+        file.write('  eval_spec_rates ( fwd_rates, rev_rates, &dy[1] );\n\n')
+    else:
+        file.write('  eval_spec_rates ( rates, &dy[1] );\n\n')
     
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n')

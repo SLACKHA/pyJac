@@ -1643,7 +1643,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
     write_chem_utils(lang, specs)
     
     # write derivative subroutines
-    write_derivs(lang, specs, num_r)
+    write_derivs(lang, specs, reacs, num_r)
     
     # write mass-mole fraction conversion subroutine
     write_mass_mole(specs)

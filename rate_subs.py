@@ -257,6 +257,11 @@ def write_rxn_rates(lang, specs, reacs):
                         nu = rxn.prod_nu[isp] - rxn.reac_nu[isp2]
                     else:
                         nu = rxn.prod_nu[isp]
+                    
+                    # skip species with zero overall stoichiometric coefficient
+                    if (nu == 0):
+                        continue
+                    
                     sum_nu += nu
                     
                     # get species object

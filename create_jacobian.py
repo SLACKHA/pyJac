@@ -1090,6 +1090,10 @@ def write_jacobian(lang, specs, reacs):
                                     elif sp in rxn.prod:
                                         nu = rxn.prod_nu[rxn.prod.index(sp)]
                                     
+                                    # skip if overall stoich coefficient is zero
+                                    if (nu == 0):
+                                        continue
+                                    
                                     sum_nu += nu
                                     
                                     spec = next((spec for spec in specs if spec.name == sp), None)
@@ -1104,6 +1108,7 @@ def write_jacobian(lang, specs, reacs):
                                         line += '\n'
                                     file.write(line)
                                     
+                                    line = ''
                                     if nu < 0:
                                         line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
                                     elif nu > 0:

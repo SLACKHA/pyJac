@@ -1081,13 +1081,13 @@ def write_jacobian(lang, specs, reacs):
                                 # sum of stoichiometric coefficients
                                 sum_nu = 0
                                 
-                                # go through species in reaction
-                                for sp in (rxn.reac + rxn.prod):
-                                    if sp in rxn.reac and sp in rxn.prod:
+                                # go through product species
+                                for sp in rxn.prod:
+                                    
+                                    # check if also in reactants
+                                    if sp in rxn.reac:
                                         nu = rxn.prod_nu[rxn.prod.index(sp)] - rxn.reac_nu[rxn.reac.index(sp)]
-                                    elif sp in rxn.reac:
-                                        nu = -rxn.reac_nu[rxn.reac.index(sp)]
-                                    elif sp in rxn.prod:
+                                    else:
                                         nu = rxn.prod_nu[rxn.prod.index(sp)]
                                     
                                     # skip if overall stoich coefficient is zero
@@ -1096,7 +1096,69 @@ def write_jacobian(lang, specs, reacs):
                                     
                                     sum_nu += nu
                                     
+                                    # get species object
                                     spec = next((spec for spec in specs if spec.name == sp), None)
+                                    if not spec:
+                                        print 'Error: species ' + sp + ' in reaction ' + str(reacs.index(rxn)) + ' not found.\n'
+                                        sys.exit()
+                                    
+                                    # need temperature conditional for equilibrium constants
+                                    line = '  if (T <= {:})'.format(spec.Trange[1])
+                                    if lang in ['c', 'cuda']:
+                                        line += ' {\n'
+                                    elif lang == 'fortran':
+                                        line += ' then\n'
+                                    elif lang == 'matlab':
+                                        line += '\n'
+                                    file.write(line)
+                                    
+                                    line = ''
+                                    if nu < 0:
+                                        line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
+                                    elif nu > 0:
+                                        line = '    Kc = Kc + {:.2f} * '.format(nu)
+                                    line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1]/2.0, spec.lo[2]/6.0, spec.lo[3]/12.0, spec.lo[4]/20.0, spec.lo[5])
+                                    line += line_end(lang)
+                                    file.write(line)
+                                    
+                                    if lang in ['c', 'cuda']:
+                                        file.write('  } else {\n')
+                                    elif lang in ['fortran', 'matlab']:
+                                        file.write('  else\n')
+                                    
+                                    if nu < 0:
+                                        line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
+                                    elif nu > 0:
+                                        line = '    Kc = Kc + {:.2f} * '.format(nu)
+                                    line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1]/2.0, spec.hi[2]/6.0, spec.hi[3]/12.0, spec.hi[4]/20.0, spec.hi[5])
+                                    line += line_end(lang)
+                                    file.write(line)
+                                    
+                                    if lang in ['c', 'cuda']:
+                                        file.write('  }\n\n')
+                                    elif lang == 'fortran':
+                                        file.write('  end if\n\n')
+                                    elif lang == 'matlab':
+                                        file.write('  end\n\n')
+                                
+                                # now loop through reactants
+                                for sp in rxn.reac:
+                                    # check if species also in products (if so, already considered)
+                                    if sp in rxn.prod: continue
+                                    
+                                    nu = rxn.reac_nu[rxn.reac.index(sp)]
+                                    
+                                    # skip if overall stoich coefficient is zero
+                                    if (nu == 0):
+                                        continue
+                                    
+                                    sum_nu -= nu
+                                    
+                                    # get species object
+                                    spec = next((spec for spec in specs if spec.name == sp), None)
+                                    if not spec:
+                                        print 'Error: species ' + sp + ' in reaction ' + str(reacs.index(rxn)) + ' not found.\n'
+                                        sys.exit()
                                     
                                     # need temperature conditional for equilibrium constants
                                     line = '  if (T <= {:})'.format(spec.Trange[1])

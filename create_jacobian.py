@@ -1594,11 +1594,18 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # interpret reaction mechanism file
     [num_e, num_s, num_r, units] = read_mech(mech_name, elems, specs, reacs)
     
-    # interpret thermodynamic database file (if it exists)
+    # interpret thermodynamic database file (if it exists & needed)
+    therm_flag = True
     if therm_name:
-        file = open(therm_name, 'r')
-        read_thermo(file, elems, specs)
-        file.close()
+        for sp in specs:
+            if not sp.mw:
+                therm_flag = False
+                break
+        if not therm_flag:
+            # need to read thermo file
+            file = open(therm_name, 'r')
+            read_thermo(file, elems, specs)
+            file.close()
     
     # convert activation energy units to K (if needed)
     if 'kelvin' not in units:

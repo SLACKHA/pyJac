@@ -1146,13 +1146,13 @@ def write_jacobian(lang, specs, reacs):
                                     # check if species also in products (if so, already considered)
                                     if sp in rxn.prod: continue
                                     
-                                    nu = rxn.reac_nu[rxn.reac.index(sp)]
+                                    nu = -rxn.reac_nu[rxn.reac.index(sp)]
                                     
                                     # skip if overall stoich coefficient is zero
                                     if (nu == 0):
                                         continue
                                     
-                                    sum_nu -= nu
+                                    sum_nu += nu
                                     
                                     # get species object
                                     spec = next((spec for spec in specs if spec.name == sp), None)
@@ -1214,6 +1214,7 @@ def write_jacobian(lang, specs, reacs):
                             
                             jline += ' * (rho / {:.8e})'.format(sp_l.mw)
                             
+                            nu = rxn.prod_nu[rxn.prod.index(sp_l.name)]
                             if (nu - 1) > 0:
                                 if isinstance(nu - 1, float):
                                     jline += ' * pow(conc'

@@ -580,20 +580,13 @@ def write_jacobian(lang, specs, reacs):
                 jline += '{:.8e}'.format(rxn.b)
             elif abs(rxn.E) > 1.0e-90:
                 jline += '({:.8e} / T)'.format(rxn.E)
-            jline += ' + 1.0 - ('
+            jline += ' + 1.0 - '
             
             # loop over reactants
-            notfirst = False
+            nu = 0
             for sp in rxn.reac:
-                sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
-                nu = rxn.reac_nu[rxn.reac.index(sp)]
-                
-                if notfirst:
-                    jline += ' + '
-                jline += str(float(nu))
-                
-                notfirst = True
-            jline += '))'
+                nu += rxn.reac_nu[rxn.reac.index(sp)]
+            jline += str(float(nu)) + ')'
             
             # contribution from temperature derivative of reaction rates
             if rxn.rev:
@@ -615,20 +608,13 @@ def write_jacobian(lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.rev_par[1])
                     elif abs(rxn.rev_par[2]) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.rev_par[2])
-                    jline += ' + 1.0 - ('
+                    jline += ' + 1.0 - '
                     
-                    notfirst = False
+                    nu = 0
                     # loop over products
                     for sp in rxn.prod:
-                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
-                        nu = rxn.prod_nu[rxn.prod.index(sp)]
-                        
-                        if notfirst:
-                            jline += ' + '
-                        jline += str(float(nu))
-                                                
-                        notfirst = True
-                    jline += '))'
+                        nu += rxn.prod_nu[rxn.prod.index(sp)]
+                    jline += str(float(nu)) + ')'
                     
                 else:
                     # reverse rate constant from forward and equilibrium
@@ -640,38 +626,27 @@ def write_jacobian(lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.b)
                     elif abs(rxn.E) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.E)
-                    jline += ' + 1.0 - ('
+                    jline += ' + 1.0 - '
                     
-                    notfirst = False
+                    nu = 0
                     # loop over products
                     for sp in rxn.prod:
-                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
-                        nu = rxn.prod_nu[rxn.prod.index(sp)]
-                        
-                        if notfirst:
-                            jline += ' + '
-                        jline += str(float(nu))
-                        
-                        notfirst = True
-                    jline += ') - T * ('
+                        nu += rxn.prod_nu[rxn.prod.index(sp)]
+                    jline += str(float(nu))
+                    jline += ' - T * ('
                     
                     notfirst = False
                     # contribution from dBdT terms from all participating species
-                    for sp in (rxn.prod + rxn.reac):
-                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
-                        
-                        # get stoichiometric coefficient
-                        # if in both reactants and products
-                        if sp in rxn.prod and sp in rxn.reac:
-                            isp = rxn.reac.index(sp)
-                            isp2 = rxn.prod.index(sp)
-                            nu = rxn.prod_nu[isp2] - rxn.reac_nu[isp]
-                        elif sp in rxn.prod:
-                            isp = rxn.prod.index(sp)
-                            nu = rxn.prod_nu[isp]
+                    for sp in rxn.prod:
+                        if sp in rxn.reac:
+                            nu = rxn.prod_nu[rxn.prod.index(sp)] - rxn.reac_nu[rxn.reac.index(sp)]
                         else:
-                            isp = rxn.reac.index(sp)
-                            nu = -rxn.reac_nu[isp]
+                            nu = rxn.prod_nu[rxn.prod.index(sp)]
+                        
+                        if (nu == 0):
+                            continue
+                        
+                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
                         
                         dBdT = 'dBdT_'
                         if lang in ['c', 'cuda']:
@@ -679,15 +654,53 @@ def write_jacobian(lang, specs, reacs):
                         elif lang in ['fortran', 'matlab']:
                             dBdT += str(sp_ind + 1)
                         
-                        if notfirst:
-                            jline += ' + '
-                        if nu == 1:
-                            jline += dBdT
-                        elif nu == -1:
-                            jline += '-' + dBdT
+                        if not notfirst:
+                            # first entry
+                            if nu == 1:
+                                jline += dBdT
+                            elif nu == -1:
+                                jline += '-' + dBdT
+                            else:
+                                jline += str(float(nu)) + ' * ' + dBdT
                         else:
-                            jline += '(' + str(float(nu)) + ' * ' + dBdT + ')'
+                            # not first entry
+                            if nu == 1:
+                                jline += ' + ' + dBdT
+                            elif nu == -1:
+                                jline += ' - ' + dBdT
+                            else:
+                                if (nu > 0):
+                                    jline += ' + ' + str(float(nu)) + ' * ' + dBdT
+                                else:
+                                    jline += ' - ' + str(float(abs(nu))) + ' * ' + dBdT
                         notfirst = True
+                        
+                        
+                    for sp in rxn.reac:
+                        # skip species also in products, already counted
+                        if sp in rxn.prod:
+                            continue
+                        
+                        nu = -rxn.reac_nu[rxn.reac.index(sp)]
+                        
+                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
+                        
+                        dBdT = 'dBdT_'
+                        if lang in ['c', 'cuda']:
+                            dBdT += str(sp_ind)
+                        elif lang in ['fortran', 'matlab']:
+                            dBdT += str(sp_ind + 1)
+                        
+                        # not first entry
+                        if nu == 1:
+                            jline += ' + ' + dBdT
+                        elif nu == -1:
+                            jline += ' - ' + dBdT
+                        else:
+                            if (nu > 0):
+                                jline += ' + ' + str(float(nu)) + ' * ' + dBdT
+                            else:
+                                jline += ' - ' + str(float(abs(nu))) + ' * ' + dBdT
                     
                     jline += '))'
                    

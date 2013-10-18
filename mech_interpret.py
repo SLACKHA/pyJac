@@ -491,6 +491,14 @@ def read_thermo(file, elems, specs):
         # set species to the one matched
         spec = specs[sp_ind]
         
+        # ensure not reading the same species more than once...
+        if spec.mw:
+            # already done! skip next three lines
+            line = file.readline()
+            line = file.readline()
+            line = file.readline()
+            continue
+        
         # now get element composition of species, columns 24:44
         # each piece of data is 5 characters long (2 for element, 3 for #)
         elem_str = split_str(line[24:44], 5)

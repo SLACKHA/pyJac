@@ -8,20 +8,7 @@ from __future__ import division
 from chem_utilities import *
 from mech_interpret import *
 from rate_subs import *
-
-def create_dir(path):
-    """Creates a new directory based on input path.
-    
-    No error if path already exists, but other error is reported.
-    
-    Keyword arguments:
-    path -- path of directory to be created
-    """
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+import utils
 
 
 def write_jacobian(lang, specs, reacs):
@@ -71,7 +58,7 @@ def write_jacobian(lang, specs, reacs):
     num_pdep = len(pdep_reacs)
     
     # create file depending on language
-    filename = file_lang_app('jacob', lang)
+    filename = 'jacob' + utils.file_ext[lang]
     file = open(filename, 'w')
     
     # header files
@@ -117,7 +104,7 @@ def write_jacobian(lang, specs, reacs):
         line = '  Real T = y[0]'
     elif lang in ['fortran', 'matlab']:
         line = '  T = y(1)'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     file.write('\n')
@@ -153,9 +140,9 @@ def write_jacobian(lang, specs, reacs):
         
         isfirst = False
     
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
-    line = '  mw_avg = 1.0 / mw_avg' + line_end(lang)
+    line = '  mw_avg = 1.0 / mw_avg' + line_end[lang]
     file.write(line)
     
     if lang in ['c', 'cuda']:
@@ -166,7 +153,7 @@ def write_jacobian(lang, specs, reacs):
     elif lang == 'matlab':
         file.write('  % mass-averaged density\n')
     line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(RU)
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     file.write('\n')
@@ -187,7 +174,7 @@ def write_jacobian(lang, specs, reacs):
             line = '  conc[{:}] = rho * y[{:}] / {:}'.format(isp, isp + 1, sp.mw)
         elif lang in ['fortran', 'matlab']:
             line = '  conc({:}) = rho * y({:}) / {:}'.format(isp + 1, isp + 2, sp.mw)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
     file.write('\n')
     
@@ -261,7 +248,7 @@ def write_jacobian(lang, specs, reacs):
         elif lang == 'cuda':
             line += 'register Real '
         line += 'm = pres / ({:4e} * T)'.format(RU)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
     
     # log(T)
@@ -271,13 +258,13 @@ def write_jacobian(lang, specs, reacs):
     elif lang == 'cuda':
         line += 'register Real '
     line += 'logT = log(T)'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     # if any reverse reactions, will need Kc
     if rev_reacs:
         line = '  Real Kc'
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
     
     # pressure-dependence variables
@@ -288,15 +275,15 @@ def write_jacobian(lang, specs, reacs):
         elif lang == 'cuda':
             line += 'register Real '
         line += 'Pr'
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
     
     if any(rxn.troe for rxn in reacs):
-        line = '  Real Fcent, A, B, lnF_AB' + line_end(lang)
+        line = '  Real Fcent, A, B, lnF_AB' + line_end[lang]
         file.write(line)
     
     if any(rxn.sri for rxn in reacs):
-        line = '  Real X' + line_end(lang)
+        line = '  Real X' + line_end[lang]
         file.write(line)
     
     # variables for equilibrium constant derivatives, if needed
@@ -324,7 +311,7 @@ def write_jacobian(lang, specs, reacs):
             elif lang in ['fortran', 'matlab']:
             	dBdT += str(sp_ind + 1)
             # declare dBdT
-            file.write('  Real ' + dBdT + line_end(lang))
+            file.write('  Real ' + dBdT + line_end[lang])
             
             # dB/dT evaluation (with temperature conditional)
             line = '  if (T <= {:})'.format(specs[sp_ind].Trange[1])
@@ -343,7 +330,7 @@ def write_jacobian(lang, specs, reacs):
             line += ' * ({:.8e}'.format(specs[sp_ind].lo[2] / 3.0)
             line =+ ' + T * ({:.8e}'.format(specs[sp_ind].lo[3] / 4.0)
             line += ' + {:.8e} * T))'.format(specs[sp_ind].lo[4] / 5.0)
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             if lang in ['c', 'cuda']:
@@ -358,7 +345,7 @@ def write_jacobian(lang, specs, reacs):
             line += ' * ({:.8e}'.format(specs[sp_ind].hi[2] / 3.0)
             line += ' + T * ({:.8e}'.format(specs[sp_ind].hi[3] / 4.0)
             line += ' + {:.8e} * T))'.format(specs[sp_ind].hi[4] / 5.0)
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             if lang in ['c', 'cuda']:
@@ -391,7 +378,7 @@ def write_jacobian(lang, specs, reacs):
         elif lang == 'matlab':
             line = '  %'
         line += 'partial of dT wrt Y_' + sp_k.name
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         isfirst = True
@@ -492,7 +479,7 @@ def write_jacobian(lang, specs, reacs):
                 
                 # finish writing P_ri
                 line += ' * (' + k0kinf + ')'
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
                 
                 # dPr/dT
@@ -504,19 +491,19 @@ def write_jacobian(lang, specs, reacs):
                     line += ' + {:.8e} * exp(T / {:.8e})'.format(rxn.troe_par[0], rxn.troe_par[2])
                     if len(rxn.troe_par) == 4:
                         line += ' + exp(-{:.8e} / T)'.format(rxn.troe_par[3])
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     line = '  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4'
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                 
                     line = '  B = 0.806 - 1.1762 * log10(Fcent) - 0.14 * log10(Pr)'
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     line = '  lnF_AB = ' + str(2.0) + ' * log(Fcent) * A / (B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     jline += ' + (((1.0 / (Fcent * (1.0 + A * A / (B * B)))) - lnF_AB * (-{:.8e} * B + {:.8e} * A) / Fcent)'.format(0.67 / math.log(10.0), 1.1762 / math.log(10.0))
@@ -529,7 +516,7 @@ def write_jacobian(lang, specs, reacs):
                     jline += '({:.8e} + ({:.8e} / T) - 1.0) / T'.format(beta_0minf, E_0minf)
                     
                 elif rxn.sri:
-                    line = '  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end(lang)
+                    line = '  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end[lang]
                     file.write(line)
                     
                     jline += ' + X * ((({:.8} / (T * T)) * exp(-{:.8} / T) - {:.8e} * exp(-T / {:.8})) / '.format(rxn.sri[0] * rxn.sri[1], rxn.sri[1], 1.0 / rxn.sri[2], rxn.sri[2])
@@ -765,7 +752,7 @@ def write_jacobian(lang, specs, reacs):
             jline += '))'
             
             # print line for reaction
-            jline += line_end(lang)
+            jline += line_end[lang]
             file.write(jline)
                 
             
@@ -786,7 +773,7 @@ def write_jacobian(lang, specs, reacs):
                 line += '(' + str(k_sp) + ', ' + str(1) + ')'
                 line += ' = jac(' + str(k_sp) + ', ' + str(1) + ') * {:.8e} / rho'.format(sp_k.mw)
         
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         file.write('\n')
         
@@ -803,7 +790,7 @@ def write_jacobian(lang, specs, reacs):
             elif lang == 'matlab':
                 line = '  %'
             line += 'partial of omega_' + sp_k.name + ' wrt Y_' + sp_j.name
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             isfirst = True
@@ -930,7 +917,7 @@ def write_jacobian(lang, specs, reacs):
                         E_0minf = rxn.E - rxn.high[2]
                         k0kinf = rxn_rate_const(rxn.A / rxn.high[0], beta_0minf, E_0minf)
                     line += ' * (' + k0kinf + ')'
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     jline += 'pres_mod'
@@ -954,22 +941,22 @@ def write_jacobian(lang, specs, reacs):
                         line += ' + {:.4e} * exp(T / {:.4e})'.format(rxn.troe_par[0], rxn.troe_par[2])
                         if len(rxn.troe_par) == 4:
                             line += ' + exp(-{:.4e} / T)'.format(rxn.troe_par[3])
-                        line += line_end(lang)
+                        line += line_end[lang]
                         file.write(line)
                         
                         line = '  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4'
-                        line += line_end(lang)
+                        line += line_end[lang]
                         file.write(line)
                         
                         line = '  B = 0.806 - 1.1762 * log10(Fcent) - 0.14 * log10(Pr)'
-                        line += line_end(lang)
+                        line += line_end[lang]
                         file.write(line)
                         
                         jline += ' - log(Fcent) * 2.0 * A * (B * {:.6} + A * {:.6}) / '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
                         jline += '(B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'
                         
                     elif rxn.sri:
-                        file.write('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end(lang))
+                        file.write('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end[lang])
                         
                         jline += ' - X * X * {:.6} * log10(Pr) * log({:.4} * exp(-{:4} / T) + exp(-T / {:.4}))'.format(2.0 / math.log(10.0), rxn.sri[0], rxn.sri[1], rxn.sri[2])                                    
                     jline += ') * '
@@ -1142,7 +1129,7 @@ def write_jacobian(lang, specs, reacs):
                             jline += ' + '
                             if not rxn.rev_par:
                                 line = '  Kc = 0.0'
-                                line += line_end(lang)
+                                line += line_end[lang]
                                 file.write(line)
                                 
                                 # sum of stoichiometric coefficients
@@ -1185,7 +1172,7 @@ def write_jacobian(lang, specs, reacs):
                                     elif nu > 0:
                                         line = '    Kc = Kc + {:.2f} * '.format(nu)
                                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1]/2.0, spec.lo[2]/6.0, spec.lo[3]/12.0, spec.lo[4]/20.0, spec.lo[5])
-                                    line += line_end(lang)
+                                    line += line_end[lang]
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1198,7 +1185,7 @@ def write_jacobian(lang, specs, reacs):
                                     elif nu > 0:
                                         line = '    Kc = Kc + {:.2f} * '.format(nu)
                                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1]/2.0, spec.hi[2]/6.0, spec.hi[3]/12.0, spec.hi[4]/20.0, spec.hi[5])
-                                    line += line_end(lang)
+                                    line += line_end[lang]
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1243,7 +1230,7 @@ def write_jacobian(lang, specs, reacs):
                                     elif nu > 0:
                                         line = '    Kc = Kc + {:.2f} * '.format(nu)
                                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1]/2.0, spec.lo[2]/6.0, spec.lo[3]/12.0, spec.lo[4]/20.0, spec.lo[5])
-                                    line += line_end(lang)
+                                    line += line_end[lang]
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1256,7 +1243,7 @@ def write_jacobian(lang, specs, reacs):
                                     elif nu > 0:
                                         line = '    Kc = Kc + {:.2f} * '.format(nu)
                                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1]/2.0, spec.hi[2]/6.0, spec.hi[3]/12.0, spec.hi[4]/20.0, spec.hi[5])
-                                    line += line_end(lang)
+                                    line += line_end[lang]
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1270,7 +1257,7 @@ def write_jacobian(lang, specs, reacs):
                                 if sum_nu != 0:
                                     line += '{:.8e} * '.format((PA / RU)**sum_nu)
                                 line += 'exp(Kc)'
-                                line += line_end(lang)
+                                line += line_end[lang]
                                 file.write(line)
                                 
                                 jline += '(' + rxn_rate_const(rxn.A, rxn.b, rxn.E) + ' / Kc)'
@@ -1329,7 +1316,7 @@ def write_jacobian(lang, specs, reacs):
                 
                 # done with this reaction
                 jline += ')'
-                jline += line_end(lang)
+                jline += line_end[lang]
                 file.write(jline)
             
             if isfirst:
@@ -1353,7 +1340,7 @@ def write_jacobian(lang, specs, reacs):
                 elif lang in ['fortran', 'matlab']:
                     line += '(' + str(k_sp + 1) + ')'
                 line += ' * mw_avg / {:.8e}'.format(sp_j.mw)
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
                 
                 line = '  jac'
@@ -1363,7 +1350,7 @@ def write_jacobian(lang, specs, reacs):
                     line += '(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') = '
                     line += 'jac(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') * '
                 line += '{:.8e} / rho'.format(sp_k.mw)
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             file.write('\n')
     
@@ -1431,7 +1418,7 @@ def write_jacobian(lang, specs, reacs):
             line += '(y(' + str(specs.index(sp) + 2) + ') * cp(' + str(specs.index(sp) + 1) + '))'
         
         isfirst = False
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     # sum of enthalpy * species rate * molecular weight for all species
@@ -1468,7 +1455,7 @@ def write_jacobian(lang, specs, reacs):
             line += '(h[' + str(isp + 1) + '] * sp_rates[' + str(isp + 1) + '] * {:.6})'.format(sp.mw)
         
         isfirst = False
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     file.write('\n')
@@ -1484,7 +1471,7 @@ def write_jacobian(lang, specs, reacs):
     elif lang == 'matlab':
         line = '  %'
     line += 'partial of dT wrt T'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     # set to zero
@@ -1495,7 +1482,7 @@ def write_jacobian(lang, specs, reacs):
         line += '(1, 1) = 0.0d0'
     elif lang == 'matlab':
         line += '(1, 1) = 0.0'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     # need dcp/dT
@@ -1528,7 +1515,7 @@ def write_jacobian(lang, specs, reacs):
             line += '(' + str(isp + 2) + ')'
         line += ' * {:.8e} * '.format(RU / sp.mw)
         line += '({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T)))'.format(sp.lo[1], 2.0 * sp.lo[2], 3.0 * sp.lo[3], 4.0 * sp.lo[4])
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1553,7 +1540,7 @@ def write_jacobian(lang, specs, reacs):
             line += '(' + str(isp + 2) + ')'
         line += ' * {:.8e} * '.format(RU / sp.mw)
         line += '({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T)))'.format(sp.hi[1], 2.0 * sp.hi[2], 3.0 * sp.hi[3], 4.0 * sp.hi[4])
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1590,7 +1577,7 @@ def write_jacobian(lang, specs, reacs):
             line += 'h(' + str(isp + 1) + ') * sp_rates(' + str(isp + 1) + ') * {:.8e}'.format(sp.mw)
         isfirst = False
     line += ')'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     line = '  '
@@ -1621,7 +1608,7 @@ def write_jacobian(lang, specs, reacs):
             line += 'h(' + str(isp + 1) + ') * jac(' + str(isp + 2) + ', ' + str(1) + '))'
         isfirst = False
     line += ')'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     line = '  '
@@ -1630,7 +1617,7 @@ def write_jacobian(lang, specs, reacs):
     elif lang in ['fortran', 'matlab']:
         line += 'jac(1, 1) = jac(1,1) / '
     line += '(-cp_avg)'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     
     file.write('\n')
@@ -1648,7 +1635,7 @@ def write_jacobian(lang, specs, reacs):
         elif lang == 'matlab':
             line = '  %'
         line += 'partial of dT wrt Y_' + sp.name
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         line = '  jac'
@@ -1682,7 +1669,7 @@ def write_jacobian(lang, specs, reacs):
             isfirst = False
         
         line += ') / cp_avg'
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
     
     if lang in ['c', 'cuda']:
@@ -1709,20 +1696,17 @@ def create_jacobian(lang, mech_name, therm_name = None):
     elems = []
     specs = []
     reacs = []
-    
-    # supported languages
-    langs = ['c', 'cuda', 'fortran', 'matlab']
-    
+        
     lang = lang.lower()
-    if lang not in langs:
+    if lang not in utils.langs:
         print 'Error: language needs to be one of: '
-        for l in langs:
+        for l in utils.langs:
             print l
         sys.exit()
     
     # create build directory if none exists
     build_path = './build'
-    create_dir(build_path)
+    utils.create_dir(build_path)
     
     # interpret reaction mechanism file
     [num_e, num_s, num_r, units] = read_mech(mech_name, elems, specs, reacs)
@@ -1730,6 +1714,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # interpret thermodynamic database file (if it exists & needed)
     therm_flag = True
     if therm_name:
+        # check for any species missing molecular weight
         for sp in specs:
             if not sp.mw:
                 therm_flag = False
@@ -1770,26 +1755,26 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    write_rxn_rates(path, lang, specs, reacs)
+    write_rxn_rates(build_path, lang, specs, reacs)
     
     # if third-body/pressure-dependent reactions, print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        write_rxn_pressure_mod(path, lang, specs, reacs)
+        write_rxn_pressure_mod(build_path, lang, specs, reacs)
     
     # write species rates subroutine
-    write_spec_rates(path, lang, specs, reacs)
+    write_spec_rates(build_path, lang, specs, reacs)
     
     # write chem_utils subroutines
-    write_chem_utils(path, lang, specs)
+    write_chem_utils(build_path, lang, specs)
     
     # write derivative subroutines
-    write_derivs(path, lang, specs, reacs)
+    write_derivs(build_path, lang, specs, reacs)
     
     # write mass-mole fraction conversion subroutine
-    write_mass_mole(path, lang, specs)
+    write_mass_mole(build_path, lang, specs)
     
     # write Jacobian subroutine
-    write_jacobian(path, lang, specs, reacs)
+    write_jacobian(build_path, lang, specs, reacs)
     
     return
 

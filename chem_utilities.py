@@ -95,23 +95,6 @@ class SpecInfo:
         # temperature range for thermodynamic coefficients
         self.Trange = [0.0, 0.0, 0.0]
 
-def read_str_num(string):
-    """Pull list of floats from a string"""
-        
-    # separate string into space-delimited strings of numbers
-    num_str = string.split()
-    
-    nums = []
-    for n in num_str:
-        nums.append( float(n) )
-    
-    return nums
-
-
-def split_str(seq, length):
-    """Separate a string seq into length-sized pieces"""
-    return [seq[i : i + length] for i in range(0, len(seq), length)]
-
 
 def calc_spec_smh(T, specs):
     """Calculate standard-state entropies minus enthalpies for all species

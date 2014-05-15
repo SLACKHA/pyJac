@@ -1,4 +1,5 @@
 from chem_utilities import *
+import utils
 
 def read_mech(filename, elems, specs, reacs):
     """Read and interpret mechanism file for elements, species, and reactions.
@@ -449,7 +450,7 @@ def read_thermo(file, elems, specs):
     
     line_split = line.split()
     if line_split[0][0:1].isdigit():
-        T_ranges = read_str_num(line)
+        T_ranges = utils.read_str_num(line)
     else:
         # no common temperature info
         file.seek(last_line)
@@ -501,7 +502,7 @@ def read_thermo(file, elems, specs):
         
         # now get element composition of species, columns 24:44
         # each piece of data is 5 characters long (2 for element, 3 for #)
-        elem_str = split_str(line[24:44], 5)
+        elem_str = utils.split_str(line[24:44], 5)
         
         for e_str in elem_str:
             e = e_str[0:2].strip()
@@ -517,7 +518,7 @@ def read_thermo(file, elems, specs):
             spec.mw += e_num * elem_mw[e.lower()]
         
         # temperatures for species
-        T_spec = read_str_num(line[45:73])
+        T_spec = utils.read_str_num(line[45:73])
         T_low  = T_spec[0]
         T_high = T_spec[1]
         if len(T_spec) == 3: T_com = T_spec[2]
@@ -527,7 +528,7 @@ def read_thermo(file, elems, specs):
         
         # second species line
         line = file.readline()
-        coeffs = split_str(line[0:75], 15)
+        coeffs = utils.split_str(line[0:75], 15)
         spec.hi[0] = float( coeffs[0] )
         spec.hi[1] = float( coeffs[1] )
         spec.hi[2] = float( coeffs[2] )
@@ -536,7 +537,7 @@ def read_thermo(file, elems, specs):
         
         # third species line
         line = file.readline()
-        coeffs = split_str(line[0:75], 15)
+        coeffs = utils.split_str(line[0:75], 15)
         spec.hi[5] = float( coeffs[0] )
         spec.hi[6] = float( coeffs[1] )
         spec.lo[0] = float( coeffs[2] )
@@ -545,7 +546,7 @@ def read_thermo(file, elems, specs):
         
         # fourth species line
         line = file.readline()
-        coeffs = split_str(line[0:75], 15)
+        coeffs = utils.split_str(line[0:75], 15)
         spec.lo[3] = float( coeffs[0] )
         spec.lo[4] = float( coeffs[1] )
         spec.lo[5] = float( coeffs[2] )

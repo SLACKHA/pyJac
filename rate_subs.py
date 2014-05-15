@@ -1,33 +1,7 @@
 import math
 from chem_utilities import *
 from mech_interpret import *
-
-def file_lang_app(filename, lang):
-    """Append filename with extension based on programming language.
-    """
-    if lang == 'c':
-        filename += '.c'
-    elif lang == 'cuda':
-        filename += '.cu'
-    elif lang == 'fortran':
-        filename += '.f90'
-    elif lang == 'matlab':
-        filename += '.m'
-    
-    return filename
-
-
-def line_end(lang):
-    """Return appropriate line ending for langauge.
-    """
-    end = ''
-    if lang in ['c', 'cuda', 'matlab']:
-        end = ';\n'
-    elif lang == 'fortran':
-        end = '\n'
-    
-    return end
-
+import *
 
 def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).
@@ -83,7 +57,7 @@ def write_rxn_rates(path, lang, specs, reacs):
     
     Keyword arguments:
     path  -- path to build directory for file
-    lang  -- language type
+    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
     specs -- list of species objects
     reacs -- list of reaction objects
     """
@@ -141,7 +115,7 @@ def write_rxn_rates(path, lang, specs, reacs):
         file.write('#endif\n')
         file.close()
     
-    filename = file_lang_app('rxn_rates', lang)
+    filename = 'rxn_rates' + utils.file_ext[lang]
     file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
@@ -191,7 +165,7 @@ def write_rxn_rates(path, lang, specs, reacs):
     elif lang == 'cuda':
         pre += 'register Real '
     line = pre + 'logT = log(T)'
-    line += line_end(lang)
+    line += line_end[lang]
     file.write(line)
     file.write('\n')
     
@@ -210,7 +184,7 @@ def write_rxn_rates(path, lang, specs, reacs):
         # if reversible, save forward rate constant for use
         if rxn.rev and not rxn.rev_par:
             line = '  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E)
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
         
         line = '  fwd_rxn_rates'
@@ -244,7 +218,7 @@ def write_rxn_rates(path, lang, specs, reacs):
         else:
             line += 'kf'
         
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if rxn.rev:
@@ -252,7 +226,7 @@ def write_rxn_rates(path, lang, specs, reacs):
             if not rxn.rev_par:
                 
                 line = '  Kc = 0.0'
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
                 
                 # sum of stoichiometric coefficients
@@ -296,7 +270,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     elif nu > 0:
                         line = '    Kc = Kc + {:.2f} * '.format(nu)
                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T) ) ) - {:.8e} / T )'.format(sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1]/2.0, sp.lo[2]/6.0, sp.lo[3]/12.0, sp.lo[4]/20.0, sp.lo[5])
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     if lang in ['c', 'cuda']:
@@ -309,7 +283,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     elif nu > 0:
                         line = '    Kc = Kc + {:.2f} * '.format(nu)
                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T) ) ) - {:.8e} / T )'.format(sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1]/2.0, sp.hi[2]/6.0, sp.hi[3]/12.0, sp.hi[4]/20.0, sp.hi[5])
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     if lang in ['c', 'cuda']:
@@ -347,7 +321,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     
                     line = '    Kc = Kc - {:.2f} * '.format(nu)
                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T) ) ) - {:.8e} / T )'.format(sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1]/2.0, sp.lo[2]/6.0, sp.lo[3]/12.0, sp.lo[4]/20.0, sp.lo[5])
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     if lang in ['c', 'cuda']:
@@ -357,7 +331,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     
                     line = '    Kc = Kc - {:.2f} * '.format(nu)
                     line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T) ) ) - {:.8e} / T )'.format(sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1]/2.0, sp.hi[2]/6.0, sp.hi[3]/12.0, sp.hi[4]/20.0, sp.hi[5])
-                    line += line_end(lang)
+                    line += line_end[lang]
                     file.write(line)
                     
                     if lang in ['c', 'cuda']:
@@ -368,7 +342,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                         file.write('  end\n\n')
                 
                 line = '  Kc = {:.8e} * exp(Kc)'.format((PA / RU)**sum_nu)
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
             
             line = '  rev_rxn_rates'
@@ -403,7 +377,7 @@ def write_rxn_rates(path, lang, specs, reacs):
             else:
                 # use equilibrium constant
                 line += 'kf / Kc'
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
     
@@ -428,7 +402,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
     specs -- list of species objects
     reacs -- list of reaction objects
     """
-    filename = file_lang_app('rxn_rates_pres_mod', lang)
+    filename = 'rxn_rates_pres_mod' + utils.file_ext[lang]
     file = open(path + filename, 'w')
     
     # headers
@@ -583,7 +557,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             line = '  ! reaction ' + str(rind + 1)
         elif lang == 'matlab':
             line = '  % reaction ' + str(rind + 1)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         # third-body reaction
@@ -610,7 +584,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     elif lang in ['fortran', 'matlab']:
                         line += ' - ' + str(1.0 - sp[1]) + ' * C(' + str(isp + 1) + ')'
             
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
         
         # pressure dependence
@@ -623,7 +597,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             else:
                 line += rxn_rate_const(reac.A, reac.b, reac.E)
             
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             # high-pressure limit rate
@@ -633,7 +607,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             else:
                 line += rxn_rate_const(reac.A, reac.b, reac.E)
             
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             # reduced pressure
@@ -645,12 +619,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     line = '  Pr = k0 * C[' + str(isp) + '] / kinf'
                 elif lang in ['fortran', 'matlab']:
                     line = '  Pr = k0 * C(' + str(isp + 1) + ') / kinf'
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             # log10 of Pr needed in both Troe and SRI formulation
             line = '  logPr = log10(Pr)'
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
             
             if reac.troe:
@@ -671,16 +645,16 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                         line += ' + exp(-{:.8e} / T)'.format(reac.troe_par[3])
                     else:
                         line += ' + exp({:.8e} / T)'.format(abs(reac.troe_par[3]))
-                line += ' )' + line_end(lang)
+                line += ' )' + line_end[lang]
                 file.write(line)
                 
                 
                 line = '  A = logPr - 0.67 * logFcent - 0.4'
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
                 
                 line = '  B = 0.806 - 1.1762 * logFcent - 0.14 * logPr'
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
                 
                 line = '  pres_mod'
@@ -696,7 +670,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                 # SRI form
                 
                 line = '  X = 1.0 / (1.0 + logPr * logPr)'
-                line += line_end(lang)
+                line += line_end[lang]
                 file.write(line)
                 
                 line = '  pres_mod'
@@ -727,7 +701,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                 # chemically-activated bimolecular reaction
                 line += '/ (1.0 + Pr)'
             
-            line += line_end(lang)
+            line += line_end[lang]
             file.write(line)
     
     if lang in ['c', 'cuda']:
@@ -751,7 +725,7 @@ def write_spec_rates(path, lang, specs, reacs):
     specs -- list of species objects
     reacs -- list of reaction objects
     """     
-    filename = file_lang_app('spec_rates', lang)
+    filename = 'spec_rates' + utils.file_ext[lang]
     file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
@@ -1001,7 +975,7 @@ def write_spec_rates(path, lang, specs, reacs):
         if not inreac: line += '0.0'
         
         # done with this species
-        line += line_end(lang)
+        line += line_end[lang]
         line += '\n'
         file.write(line)
     
@@ -1055,7 +1029,7 @@ def write_chem_utils(path, lang, specs):
         file.write('#endif\n')
         file.close()
     
-    filename = file_lang_app('chem_utils', lang)
+    filename = 'chem_utils' + utils.file_ext[lang]
     file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
@@ -1099,7 +1073,7 @@ def write_chem_utils(path, lang, specs):
             line = '    h(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) ) )'.format(sp.lo[5], sp.lo[0], sp.lo[1] / 2.0, sp.lo[2] / 3.0, sp.lo[3] / 4.0, sp.lo[4] / 5.0)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1113,7 +1087,7 @@ def write_chem_utils(path, lang, specs):
             line = '    h(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) ) )'.format(sp.hi[5], sp.hi[0], sp.hi[1] / 2.0, sp.hi[2] / 3.0, sp.hi[3] / 4.0, sp.hi[4] / 5.0)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1165,7 +1139,7 @@ def write_chem_utils(path, lang, specs):
             line = '    u(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} + T * ( {:.8e} - 1.0 + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) ) )'.format(sp.lo[5], sp.lo[0], sp.lo[1] / 2.0, sp.lo[2] / 3.0, sp.lo[3] / 4.0, sp.lo[4] / 5.0)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1179,7 +1153,7 @@ def write_chem_utils(path, lang, specs):
             line = '    u(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} + T * ( {:.8e} - 1.0 + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) ) )'.format(sp.hi[5], sp.hi[0], sp.hi[1] / 2.0, sp.hi[2] / 3.0, sp.hi[3] / 4.0, sp.hi[4] / 5.0)
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1230,7 +1204,7 @@ def write_chem_utils(path, lang, specs):
             line = '    cv(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} - 1.0 + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) )'.format(sp.lo[0], sp.lo[1], sp.lo[2], sp.lo[3], sp.lo[4])
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1244,7 +1218,7 @@ def write_chem_utils(path, lang, specs):
             line = '    cv(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} - 1.0 + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) )'.format(sp.hi[0], sp.hi[1], sp.hi[2], sp.hi[3], sp.hi[4])
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1295,7 +1269,7 @@ def write_chem_utils(path, lang, specs):
             line = '    cp(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) )'.format(sp.lo[0], sp.lo[1], sp.lo[2], sp.lo[3], sp.lo[4])
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1309,7 +1283,7 @@ def write_chem_utils(path, lang, specs):
             line = '    cp(' + str(specs.index(sp) + 1) + ')'
         line += ' = {:.8e} * '.format(RU / sp.mw)
         line += '( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + T * ( {:.8e} + {:.8e} * T ) ) ) )'.format(sp.hi[0], sp.hi[1], sp.hi[2], sp.hi[3], sp.hi[4])
-        line += line_end(lang)
+        line += line_end[lang]
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1364,7 +1338,7 @@ def write_derivs(path, lang, specs, reacs):
         file.write('#endif\n')
         file.close()
     
-    filename = file_lang_app('dydt', lang)
+    filename = 'dydt' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
     pre = ''

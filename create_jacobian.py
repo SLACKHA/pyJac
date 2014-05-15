@@ -1692,10 +1692,6 @@ def create_jacobian(lang, mech_name, therm_name = None):
     mech_name -- string with reaction mechanism filename (e.g. 'mech.dat')
     therm_name -- string with thermodynamic database filename (e.g. 'therm.dat') or nothing if info in mech_name
     """
-    
-    elems = []
-    specs = []
-    reacs = []
         
     lang = lang.lower()
     if lang not in utils.langs:
@@ -1709,7 +1705,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
     utils.create_dir(build_path)
     
     # interpret reaction mechanism file
-    [num_e, num_s, num_r, units] = read_mech(mech_name, elems, specs, reacs)
+    [elems, specs, reacs, units] = read_mech(mech_name)
     
     # interpret thermodynamic database file (if it exists & needed)
     therm_flag = True

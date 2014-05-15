@@ -1,13 +1,13 @@
 from chem_utilities import *
 import utils
 
-def read_mech(filename, elems, specs, reacs):
+def read_mech(filename):
     """Read and interpret mechanism file for elements, species, and reactions.
     
     Doesn't support element names with digits.
     
-    Input
-    filename:  reaction mechanism filename (e.g. 'mech.dat')
+    Keyword arguments:
+    filename -- reaction mechanism filename (e.g. 'mech.dat')
     """
     
     file = open(filename, 'r')
@@ -419,7 +419,7 @@ def read_mech(filename, elems, specs, reacs):
                     for i in range(0, len(line_split), 2):
                         reacs[num_r - 1].thd_body.append( [line_split[i], float(line_split[i + 1])] )
     
-    return (num_e, num_s, num_r, units)
+    return (elems, specs, reacs, units)
 
 
 def read_thermo(file, elems, specs):
@@ -428,10 +428,10 @@ def read_thermo(file, elems, specs):
     Reads the file therm.dat and returns the species thermodynamic coefficients
     as well as the species-specific temperature range values (if given)
     
-    Input
-    file:  pointer to open thermo database file
-    elems: list of element names
-    specs: list of species names (SpecInfo class)
+    Keyword arguments:
+    file  -- pointer to open thermo database file
+    elems -- list of element names
+    specs -- list of species names (SpecInfo class)
     """
     
     # loop through intro lines

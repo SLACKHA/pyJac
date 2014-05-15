@@ -1,4 +1,5 @@
 import math
+from __future__ import division
 
 # universal gas constants, cgs units
 RU = 8.314510e7 # erg/(mole * K)

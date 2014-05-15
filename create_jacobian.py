@@ -4,6 +4,7 @@ import sys
 import os
 import errno
 import math
+from __future__ import division
 from chem_utilities import *
 from mech_interpret import *
 from rate_subs import *

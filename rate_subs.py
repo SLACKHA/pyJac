@@ -1,7 +1,7 @@
 import math
 from chem_utilities import *
 from mech_interpret import *
-import *
+import utils
 
 def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).

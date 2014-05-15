@@ -1,18 +1,61 @@
 #! /usr/bin/env python
 
+import sys
+import os
+import errno
 import math
 from chem_utilities import *
 from mech_interpret import *
 from rate_subs import *
 
+def create_dir(path):
+    """Creates a new directory based on input path.
+    
+    No error if path already exists, but other error is reported.
+    
+    Keyword arguments:
+    path -- path of directory to be created
+    """
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+
 def write_jacobian(lang, specs, reacs):
     """Write Jacobian subroutine.
     
-    Input
-    lang:   programming language ('c', 'cuda', 'fortran', 'matlab')
-    specs:  list of species objects
-    reacs:  list of reaction objects
+    Keyword arguments:
+    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
+    specs -- list of species objects
+    reacs -- list of reaction objects
     """
+    
+    # first write header file
+    if lang == 'c':
+        file = open('jacob.h', 'w')
+        file.write('#ifndef JACOB_HEAD\n')
+        file.write('#define JACOB_HEAD\n')
+        file.write('\n')
+        file.write('#include "header.h"\n')
+        file.write('\n')
+        file.write('void eval_jacob (const Real, const Real, const Real*, Real*);\n')
+        file.write('\n')
+        file.write('#endif\n')
+        file.close()
+    elif lang == 'cuda':
+        file = open('jacob.cuh', 'w')
+        file.write('#ifndef JACOB_HEAD\n')
+        file.write('#define JACOB_HEAD\n')
+        file.write('\n')
+        file.write('#include "header.h"\n')
+        file.write('\n')
+        file.write('__device__ void eval_jacob (const Real, const Real, const Real*, Real*);\n')
+        file.write('\n')
+        file.write('#endif\n')
+        file.close()
+        
     # numbers of species and reactions
     num_s = len(specs)
     num_r = len(reacs)
@@ -32,14 +75,12 @@ def write_jacobian(lang, specs, reacs):
     
     # header files
     if lang == 'c':
-        file.write('#include <stdlib.h>\n')
         file.write('#include <math.h>\n')
         file.write('#include "header.h"\n')
         file.write('#include "chem_utils.h"\n')
         file.write('#include "rates.h"\n')
         file.write('\n')
     elif lang == 'cuda':
-        file.write('#include <stdlib.h>\n')
         file.write('#include <math.h>\n')
         file.write('#include "header.h"\n')
         file.write('#include "chem_utils.cuh"\n')
@@ -50,7 +91,7 @@ def write_jacobian(lang, specs, reacs):
     if lang == 'cuda': line = '__device__ '
     
     if lang in ['c', 'cuda']:
-        line += 'void eval_jacob (Real t, Real pres, Real * y, Real * jac) {\n\n'
+        line += 'void eval_jacob (const Real t, const Real pres, const Real * y, Real * jac) {\n\n'
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
         
@@ -294,7 +335,13 @@ def write_jacobian(lang, specs, reacs):
                 line += '\n'
             file.write(line)
             
-            line = '    ' + dBdT + ' = ({:.8e} + {:.8e} / T) / T + {:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))'.format(specs[sp_ind].lo[0] - 1.0, specs[sp_ind].lo[5], specs[sp_ind].lo[1] / 2.0, specs[sp_ind].lo[2] / 3.0, specs[sp_ind].lo[3] / 4.0, specs[sp_ind].lo[4] / 5.0)
+            line = '    ' + dBdT
+            line += ' = ({:.8e}'.format(specs[sp_ind].lo[0] - 1.0)
+            line += ' + {:.8e} / T) / T'.format(specs[sp_ind].lo[5])
+            line += ' + {:.8e} + T'.format(specs[sp_ind].lo[1] / 2.0)
+            line += ' * ({:.8e}'.format(specs[sp_ind].lo[2] / 3.0)
+            line =+ ' + T * ({:.8e}'.format(specs[sp_ind].lo[3] / 4.0)
+            line += ' + {:.8e} * T))'.format(specs[sp_ind].lo[4] / 5.0)
             line += line_end(lang)
             file.write(line)
             
@@ -303,7 +350,13 @@ def write_jacobian(lang, specs, reacs):
             elif lang in ['fortran', 'matlab']:
                 file.write('  else\n')
             
-            line = '    ' + dBdT + ' = ({:.8e} + {:.8e} / T) / T + {:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))'.format(specs[sp_ind].hi[0] - 1.0, specs[sp_ind].hi[5], specs[sp_ind].hi[1] / 2.0, specs[sp_ind].hi[2] / 3.0, specs[sp_ind].hi[3] / 4.0, specs[sp_ind].hi[4] / 5.0)
+            line = '    ' + dBdT
+            line += ' = ({:.8e}'.format(specs[sp_ind].hi[0] - 1.0)
+            line += ' + {:.8e} / T) / T'.format(specs[sp_ind].hi[5])
+            line += ' + {:.8e} + T'.format(specs[sp_ind].hi[1] / 2.0)
+            line += ' * ({:.8e}'.format(specs[sp_ind].hi[2] / 3.0)
+            line += ' + T * ({:.8e}'.format(specs[sp_ind].hi[3] / 4.0)
+            line += ' + {:.8e} * T))'.format(specs[sp_ind].hi[4] / 5.0)
             line += line_end(lang)
             file.write(line)
             
@@ -346,7 +399,8 @@ def write_jacobian(lang, specs, reacs):
             rind = reacs.index(rxn)
             
             if sp_k.name in rxn.prod and sp_k.name in rxn.reac:
-                nu = rxn.prod_nu[rxn.prod.index(sp_k.name)] - rxn.reac_nu[rxn.reac.index(sp_k.name)]
+                nu = (rxn.prod_nu[rxn.prod.index(sp_k.name)] - 
+                      rxn.reac_nu[rxn.reac.index(sp_k.name)])
                 # check if net production zero
                 if nu == 0:
                     continue
@@ -470,7 +524,6 @@ def write_jacobian(lang, specs, reacs):
                         line += ' + ({:.8e} / (T * T)) * exp(-{:.8e} / T)'.format(rxn.troe_par[3], rxn.troe_par[3])
                     jline += '))'
                     
-                    #jline += ' - (lnF_AB * ({:.4e} * B + {:.4e} * A) / Pr) * '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
                     jline += ' - lnF_AB * ({:.8e} * B + {:.8e} * A) * '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
                     jline += '({:.8e} + ({:.8e} / T) - 1.0) / T'.format(beta_0minf, E_0minf)
                     
@@ -737,7 +790,7 @@ def write_jacobian(lang, specs, reacs):
         file.write('\n')
         
         ###############################
-        # w.r.t. species mass fractions
+        # Derivatives with respect to species mass fractions
         ###############################
         for sp_j in specs:
             j_sp = specs.index(sp_j)
@@ -1316,7 +1369,7 @@ def write_jacobian(lang, specs, reacs):
     file.write('\n')
     
     ###################################
-    # partial derivatives of temperature (energy equation)
+    # Partial derivatives of temperature (energy equation)
     ###################################
     
     # evaluate enthalpy
@@ -1420,7 +1473,7 @@ def write_jacobian(lang, specs, reacs):
     file.write('\n')
     
     ######################################
-    # w.r.t. temperature
+    # Derivatives with respect to temperature
     ######################################
     
     if lang in ['c', 'cuda']:
@@ -1582,7 +1635,7 @@ def write_jacobian(lang, specs, reacs):
     file.write('\n')
     
     ######################################
-    # w.r.t. species
+    # Derivative with respect to species
     ######################################
     for sp in specs:
         isp = specs.index(sp)
@@ -1646,12 +1699,11 @@ def write_jacobian(lang, specs, reacs):
 def create_jacobian(lang, mech_name, therm_name = None):
     """Create Jacobian subroutine from mechanism.
     
-    Input
-    lang: language type (e.g., C, CUDA, fortran, matlab)
-    mech_name: string with reaction mechanism filename (e.g. 'mech.dat')
-    therm_name: string with thermodynamic database filename (e.g. 'therm.dat') or nothing if info in mech_name
+    Keyword arguments:
+    lang -- language type (e.g., C, CUDA, fortran, matlab)
+    mech_name -- string with reaction mechanism filename (e.g. 'mech.dat')
+    therm_name -- string with thermodynamic database filename (e.g. 'therm.dat') or nothing if info in mech_name
     """
-    import sys
     
     elems = []
     specs = []
@@ -1666,6 +1718,10 @@ def create_jacobian(lang, mech_name, therm_name = None):
         for l in langs:
             print l
         sys.exit()
+    
+    # create build directory if none exists
+    build_path = './build'
+    create_dir(build_path)
     
     # interpret reaction mechanism file
     [num_e, num_s, num_r, units] = read_mech(mech_name, elems, specs, reacs)
@@ -1713,32 +1769,31 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    write_rxn_rates(lang, specs, reacs)
+    write_rxn_rates(path, lang, specs, reacs)
     
     # if third-body/pressure-dependent reactions, print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        write_rxn_pressure_mod(lang, specs, reacs)
+        write_rxn_pressure_mod(path, lang, specs, reacs)
     
     # write species rates subroutine
-    write_spec_rates(lang, specs, reacs)
+    write_spec_rates(path, lang, specs, reacs)
     
     # write chem_utils subroutines
-    write_chem_utils(lang, specs)
+    write_chem_utils(path, lang, specs)
     
     # write derivative subroutines
-    write_derivs(lang, specs, reacs, num_r)
+    write_derivs(path, lang, specs, reacs)
     
     # write mass-mole fraction conversion subroutine
-    write_mass_mole(specs)
+    write_mass_mole(path, lang, specs)
     
     # write Jacobian subroutine
-    write_jacobian(lang, specs, reacs)
+    write_jacobian(path, lang, specs, reacs)
     
     return
 
 
 if __name__ == "__main__":
-    import sys
     
     if len(sys.argv) == 3:
         create_jacobian(sys.argv[1], sys.argv[2])
@@ -1746,3 +1801,4 @@ if __name__ == "__main__":
         create_jacobian(sys.argv[1], sys.argv[2], sys.argv[3])
     else:
         print 'Incorrect number of arguments'
+

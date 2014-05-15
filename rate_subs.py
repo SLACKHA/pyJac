@@ -78,13 +78,14 @@ def rxn_rate_const(A, b, E):
     return line
 
 
-def write_rxn_rates(lang, specs, reacs):
+def write_rxn_rates(path, lang, specs, reacs):
     """Write reaction rate subroutine. Conditionals for reverse reaction.
     
-    Input
-    lang: language type
-    specs: list of species objects
-    reacs: list of reaction objects
+    Keyword arguments:
+    path  -- path to build directory for file
+    lang  -- language type
+    specs -- list of species objects
+    reacs -- list of reaction objects
     """
     
     num_s = len(specs)
@@ -100,7 +101,7 @@ def write_rxn_rates(lang, specs, reacs):
     
     # first write header file
     if lang == 'c':
-        file = open('rates.h', 'w')
+        file = open(path + 'rates.h', 'w')
         file.write('#ifndef RATES_HEAD\n')
         file.write('#define RATES_HEAD\n')
         file.write('\n')
@@ -112,13 +113,15 @@ def write_rxn_rates(lang, specs, reacs):
         else:
             file.write('void eval_rxn_rates (const Real, const Real*, Real*);\n')
             file.write('void eval_spec_rates (const Real*, const Real*, Real*);\n')
+        
         if pdep_reacs:
             file.write('void get_rxn_pres_mod (const Real, const Real, const Real*, Real*);\n')
+        
         file.write('\n')
         file.write('#endif\n')
         file.close()
     elif lang == 'cuda':
-        file = open('rates.cuh', 'w')
+        file = open(path + 'rates.cuh', 'w')
         file.write('#ifndef RATES_HEAD\n')
         file.write('#define RATES_HEAD\n')
         file.write('\n')
@@ -130,17 +133,18 @@ def write_rxn_rates(lang, specs, reacs):
         else:
             file.write('__device__ void eval_rxn_rates (const Real, const Real*, Real*);\n')
             file.write('__device__ void eval_spec_rates (const Real*, const Real*, Real*);\n')
-        file.write('__device__ void get_rxn_pres_mod (const Real, const Real, const Real*, Real*);\n')
+        
+        if pdep_reacs:
+            file.write('__device__ void get_rxn_pres_mod (const Real, const Real, const Real*, Real*);\n')
         
         file.write('\n')
         file.write('#endif\n')
         file.close()
     
     filename = file_lang_app('rxn_rates', lang)
-    file = open(filename, 'w')
+    file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
-        file.write('#include <stdlib.h>\n')
         file.write('#include <math.h>\n')
         file.write('#include "header.h"\n')
         file.write('\n')
@@ -415,20 +419,20 @@ def write_rxn_rates(lang, specs, reacs):
     return
 
 
-def write_rxn_pressure_mod(lang, specs, reacs):
+def write_rxn_pressure_mod(path, lang, specs, reacs):
     """Write subroutine to calculate pressure dependence modifications for reactions.
     
-    Input
-    lang: language type
-    specs: list of species objects
-    reacs: list of reaction objects
+    Keyword arguments:
+    path  -- path to build directory for file
+    lang  -- language type
+    specs -- list of species objects
+    reacs -- list of reaction objects
     """
     filename = file_lang_app('rxn_rates_pres_mod', lang)
-    file = open(filename, 'w')
+    file = open(path + filename, 'w')
     
     # headers
     if lang in ['c', 'cuda']:
-        file.write('#include <stdlib.h>\n')
         file.write('#include <math.h>\n')
         file.write('#include "header.h"\n')
         file.write('\n')
@@ -738,16 +742,17 @@ def write_rxn_pressure_mod(lang, specs, reacs):
     return
 
 
-def write_spec_rates(lang, specs, reacs):
+def write_spec_rates(path, lang, specs, reacs):
     """Write language-specific subroutine to evaluate species rates of production.
     
-    Input
-    lang:   programming language ('c', 'cuda', 'fortran', 'matlab')
-    specs:  list of species objects
-    reacs:  list of reaction objects
+    Keyword arguments:
+    path  -- path to build directory for file
+    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
+    specs -- list of species objects
+    reacs -- list of reaction objects
     """     
     filename = file_lang_app('spec_rates', lang)
-    file = open(filename, 'w')
+    file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
         file.write('#include "header.h"\n')
@@ -776,9 +781,9 @@ def write_spec_rates(lang, specs, reacs):
             line += 'void eval_spec_rates (const Real * fwd_rates, const Real * pres_mod, Real * sp_rates) {\n'
     elif lang == 'fortran':
         if rev_reacs:
-            line += 'subroutine eval_spec_rates ( fwd_rates, rev_rates, pres_mod, sp_rates )\n\n'
+            line += 'subroutine eval_spec_rates (fwd_rates, rev_rates, pres_mod, sp_rates)\n\n'
         else:
-            line += 'subroutine eval_spec_rates ( fwd_rates, pres_mod, sp_rates )\n\n'
+            line += 'subroutine eval_spec_rates (fwd_rates, pres_mod, sp_rates)\n\n'
         
         # fortran needs type declarations
         line += '  implicit none\n'
@@ -1011,17 +1016,18 @@ def write_spec_rates(lang, specs, reacs):
     
     return
 
-def write_chem_utils(lang, specs):
+def write_chem_utils(path, lang, specs):
     """Write language-specific subroutine to evaluate species thermodynamic properties (enthalpy, energy, specific heat)
     
-    Input
-    lang:   programming language ('c', 'cuda', 'fortran', 'matlab')
-    specs:  list of species objects
+    Keyword arguments:
+    path  -- path to build directory for file
+    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
+    specs -- list of species objects
     """
     
     # first write header file
     if lang == 'c':
-        file = open('chem_utils.h', 'w')
+        file = open(path + 'chem_utils.h', 'w')
         file.write('#ifndef CHEM_UTILS_HEAD\n')
         file.write('#define CHEM_UTILS_HEAD\n')
         file.write('\n')
@@ -1035,7 +1041,7 @@ def write_chem_utils(lang, specs):
         file.write('#endif\n')
         file.close()
     elif lang == 'cuda':
-        file = open('chem_utils.cuh', 'w')
+        file = open(path + 'chem_utils.cuh', 'w')
         file.write('#ifndef CHEM_UTILS_HEAD\n')
         file.write('#define CHEM_UTILS_HEAD\n')
         file.write('\n')
@@ -1050,7 +1056,7 @@ def write_chem_utils(lang, specs):
         file.close()
     
     filename = file_lang_app('chem_utils', lang)
-    file = open(filename, 'w')
+    file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
         file.write('#include "header.h"\n\n')
@@ -1063,9 +1069,9 @@ def write_chem_utils(lang, specs):
     ######################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_h ( Real T, Real * h ) {\n\n'
+        line += 'void eval_h (const Real T, Real * h) {\n\n'
     elif lang == 'fortran':
-        line += 'subroutine eval_h ( T, h )\n\n'
+        line += 'subroutine eval_h (T, h)\n\n'
         
         # fortran needs type declarations
         line += '  implicit none\n'
@@ -1073,7 +1079,7 @@ def write_chem_utils(lang, specs):
         line += '  double precision, intent(out) :: h(' + str(len(specs)) + ')\n'
         line += '\n'
     elif lang == 'matlab':
-        line += 'function h = eval_h ( T )\n\n'
+        line += 'function h = eval_h (T)\n\n'
     file.write(line)
     
     # loop through species
@@ -1129,9 +1135,9 @@ def write_chem_utils(lang, specs):
     #################################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_u ( Real T, Real * u ) {\n\n'
+        line += 'void eval_u (const Real T, Real * u) {\n\n'
     elif lang == 'fortran':
-        line += 'subroutine eval_u ( T, u )\n\n'
+        line += 'subroutine eval_u (T, u)\n\n'
         
         # fortran needs type declarations
         line += '  implicit none\n'
@@ -1139,7 +1145,7 @@ def write_chem_utils(lang, specs):
         line += '  double precision, intent(out) :: u(' + str(len(specs)) + ')\n'
         line += '\n'
     elif lang == 'matlab':
-        line += 'function u = eval_u ( T )\n\n'
+        line += 'function u = eval_u (T)\n\n'
     file.write(line)
     
     # loop through species
@@ -1194,9 +1200,9 @@ def write_chem_utils(lang, specs):
     # cv subroutine
     ##################################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cv ( Real T, Real * cv ) {\n\n'
+        line = pre + 'void eval_cv (const Real T, Real * cv) {\n\n'
     elif lang == 'fortran':
-        line = 'subroutine eval_cv ( T, cv )\n\n'
+        line = 'subroutine eval_cv (T, cv)\n\n'
         
         # fortran needs type declarations
         line += '  implicit none\n'
@@ -1204,7 +1210,7 @@ def write_chem_utils(lang, specs):
         line += '  double precision, intent(out) :: cv(' + str(len(specs)) + ')\n'
         line += '\n'
     elif lang == 'matlab':
-        line = 'function cv = eval_cv ( T )\n\n'
+        line = 'function cv = eval_cv (T)\n\n'
     file.write(line)
     
     # loop through species
@@ -1259,9 +1265,9 @@ def write_chem_utils(lang, specs):
     # cp subroutine 
     ###############################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cp ( Real T, Real * cp ) {\n\n'
+        line = pre + 'void eval_cp (const Real T, Real * cp) {\n\n'
     elif lang == 'fortran':
-        line = 'subroutine eval_cp ( T, cp )\n\n'
+        line = 'subroutine eval_cp (T, cp)\n\n'
         
         # fortran needs type declarations
         line += '  implicit none\n'
@@ -1269,7 +1275,7 @@ def write_chem_utils(lang, specs):
         line += '  double precision, intent(out) :: cp(' + str(len(specs)) + ')\n'
         line += '\n'
     elif lang == 'matlab':
-        line = 'function cp = eval_cp ( T )\n\n'
+        line = 'function cp = eval_cp (T)\n\n'
     file.write(line)
     
     # loop through species
@@ -1324,14 +1330,42 @@ def write_chem_utils(lang, specs):
     
     return
 
-def write_derivs(lang, specs, reacs, num_r):
+def write_derivs(path, lang, specs, reacs):
+    """Writes derivative function file and header.
+    
+    Keyword arguments:
+    path  -- path to build directory for file
+    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
+    specs -- list of species objects
+    reacs -- list of reaction objects
     """
     
-    
-    """
+    # first write header file
+    if lang == 'c':
+        file = open(path + 'dydt.h', 'w')
+        file.write('#ifndef DYDT_HEAD\n')
+        file.write('#define DYDT_HEAD\n')
+        file.write('\n')
+        file.write('#include "header.h"\n')
+        file.write('\n')
+        file.write('void dydt (const Real, const Real, const Real*, Real*);\n')
+        file.write('\n')
+        file.write('#endif\n')
+        file.close()
+    elif lang == 'cuda':
+        file = open(path + 'dydt.cuh', 'w')
+        file.write('#ifndef DYDT_HEAD\n')
+        file.write('#define DYDT_HEAD\n')
+        file.write('\n')
+        file.write('#include "header.h"\n')
+        file.write('\n')
+        file.write('__device__ void dydt (const Real, const Real, const Real*, Real*);\n')
+        file.write('\n')
+        file.write('#endif\n')
+        file.close()
     
     filename = file_lang_app('dydt', lang)
-    file = open(filename, 'w')
+    file = open(path + filename, 'w')
 
     pre = ''
     if lang == 'cuda': pre = '__device__ '
@@ -1348,10 +1382,11 @@ def write_derivs(lang, specs, reacs, num_r):
     # constant pressure
     file.write('#if defined(CONP)\n\n')
     
-    line = pre + 'void dydt ( Real t, Real pres, Real * y, Real * dy ) {\n\n'
+    line = pre + 'void dydt (const Real t, const Real pres, const Real * y, Real * dy) {\n\n'
     file.write(line)
     
-    file.write('  Real T = y[0];\n\n')
+    # avoid T variable, just use y[0]
+    #file.write('  Real T = y[0];\n\n')
     
     # calculation of density
     file.write('  // mass-averaged density\n')
@@ -1371,7 +1406,7 @@ def write_derivs(lang, specs, reacs, num_r):
     
     line += ';\n'
     file.write(line)
-    line = '  rho = pres / ({:.8e} * T * rho);\n\n'.format(RU)
+    line = '  rho = pres / ({:.8e} * y[0] * rho);\n\n'.format(RU)
     file.write(line)
     
     # calculation of species molar concentrations
@@ -1389,13 +1424,13 @@ def write_derivs(lang, specs, reacs, num_r):
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
     if rev_reacs:
         file.write('  // local arrays holding reaction rates\n')
-        file.write('  Real fwd_rates[{:}];\n'.format(num_r) )
-        file.write('  Real rev_rates[{:}];\n'.format(num_r) )
-        file.write('  eval_rxn_rates (T, conc, fwd_rates, rev_rates);\n\n')
+        file.write('  Real fwd_rates[{:}];\n'.format(len(reacs)) )
+        file.write('  Real rev_rates[{:}];\n'.format(len(rev_reacs)) )
+        file.write('  eval_rxn_rates (y[0], conc, fwd_rates, rev_rates);\n\n')
     else:
         file.write('  // local array holding reaction rates\n')
-        file.write('  Real rates[{:}];\n'.format(num_r) )
-        file.write('  eval_rxn_rates ( T, conc, rates );\n\n')
+        file.write('  Real rates[{:}];\n'.format(len(reacs)) )
+        file.write('  eval_rxn_rates (y[0], conc, rates);\n\n')
     
     # reaction pressure dependence
     pdep_reacs = []
@@ -1408,13 +1443,13 @@ def write_derivs(lang, specs, reacs, num_r):
         if lang in ['c', 'cuda']:
             file.write('  // get pressure modifications to reaction rates\n')
             file.write('  Real pres_mod[' + str(num_pdep) + '];\n')
-            file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+            file.write('  get_rxn_pres_mod (y[0], pres, conc, pres_mod);\n')
         elif lang == 'fortran':
             file.write('  ! get and evaluate pressure modifications to reaction rates\n')
-            file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod)\n')
+            file.write('  get_rxn_pres_mod (y[0], pres, conc, pres_mod)\n')
         elif lang == 'matlab':
             file.write('  % get and evaluate pressure modifications to reaction rates\n')
-            file.write('  pres_mod = get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+            file.write('  pres_mod = get_rxn_pres_mod (y[0], pres, conc, pres_mod);\n')
         file.write('\n')
     
     # species rate of change of molar concentration
@@ -1422,14 +1457,14 @@ def write_derivs(lang, specs, reacs, num_r):
     if rev_reacs and pdep_reacs:
         file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, &dy[1]);\n\n')
     elif rev_reacs:
-        file.write('  eval_spec_rates ( fwd_rates, rev_rates, &dy[1] );\n\n')
+        file.write('  eval_spec_rates (fwd_rates, rev_rates, &dy[1]);\n\n')
     else:
-        file.write('  eval_spec_rates ( rates, &dy[1] );\n\n')
+        file.write('  eval_spec_rates (rates, &dy[1] );\n\n')
     
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n')
     file.write('  Real cp[{:}];\n'.format(len(specs)) )
-    file.write('  eval_cp ( T, cp );\n\n')
+    file.write('  eval_cp (y[0], cp);\n\n')
     
     file.write('  // constant pressure mass-average specific heat\n')
     line = '  Real cp_avg = '
@@ -1453,11 +1488,11 @@ def write_derivs(lang, specs, reacs, num_r):
     # evaluate enthalpy
     file.write('  // local array for species enthalpies\n')
     file.write('  Real h[{:}];\n'.format(len(specs)) )
-    file.write('  eval_h ( T, h );\n\n')
+    file.write('  eval_h (y[0], h);\n\n')
     
     # energy equation
     file.write('  // rate of change of temperature\n')
-    line = '  dy[0] = ( -1.0 / ( rho * cp_avg ) ) * ( '
+    line = '  dy[0] = (-1.0 / ( rho * cp_avg )) * ( '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1489,10 +1524,11 @@ def write_derivs(lang, specs, reacs, num_r):
     # constant volume
     file.write('#elif defined(CONV)\n\n')
     
-    line = pre + 'void dydt ( Real t, Real rho, Real * y, Real * dy ) {\n\n'
+    line = pre + 'void dydt (const Real t, const Real rho, const Real * y, Real * dy) {\n\n'
     file.write(line)
     
-    file.write('  Real T = y[0];\n\n')
+    # just use y[0] for temperature
+    #file.write('  Real T = y[0];\n\n')
     
     # calculation of pressure
     file.write('  // pressure\n')
@@ -1512,7 +1548,7 @@ def write_derivs(lang, specs, reacs, num_r):
     
     line += ';\n'
     file.write(line)
-    line = '  pres = rho * {:.8e} * T * pres;\n\n'.format(RU)
+    line = '  pres = rho * {:.8e} * y[0] * pres;\n\n'.format(RU)
     file.write(line)
     
     # calculation of species molar concentrations
@@ -1528,17 +1564,17 @@ def write_derivs(lang, specs, reacs, num_r):
     
     # evaluate reaction rates
     file.write('  // local array holding reaction rates\n')
-    file.write('  Real rates[{:}];\n'.format(num_r) )
-    file.write('  eval_rxn_rates ( T, pres, conc, rates );\n\n')
+    file.write('  Real rates[{:}];\n'.format(len(reacs)) )
+    file.write('  eval_rxn_rates (y[0], pres, conc, rates);\n\n')
     
     # species rate of change of molar concentration
     file.write('  // evaluate rate of change of species molar concentration\n')
-    file.write('  eval_spec_rates ( rates, &dy[1] );\n\n')
+    file.write('  eval_spec_rates (rates, &dy[1]);\n\n')
     
     # evaluate specific heat
     file.write('  // local array holding constant volume specific heat\n')
     file.write('  Real cv[{:}];\n'.format(len(specs)) )
-    file.write('  eval_cv ( T, cv );\n\n')
+    file.write('  eval_cv (y[0], cv);\n\n')
     
     file.write('  // constant volume mass-average specific heat\n')
     line = '  Real cv_avg = '
@@ -1562,11 +1598,11 @@ def write_derivs(lang, specs, reacs, num_r):
     # evaluate internal energy
     file.write('  // local array for species internal energies\n')
     file.write('  Real u[{:}];\n'.format(len(specs)) )
-    file.write('  eval_u ( T, u );\n\n')
+    file.write('  eval_u (y[0], u);\n\n')
     
     # energy equation
     file.write('  // rate of change of temperature\n')
-    line = '  dy[0] = ( -1.0 / ( rho * cv_avg ) ) * ( '
+    line = '  dy[0] = (-1.0 / ( rho * cv_avg )) * ( '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1597,63 +1633,202 @@ def write_derivs(lang, specs, reacs, num_r):
     file.write('#endif\n')
     
     file.close()
-    
     return
 
-def write_mass_mole(specs):
+def write_mass_mole(path, lang, specs):
+    """Writes file and header for mass/molar concentration and density conversion utility.
+    
+    Keyword arguments:
+    path -- path to build directory for file
+    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
+    specs -- list of species objects
     """
     
-    """
-    file = open('mass_mole.h', 'w')
-    file.write('#ifndef MASS_MOLE_H\n')
-    file.write('#define MASS_MOLE_H\n\n')
-    file.write('void mole2mass (Real*, Real*);\n')
-    file.write('void mass2mole (Real*, Real*);\n')
-    file.write('#endif\n')
-    file.close()
+    # Create header file
+    if lang in ['c', 'cuda']:
+        file = open(path + 'mass_mole.h', 'w')
     
-    file = open('mass_mole.c', 'w')
+        file.write('#ifndef MASS_MOLE_H\n')
+        file.write('#define MASS_MOLE_H\n\n')
     
-    file.write('#include "header.h"\n\n')
+        file.write('#ifdef __cplusplus\n  extern "C" {\n#endif\n')
     
-    file.write('/** Function converting species mole fractions to mass fractions.\n')
-    file.write(' *\n')
-    file.write(' * \param[in]  X  array of species mole fractions\n')
-    file.write(' * \param[out] Y  array of species mass fractions\n')
-    file.write(' */\n')
-    file.write('void mole2mass ( Real * X, Real * Y ) {\n\n')
-    file.write('  // average molecular weight\n')
-    file.write('  Real mw_avg = 0.0;\n')
-    for sp in specs:
-        file.write('  mw_avg += X[{:}] * {:};\n'.format(specs.index(sp), sp.mw))
+        file.write('void mole2mass (const Real*, Real*);\n')
+        file.write('void mass2mole (const Real*, Real*);\n')
+        file.write('Real getDensity (Real, Real, Real*);\n')
+    
+        file.write('#ifdef __cplusplus\n  }\n#endif\n')
+    
+        file.write('#endif\n')
+        file.close()
+    
+    # Open file; both C and CUDA programs use C file (only used on host)
+    if lang in ['c', 'cuda']:
+        filename = 'mass_mole.c'
+    elif lang == 'fortran':
+        filename = 'mass_mole.f90'
+    elif lang == 'matlab':
+        filename = 'mass_mole.m'
+    file = open(path + filename, 'w')
+    
+    if lang in ['c', 'cuda']:
+        file.write('#include "header.h"\n\n')
+    
+    ###################################################
+    # Documentation and function/subroutine initializaton for mole2mass
+    if lang in ['c', 'cuda']:
+        file.write('/** Function converting species mole fractions to mass fractions.\n')
+        file.write(' *\n')
+        file.write(' * \param[in]  X  array of species mole fractions\n')
+        file.write(' * \param[out] Y  array of species mass fractions\n')
+        file.write(' */\n')
+        file.write('void mole2mass (const Real * X, Real * Y) {\n\n')
+    elif lang == 'fortran':
+        file.write('!-----------------------------------------------------------------\n')
+        file.write('!> Subroutine converting species mole fractions to mass fractions.\n')
+        file.write('!! @param[in]  X  array of species mole fractions\n')
+        file.write('!! @param[out] Y  array of species mass fractions\n')
+        file.write('!-----------------------------------------------------------------\n')
+        file.write('subroutine mole2mass (X, Y)\n\n')
+        file.write('  implicit none\n')
+        file.write('  double, dimension(:), intent(in) :: X\n')
+        file.write('  double, dimension(:), intent(out) :: X\n')
+        file.write('  double :: mw_avg\n\n')
+    
+    # calculate molecular weight
+    if lang in ['c', 'cuda']:
+        file.write('  // average molecular weight\n')
+        file.write('  Real mw_avg = 0.0;\n')
+        for sp in specs:
+            file.write('  mw_avg += X[{:}] * {:};\n'.format(specs.index(sp), sp.mw))
+    elif lang == 'fortran':
+        file.write('  ! average molecular weight\n')
+        file.write('  mw_avg = 0.0\n')
+        for sp in specs:
+            file.write('  mw_avg = mw_avg + X({:}) * {:}\n'.format(specs.index(sp) + 1, sp.mw))
     file.write('\n')
     
-    file.write('  // calculate mass fractions\n')
-    for sp in specs:
-        isp = specs.index(sp)
-        file.write('  Y[{:}] = X[{:}] * {:} / mw_avg;\n'.format(isp, isp, sp.mw))
-    file.write('\n')
-    file.write('} // end mole2mass\n\n')
+    # calculate mass fractions
+    if lang in ['c', 'cuda']:
+        file.write('  // calculate mass fractions\n')
+        for sp in specs:
+            isp = specs.index(sp)
+            file.write('  Y[{:}] = X[{:}] * {:} / mw_avg;\n'.format(isp, isp, sp.mw))
+        file.write('\n')
+        file.write('} // end mole2mass\n\n')
+    elif lang == 'fortran':
+        file.write('  ! calculate mass fractions\n')
+        for sp in specs:
+            isp = specs.index(sp) + 1
+            file.write('  Y({:}) = X({:}) * {:} / mw_avg\n'.format(isp, isp, sp.mw))
+        file.write('\n')
+        file.write('end subroutine mole2mass\n\n')
     
-    file.write('/** Function converting species mass fractions to mole fractions.\n')
-    file.write(' *\n')
-    file.write(' * \param[in]  Y  array of species mass fractions\n')
-    file.write(' * \param[out] X  array of species mole fractions\n')
-    file.write(' */\n')
-    file.write('void mass2mole ( Real * Y, Real * X ) {\n\n')
-    file.write('  // average molecular weight\n')
-    file.write('  Real mw_avg = 0.0;\n')
-    for sp in specs:
-        file.write('  mw_avg += Y[{:}] / {:};\n'.format(specs.index(sp), sp.mw))
-    file.write('  mw_avg = 1.0 / mw_avg;\n')
+    ################################
+    # Documentation and function/subroutine initialization for mass2mole
+    
+    if lang in ['c', 'cuda']:
+        file.write('/** Function converting species mass fractions to mole fractions.\n')
+        file.write(' *\n')
+        file.write(' * \param[in]  Y  array of species mass fractions\n')
+        file.write(' * \param[out] X  array of species mole fractions\n')
+        file.write(' */\n')
+        file.write('void mass2mole (const Real * Y, Real * X) {\n\n')
+    elif lang == 'fortran':
+        file.write('!-----------------------------------------------------------------\n')
+        file.write('!> Subroutine converting species mass fractions to mole fractions.\n')
+        file.write('!! @param[in]  Y  array of species mass fractions\n')
+        file.write('!! @param[out] X  array of species mole fractions\n')
+        file.write('!-----------------------------------------------------------------\n')
+        file.write('subroutine mass2mole (Y, X)\n\n')
+        file.write('  implicit none\n')
+        file.write('  double, dimension(:), intent(in) :: Y\n')
+        file.write('  double, dimension(:), intent(out) :: X\n')
+        file.write('  double :: mw_avg\n\n')
+    
+    # calculate average molecular weight
+    if lang in ['c', 'cuda']:
+        file.write('  // average molecular weight\n')
+        file.write('  Real mw_avg = 0.0;\n')
+        for sp in specs:
+            file.write('  mw_avg += Y[{:}] / {:};\n'.format(specs.index(sp), sp.mw))
+        file.write('  mw_avg = 1.0 / mw_avg;\n')
+    elif lang == 'fortran':
+        file.write('  ! average molecular weight\n')
+        file.write('  mw_avg = 0.0\n')
+        for sp in specs:
+            file.write('  mw_avg = mw_avg + Y({:}) / {:}\n'.format(specs.index(sp) + 1, sp.mw))
     file.write('\n')
     
-    file.write('  // calculate mass fractions\n')
-    for sp in specs:
-        isp = specs.index(sp)
-        file.write('  X[{:}] = Y[{:}] * mw_avg / {:};\n'.format(isp, isp, sp.mw))
+    # calculate mass fractions
+    if lang in ['c', 'cuda']:
+        file.write('  // calculate mass fractions\n')
+        for sp in specs:
+            isp = specs.index(sp)
+            file.write('  X[{:}] = Y[{:}] * mw_avg / {:};\n'.format(isp, isp, sp.mw))
+        file.write('\n')
+        file.write('} // end mass2mole\n\n')
+    elif lang == 'fortran':
+        file.write('  ! calculate mass fractions\n')
+        for sp in specs:
+            isp = specs.index(sp) + 1
+            file.write('  X({:}) = Y({:}) * mw_avg / {:}\n'.format(isp, isp, sp.mw))
+        file.write('\n')
+        file.write('end subroutine mass2mole\n\n')
+    
+    
+    ###############################
+    # Documentation and subroutine/function initialization for getDensity
+    
+    if lang in ['c', 'cuda']:
+        file.write('/** Function calculating density from mole fractions.\n')
+        file.write(' *\n')
+        file.write(' * \param[in]  temp  temperature\n')
+        file.write(' * \param[in]  pres  pressure\n')
+        file.write(' * \param[in]  X     array of species mole fractions\n')
+        file.write(r' * \return     rho  mixture mass density' + '\n')
+        file.write(' */\n')
+        file.write('Real getDensity (const Real temp, const real pres, Real * X) {\n\n')
+    elif lang == 'fortran':
+        file.write('!-----------------------------------------------------------------\n')
+        file.write('!> Function calculating density from mole fractions.\n')
+        file.write('!! @param[in]  temp  temperature\n')
+        file.write('!! @param[in]  pres  pressure\n')
+        file.write('!! @param[in]  X     array of species mole fractions\n')
+        file.write('!! @return     rho   mixture mass density' + '\n')
+        file.write('!-----------------------------------------------------------------\n')
+        file.write('function mass2mole (temp, pres, X) result(rho)\n\n')
+        file.write('  implicit none\n')
+        file.write('  double, intent(in) :: temp, pres\n')
+        file.write('  double, dimension(:), intent(in) :: X\n')
+        file.write('  double :: mw_avg, rho\n\n')
+    
+    # get molecular weight
+    if lang in ['c', 'cuda']:
+        file.write('  // average molecular weight\n')
+        file.write('  Real mw_avg = 0.0;\n')
+        for sp in specs:
+            file.write('  mw_avg += X[{:}] * {:};\n'.format(specs.index(sp), sp.mw))
+        file.write('\n')
+    elif lang == 'fortran':
+        file.write('  ! average molecular weight\n')
+        file.write('  mw_avg = 0.0\n')
+        for sp in specs:
+            file.write('  mw_avg = mw_avg + X({:}) * {:}\n'.format(specs.index(sp), sp.mw))
+        file.write('\n')
+    
+    # calculate density
+    if lang in ['c', 'cuda']:
+        file.write('  rho = pres * mw_avg / ({:.8e} * temp);\n'.format(RU))
+        file.write('  return rho;\n')
+    elif lang == 'fortran':
+        file.write('  rho = pres * mw_avg / ({:.8e} * temp)\n'.format(RU))
     file.write('\n')
-    file.write('} // end mass2mole\n\n')
+    
+    if lang in ['c', 'cuda']:
+        file.write('} // end getDensity\n\n')
+    elif lang == 'fortran':
+        file.write('end function getDensity\n\n')
     
     file.close()
     return

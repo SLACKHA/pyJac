@@ -2327,11 +2327,32 @@ def create_rate_subs(lang, mech_name, therm_name = None):
 
 
 if __name__ == "__main__":
+    import argparse
     
-    if len(sys.argv) == 3:
-        create_rate_subs(sys.argv[1], sys.argv[2])
-    elif len(sys.argv) == 4:
-        create_rate_subs(sys.argv[1], sys.argv[2], sys.argv[3])
-    else:
-        print 'Incorrect number of arguments'
+    # command line arguments
+    parser = argparse.ArgumentParser(description = 'Generates source code '
+                                     'for species and reaction rates.'
+                                     )
+    parser.add_argument('-l', '--lang',
+                        type = str,
+                        choices = utils.langs, 
+                        required = True, 
+                        help = 'Programming language for output '
+                        'source files.'
+                        )
+    parser.add_argument('-i', '--input',
+                        type = str,
+                        required = True, 
+                        help = 'Input mechanism filename (e.g., mech.dat).'
+                        )
+    parser.add_argument('-t', '--thermo',
+                        type = str,
+                        default = None, 
+                        help = 'Thermodynamic database filename (e.g., '
+                        'therm.dat), or nothing if in mechanism.'
+                        )
+    
+    args = parser.parse_args()
+    
+    create_rate_subs(args.lang, args.input, args.thermo)
 

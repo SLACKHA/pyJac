@@ -1,47 +1,62 @@
 #! /usr/bin/env python
+"""Creates source code for calculating analytical Jacobian matrix.
+"""
 
-import sys
-import os
-import errno
-import math
 from __future__ import division
-from chem_utilities import *
-from mech_interpret import *
-from rate_subs import *
+import sys
+import math
+import chem_utilities as chem
+import mech_interpret as mech
+import rate_subs as rate
 import utils
 
 
-def write_jacobian(lang, specs, reacs):
-    """Write Jacobian subroutine.
+def write_jacobian(path, lang, specs, reacs):
+    """Write Jacobian subroutine in desired language.
     
-    Keyword arguments:
-    lang  -- programming language ('c', 'cuda', 'fortran', 'matlab')
-    specs -- list of species objects
-    reacs -- list of reaction objects
+    Parameters
+    ----------
+    path : str
+        Path to build directory for file.
+    lang : {'c', 'cuda', 'fortran', 'matlab'}
+        Programming language.
+    specs : list of SpecInfo
+        List of species in the mechanism.
+    reacs : list of ReacInfo
+        List of reactions in the mechanism.
+    
+    Returns
+    -------
+    None
+    
     """
     
     # first write header file
     if lang == 'c':
-        file = open('jacob.h', 'w')
-        file.write('#ifndef JACOB_HEAD\n')
-        file.write('#define JACOB_HEAD\n')
-        file.write('\n')
-        file.write('#include "header.h"\n')
-        file.write('\n')
-        file.write('void eval_jacob (const Real, const Real, const Real*, Real*);\n')
-        file.write('\n')
-        file.write('#endif\n')
+        file = open(path + 'jacob.h', 'w')
+        file.write('#ifndef JACOB_HEAD\n'
+                   '#define JACOB_HEAD\n'
+                   '\n'
+                   '#include "header.h"\n'
+                   '\n'
+                   'void eval_jacob (const Real, const Real, const Real*, '
+                   'Real*);\n'
+                   '\n'
+                   '#endif\n'
+                   )
         file.close()
     elif lang == 'cuda':
-        file = open('jacob.cuh', 'w')
-        file.write('#ifndef JACOB_HEAD\n')
-        file.write('#define JACOB_HEAD\n')
-        file.write('\n')
-        file.write('#include "header.h"\n')
-        file.write('\n')
-        file.write('__device__ void eval_jacob (const Real, const Real, const Real*, Real*);\n')
-        file.write('\n')
-        file.write('#endif\n')
+        file = open(path + 'jacob.cuh', 'w')
+        file.write('#ifndef JACOB_HEAD\n'
+                   '#define JACOB_HEAD\n'
+                   '\n'
+                   '#include "header.h"\n'
+                   '\n'
+                   '__device__ void eval_jacob (const Real, const Real, '
+                   'const Real*, Real*);\n'
+                   '\n'
+                   '#endif\n'
+                   )
         file.close()
         
     # numbers of species and reactions
@@ -59,41 +74,48 @@ def write_jacobian(lang, specs, reacs):
     
     # create file depending on language
     filename = 'jacob' + utils.file_ext[lang]
-    file = open(filename, 'w')
+    file = open(path + filename, 'w')
     
     # header files
     if lang == 'c':
-        file.write('#include <math.h>\n')
-        file.write('#include "header.h"\n')
-        file.write('#include "chem_utils.h"\n')
-        file.write('#include "rates.h"\n')
-        file.write('\n')
+        file.write('#include <math.h>\n'
+                   '#include "header.h"\n'
+                   '#include "chem_utils.h"\n'
+                   '#include "rates.h"\n'
+                   '\n'
+                   )
     elif lang == 'cuda':
-        file.write('#include <math.h>\n')
-        file.write('#include "header.h"\n')
-        file.write('#include "chem_utils.cuh"\n')
-        file.write('#include "rates.cuh"\n')
-        file.write('\n')
-        
+        file.write('#include <math.h>\n'
+                   '#include "header.h"\n'
+                   '#include "chem_utils.cuh"\n'
+                   '#include "rates.cuh"\n'
+                   '\n'
+                   )
+    
     line = ''
     if lang == 'cuda': line = '__device__ '
     
     if lang in ['c', 'cuda']:
-        line += 'void eval_jacob (const Real t, const Real pres, const Real * y, Real * jac) {\n\n'
+        line += ('void eval_jacob (const Real t, const Real pres, '
+                 'const Real * y, Real * jac) {\n\n')
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
         
         # fortran needs type declarations
-        line += '  implicit none\n'
-        line += '  double precision, intent(in) :: t, pres, y(' + str(num_s) + ')\n'
-        line += '  double precision, intent(out) :: jac(' + str(num_s) + ',' + str(num_s) + ')\n'
-        line += '  \n'
-        line += '  double precision :: T, rho, cp_avg, logT\n'
+        line += ('  implicit none\n'
+                 '  integer, parameter :: wp = kind(1.0d0)'
+                 '  real(wp), intent(in) :: t, pres, y({})\n'.format(num_s) + 
+                 '  real(wp), intent(out) :: jac({0},{0})\n'.format(num_s) + 
+                 '  \n'
+                 '  real(wp) :: T, rho, cp_avg, logT\n'
+                 )
         if any(rxn.thd for rxn in rev_reacs):
-            line += '  double precision :: m\n'
-        line += '  double precision, dimension(' + str(num_s) + ') :: conc, cp, h, sp_rates\n'
-        line += '  double precision, dimension(' + str(num_r) + ') :: rxn_rates\n'
-        line += '  double precision, dimension(' + str(num_pdep) + ') :: pres_mod\n'
+            line += '  real(wp) :: m\n'
+        line += ('  real(wp), dimension({}) :: '.format(num_s) + 
+                 'conc, cp, h, sp_rates\n'
+                 '  real(wp), dimension({}) :: rxn_rates\n'.format(num_r) + 
+                 '  real(wp), dimension({}) :: pres_mod\n'.format(num_pdep)
+                 )
     elif lang == 'matlab':
         line += 'function jac = eval_jacob (T, pres, y)\n\n'
     file.write(line)
@@ -104,22 +126,21 @@ def write_jacobian(lang, specs, reacs):
         line = '  Real T = y[0]'
     elif lang in ['fortran', 'matlab']:
         line = '  T = y(1)'
-    line += line_end[lang]
+    line += utils.line_end[lang]
     file.write(line)
     
     file.write('\n')
     
     # calculation of average molecular weight
     if lang in ['c', 'cuda']:
-        file.write('  // average molecular weight\n')
-        file.write('  Real mw_avg;\n')
-        line = '  mw_avg = '
+        file.write('  // average molecular weight\n'
+                   '  Real mw_avg;\n'
+                   )
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n')
-        line = '  mw_avg = '
     elif lang == 'matlab':
         file.write('  % average molecular weight\n')
-        line = '  mw_avg = '
+    line = '  mw_avg = '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -134,70 +155,84 @@ def write_jacobian(lang, specs, reacs):
         
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(y[' + str(specs.index(sp) + 1) + '] / {:})'.format(sp.mw)
+            line += '(y[{}] / {:})'.format(specs.index(sp) + 1, sp.mw)
         elif lang in ['fortran', 'matlab']:
-            line += '(y(' + str(specs.index(sp) + 2) + ') / {:})'.format(sp.mw)
+            line += '(y({}) / {:})'.format(specs.index(sp) + 2, sp.mw)
         
         isfirst = False
     
-    line += line_end[lang]
+    line += utils.line_end[lang]
     file.write(line)
-    line = '  mw_avg = 1.0 / mw_avg' + line_end[lang]
+    line = '  mw_avg = 1.0 / mw_avg' + utils.line_end[lang]
     file.write(line)
     
     if lang in ['c', 'cuda']:
-        file.write('  // mass-averaged density\n')
-        file.write('  Real rho;\n')
+        file.write('  // mass-averaged density\n'
+                   '  Real rho;\n'
+                   )
     elif lang == 'fortran':
         file.write('  ! mass-averaged density\n')
     elif lang == 'matlab':
         file.write('  % mass-averaged density\n')
-    line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(RU)
-    line += line_end[lang]
+    line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(chem.RU)
+    line += utils.line_end[lang]
     file.write(line)
     
     file.write('\n')
     
     # evaluate species molar concentrations
     if lang in ['c', 'cuda']:
-        file.write('  // species molar concentrations\n')
-        file.write('  Real conc[' + str(num_s) + '];\n')
+        file.write('  // species molar concentrations\n'
+                   '  Real conc[{}];\n'.format(num_s)
+                   )
     elif lang == 'fortran':
         file.write('  ! species molar concentrations\n')
     elif lang == 'matlab':
-        file.write('  % species molar concentrations\n')
-        file.write('  conc = zeros(' + str(num_s) + ',1);\n')
+        file.write('  % species molar concentrations\n'
+                   '  conc = zeros({},1);\n'.format(num_s)
+                   )
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
         if lang in ['c', 'cuda']:
-            line = '  conc[{:}] = rho * y[{:}] / {:}'.format(isp, isp + 1, sp.mw)
+            line = ('  conc[{}] = rho * '.format(isp) + 
+                    'y[{}] / {}'.format(isp + 1, sp.mw)
+                    )
         elif lang in ['fortran', 'matlab']:
-            line = '  conc({:}) = rho * y({:}) / {:}'.format(isp + 1, isp + 2, sp.mw)
-        line += line_end[lang]
+            line = ('  conc({}) = rho * '.format(isp + 1) + 
+                    'y({}) / {}'.format(isp + 2, sp.mw)
+                    )
+        line += utils.line_end[lang]
         file.write(line)
     file.write('\n')
     
     
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
-        file.write('  // evaluate reaction rates\n')
-        file.write('  Real fwd_rxn_rates[' + str(num_r) + '];\n')
+        file.write('  // evaluate reaction rates\n'
+                   '  Real fwd_rxn_rates[{}];\n'.format(num_r)
+                   )
         if rev_reacs:
-            file.write('  Real rev_rxn_rates[' + str(num_rev) + '];\n')
-            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates, rev_rxn_rates);\n')
+            file.write('  Real rev_rxn_rates[{}];\n'.format(num_rev) + 
+                       '  eval_rxn_rates (T, conc, fwd_rxn_rates, '
+                       'rev_rxn_rates);\n'
+                       )
         else:
             file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates);\n')
     elif lang == 'fortran':
         file.write('  ! evaluate reaction rates\n')
         if rev_reacs:
-            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates, rev_rxn_rates)\n')
+            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates, '
+                       'rev_rxn_rates)\n'
+                       )
         else:
             file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates)\n')
     elif lang == 'matlab':
         file.write('  % evaluate reaction rates\n')
         if rev_reacs:
-            file.write('  [fwd_rxn_rates, rev_rxn_rates] = eval_rxn_rates (T, conc);\n')
+            file.write('  [fwd_rxn_rates, rev_rxn_rates] = eval_rxn_rates '
+                       '(T, conc);\n'
+                       )
         else:
             file.write('  fwd_rxn_rates = eval_rxn_rates (T, conc);\n')
     file.write('\n')
@@ -205,38 +240,62 @@ def write_jacobian(lang, specs, reacs):
     
     # evaluate third-body and pressure-dependence reaction modifications
     if lang in ['c', 'cuda']:
-        file.write('  // get pressure modifications to reaction rates\n')
-        file.write('  Real pres_mod[' + str(num_pdep) + '];\n')
-        file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+        file.write('  // get pressure modifications to reaction rates\n'
+                   '  Real pres_mod[{}];\n'.format(num_pdep) + 
+                   '  get_rxn_pres_mod (T, pres, conc, pres_mod);\n'
+                   )
     elif lang == 'fortran':
-        file.write('  ! get and evaluate pressure modifications to reaction rates\n')
-        file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod)\n')
+        file.write('  ! get and evaluate pressure modifications to '
+                   'reaction rates\n'
+                   '  get_rxn_pres_mod (T, pres, conc, pres_mod)\n'
+                   )
     elif lang == 'matlab':
-        file.write('  % get and evaluate pressure modifications to reaction rates\n')
-        file.write('  pres_mod = get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+        file.write('  % get and evaluate pressure modifications to '
+                   'reaction rates\n'
+                   '  pres_mod = get_rxn_pres_mod (T, pres, conc, '
+                   'pres_mod);\n'
+                   )
     file.write('\n')
     
     
     # evaluate species rates
     if lang in ['c', 'cuda']:
-        file.write('  // evaluate rate of change of species molar concentration\n')
-        file.write('  Real sp_rates[' + str(num_s) + '];\n')
+        file.write('  // evaluate rate of change of species molar '
+                   'concentration\n'
+                   '  Real sp_rates[{}];\n'.format(num_s)
+                   )
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, pres_mod, sp_rates);\n')
+            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, '
+                       'pres_mod, sp_rates);\n'
+                       )
         else:
-            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, sp_rates);\n')
+            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, '
+                       'sp_rates);\n'
+                       )
     elif lang == 'fortran':
-        file.write('  ! evaluate rate of change of species molar concentration\n')
+        file.write('  ! evaluate rate of change of species molar '
+                   'concentration\n'
+                   )
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, pres_mod, sp_rates)\n')
+            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, '
+                       'pres_mod, sp_rates)\n'
+                       )
         else:
-            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, sp_rates)\n')
+            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, '
+                       'sp_rates)\n'
+                       )
     elif lang == 'matlab':
-        file.write('  % evaluate rate of change of species molar concentration\n')
+        file.write('  % evaluate rate of change of species molar '
+                   'concentration\n'
+                   )
         if rev_reacs:
-            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, rev_rxn_rates, pres_mod);\n')
+            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, '
+                       'rev_rxn_rates, pres_mod);\n'
+                       )
         else:
-            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, pres_mod);\n')
+            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, '
+                       'pres_mod);\n'
+                       )
     file.write('\n')
     
     
@@ -247,8 +306,9 @@ def write_jacobian(lang, specs, reacs):
             line += 'Real '
         elif lang == 'cuda':
             line += 'register Real '
-        line += 'm = pres / ({:4e} * T)'.format(RU)
-        line += line_end[lang]
+        line += ('m = pres / ({:4e} * T)'.format(chem.RU) + 
+                 utils.line_end[lang]
+                 )
         file.write(line)
     
     # log(T)
@@ -257,14 +317,16 @@ def write_jacobian(lang, specs, reacs):
         line += 'Real '
     elif lang == 'cuda':
         line += 'register Real '
-    line += 'logT = log(T)'
-    line += line_end[lang]
+    line += ('logT = log(T)' + 
+             utils.line_end[lang]
+             )
     file.write(line)
     
     # if any reverse reactions, will need Kc
     if rev_reacs:
-        line = '  Real Kc'
-        line += line_end[lang]
+        line = ('  Real Kc' + 
+                utils.line_end[lang]
+                )
         file.write(line)
     
     # pressure-dependence variables
@@ -274,16 +336,15 @@ def write_jacobian(lang, specs, reacs):
             line += 'Real '
         elif lang == 'cuda':
             line += 'register Real '
-        line += 'Pr'
-        line += line_end[lang]
+        line += 'Pr' + utils.line_end[lang]
         file.write(line)
     
     if any(rxn.troe for rxn in reacs):
-        line = '  Real Fcent, A, B, lnF_AB' + line_end[lang]
+        line = '  Real Fcent, A, B, lnF_AB' + utils.line_end[lang]
         file.write(line)
     
     if any(rxn.sri for rxn in reacs):
-        line = '  Real X' + line_end[lang]
+        line = '  Real X' + utils.line_end[lang]
         file.write(line)
     
     # variables for equilibrium constant derivatives, if needed
@@ -297,7 +358,8 @@ def write_jacobian(lang, specs, reacs):
         
         # all participating species
         for rxn_sp in (rxn.reac + rxn.prod):
-            sp_ind = next((specs.index(s) for s in specs if s.name == rxn_sp), None)
+            sp_ind = next((specs.index(s) for s in specs 
+                           if s.name == rxn_sp), None)
             
             # skip if already printed
             if dBdT_flag[sp_ind]:
@@ -311,7 +373,7 @@ def write_jacobian(lang, specs, reacs):
             elif lang in ['fortran', 'matlab']:
             	dBdT += str(sp_ind + 1)
             # declare dBdT
-            file.write('  Real ' + dBdT + line_end[lang])
+            file.write('  Real ' + dBdT + utils.line_end[lang])
             
             # dB/dT evaluation (with temperature conditional)
             line = '  if (T <= {:})'.format(specs[sp_ind].Trange[1])
@@ -323,14 +385,15 @@ def write_jacobian(lang, specs, reacs):
                 line += '\n'
             file.write(line)
             
-            line = '    ' + dBdT
-            line += ' = ({:.8e}'.format(specs[sp_ind].lo[0] - 1.0)
-            line += ' + {:.8e} / T) / T'.format(specs[sp_ind].lo[5])
-            line += ' + {:.8e} + T'.format(specs[sp_ind].lo[1] / 2.0)
-            line += ' * ({:.8e}'.format(specs[sp_ind].lo[2] / 3.0)
-            line =+ ' + T * ({:.8e}'.format(specs[sp_ind].lo[3] / 4.0)
-            line += ' + {:.8e} * T))'.format(specs[sp_ind].lo[4] / 5.0)
-            line += line_end[lang]
+            line = ('    ' + dBdT + 
+                    ' = ({:.8e}'.format(specs[sp_ind].lo[0] - 1.0) + 
+                    ' + {:.8e} / T) / T'.format(specs[sp_ind].lo[5]) + 
+                    ' + {:.8e} + T'.format(specs[sp_ind].lo[1] / 2.0) + 
+                    ' * ({:.8e}'.format(specs[sp_ind].lo[2] / 3.0) + 
+                    ' + T * ({:.8e}'.format(specs[sp_ind].lo[3] / 4.0) + 
+                    ' + {:.8e} * T))'.format(specs[sp_ind].lo[4] / 5.0) + 
+                    utils.line_end[lang]
+                    )
             file.write(line)
             
             if lang in ['c', 'cuda']:
@@ -338,14 +401,15 @@ def write_jacobian(lang, specs, reacs):
             elif lang in ['fortran', 'matlab']:
                 file.write('  else\n')
             
-            line = '    ' + dBdT
-            line += ' = ({:.8e}'.format(specs[sp_ind].hi[0] - 1.0)
-            line += ' + {:.8e} / T) / T'.format(specs[sp_ind].hi[5])
-            line += ' + {:.8e} + T'.format(specs[sp_ind].hi[1] / 2.0)
-            line += ' * ({:.8e}'.format(specs[sp_ind].hi[2] / 3.0)
-            line += ' + T * ({:.8e}'.format(specs[sp_ind].hi[3] / 4.0)
-            line += ' + {:.8e} * T))'.format(specs[sp_ind].hi[4] / 5.0)
-            line += line_end[lang]
+            line = ('    ' + dBdT + 
+                    ' = ({:.8e}'.format(specs[sp_ind].hi[0] - 1.0) + 
+                    ' + {:.8e} / T) / T'.format(specs[sp_ind].hi[5]) + 
+                    ' + {:.8e} + T'.format(specs[sp_ind].hi[1] / 2.0) + 
+                    ' * ({:.8e}'.format(specs[sp_ind].hi[2] / 3.0) + 
+                    ' + T * ({:.8e}'.format(specs[sp_ind].hi[3] / 4.0) + 
+                    ' + {:.8e} * T))'.format(specs[sp_ind].hi[4] / 5.0) + 
+                    utils.line_end[lang]
+                    )
             file.write(line)
             
             if lang in ['c', 'cuda']:
@@ -367,7 +431,7 @@ def write_jacobian(lang, specs, reacs):
     for sp_k in specs:
         
         ######################################
-        # w.r.t. temperature
+        # with respect to temperature
         ######################################
         k_sp = specs.index(sp_k)
         
@@ -377,8 +441,9 @@ def write_jacobian(lang, specs, reacs):
             line = '  !'
         elif lang == 'matlab':
             line = '  %'
-        line += 'partial of dT wrt Y_' + sp_k.name
-        line += line_end[lang]
+        line += ('partial of omega_' + sp_k.name + ' wrt T' + 
+                 utils.line_end[lang]
+                 )
         file.write(line)
         
         isfirst = True
@@ -403,25 +468,25 @@ def write_jacobian(lang, specs, reacs):
             # start contribution to Jacobian entry for reaction
             jline = '  jac'
             if lang in ['c', 'cuda']:
-                jline += '[' + str(k_sp + 1) + ']'
+                jline += '[{}]'.format(k_sp + 1)
             elif lang in ['fortran', 'matlab']:
-                jline += '(' + str(k_sp + 2) + ', ' + str(1) + ')'
+                jline += '({},1)'.format(k_sp + 2)
             
             # first reaction for this species
             if isfirst:
                 jline += ' = '
                 
                 if nu != 1:
-                    jline += str(float(nu)) + ' * '
+                    jline += '{} * '.format(float(nu))
                 isfirst = False
             else:
                 if lang in ['c', 'cuda']:
                     jline += ' += '
                 elif lang in ['fortran', 'matlab']:
-                    jline += ' = jac(' + str(k_sp) + ', ' + str(1) + ') + '
+                    jline += ' = jac({},1) + '.format(k_sp)
                 
                 if nu != 1:
-                    jline += str(float(nu)) + ' * '
+                    jline += '{} * '.format(float(nu))
             
             jline += '('
             
@@ -433,98 +498,156 @@ def write_jacobian(lang, specs, reacs):
                 if rxn.pdep_sp:
                     line += 'conc'
                     if lang in ['c', 'cuda']:
-                        line += '[' + str(specs.index(rxn.pdep_sp)) + ']'
+                        line += '[{}]'.format(specs.index(rxn.pdep_sp))
                     elif lang in ['fortran', 'matlab']:
-                        line += '(' + str(specs.index(rxn.pdep_sp) + 1) + ')'
+                        line += '({})'.format(specs.index(rxn.pdep_sp) + 1)
                 else:
                     line += '(m'
                     
                     for thd_sp in rxn.thd_body:
-                        isp = specs.index(next((s for s in specs if s.name == thd_sp[0]), None))
+                        isp = specs.index(next((s for s in specs 
+                                          if s.name == thd_sp[0]), None))
                         if thd_sp[1] > 1.0:
-                            line += ' + ' + str(thd_sp[1] - 1.0) + ' * conc'
+                            line += ' + {} * conc'.format(thd_sp[1] - 1.0)
                             if lang in ['c', 'cuda']:
-                                line += '[' + str(isp) + ']'
+                                line += '[{}]'.format(isp)
                             elif lang in ['fortran', 'matlab']:
-                                line += '(' + str(isp + 1) + ')'
+                                line += '({})'.format(isp + 1)
                         elif thd_sp[1] < 1.0:
-                            line += ' - ' + str(1.0 - thd_sp[1]) + ' * conc'
+                            line += ' - {} * conc'.format(1.0 - thd_sp[1])
                             if lang in ['c', 'cuda']:
-                                line += '[' + str(isp) + ']'
+                                line += '[{}]'.format(isp)
                             elif lang in ['fortran', 'matlab']:
-                                line += '(' + str(isp + 1) + ')'
+                                line += '({})'.format(isp + 1)
                     line += ')'
-                
-                #jline += '(('
                 
                 jline += 'pres_mod'
                 if lang in ['c', 'cuda']:
-                    jline += '[' + str(pind) + ']'
-                elif lang in ['fortran', 'cuda']:
-                    jline += '(' + str(pind) + ')'
+                    jline += '[{}]'.format(pind)
+                elif lang in ['fortran', 'matlab']:
+                    jline += '({})'.format(pind + 1)
                 jline += '* (('
                 
                 if rxn.low:
                     # unimolecular/recombination fall-off
                     beta_0minf = rxn.low[1] - rxn.b
                     E_0minf = rxn.low[2] - rxn.E
-                    k0kinf = rxn_rate_const(rxn.low[0] / rxn.A, beta_0minf, E_0minf)
+                    k0kinf = rate.rxn_rate_const(rxn.low[0] / rxn.A, 
+                                                 beta_0minf, E_0minf
+                                                 )
                 elif rxn.high:
                     # chem-activated bimolecular rxn
                     beta_0minf = rxn.b - rxn.high[1]
                     E_0minf = rxn.E - rxn.high[2]
-                    k0kinf = rxn_rate_const(rxn.A / rxn.high[0], beta_0minf, E_0minf)
+                    k0kinf = rate.rxn_rate_const(rxn.A / rxn.high[0], 
+                                                 beta_0minf, E_0minf
+                                                 )
                     
                     jline += '-Pr'
                 
                 # finish writing P_ri
-                line += ' * (' + k0kinf + ')'
-                line += line_end[lang]
+                line += (' * (' + k0kinf + ')' + 
+                         utils.line_end[lang]
+                         )
                 file.write(line)
                 
                 # dPr/dT
-                jline += '({:.4e} + ({:.8e} / T) - 1.0) / (T * (1.0 + Pr)))'.format(beta_0minf, E_0minf)
+                jline += ('({:.4e} + ('.format(beta_0minf) + 
+                          '{:.8e} / T) - 1.0) / '.format(E_0minf) + 
+                          '(T * (1.0 + Pr)))'
+                         )
                 
                 # dF/dT
                 if rxn.troe:
-                    line = '  Fcent = {:.8e} * exp(-T / {:.8e})'.format(1.0 - rxn.troe_par[0], rxn.troe_par[1])
-                    line += ' + {:.8e} * exp(T / {:.8e})'.format(rxn.troe_par[0], rxn.troe_par[2])
+                    line = ('  Fcent = '
+                            '{:.8e} * '.format(1.0 - rxn.troe_par[0]) + 
+                            'exp(-T / {:.8e})'.format(rxn.troe_par[1]) + 
+                            ' + {:.8e} * exp(T / '.format(rxn.troe_par[0]) + 
+                            '{:.8e})'.format(rxn.troe_par[2])
+                            )
                     if len(rxn.troe_par) == 4:
                         line += ' + exp(-{:.8e} / T)'.format(rxn.troe_par[3])
-                    line += line_end[lang]
+                    line += utils.line_end[lang]
                     file.write(line)
                     
-                    line = '  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4'
-                    line += line_end[lang]
+                    line = ('  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4' + 
+                            utils.line_end[lang]
+                            )
                     file.write(line)
                 
-                    line = '  B = 0.806 - 1.1762 * log10(Fcent) - 0.14 * log10(Pr)'
-                    line += line_end[lang]
+                    line = ('  B = 0.806 - 1.1762 * log10(Fcent) - '
+                            '0.14 * log10(Pr)' + 
+                            utils.line_end[lang]
+                            )
                     file.write(line)
                     
-                    line = '  lnF_AB = ' + str(2.0) + ' * log(Fcent) * A / (B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'
-                    line += line_end[lang]
+                    line = ('  lnF_AB = 2.0 * log(Fcent) * '
+                            'A / (B * B * B * (1.0 + A * A / (B * B)) * '
+                            '(1.0 + A * A / (B * B)))' + 
+                            utils.line_end[lang]
+                            )
                     file.write(line)
                     
-                    jline += ' + (((1.0 / (Fcent * (1.0 + A * A / (B * B)))) - lnF_AB * (-{:.8e} * B + {:.8e} * A) / Fcent)'.format(0.67 / math.log(10.0), 1.1762 / math.log(10.0))
-                    jline += ' * ({:.8e} * exp(-T / {:.8e}) - {:.8e} * exp(-T / {:.8e})'.format( -(1.0 - rxn.troe_par[0]) / rxn.troe_par[1], rxn.troe_par[1], rxn.troe_par[0] / rxn.troe_par[2], rxn.troe_par[2])
+                    jline += (' + (((1.0 / '
+                              '(Fcent * (1.0 + A * A / (B * B)))) - '
+                              'lnF_AB * ('
+                              '-{:.8e}'.format(0.67 / math.log(10.0)) +
+                              ' * B + '
+                              '{:.8e} * '.format(1.1762 / math.log(10.0)) + 
+                              'A) / Fcent)'
+                              ' * ({:.8e}'.format(-(1.0 - rxn.troe_par[0]) /
+                                                 rxn.troe_par[1]) + 
+                              ' * exp(-T / '
+                              '{:.8e}) - '.format(rxn.troe_par[1]) + 
+                              '{:.8e} * '.format(rxn.troe_par[0] / 
+                                                 rxn.troe_par[2]) + 
+                              'exp(-T / '
+                              '{:.8e})'.format(rxn.troe_par[2])
+                              )
                     if len(rxn.troe_par) == 4:
-                        line += ' + ({:.8e} / (T * T)) * exp(-{:.8e} / T)'.format(rxn.troe_par[3], rxn.troe_par[3])
+                        jline += (' + ({:.8e} / '.format(rxn.troe_par[3]) + 
+                                  '(T * T)) * exp('
+                                  '-{:.8e} / T)'.format(rxn.troe_par[3])
+                                  )
                     jline += '))'
                     
-                    jline += ' - lnF_AB * ({:.8e} * B + {:.8e} * A) * '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
-                    jline += '({:.8e} + ({:.8e} / T) - 1.0) / T'.format(beta_0minf, E_0minf)
+                    jline += (' - lnF_AB * ('
+                              '{:.8e}'.format(1.0 / math.log(10.0)) + 
+                              ' * B + '
+                              '{:.8e}'.format(0.14 / math.log(10.0)) + 
+                              ' * A) * '
+                              '({:.8e} + ('.format(beta_0minf) + 
+                              '{:.8e} / T) - 1.0) / T'.format(E_0minf)
+                              )
                     
                 elif rxn.sri:
-                    line = '  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end[lang]
+                    line = ('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + 
+                            utils.line_end[lang]
+                            )
                     file.write(line)
                     
-                    jline += ' + X * ((({:.8} / (T * T)) * exp(-{:.8} / T) - {:.8e} * exp(-T / {:.8})) / '.format(rxn.sri[0] * rxn.sri[1], rxn.sri[1], 1.0 / rxn.sri[2], rxn.sri[2])
-                    jline += '({:.8} * exp(-{:.8} / T) + exp(-T / {:.8}))'.format(rxn.sri[0], rxn.sri[1], rxn.sri[2])
-                    jline += ' - X * {:.8} * log10(Pr) * ({:.8e} + ({:.8e} / T) - 1.0) * log({:8} * exp(-{:.8} / T) + exp(-T / {:8})) / T)'.format(2.0 / math.log(10.0), beta_0minf, E_0minf, rxn.sri[0], rxn.sri[1], rxn.sri[2])
+                    jline += (' + X * ((('
+                              '{:.8} / '.format(rxn.sri[0] * rxn.sri[1]) + 
+                              '(T * T)) * exp(-'
+                              '{:.8} / T) - '.format(rxn.sri[1]) + 
+                              '{:.8e} * '.format(1.0 / rxn.sri[2]) + 
+                              'exp(-T / {:.8})) / '.format(rxn.sri[2]) + 
+                              '({:.8} * '.format(rxn.sri[0]) + 
+                              'exp(-{:.8} / T) + '.format(rxn.sri[1]) + 
+                              'exp(-T / {:.8})) - '.format(rxn.sri[2]) + 
+                              'X * {:.8} * '.format(2.0 / math.log(10.0)) + 
+                              'log10(Pr) * ('
+                              '{:.8e} + ('.format(beta_0minf) + 
+                              '{:.8e} / T) - 1.0) * '.format(E_0minf) + 
+                              'log({:8} * exp('.format(rxn.sri[0]) + 
+                              '-{:.8} / T) + '.format(rxn.sri[1]) + 
+                              'exp(-T / '
+                              '{:8})) / T)'.format(rxn.sri[2])
+                              )
                     
                     if len(rxn.sri) == 5:
                         jline += ' + ({:.8} / T)'.format(rxn.sri[4])
+                
                 # lindemann, dF/dT = 0
                 
                 jline += ') * '
@@ -533,29 +656,29 @@ def write_jacobian(lang, specs, reacs):
                     # forward and reverse reaction rates
                     jline += '(fwd_rxn_rates'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(rind) + ']'
-                    elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(rind + 1) + ')'
+                        jline += '[{}]'.format(rind)
+                    elif lang in ['fortran', 'matlab']:
+                        jline += '({})'.format(rind + 1)
                     
                     jline += ' - rev_rxn_rates'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(rev_reacs.index(rxn)) + ']'
-                    elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
+                        jline += '[{}]'.format(rev_reacs.index(rxn))
+                    elif lang in ['fortran', 'matlab']:
+                        jline += '({})'.format(rev_reacs.index(rxn) + 1)
                     jline += ')'
                 else:
                     # forward reaction rate only
                     jline += 'fwd_rxn_rates'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(rind) + ']'
-                    elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(rind + 1) + ')'
+                        jline += '[{}]'.format(rind)
+                    elif lang in ['fortran', 'matlab']:
+                        jline += '({})'.format(rind + 1)
                 
                 jline += ' + (pres_mod'
                 if lang in ['c', 'cuda']:
-                    jline += '[' + str(pind) + ']'
-                elif lang in ['fortran', 'cuda']:
-                    jline += '(' + str(pind) + ')'
+                    jline += '[{}]'.format(pind)
+                elif lang in ['fortran', 'matlab']:
+                    jline += '({})'.format(pind + 1)
                 
             else:
                 # not pressure dependent
@@ -566,53 +689,53 @@ def write_jacobian(lang, specs, reacs):
                     
                     jline += '(-pres_mod'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(pind) + ']'
-                    elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(pind) + ')'
+                        jline += '[{}]'.format(pind)
+                    elif lang in ['fortran', 'matlab']:
+                        jline += '({})'.format(pind + 1)
                     jline += ' * '
                     
                     if rxn.rev:
                         # forward and reverse reaction rates
                         jline += '(fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
-                        elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
+                            jline += '[{}]'.format(rind)
+                        elif lang in ['fortran', 'matlab']:
+                            jline += '({})'.format(rind + 1)
                     
                         jline += ' - rev_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rev_reacs.index(rxn)) + ']'
-                        elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
+                            jline += '[{}]'.format(rev_reacs.index(rxn))
+                        elif lang in ['fortran', 'matlab']:
+                            jline += '({})'.format(rev_reacs.index(rxn) + 1)
                         jline += ')'
                     else:
                         # forward reaction rate only
                         jline += 'fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
-                        elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
+                            jline += '[{}]'.format(rind)
+                        elif lang in ['fortran', 'matlab']:
+                            jline += '({})'.format(rind + 1)
                     
                     jline += ' / T) + (pres_mod'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(pind) + ']'
-                    elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(pind) + ')'
+                        jline += '[{}]'.format(pind)
+                    elif lang in ['fortran', 'matlab']:
+                        jline += '({})'.format(pind + 1)
                     
                 else:
                     if lang in ['c', 'cuda', 'matlab']:
                         jline += '(1.0'
                     elif lang in ['fortran']:
-                        jline += '(1.0d0'
+                        jline += '(1.0_wp'
             
             jline += ' / T) * ('
             
             # contribution from temperature derivative of forward reaction rate
             jline += 'fwd_rxn_rates'
             if lang in ['c', 'cuda']:
-                jline += '[' + str(rind) + ']'
+                jline += '[{}]'.format(rind)
             elif lang in ['fortran', 'matlab']:
-                jline += '(' + str(rind + 1) + ')'
+                jline += '({})'.format(rind + 1)
             
             jline += ' * ('
             if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
@@ -627,7 +750,7 @@ def write_jacobian(lang, specs, reacs):
             nu = 0
             for sp in rxn.reac:
                 nu += rxn.reac_nu[rxn.reac.index(sp)]
-            jline += str(float(nu)) + ')'
+            jline += '{})'.format(float(nu))
             
             # contribution from temperature derivative of reaction rates
             if rxn.rev:
@@ -635,16 +758,20 @@ def write_jacobian(lang, specs, reacs):
                 
                 jline += ' - rev_rxn_rates'
                 if lang in ['c', 'cuda']:
-                    jline += '[' + str(rev_reacs.index(rxn)) + ']'
+                    jline += '[{}]'.format(rev_reacs.index(rxn))
                 elif lang in ['fortran', 'matlab']:
-                    jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
+                    jline += '({})'.format(rev_reacs.index(rxn) + 1)
                 
                 if rxn.rev_par:
                     # explicit reverse parameters
-                                        
+                    
                     jline += ' * ('
-                    if abs(rxn.rev_par[1]) > 1.0e-90 and abs(rxn.rev_par[2]) > 1.0e-90:
-                        jline += '{:.8e} + ({:.8e} / T)'.format(rxn.rev_par[1], rxn.rev_par[2])
+                    # check which parameters are > 0 (effectively)
+                    if (abs(rxn.rev_par[1]) > 1.0e-90 
+                        and abs(rxn.rev_par[2]) > 1.0e-90):
+                        jline += ('{:.8e} + '.format(rxn.rev_par[1]) + 
+                                  '({:.8e} / T)'.format(rxn.rev_par[2])
+                                  )
                     elif abs(rxn.rev_par[1]) > 1.0e-90:
                         jline += '{:.8e}'.format(rxn.rev_par[1])
                     elif abs(rxn.rev_par[2]) > 1.0e-90:
@@ -655,7 +782,7 @@ def write_jacobian(lang, specs, reacs):
                     # loop over products
                     for sp in rxn.prod:
                         nu += rxn.prod_nu[rxn.prod.index(sp)]
-                    jline += str(float(nu)) + ')'
+                    jline += '{})'.format(float(nu))
                     
                 else:
                     # reverse rate constant from forward and equilibrium
@@ -673,21 +800,24 @@ def write_jacobian(lang, specs, reacs):
                     # loop over products
                     for sp in rxn.prod:
                         nu += rxn.prod_nu[rxn.prod.index(sp)]
-                    jline += str(float(nu))
-                    jline += ' - T * ('
+                    jline += '{} - T * ('.format(float(nu))
                     
                     notfirst = False
-                    # contribution from dBdT terms from all participating species
+                    # contribution from dBdT terms from 
+                    # all participating species
                     for sp in rxn.prod:
                         if sp in rxn.reac:
-                            nu = rxn.prod_nu[rxn.prod.index(sp)] - rxn.reac_nu[rxn.reac.index(sp)]
+                            nu = (rxn.prod_nu[rxn.prod.index(sp)] - 
+                                  rxn.reac_nu[rxn.reac.index(sp)]
+                                  )
                         else:
                             nu = rxn.prod_nu[rxn.prod.index(sp)]
                         
                         if (nu == 0):
                             continue
                         
-                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
+                        sp_ind = next((specs.index(s) for s in specs
+                                       if s.name == sp), None)
                         
                         dBdT = 'dBdT_'
                         if lang in ['c', 'cuda']:
@@ -702,18 +832,20 @@ def write_jacobian(lang, specs, reacs):
                             elif nu == -1:
                                 jline += '-' + dBdT
                             else:
-                                jline += str(float(nu)) + ' * ' + dBdT
+                                jline += '{} * '.format(float(nu)) + dBdT
                         else:
                             # not first entry
                             if nu == 1:
-                                jline += ' + ' + dBdT
+                                jline += ' + '
                             elif nu == -1:
-                                jline += ' - ' + dBdT
+                                jline += ' - '
                             else:
                                 if (nu > 0):
-                                    jline += ' + ' + str(float(nu)) + ' * ' + dBdT
+                                    jline += ' + {}'.format(float(nu))
                                 else:
-                                    jline += ' - ' + str(float(abs(nu))) + ' * ' + dBdT
+                                    jline += ' - {}'.format(float(abs(nu)))
+                                jline += ' * '
+                            jline += dBdT
                         notfirst = True
                         
                         
@@ -724,7 +856,8 @@ def write_jacobian(lang, specs, reacs):
                         
                         nu = -rxn.reac_nu[rxn.reac.index(sp)]
                         
-                        sp_ind = next((specs.index(s) for s in specs if s.name == sp), None)
+                        sp_ind = next((specs.index(s) for s in specs 
+                                       if s.name == sp), None)
                         
                         dBdT = 'dBdT_'
                         if lang in ['c', 'cuda']:
@@ -734,14 +867,16 @@ def write_jacobian(lang, specs, reacs):
                         
                         # not first entry
                         if nu == 1:
-                            jline += ' + ' + dBdT
+                            jline += ' + '
                         elif nu == -1:
-                            jline += ' - ' + dBdT
+                            jline += ' - '
                         else:
                             if (nu > 0):
-                                jline += ' + ' + str(float(nu)) + ' * ' + dBdT
+                                jline += ' + {}'.format(float(nu))
                             else:
-                                jline += ' - ' + str(float(abs(nu))) + ' * ' + dBdT
+                                jline += ' - {}'.format(float(abs(nu)))
+                            jline += ' * '
+                        jline += dBdT
                     
                     jline += '))'
                    
@@ -752,28 +887,32 @@ def write_jacobian(lang, specs, reacs):
             jline += '))'
             
             # print line for reaction
-            jline += line_end[lang]
+            jline += utils.line_end[lang]
             file.write(jline)
                 
             
         if isfirst:
-            # not participating in any reactions, or at least no net production
+            # not participating in any reactions, 
+            # or at least no net production
             line = '  jac'
             if lang in ['c', 'cuda']:
-                line += '[' + str(k_sp + 1) + ']'
+                line += '[{}]'.format(k_sp + 1)
             elif lang in ['fortran', 'matlab']:
-                line += '(' + str(k_sp) + ', ' + str(1) + ')'
+                line += '({},1)'.format(k_sp)
             line += ' = 0.0'
         else:
             line = '  jac'
             if lang in ['c', 'cuda']:
-                line += '[' + str(k_sp + 1) + ']'
-                line += ' *= {:.8e} / rho'.format(sp_k.mw)
+                line += ('[{}]'.format(k_sp + 1) + 
+                         ' *= {:.8e} / rho'.format(sp_k.mw)
+                         )
             elif lang in ['fortran', 'matlab']:
-                line += '(' + str(k_sp) + ', ' + str(1) + ')'
-                line += ' = jac(' + str(k_sp) + ', ' + str(1) + ') * {:.8e} / rho'.format(sp_k.mw)
+                line += ('({}, 1)'.format(k_sp) + 
+                         ' = jac({}, 1)'.format(k_sp) + 
+                         ' * {:.8e} / rho'.format(sp_k.mw)
+                         )
         
-        line += line_end[lang]
+        line += utils.line_end[lang]
         file.write(line)
         file.write('\n')
         
@@ -789,8 +928,9 @@ def write_jacobian(lang, specs, reacs):
                 line = '  !'
             elif lang == 'matlab':
                 line = '  %'
-            line += 'partial of omega_' + sp_k.name + ' wrt Y_' + sp_j.name
-            line += line_end[lang]
+            line += ('partial of omega_' + sp_k.name + ' wrt Y_' + 
+                     sp_j.name + utils.line_end[lang]
+                     )
             file.write(line)
             
             isfirst = True
@@ -799,7 +939,8 @@ def write_jacobian(lang, specs, reacs):
                 rind = reacs.index(rxn)
                 
                 if sp_k.name in rxn.prod and sp_k.name in rxn.reac:
-                    nu = rxn.prod_nu[rxn.prod.index(sp_k.name)] - rxn.reac_nu[rxn.reac.index(sp_k.name)]
+                    nu = (rxn.prod_nu[rxn.prod.index(sp_k.name)] - 
+                          rxn.reac_nu[rxn.reac.index(sp_k.name)])
                     # check if net production zero
                     if nu == 0:
                         continue
@@ -814,9 +955,11 @@ def write_jacobian(lang, specs, reacs):
                 # start contribution to Jacobian entry for reaction
                 jline = '  jac'
                 if lang in ['c', 'cuda']:
-                    jline += '[' + str(k_sp + 1 + (num_s + 1) * (j_sp + 1)) + ']'
+                    jline += '[{}]'.format(k_sp + 1 + (num_s+1) * (j_sp+1))
                 elif lang in ['fortran', 'matlab']:
-                    jline += '(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ')'
+                    jline += ('({}, '.format(k_sp + 2) + 
+                              '{})'.format(j_sp + 2)
+                              )
                 
                 if isfirst:
                     jline += ' = '
@@ -825,10 +968,12 @@ def write_jacobian(lang, specs, reacs):
                     if lang in ['c', 'cuda']:
                         jline += ' += '
                     elif lang in ['fortran', 'matlab']:
-                        jline += 'jac(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') + '
+                        jline += ('jac({}, '.format(k_sp + 2) + 
+                                  '{}) + '.format(j_sp + 2)
+                                  )
                 
                 if nu != 1:
-                    jline += str(float(nu)) + ' * '
+                    jline += '{} * '.format(float(nu))
                 
                 # start reaction
                 jline += '('
@@ -839,17 +984,18 @@ def write_jacobian(lang, specs, reacs):
                     
                     jline += '(-mw_avg * pres_mod'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(pind) + ']'
+                        jline += '[{}]'.format(pind)
                     elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(pind + 1) + ')'
+                        jline += '({})'.format(pind + 1)
                     jline += ' / {:.8e}'.format(sp_j.mw)
                     
                     # check if species of interest is third body in reaction
-                    alphaij = next((thd[1] for thd in rxn.thd_body if thd[0] == sp_j.name), None)
+                    alphaij = next((thd[1] for thd in rxn.thd_body 
+                                    if thd[0] == sp_j.name), None)
                     if alphaij != 0.0:
                         jline += ' + '
                         if alphaij:
-                            jline += str(float(alphaij)) + ' * '
+                            jline += '{} * '.format(float(alphaij))
                         # default is 1.0
                         jline += 'rho / {:.8e}'.format(sp_j.mw)
                     jline += ') * '
@@ -857,24 +1003,23 @@ def write_jacobian(lang, specs, reacs):
                     if rxn.rev:
                         jline += '(fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
+                            jline += '[{}]'.format(rind)
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
+                            jline += '({})'.format(rind + 1)
                         
                         jline += ' - rev_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rev_reacs.index(rxn)) + ']'
+                            jline += '[{}]'.format(rev_reacs.index(rxn))
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
+                            jline += '({})'.format(rev_reacs.index(rxn) + 1)
                         jline += ')'
                     else:
                         jline += 'fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
+                            jline += '[{}]'.format(rind)
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
+                            jline += '({})'.format(rind + 1)
                     
-                    #if (sp_j.name in rxn.reac) or (rxn.rev and sp_j.name in rxn.prod):
                     jline += ' + '
                 elif rxn.pdep:
                     # pressure-dependent reaction
@@ -884,47 +1029,54 @@ def write_jacobian(lang, specs, reacs):
                     
                     if rxn.pdep_sp:
                         line += 'conc'
+                        i = specs.index(rxn.pdep_sp)
                         if lang in ['c', 'cuda']:
-                            line += '[' + str(specs.index(rxn.pdep_sp)) + ']'
+                            line += '[{}]'.format(i)
                         elif lang in ['fortran', 'matlab']:
-                            line += '(' + str(specs.index(rxn.pdep_sp) + 1) + ')'
+                            line += '({})'.format(i + 1)
                     else:
                         line += '(m'
                         for thd_sp in rxn.thd_body:
-                            isp = specs.index( next((s for s in specs if s.name == thd_sp[0]), None) )
+                            isp = specs.index(next((s for s in specs 
+                                              if s.name == thd_sp[0]), None))
                             if thd_sp[1] > 1.0:
-                                line += ' + ' + str(thd_sp[1] - 1.0) + ' * conc'
+                                line += ' + {} * conc'.format(thd_sp[1] - 1.0)
                                 if lang in ['c', 'cuda']:
-                                    line += '[' + str(isp) + ']'
+                                    line += '[{}]'.format(isp)
                                 elif lang in ['fortran', 'matlab']:
-                                    line += '(' + str(isp + 1) + ')'
+                                    line += '({})'.format(isp + 1)
                             elif thd_sp[1] < 1.0:
-                                line += ' - ' + str(1.0 - thd_sp[1]) + ' * conc'
+                                line += ' - {} * conc'.format(1.0 - thd_sp[1])
                                 if lang in ['c', 'cuda']:
-                                    line += '[' + str(isp) + ']'
+                                    line += '[{}]'.format(isp)
                                 elif lang in ['fortran', 'matlab']:
-                                    line += '(' + str(isp + 1) + ')'
+                                    line += '({})'.format(isp + 1)
                         line += ')'
                     
                     if rxn.low:
                         # unimolecular/recombination fall-off
                         beta_0minf = rxn.low[1] - rxn.b
                         E_0minf = rxn.low[2] - rxn.E
-                        k0kinf = rxn_rate_const(rxn.low[0] / rxn.A, beta_0minf, E_0minf)
+                        k0kinf = rate.rxn_rate_const(rxn.low[0] / rxn.A, 
+                                                     beta_0minf, E_0minf
+                                                     )
                     elif rxn.high:
                         # chem-activated bimolecular rxn
                         beta_0minf = rxn.b - rxn.high[1]
                         E_0minf = rxn.E - rxn.high[2]
-                        k0kinf = rxn_rate_const(rxn.A / rxn.high[0], beta_0minf, E_0minf)
-                    line += ' * (' + k0kinf + ')'
-                    line += line_end[lang]
+                        k0kinf = rate.rxn_rate_const(rxn.A / rxn.high[0],
+                                                     beta_0minf, E_0minf
+                                                     )
+                    line += (' * (' + k0kinf + ')' + 
+                             utils.line_end[lang]
+                             )
                     file.write(line)
                     
                     jline += 'pres_mod'
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(pind) + ']'
+                        jline += '[{}]'.format(pind)
                     elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(pind + 1) + ')'
+                        jline += '({})'.format(pind + 1)
                     jline += ' * ('
                     
                     # dPr/dYj contribution
@@ -937,91 +1089,121 @@ def write_jacobian(lang, specs, reacs):
                     
                     # dF/dYj contribution
                     if rxn.troe:
-                        line = '  Fcent = {:.4e} * exp(-T / {:.4e})'.format(1.0 - rxn.troe_par[0], rxn.troe_par[1])
-                        line += ' + {:.4e} * exp(T / {:.4e})'.format(rxn.troe_par[0], rxn.troe_par[2])
+                        line = ('  Fcent = '
+                                '{:.4e} * '.format(1.0 - rxn.troe_par[0]) + 
+                                'exp(-T / {:.4e})'.format(rxn.troe_par[1]) + 
+                                ' + {:.4e} * '.format(rxn.troe_par[0]) + 
+                                'exp(T / {:.4e})'.format(rxn.troe_par[2])
+                                )
                         if len(rxn.troe_par) == 4:
-                            line += ' + exp(-{:.4e} / T)'.format(rxn.troe_par[3])
-                        line += line_end[lang]
+                            line += (' + exp(-'
+                                     '{:.4e} / T)'.format(rxn.troe_par[3])
+                                     )
+                        line += utils.line_end[lang]
                         file.write(line)
                         
-                        line = '  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4'
-                        line += line_end[lang]
+                        line = ('  A = log10(Pr) - 0.67 * '
+                                'log10(Fcent) - 0.4' + 
+                                utils.line_end[lang]
+                                )
                         file.write(line)
                         
-                        line = '  B = 0.806 - 1.1762 * log10(Fcent) - 0.14 * log10(Pr)'
-                        line += line_end[lang]
+                        line = ('  B = 0.806 - 1.1762 * log10(Fcent) - '
+                                '0.14 * log10(Pr)' + 
+                                utils.line_end[lang]
+                                )
                         file.write(line)
                         
-                        jline += ' - log(Fcent) * 2.0 * A * (B * {:.6} + A * {:.6}) / '.format(1.0 / math.log(10.0), 0.14 / math.log(10.0))
-                        jline += '(B * B * B * (1.0 + A * A / (B * B)) * (1.0 + A * A / (B * B)))'
+                        jline += (' - log(Fcent) * 2.0 * A * (B * '
+                                  '{:.6}'.format(1.0 / math.log(10.0)) + 
+                                  ' + A * '
+                                  '{:.6}) / '.format(0.14 / math.log(10.0)) + 
+                                  '(B * B * B * (1.0 + A * A / (B * B)) '
+                                  '* (1.0 + A * A / (B * B)))'
+                                  )
                         
                     elif rxn.sri:
-                        file.write('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + line_end[lang])
+                        file.write('  X = 1.0 / (1.0 + log10(Pr) * '
+                                   'log10(Pr))' + 
+                                   utils.line_end[lang]
+                                   )
                         
-                        jline += ' - X * X * {:.6} * log10(Pr) * log({:.4} * exp(-{:4} / T) + exp(-T / {:.4}))'.format(2.0 / math.log(10.0), rxn.sri[0], rxn.sri[1], rxn.sri[2])                                    
+                        jline += (' - X * X * '
+                                  '{:.6} * '.format(2.0 / math.log(10.0)) + 
+                                  'log10(Pr) * '
+                                  'log({:.4} * '.format(rxn.sri[0]) + 
+                                  'exp(-{:4} / T) + '.format(rxn.sri[1]) + 
+                                  'exp(-T / {:.4}))'.format(rxn.sri[2])
+                                  )
                     jline += ') * '
                     
                     # dPr/dYj part
-                    #jline += '(-rho * {:.8e} * T / (pres * {:.8e})'.format(RU, sp_j.mw)
                     jline += '(-mw_avg / {:.8e}'.format(sp_j.mw)
                     
                     if rxn.thd_body:
                         
-                        alphaij = next((thd[1] for thd in rxn.thd_body if thd[0] == sp_j.name), None)
+                        alphaij = next((thd[1] for thd in rxn.thd_body 
+                                        if thd[0] == sp_j.name), None)
                         
                         # need to make sure alpha isn't 0.0
                         if alphaij != 0.0:
                             jline += ' + rho'
                             if alphaij:
-                                jline += ' * ' + str(float(alphaij))
+                                jline += ' * {}'.format(float(alphaij))
                             
                             jline += ' / ((m'
                             for thd_sp in rxn.thd_body:
-                                isp = specs.index( next((s for s in specs if s.name == thd_sp[0]), None) )
+                                i = next((s for s in specs if s.name == 
+                                            thd_sp[0]), None)
+                                isp = specs.index(i)
                                 if thd_sp[1] > 1.0:
-                                    jline += ' + ' + str(thd_sp[1] - 1.0) + ' * conc'
+                                    jline += (' + '
+                                              '{}'.format(thd_sp[1] - 1.0) + 
+                                              ' * conc'
+                                              )
                                     if lang in ['c', 'cuda']:
-                                        jline += '[' + str(isp) + ']'
+                                        jline += '[{}]'.format(isp)
                                     elif lang in ['fortran', 'matlab']:
-                                        jline += '(' + str(isp + 1) + ')'
+                                        jline += '({})'.format(isp + 1)
                                 elif thd_sp[1] < 1.0:
-                                    jline += ' - ' + str(1.0 - thd_sp[1]) + ' * conc'
+                                    jline += (' - '
+                                              '{}'.format(1.0 - thd_sp[1]) + 
+                                              ' * conc'
+                                              )
                                     if lang in ['c', 'cuda']:
-                                        jline += '[' + str(isp) + ']'
+                                        jline += '[{}]'.format(isp)
                                     elif lang in ['fortran', 'matlab']:
-                                        jline += '(' + str(isp + 1) + ')'
+                                        jline += '({})'.format(isp + 1)
                             jline += ') * {:.8e})'.format(sp_j.mw)
                     elif rxn.pdep and rxn.pdep_sp == sp_j.name:
                         jline += ' + (1.0 / Y'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(j_sp) + ']'
+                            jline += '[{}]'.format(j_sp)
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(j_sp + 1) + ')'
+                            jline += '({})'.format(j_sp + 1)
                         jline += ')'
                     jline += ') * '
                     
                     if rxn.rev:
                         jline += '(fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
+                            jline += '[{}]'.format(rind)
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
+                            jline += '({})'.format(rind + 1)
                         
                         jline += ' - rev_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rev_reacs.index(rxn)) + ']'
+                            jline += '[{}]'.format(rev_reacs.index(rxn))
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
+                            jline += '({})'.format(rev_reacs.index(rxn) + 1)
                         jline += ')'
                     else:
                         jline += 'fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
+                            jline += '[{}]'.format(rind)
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
-                    #jline += ')'
+                            jline += '({})'.format(rind + 1)
                     
-                    #if (sp_j.name in rxn.reac) or (rxn.rev and sp_j.name in rxn.prod):
                     jline += ' + '
                 
                 # next, contribution from dR/dYj
@@ -1029,9 +1211,9 @@ def write_jacobian(lang, specs, reacs):
                     jline += 'pres_mod'
                     pind = pdep_reacs.index(rind)
                     if lang in ['c', 'cuda']:
-                        jline += '[' + str(pind) + ']'
+                        jline += '[{}]'.format(pind)
                     elif lang in ['fortran', 'cuda']:
-                        jline += '(' + str(pind + 1) + ')'
+                        jline += '({})'.format(pind + 1)
                     jline += ' * ('
                 
                 firstSp = True
@@ -1046,44 +1228,49 @@ def write_jacobian(lang, specs, reacs):
                         
                         nu = rxn.reac_nu[rxn.reac.index(sp_l.name)]
                         if nu != 1:
-                            jline += str(float(nu)) + ' * '
+                            jline += '{} * '.format(float(nu))
                         jline += '('
                         
                         jline += '-mw_avg * fwd_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rind) + ']'
+                            jline += '[{}]'.format(rind)
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rind + 1) + ')'
+                            jline += '({})'.format(rind + 1)
                         jline += ' / {:.8e}'.format(sp_j.mw)
                         
                         # only contribution from 2nd part of sp_l is sp_j
                         if sp_l is sp_j:
-                            jline += ' + ' + rxn_rate_const(rxn.A, rxn.b, rxn.E)
-                            jline += ' * (rho / {:.8e})'.format(sp_l.mw)
+                            jline += (' + ' + 
+                                      rate.rxn_rate_const(rxn.A, rxn.b, 
+                                                          rxn.E
+                                                          ) + 
+                                      ' * (rho / {:.8e})'.format(sp_l.mw)
+                                      )
                             
                             if (nu - 1) > 0:
                                 if isinstance(nu - 1, float):
                                     jline += ' * pow(conc'
                                     if lang in ['c', 'cuda']:
-                                        jline += '[' + str(l_sp) + ']'
+                                        jline += '[{}]'.format(l_sp)
                                     elif lang in ['fortran', 'matlab']:
-                                        jline += '(' + str(l_sp + 1) + ')'
-                                    jline += ', ' + str(nu - 1) + ')'
+                                        jline += '({})'.format(l_sp + 1)
+                                    jline += ', {})'.format(nu - 1)
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu - 1):
                                         jline += ' * conc'
                                         if lang in ['c', 'cuda']:
-                                            jline += '[' + str(l_sp) + ']'
+                                            jline += '[{}]'.format(l_sp)
                                         elif lang in ['fortran', 'matlab']:
-                                            jline += '(' + str(l_sp) + ')'
+                                            jline += '({})'.format(l_sp + 1)
                             
                             # loop through remaining reactants
                             for sp_reac in rxn.reac:
                                 if sp_reac == sp_l.name: continue
                                 
                                 nu = rxn.reac_nu[rxn.reac.index(sp_reac)]
-                                isp = next(i for i in xrange(len(specs)) if specs[i].name == sp_reac)
+                                isp = next(i for i in xrange(len(specs)) 
+                                           if specs[i].name == sp_reac)
                                 if isinstance(nu, float):
                                     jline += ' * pow(conc'
                                     if lang in ['c', 'cuda']:
@@ -1096,9 +1283,9 @@ def write_jacobian(lang, specs, reacs):
                                     for i in range(nu):
                                         jline += ' * conc'
                                         if lang in ['c', 'cuda']:
-                                            jline += '[' + str(isp) + ']'
+                                            jline += '[{}]'.format(isp)
                                         elif lang in ['fortran', 'matlab']:
-                                            jline += '(' + str(isp) + ')'
+                                            jline += '({})'.format(isp)
                         # end reactant section
                         jline += ')'
                     
@@ -1113,14 +1300,14 @@ def write_jacobian(lang, specs, reacs):
                         
                         nu = rxn.prod_nu[rxn.prod.index(sp_l.name)]
                         if nu != 1:
-                            jline += str(float(nu)) + ' * '
+                            jline += '{} * '.format(float(nu))
                         jline += '('
                         
                         jline += '-mw_avg * rev_rxn_rates'
                         if lang in ['c', 'cuda']:
-                            jline += '[' + str(rev_reacs.index(rxn)) + ']'
+                            jline += '[{}]'.format(rev_reacs.index(rxn))
                         elif lang in ['fortran', 'cuda']:
-                            jline += '(' + str(rev_reacs.index(rxn) + 1) + ')'
+                            jline += '({})'.format(rev_reacs.index(rxn) + 1)
                         jline += ' / {:.8e}'.format(sp_j.mw)
                         
                         # only contribution from 2nd part of sp_l is sp_j
@@ -1128,8 +1315,7 @@ def write_jacobian(lang, specs, reacs):
                             
                             jline += ' + '
                             if not rxn.rev_par:
-                                line = '  Kc = 0.0'
-                                line += line_end[lang]
+                                line = '  Kc = 0.0' + utils.line_end[lang]
                                 file.write(line)
                                 
                                 # sum of stoichiometric coefficients
@@ -1140,7 +1326,10 @@ def write_jacobian(lang, specs, reacs):
                                     
                                     # check if also in reactants
                                     if sp in rxn.reac:
-                                        nu = rxn.prod_nu[rxn.prod.index(sp)] - rxn.reac_nu[rxn.reac.index(sp)]
+                                        nu = (rxn.prod_nu[rxn.prod.index(sp)] 
+                                              - 
+                                              rxn.reac_nu[rxn.reac.index(sp)]
+                                              )
                                     else:
                                         nu = rxn.prod_nu[rxn.prod.index(sp)]
                                     
@@ -1151,13 +1340,20 @@ def write_jacobian(lang, specs, reacs):
                                     sum_nu += nu
                                     
                                     # get species object
-                                    spec = next((spec for spec in specs if spec.name == sp), None)
+                                    spec = next((spec for spec in specs 
+                                                 if spec.name == sp), None)
                                     if not spec:
-                                        print 'Error: species ' + sp + ' in reaction ' + str(reacs.index(rxn)) + ' not found.\n'
+                                        i = reacs.index(rxn)
+                                        print ('Error: species ' + sp + 
+                                               ' in reaction {}'.format(i) + 
+                                               ' not found.\n'
+                                               )
                                         sys.exit()
                                     
                                     # need temperature conditional for equilibrium constants
-                                    line = '  if (T <= {:})'.format(spec.Trange[1])
+                                    line = ('  if (T <= '
+                                            '{})'.format(spec.Trange[1])
+                                            )
                                     if lang in ['c', 'cuda']:
                                         line += ' {\n'
                                     elif lang == 'fortran':
@@ -1166,13 +1362,39 @@ def write_jacobian(lang, specs, reacs):
                                         line += '\n'
                                     file.write(line)
                                     
-                                    line = ''
-                                    if nu < 0:
-                                        line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
-                                    elif nu > 0:
-                                        line = '    Kc = Kc + {:.2f} * '.format(nu)
-                                    line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1]/2.0, spec.lo[2]/6.0, spec.lo[3]/12.0, spec.lo[4]/20.0, spec.lo[5])
-                                    line += line_end[lang]
+                                    line = '    Kc'
+                                    if lang in ['c', 'cuda']:
+                                        if nu < 0:
+                                            line += ' -= '
+                                        elif nu > 0:
+                                            line += ' += '
+                                    elif lang in ['fortran', 'matlab']:    
+                                        if nu < 0:
+                                            line += ' = Kc - '
+                                        elif nu > 0:
+                                            line += ' = Kc + '
+                                    line += (
+                                            '{:.2f} * '.format(abs(nu)) + 
+                                            '({:.8e} - '.format(spec.lo[6]) + 
+                                            '{:.8e} + '.format(spec.lo[0]) + 
+                                            '{:.8e}'.format(spec.lo[0] - 
+                                                            1.0) + 
+                                            ' * logT + T * ('
+                                            '{:.8e}'.format(spec.lo[1] / 
+                                                            2.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.lo[2] / 
+                                                            6.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.lo[3] / 
+                                                            12.0) + 
+                                            ' + '
+                                            '{:.8e}'.format(spec.lo[4] / 
+                                                            20.0) + 
+                                            ' * T))) - '
+                                            '{:.8e} / T)'.format(spec.lo[5]) +
+                                            utils.line_end[lang]
+                                            )
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1180,12 +1402,39 @@ def write_jacobian(lang, specs, reacs):
                                     elif lang in ['fortran', 'matlab']:
                                         file.write('  else\n')
                                     
-                                    if nu < 0:
-                                        line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
-                                    elif nu > 0:
-                                        line = '    Kc = Kc + {:.2f} * '.format(nu)
-                                    line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1]/2.0, spec.hi[2]/6.0, spec.hi[3]/12.0, spec.hi[4]/20.0, spec.hi[5])
-                                    line += line_end[lang]
+                                    line = '    Kc'
+                                    if lang in ['c', 'cuda']:
+                                        if nu < 0:
+                                            line += ' -= '
+                                        elif nu > 0:
+                                            line += ' += '
+                                    elif lang in ['fortran', 'matlab']:    
+                                        if nu < 0:
+                                            line += ' = Kc - '
+                                        elif nu > 0:
+                                            line += ' = Kc + '
+                                    line += (
+                                            '{:.2f} * '.format(abs(nu)) + 
+                                            '({:.8e} - '.format(spec.hi[6]) + 
+                                            '{:.8e} + '.format(spec.hi[0]) + 
+                                            '{:.8e}'.format(spec.hi[0] - 
+                                                            1.0) + 
+                                            ' * logT + T * ('
+                                            '{:.8e}'.format(spec.hi[1] / 
+                                                            2.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.hi[2] / 
+                                                            6.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.hi[3] / 
+                                                            12.0) + 
+                                            ' + '
+                                            '{:.8e}'.format(spec.hi[4] / 
+                                                            20.0) + 
+                                            ' * T))) - '
+                                            '{:.8e} / T)'.format(spec.hi[5]) +
+                                            utils.line_end[lang]
+                                            )
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1197,25 +1446,34 @@ def write_jacobian(lang, specs, reacs):
                                 
                                 # now loop through reactants
                                 for sp in rxn.reac:
-                                    # check if species also in products (if so, already considered)
+                                    # check if species also in products
+                                    # (if so, already considered)
                                     if sp in rxn.prod: continue
                                     
                                     nu = -rxn.reac_nu[rxn.reac.index(sp)]
                                     
-                                    # skip if overall stoich coefficient is zero
+                                    # skip if overall stoich coefficient
+                                    # is zero
                                     if (nu == 0):
                                         continue
                                     
                                     sum_nu += nu
                                     
                                     # get species object
-                                    spec = next((spec for spec in specs if spec.name == sp), None)
+                                    spec = next((spec for spec in specs 
+                                                 if spec.name == sp), None)
                                     if not spec:
-                                        print 'Error: species ' + sp + ' in reaction ' + str(reacs.index(rxn)) + ' not found.\n'
+                                        i = reacs.index(rxn)
+                                        print ('Error: species ' + sp + 
+                                               ' in reaction {}'.format(i) + 
+                                               ' not found.\n')
                                         sys.exit()
                                     
-                                    # need temperature conditional for equilibrium constants
-                                    line = '  if (T <= {:})'.format(spec.Trange[1])
+                                    # Write temperature conditional for 
+                                    # equilibrium constants
+                                    line = ('  if (T <= '
+                                            '{})'.format(spec.Trange[1])
+                                            )
                                     if lang in ['c', 'cuda']:
                                         line += ' {\n'
                                     elif lang == 'fortran':
@@ -1224,13 +1482,39 @@ def write_jacobian(lang, specs, reacs):
                                         line += '\n'
                                     file.write(line)
                                     
-                                    line = ''
-                                    if nu < 0:
-                                        line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
-                                    elif nu > 0:
-                                        line = '    Kc = Kc + {:.2f} * '.format(nu)
-                                    line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1]/2.0, spec.lo[2]/6.0, spec.lo[3]/12.0, spec.lo[4]/20.0, spec.lo[5])
-                                    line += line_end[lang]
+                                    line = '    Kc'
+                                    if lang in ['c', 'cuda']:
+                                        if nu < 0:
+                                            line += ' -= '
+                                        elif nu > 0:
+                                            line += ' += '
+                                    elif lang in ['fortran', 'matlab']:    
+                                        if nu < 0:
+                                            line += ' = Kc - '
+                                        elif nu > 0:
+                                            line += ' = Kc + '
+                                    line += (
+                                            '{:.2f} * '.format(abs(nu)) + 
+                                            '({:.8e} - '.format(spec.lo[6]) + 
+                                            '{:.8e} + '.format(spec.lo[0]) + 
+                                            '{:.8e}'.format(spec.lo[0] - 
+                                                            1.0) + 
+                                            ' * logT + T * ('
+                                            '{:.8e}'.format(spec.lo[1] / 
+                                                            2.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.lo[2] / 
+                                                            6.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.lo[3] / 
+                                                            12.0) + 
+                                            ' + '
+                                            '{:.8e}'.format(spec.lo[4] / 
+                                                            20.0) + 
+                                            ' * T))) - '
+                                            '{:.8e} / T)'.format(spec.lo[5]) +
+                                            utils.line_end[lang]
+                                            )
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1238,12 +1522,39 @@ def write_jacobian(lang, specs, reacs):
                                     elif lang in ['fortran', 'matlab']:
                                         file.write('  else\n')
                                     
-                                    if nu < 0:
-                                        line = '    Kc = Kc - {:.2f} * '.format(abs(nu))
-                                    elif nu > 0:
-                                        line = '    Kc = Kc + {:.2f} * '.format(nu)
-                                    line += '({:.8e} - {:.8e} + {:.8e} * logT + T * ({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T))) - {:.8e} / T)'.format(spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1]/2.0, spec.hi[2]/6.0, spec.hi[3]/12.0, spec.hi[4]/20.0, spec.hi[5])
-                                    line += line_end[lang]
+                                    line = '    Kc'
+                                    if lang in ['c', 'cuda']:
+                                        if nu < 0:
+                                            line += ' -= '
+                                        elif nu > 0:
+                                            line += ' += '
+                                    elif lang in ['fortran', 'matlab']:    
+                                        if nu < 0:
+                                            line += ' = Kc - '
+                                        elif nu > 0:
+                                            line += ' = Kc + '
+                                    line += (
+                                            '{:.2f} * '.format(abs(nu)) + 
+                                            '({:.8e} - '.format(spec.hi[6]) + 
+                                            '{:.8e} + '.format(spec.hi[0]) + 
+                                            '{:.8e}'.format(spec.hi[0] - 
+                                                            1.0) + 
+                                            ' * logT + T * ('
+                                            '{:.8e}'.format(spec.hi[1] / 
+                                                            2.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.hi[2] / 
+                                                            6.0) + 
+                                            ' + T * ('
+                                            '{:.8e}'.format(spec.hi[3] / 
+                                                            12.0) + 
+                                            ' + '
+                                            '{:.8e}'.format(spec.hi[4] / 
+                                                            20.0) + 
+                                            ' * T))) - '
+                                            '{:.8e} / T)'.format(spec.hi[5]) +
+                                            utils.line_end[lang]
+                                            )
                                     file.write(line)
                                     
                                     if lang in ['c', 'cuda']:
@@ -1255,16 +1566,25 @@ def write_jacobian(lang, specs, reacs):
                                 
                                 line = '  Kc = '
                                 if sum_nu != 0:
-                                    line += '{:.8e} * '.format((PA / RU)**sum_nu)
-                                line += 'exp(Kc)'
-                                line += line_end[lang]
+                                    num = (chem.PA / chem.RU)**sum_nu
+                                    line += '{:.8e} * '.format(num)
+                                line += 'exp(Kc)' + utils.line_end[lang]
                                 file.write(line)
                                 
-                                jline += '(' + rxn_rate_const(rxn.A, rxn.b, rxn.E) + ' / Kc)'
+                                jline += ('(' + 
+                                          rate.rxn_rate_const(rxn.A, 
+                                                              rxn.b, 
+                                                              rxn.E
+                                                              ) + 
+                                          ' / Kc)'
+                                          )
                             
                             else:
                                 # explicit reverse coefficients
-                                jline += rxn_rate_const(rxn.rev_par[0], rxn.rev_par[1], rxn.rev_par[2])
+                                jline += rate.rxn_rate_const(rxn.rev_par[0], 
+                                                             rxn.rev_par[1], 
+                                                             rxn.rev_par[2]
+                                                             )
                             
                             jline += ' * (rho / {:.8e})'.format(sp_l.mw)
                             
@@ -1273,40 +1593,41 @@ def write_jacobian(lang, specs, reacs):
                                 if isinstance(nu - 1, float):
                                     jline += ' * pow(conc'
                                     if lang in ['c', 'cuda']:
-                                        jline += '[' + str(l_sp) + ']'
+                                        jline += '[{}]'.format(l_sp)
                                     elif lang in ['fortran', 'matlab']:
-                                        jline += '(' + str(l_sp + 1) + ')'
-                                    jline += ', ' + str(nu - 1) + ')'
+                                        jline += '({})'.format(l_sp + 1)
+                                    jline += ', {})'.format(nu - 1)
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu - 1):
                                         jline += ' * conc'
                                         if lang in ['c', 'cuda']:
-                                            jline += '[' + str(l_sp) + ']'
+                                            jline += '[{}]'.format(l_sp)
                                         elif lang in ['fortran', 'matlab']:
-                                            jline += '(' + str(l_sp) + ')'
+                                            jline += '({})'.format(l_sp)
                             
                             # loop through remaining products
                             for sp_reac in rxn.prod:
                                 if sp_reac == sp_l.name: continue
                                 
                                 nu = rxn.prod_nu[rxn.prod.index(sp_reac)]
-                                isp = next(i for i in xrange(len(specs)) if specs[i].name == sp_reac)
+                                isp = next(i for i in xrange(len(specs)) 
+                                           if specs[i].name == sp_reac)
                                 if isinstance(nu, float):
                                     jline += ' * pow(conc'
                                     if lang in ['c', 'cuda']:
-                                        jline += '[' + str(isp) + ']'
+                                        jline += '[{}]'.format(isp)
                                     elif lang in ['fortran', 'matlab']:
-                                        jline += '(' + str(isp + 1) + ')'
-                                    jline += ', ' + str(nu) + ')'
+                                        jline += '({})'.format(isp + 1)
+                                    jline += ', {})'.format(nu)
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu):
                                         jline += ' * conc'
                                         if lang in ['c', 'cuda']:
-                                            jline += '[' + str(isp) + ']'
+                                            jline += '[{}]'.format(isp)
                                         elif lang in ['fortran', 'matlab']:
-                                            jline += '(' + str(isp) + ')'
+                                            jline += '({})'.format(isp)
                         # end product section
                         jline += ')'
                 # done with species loop
@@ -1315,42 +1636,48 @@ def write_jacobian(lang, specs, reacs):
                     jline += ')'
                 
                 # done with this reaction
-                jline += ')'
-                jline += line_end[lang]
+                jline += ')' + utils.line_end[lang]
                 file.write(jline)
             
             if isfirst:
                 # not participating in any reactions, or at least no net production
                 line = '  jac'
                 if lang in ['c', 'cuda']:
-                    line += '[' + str(k_sp + 1 + (num_s + 1) * (j_sp + 1)) + ']'
+                    line += '[{}]'.format(k_sp + 1 + (num_s + 1) * (j_sp + 1))
                 elif lang in ['fortran', 'matlab']:
-                    line += '(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ')'
+                    line += '({},{})'.format(k_sp + 2, j_sp + 2)
                 line += ' = 0.0'
             else:
                 line = '  jac'
                 if lang in ['c', 'cuda']:
-                    line += '[' + str(k_sp + 1 + (num_s + 1) * (j_sp + 1)) + '] += '
+                    i = k_sp + 1 + (num_s + 1) * (j_sp + 1)
+                    line += '[{}] += '.format(i)
                 elif lang in ['fortran', 'matlab']:
-                    line += '(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') = '
-                    line += 'jac(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') + '
+                    line += ('({},{}) = '.format(k_sp + 2, j_sp + 2) + 
+                             'jac({},{}) + '.format(k_sp + 2, j_sp + 2)
+                             )
                 line += 'sp_rates'
                 if lang in ['c', 'cuda']:
-                    line += '[' + str(k_sp) + ']'
+                    line += '[{}]'.format(k_sp)
                 elif lang in ['fortran', 'matlab']:
-                    line += '(' + str(k_sp + 1) + ')'
-                line += ' * mw_avg / {:.8e}'.format(sp_j.mw)
-                line += line_end[lang]
+                    line += '({})'.format(k_sp + 1)
+                line += (' * mw_avg / {:.8e}'.format(sp_j.mw) + 
+                         utils.line_end[lang]
+                         )
                 file.write(line)
                 
                 line = '  jac'
                 if lang in ['c', 'cuda']:
-                    line += '[' + str(k_sp + 1 + (num_s + 1) * (j_sp + 1)) + '] *= '
+                    line += ('[{}]'.format(k_sp + 1 + (num_s + 1) * 
+                                           (j_sp + 1)) + 
+                             ' *= '
+                             )
                 elif lang in ['fortran', 'matlab']:
-                    line += '(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') = '
-                    line += 'jac(' + str(k_sp + 2) + ', ' + str(j_sp + 2) + ') * '
+                    line += ('({},{}) = '.format(k_sp + 2, j_sp + 2) + 
+                             'jac({},{}) * '.format(k_sp + 2, j_sp + 2)
+                             )
                 line += '{:.8e} / rho'.format(sp_k.mw)
-            line += line_end[lang]
+            line += utils.line_end[lang]
             file.write(line)
             file.write('\n')
     
@@ -1362,37 +1689,45 @@ def write_jacobian(lang, specs, reacs):
     
     # evaluate enthalpy
     if lang in ['c', 'cuda']:
-        file.write('  // species enthalpies\n')
-        file.write('  Real h[' + str(num_s) + '];\n')
-        file.write('  eval_h(T, h);\n')
+        file.write('  // species enthalpies\n'
+                   '  Real h[{}];\n'.format(num_s) + 
+                   '  eval_h(T, h);\n'
+                   )
     elif lang == 'fortran':
-        file.write('  ! species enthalpies\n')
-        file.write('  call eval_h(T, h)\n')
+        file.write('  ! species enthalpies\n'
+                   '  call eval_h(T, h)\n'
+                   )
     elif lang == 'matlab':
-        file.write('  % species enthalpies\n')
-        file.write('  h = eval_h(T);\n')
+        file.write('  % species enthalpies\n'
+                   '  h = eval_h(T);\n'
+                   )
     file.write('\n')
     
     # evaluate specific heat
     if lang in ['c', 'cuda']:
-        file.write('  // species specific heats\n')
-        file.write('  Real cp[' + str(num_s) + '];\n')
-        file.write('  eval_cp(T, cp);\n')
+        file.write('  // species specific heats\n'
+                   '  Real cp[{}];\n'.format(num_s) + 
+                   '  eval_cp(T, cp);\n'
+                   )
     elif lang == 'fortran':
-        file.write('  ! species specific heats\n')
-        file.write('  call eval_cp(T, cp)\n')
+        file.write('  ! species specific heats\n'
+                   '  call eval_cp(T, cp)\n'
+                   )
     elif lang == 'matlab':
-        file.write('  % species specific heats\n')
-        file.write('  cp = eval_cp(T);\n')
+        file.write('  % species specific heats\n'
+                   '  cp = eval_cp(T);\n'
+                   )
     file.write('\n')
     
     # average specific heat
     if lang == 'c':
-        file.write('  // average specific heat\n')
-        file.write('  Real cp_avg;\n')
+        file.write('  // average specific heat\n'
+                   '  Real cp_avg;\n'
+                   )
     elif lang == 'cuda':
-        file.write('  // average specific heat\n')
-        file.write('  register Real cp_avg;\n')
+        file.write('  // average specific heat\n'
+                   '  register Real cp_avg;\n'
+                   )
     elif lang == 'fortran':
         file.write('  ! average specific heat\n')
     elif lang == 'matlab':
@@ -1411,27 +1746,36 @@ def write_jacobian(lang, specs, reacs):
             file.write(line)
             line = '     '
         
+        isp = specs.index(sp)
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(y[' + str(specs.index(sp) + 1) + '] * cp[' + str(specs.index(sp)) + '])'
+            line += '(y[{}] * cp[{}])'.format(isp + 1, isp)
         elif lang in ['fortran', 'matlab']:
-            line += '(y(' + str(specs.index(sp) + 2) + ') * cp(' + str(specs.index(sp) + 1) + '))'
+            line += '(y({}) * cp({}))'.format(isp + 2, isp + 1)
         
         isfirst = False
-    line += line_end[lang]
+    line += utils.line_end[lang]
     file.write(line)
     
     # sum of enthalpy * species rate * molecular weight for all species
     if lang == 'c':
-        file.write('  // sum of enthalpy * species rate * molecular weight for all species\n')
-        file.write('  Real sum_hwW;\n')
+        file.write('  // sum of enthalpy * species rate * molecular weight '
+                   'for all species\n'
+                   '  Real sum_hwW;\n'
+                   )
     elif lang == 'cuda':
-        file.write('  // sum of enthalpy * species rate * molecular weight for all species\n')
-        file.write('  register Real sum_hwW;\n')
+        file.write('  // sum of enthalpy * species rate * molecular weight '
+                   'for all species\n'
+                   '  register Real sum_hwW;\n'
+                   )
     elif lang == 'fortran':
-        file.write('  ! sum of enthalpy * species rate * molecular weight for all species\n')
+        file.write('  ! sum of enthalpy * species rate * molecular weight '
+                   'for all species\n'
+                   )
     elif lang == 'matlab':
-        file.write('  % sum of enthalpy * species rate * molecular weight for all species\n')
+        file.write('  % sum of enthalpy * species rate * molecular weight '
+                   'for all species\n'
+                   )
     file.write('\n')
     line = '  sum_hwW = '
     
@@ -1450,12 +1794,12 @@ def write_jacobian(lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(h[' + str(isp) + '] * sp_rates[' + str(isp) + '] * {:.6})'.format(sp.mw)
+            line += '(h[{0}] * sp_rates[{0}] * {1:.6})'.format(isp, sp.mw)
         elif lang in ['fortran', 'matlab']:
-            line += '(h[' + str(isp + 1) + '] * sp_rates[' + str(isp + 1) + '] * {:.6})'.format(sp.mw)
+            line += '(h[{0}] * sp_rates[{0}] * {1:.6})'.format(isp + 1, sp.mw)
         
         isfirst = False
-    line += line_end[lang]
+    line += utils.line_end[lang]
     file.write(line)
     
     file.write('\n')
@@ -1470,8 +1814,7 @@ def write_jacobian(lang, specs, reacs):
         line = '  !'
     elif lang == 'matlab':
         line = '  %'
-    line += 'partial of dT wrt T'
-    line += line_end[lang]
+    line += 'partial of dT wrt T' + utils.line_end[lang]
     file.write(line)
     
     # set to zero
@@ -1479,10 +1822,10 @@ def write_jacobian(lang, specs, reacs):
     if lang in ['c', 'cuda']:
         line += '[0] = 0.0'
     elif lang == 'fortran':
-        line += '(1, 1) = 0.0d0'
+        line += '(1,1) = 0.0_wp'
     elif lang == 'matlab':
-        line += '(1, 1) = 0.0'
-    line += line_end[lang]
+        line += '(1,1) = 0.0'
+    line += utils.line_end[lang]
     file.write(line)
     
     # need dcp/dT
@@ -1502,20 +1845,24 @@ def write_jacobian(lang, specs, reacs):
         if lang in ['c', 'cuda']:
             line += '[0]'
         elif lang in ['fortran', 'matlab']:
-            line += '(1, 1)'
+            line += '(1,1)'
             
         if lang in ['c', 'cuda']:
             line += ' += '
         elif lang in ['fortran', 'matlab']:
-            line += ' = jac(1, 1) +'
+            line += ' = jac(1,1) +'
         line += 'y'
         if lang in ['c', 'cuda']:
-            line += '[' + str(isp + 1) + ']'
+            line += '[{}]'.format(isp + 1)
         elif lang in ['fortran', 'matlab']:
-            line += '(' + str(isp + 2) + ')'
-        line += ' * {:.8e} * '.format(RU / sp.mw)
-        line += '({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T)))'.format(sp.lo[1], 2.0 * sp.lo[2], 3.0 * sp.lo[3], 4.0 * sp.lo[4])
-        line += line_end[lang]
+            line += '({})'.format(isp + 2)
+        line += (' * {:.8e} * ('.format(chem.RU / sp.mw) + 
+                 '{:.8e} + '.format(sp.lo[1]) + 
+                 'T * ({:.8e} + '.format(2.0 * sp.lo[2]) + 
+                 'T * ({:.8e} + '.format(3.0 * sp.lo[3]) + 
+                 '{:.8e} * T)))'.format(4.0 * sp.lo[4]) + 
+                 utils.line_end[lang]
+                 )
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1527,20 +1874,24 @@ def write_jacobian(lang, specs, reacs):
         if lang in ['c', 'cuda']:
             line += '[0]'
         elif lang in ['fortran', 'matlab']:
-            line += '(1, 1)'
+            line += '(1,1)'
         
         if lang in ['c', 'cuda']:
             line += ' += '
         elif lang in ['fortran', 'matlab']:
-            line += ' = jac(1, 1) +'
+            line += ' = jac(1,1) +'
         line += 'y'
         if lang in ['c', 'cuda']:
-            line += '[' + str(isp + 1) + ']'
+            line += '[{}]'.format(isp + 1)
         elif lang in ['fortran', 'matlab']:
-            line += '(' + str(isp + 2) + ')'
-        line += ' * {:.8e} * '.format(RU / sp.mw)
-        line += '({:.8e} + T * ({:.8e} + T * ({:.8e} + {:.8e} * T)))'.format(sp.hi[1], 2.0 * sp.hi[2], 3.0 * sp.hi[3], 4.0 * sp.hi[4])
-        line += line_end[lang]
+            line += '({})'.format(isp + 2)
+        line += (' * {:.8e} * ('.format(chem.RU / sp.mw) + 
+                 '{:.8e} + '.format(sp.hi[1]) + 
+                 'T * ({:.8e} + '.format(2.0 * sp.hi[2]) + 
+                 'T * ({:.8e} + '.format(3.0 * sp.hi[3]) + 
+                 '{:.8e} * T)))'.format(4.0 * sp.hi[4]) + 
+                 utils.line_end[lang]
+                 )
         file.write(line)
         
         if lang in ['c', 'cuda']:
@@ -1554,7 +1905,7 @@ def write_jacobian(lang, specs, reacs):
     if lang in ['c', 'cuda']:
         line += 'jac[0] *= (-1.0'
     elif lang in ['fortran', 'matlab']:
-        line += 'jac(1, 1) = (-jac(1, 1)'
+        line += 'jac(1,1) = (-jac(1,1)'
     line += ' / (rho * cp_avg)) * ('
     
     isfirst = True
@@ -1572,19 +1923,18 @@ def write_jacobian(lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += 'h[' + str(isp) + '] * sp_rates[' + str(isp) + '] * {:.8e}'.format(sp.mw)
+            line += 'h[{0}] * sp_rates[{0}] * {1:.8e}'.format(isp, sp.mw)
         elif lang in ['fortran', 'matlab']:
-            line += 'h(' + str(isp + 1) + ') * sp_rates(' + str(isp + 1) + ') * {:.8e}'.format(sp.mw)
+            line += 'h({0}) * sp_rates({0}) * {1:.8e}'.format(isp + 1, sp.mw)
         isfirst = False
-    line += ')'
-    line += line_end[lang]
+    line += ')' + utils.line_end[lang]
     file.write(line)
     
     line = '  '
     if lang in ['c', 'cuda']:
         line += 'jac[0] += ('
     elif lang in ['fortran', 'matlab']:
-        line += 'jac(1, 1) = jac(1, 1) + ('
+        line += 'jac(1,1) = jac(1,1) + ('
 
     isfirst = True
     for sp in specs:    
@@ -1601,23 +1951,25 @@ def write_jacobian(lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(cp[' + str(isp) + '] * sp_rates[' + str(isp) + '] * {:.8e} / rho + '.format(sp.mw)
-            line += 'h[' + str(isp) + '] * jac[' + str(isp + 1) + '])'
+            line += ('(cp[{0}] * sp_rates[{0}] * '.format(isp) + 
+                     '{:.8e} / rho + '.format(sp.mw) + 
+                     'h[{}] * jac[{}])'.format(isp, isp + 1)
+                     )
         elif lang in ['fortran', 'matlab']:
-            line += '(cp(' + str(isp + 1) + ') * sp_rates(' + str(isp + 1) + ') * {:.8e} / rho + '.format(sp.mw)
-            line += 'h(' + str(isp + 1) + ') * jac(' + str(isp + 2) + ', ' + str(1) + '))'
+            line += ('(cp({0}) * sp_rates({0}) * '.format(isp + 1) + 
+                     '{:.8e} / rho + '.format(sp.mw) + 
+                     'h({}) * jac({},1))'.format(isp + 1, isp + 2)
+                     )
         isfirst = False
-    line += ')'
-    line += line_end[lang]
+    line += ')' + utils.line_end[lang]
     file.write(line)
     
     line = '  '
     if lang in ['c', 'cuda']:
         line += 'jac[0] /= '
     elif lang in ['fortran', 'matlab']:
-        line += 'jac(1, 1) = jac(1,1) / '
-    line += '(-cp_avg)'
-    line += line_end[lang]
+        line += 'jac(1,1) = jac(1,1) / '
+    line += '(-cp_avg)' + utils.line_end[lang]
     file.write(line)
     
     file.write('\n')
@@ -1634,15 +1986,15 @@ def write_jacobian(lang, specs, reacs):
             line = '  !'
         elif lang == 'matlab':
             line = '  %'
-        line += 'partial of dT wrt Y_' + sp.name
-        line += line_end[lang]
+        line += ('partial of dT wrt Y_' + sp.name + 
+                 utils.line_end[lang])
         file.write(line)
         
         line = '  jac'
         if lang in ['c', 'cuda']:
-            line += '[' + str((num_s + 1) * (isp + 1)) + ']'
+            line += '[{}]'.format((num_s + 1) * (isp + 1))
         elif lang in ['fortran', 'matlab']:
-            line += '(' + str(1) + ', ' + str(isp + 2) + ')'
+            line += '(1, {})'.format(isp + 2)
         line += ' = -('
         
         isfirst = True
@@ -1660,16 +2012,24 @@ def write_jacobian(lang, specs, reacs):
             k_sp = specs.index(sp_k)
             if not isfirst: line += ' + '
             if lang in ['c', 'cuda']:
-                line += 'h[' + str(k_sp) + '] * (jac[' + str(k_sp + 1 + (num_s + 1) * (isp + 1)) + ']'
-                line += ' - (cp[' + str(isp) + '] * sp_rates[' + str(k_sp) + ']'
+                line += ('h[{}] * ('.format(k_sp) + 
+                         'jac[{}]'.format(k_sp + 1 + (num_s + 1) * 
+                                          (isp + 1)
+                                          ) + 
+                         ' - (cp[{}] '.format(isp) + 
+                         '* sp_rates[{}]'.format(k_sp) + 
+                         ' * {:.8e} / (rho * cp_avg)))'.format(sp_k.mw)
+                         )
             elif lang in ['fortran', 'matlab']:
-                line += 'h(' + str(k_sp + 1) + ') * (jac(' + str(k_sp + 2) + ', ' + str(isp + 2) + ')'
-                line += ' - (cp(' + str(isp + 1) + ') * sp_rates(' + str(k_sp + 1) + ')'
-            line += ' * {:.8e} / (rho * cp_avg)))'.format(sp_k.mw)
+                line += ('h({}) * ('.format(k_sp + 1) + 
+                         'jac({}, {})'.format(k_sp + 2, isp + 2) + 
+                         ' - (cp({})'.format(isp + 1) + 
+                         ' * sp_rates({})'.format(k_sp + 1) + 
+                         ' * {:.8e} / (rho * cp_avg)))'.format(sp_k.mw)
+                         )
             isfirst = False
         
-        line += ') / cp_avg'
-        line += line_end[lang]
+        line += ') / cp_avg' + utils.line_end[lang]
         file.write(line)
     
     if lang in ['c', 'cuda']:
@@ -1687,10 +2047,20 @@ def write_jacobian(lang, specs, reacs):
 def create_jacobian(lang, mech_name, therm_name = None):
     """Create Jacobian subroutine from mechanism.
     
-    Keyword arguments:
-    lang -- language type (e.g., C, CUDA, fortran, matlab)
-    mech_name -- string with reaction mechanism filename (e.g. 'mech.dat')
-    therm_name -- string with thermodynamic database filename (e.g. 'therm.dat') or nothing if info in mech_name
+    Parameters
+    ----------
+    lang : {'c', 'cuda', 'fortran', 'matlab'}
+        Language type.
+    mech_name : str
+        Reaction mechanism filename (e.g. 'mech.dat').
+    therm_name : str, optional
+        Thermodynamic database filename (e.g. 'therm.dat') 
+        or nothing if info in mechanism file.
+    
+    Returns
+    -------
+    None
+    
     """
         
     lang = lang.lower()
@@ -1700,12 +2070,12 @@ def create_jacobian(lang, mech_name, therm_name = None):
             print l
         sys.exit()
     
-    # create build directory if none exists
-    build_path = './build'
+    # create output directory if none exists
+    build_path = './out/'
     utils.create_dir(build_path)
     
     # interpret reaction mechanism file
-    [elems, specs, reacs, units] = read_mech(mech_name)
+    [elems, specs, reacs, units] = mech.read_mech(mech_name)
     
     # interpret thermodynamic database file (if it exists & needed)
     therm_flag = True
@@ -1718,7 +2088,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
         if not therm_flag:
             # need to read thermo file
             file = open(therm_name, 'r')
-            read_thermo(file, elems, specs)
+            mech.read_thermo(file, elems, specs)
             file.close()
     
     # convert activation energy units to K (if needed)
@@ -1726,18 +2096,18 @@ def create_jacobian(lang, mech_name, therm_name = None):
         efac = 1.0
         
         if 'kcal/mole' in units:
-            efac = 4184.0 / RU_JOUL
+            efac = 4184.0 / chem.RU_JOUL
         elif 'cal/mole' in units:
-            efac = 4.184 / RU_JOUL
+            efac = 4.184 / chem.RU_JOUL
         elif 'kjoule' in units:
-            efac = 1000.0 / RU_JOUL
+            efac = 1000.0 / chem.RU_JOUL
         elif 'joules' in units:
-            efac = 1.00 / RU_JOUL
+            efac = 1.00 / chem.RU_JOUL
         elif 'evolt' in units:
             efac = 11595.
         else:
             # default is cal/mole
-            efac = 4.184 / RU_JOUL
+            efac = 4.184 / chem.RU_JOUL
         
         for rxn in reacs:
             rxn.E *= efac
@@ -1751,23 +2121,24 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    write_rxn_rates(build_path, lang, specs, reacs)
+    rate.write_rxn_rates(build_path, lang, specs, reacs)
     
-    # if third-body/pressure-dependent reactions, print modification subroutine
+    # if third-body/pressure-dependent reactions, 
+    # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        write_rxn_pressure_mod(build_path, lang, specs, reacs)
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs)
     
     # write species rates subroutine
-    write_spec_rates(build_path, lang, specs, reacs)
+    rate.write_spec_rates(build_path, lang, specs, reacs)
     
     # write chem_utils subroutines
-    write_chem_utils(build_path, lang, specs)
+    rate.write_chem_utils(build_path, lang, specs)
     
     # write derivative subroutines
-    write_derivs(build_path, lang, specs, reacs)
+    rate.write_derivs(build_path, lang, specs, reacs)
     
     # write mass-mole fraction conversion subroutine
-    write_mass_mole(build_path, lang, specs)
+    rate.write_mass_mole(build_path, lang, specs)
     
     # write Jacobian subroutine
     write_jacobian(build_path, lang, specs, reacs)

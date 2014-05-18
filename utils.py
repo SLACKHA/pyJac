@@ -1,6 +1,9 @@
 """Module containing utility functions.
 """
 
+import os
+import errno
+
 # list of supported languages
 langs = ['c', 'cuda', 'fortran', 'matlab']
 
@@ -19,9 +22,18 @@ def read_str_num(string, sep = None):
     
     Delimiter is optional; if not specified, uses whitespace.
     
-    Keyword arguments:
-    string -- string to be parsed
-    sep    -- (optional) delimiter
+    Parameters
+    ----------
+    string : str
+        String to be parsed.
+    sep : str, optional
+        Delimiter (default is None, which means consecutive whitespace).
+    
+    Returns
+    -------
+    list of float
+        Floats separated by `sep` in `string`.
+    
     """
         
     # separate string into space-delimited strings of numbers
@@ -32,9 +44,18 @@ def read_str_num(string, sep = None):
 def split_str(seq, length):
     """Separate a string seq into length-sized pieces.
     
-    Keyword arguments:
-    seq    -- string containing sequence of smaller strings of constant length
-    length -- length of individual sequences
+    Parameters
+    ----------
+    seq : str
+        String containing sequence of smaller strings of constant length.
+    length : int
+        Length of individual sequences.
+    
+    Returns
+    -------
+    list of str
+        List of strings of length `length` from `seq`.
+    
     """
     return [seq[i : i + length] for i in range(0, len(seq), length)]
 
@@ -44,11 +65,19 @@ def create_dir(path):
     
     No error if path already exists, but other error is reported.
     
-    Keyword arguments:
-    path -- path of directory to be created
+    Parameters
+    ----------
+    path : str
+        Path of directory to be created
+    
+    Returns
+    -------
+    None
+    
     """
     try:
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
+

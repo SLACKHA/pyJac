@@ -659,7 +659,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             if troe_flag:
                 # troe variables
                 file.write('  // troe variable declarations\n'
-                           '  Real logPr;\n'
                            '  Real logFcent;\n'
                            '  Real A;\n'
                            '  Real B;\n'
@@ -668,7 +667,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                if not troe_flag: file.write('  Real logPr;\n')
                 file.write('  Real x;\n'
                            '\n'
                            )
@@ -683,7 +681,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             if troe_flag:
                 # troe variables
                 file.write('  // troe variable declarations\n'
-                           '  register Real logPr;\n'
                            '  register Real logFcent;\n'
                            '  register Real A;\n'
                            '  register Real B;\n'
@@ -692,7 +689,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                if not troe_flag: file.write('  register Real logPr;\n')
                 file.write('  register Real x;\n'
                            '\n')
         elif lang == 'fortran':
@@ -703,13 +699,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             if troe_flag:
                 # troe variables
                 file.write('  ! troe variable declarations\n'
-                           '  double precision :: logPr, logFcent, A, B\n'
+                           '  double precision :: logFcent, A, B\n'
                            '\n'
                            )
             if sri_flag:
                 # sri variables
                 file.write('  ! sri variable declarations\n')
-                if not troe_flag: file.write('  double precision :: logPr\n')
                 file.write('  double precision :: X\n'
                            '\n')
     
@@ -818,10 +813,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             line += utils.line_end[lang]
             file.write(line)
             
-            # log10 of Pr needed in both Troe and SRI formulation
-            line = '  logPr = log10(Pr)' + utils.line_end[lang]
-            file.write(line)
-            
             if reac.troe:
                 # Troe form
                 line = ('  logFcent = log10('
@@ -849,12 +840,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                 line += ')' + utils.line_end[lang]
                 file.write(line)
                 
-                line = ('  A = logPr - 0.67 * logFcent - 0.4' + 
+                line = ('  A = log10(Pr) - 0.67 * logFcent - 0.4' + 
                         utils.line_end[lang]
                         )
                 file.write(line)
                 
-                line = ('  B = 0.806 - 1.1762 * logFcent - 0.14 * logPr' + 
+                line = ('  B = 0.806 - 1.1762 * logFcent - 0.14 * log10(Pr)' +
                         utils.line_end[lang]
                         )
                 file.write(line)
@@ -874,7 +865,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             elif reac.sri:
                 # SRI form
                 
-                line = ('  X = 1.0 / (1.0 + logPr * logPr)' + 
+                line = ('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + 
                         utils.line_end[lang]
                         )
                 file.write(line)

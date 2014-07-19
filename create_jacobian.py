@@ -9,6 +9,7 @@ import chem_utilities as chem
 import mech_interpret as mech
 import rate_subs as rate
 import utils
+from argparse import ArgumentParser
 
 def write_jacobian(path, lang, specs, reacs):
     """Write Jacobian subroutine in desired language.
@@ -2146,30 +2147,25 @@ def create_jacobian(lang, mech_name, therm_name = None):
 
 
 if __name__ == "__main__":
-    import argparse
     
     # command line arguments
-    parser = argparse.ArgumentParser(description = 'Generates source code '
-                                     'for analytical Jacobian.'
-                                     )
+    parser = ArgumentParser(description = 'Generates source code '
+                                          'for analytical Jacobian.')
     parser.add_argument('-l', '--lang',
                         type = str,
                         choices = utils.langs, 
                         required = True, 
                         help = 'Programming language for output '
-                        'source files.'
-                        )
+                        'source files.')
     parser.add_argument('-i', '--input',
                         type = str,
                         required = True, 
-                        help = 'Input mechanism filename (e.g., mech.dat).'
-                        )
+                        help = 'Input mechanism filename (e.g., mech.dat).')
     parser.add_argument('-t', '--thermo',
                         type = str,
                         default = None, 
                         help = 'Thermodynamic database filename (e.g., '
-                        'therm.dat), or nothing if in mechanism.'
-                        )
+                        'therm.dat), or nothing if in mechanism.')
     
     args = parser.parse_args()
     

@@ -27,7 +27,6 @@ def get_elem_wt():
     -------
     elem_wt : dict
         Dictionary with element name keys and atomic weight values.
-    
     """
     elem_wt = dict([
         ('h',   1.00797),  ('he',   4.00260), ('li',   6.93900), 

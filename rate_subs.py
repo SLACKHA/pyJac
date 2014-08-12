@@ -495,7 +495,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                              '{:.8e} + '.format(sp.hi[3] / 12.0) + 
                              '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
                              '{:.8e} / T)'.format(sp.hi[5]) + 
-                             line_end[lang]
+                             utils.line_end[lang]
                              )
                     file.write(line)
                     
@@ -822,7 +822,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             
             if reac.troe:
                 # Troe form
-                line = ('  logFcent = log10('
+                line = ('  logFcent = log10( fmax('
                         '{:.8e} * '.format(1.0 - reac.troe_par[0])
                         )
                 if reac.troe_par[1] > 0.0:
@@ -844,15 +844,17 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     else:
                         val = abs(reac.troe_par[3])
                         line += 'exp({:.8e} / T)'.format(val)
-                line += ')' + utils.line_end[lang]
+                line += ', 1.0e-300))' + utils.line_end[lang]
                 file.write(line)
                 
-                line = ('  A = log10(Pr) - 0.67 * logFcent - 0.4' + 
+                line = ('  A = log10(fmax(Pr, 1.0e-300)) - '
+                        '0.67 * logFcent - 0.4' + 
                         utils.line_end[lang]
                         )
                 file.write(line)
                 
-                line = ('  B = 0.806 - 1.1762 * logFcent - 0.14 * log10(Pr)' +
+                line = ('  B = 0.806 - 1.1762 * logFcent - '
+                        '0.14 * log10(fmax(Pr, 1.0e-300))' +
                         utils.line_end[lang]
                         )
                 file.write(line)
@@ -872,7 +874,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             elif reac.sri:
                 # SRI form
                 
-                line = ('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' + 
+                line = ('  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * '
+                        'log10(fmax(Pr, 1.0e-300)))' + 
                         utils.line_end[lang]
                         )
                 file.write(line)

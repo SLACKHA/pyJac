@@ -458,7 +458,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     
                     line = '    Kc '
                     if lang in ['c', 'cuda']:
-                        line += '-= Kc'
+                        line += '-= '
                     elif lang in ['fortran', 'matlab']:
                         line += '= Kc - '
                     line += '{:.2f} * '.format(nu)
@@ -482,7 +482,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     
                     line = '    Kc '
                     if lang in ['c', 'cuda']:
-                        line += '-= Kc'
+                        line += '-= '
                     elif lang in ['fortran', 'matlab']:
                         line += '= Kc - '
                     line += '{:.2f} * '.format(nu)

@@ -2212,12 +2212,13 @@ def write_mass_mole(path, lang, specs):
         file.write('\n')
     
     # calculate density
-    line = '  rho = pres * mw_avg / ({:.8e} * temp)'.format(chem.RU)
-    line += utils.line_end[lang]
-    file.write(line)
     if lang in ['c', 'cuda']:
-        file.write('  return rho;\n')
-    file.write('\n')
+        file.write('  return pres * mw_avg / ({:.8e} * temp);'.format(chem.RU))
+        file.write('\n')
+    else:
+        line = '  rho = pres * mw_avg / ({:.8e} * temp)'.format(chem.RU)
+        line += utils.line_end[lang]
+        file.write(line)
     
     if lang in ['c', 'cuda']:
         file.write('} // end getDensity\n\n')

@@ -2168,7 +2168,7 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  X     array of species mole fractions\n'
                    r' * \return     rho  mixture mass density' + '\n'
                    ' */\n'
-                   'Real getDensity (const Real temp, const real pres, '
+                   'Real getDensity (const Real temp, const Real pres, '
                    'const Real * X) {\n'
                    '\n'
                    )

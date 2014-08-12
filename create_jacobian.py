@@ -2,14 +2,20 @@
 """Creates source code for calculating analytical Jacobian matrix.
 """
 
+# Python 2 compatibility
 from __future__ import division
+from __future__ import print_function
+
+# Standard libraries
 import sys
 import math
+from argparse import ArgumentParser
+
+# Local imports
 import chem_utilities as chem
 import mech_interpret as mech
 import rate_subs as rate
 import utils
-from argparse import ArgumentParser
 
 def write_jacobian(path, lang, specs, reacs):
     """Write Jacobian subroutine in desired language.
@@ -1344,10 +1350,10 @@ def write_jacobian(path, lang, specs, reacs):
                                                  if spec.name == sp), None)
                                     if not spec:
                                         i = reacs.index(rxn)
-                                        print ('Error: species ' + sp + 
-                                               ' in reaction {}'.format(i) + 
-                                               ' not found.\n'
-                                               )
+                                        print('Error: species ' + sp + 
+                                              ' in reaction {}'.format(i) + 
+                                              ' not found.\n'
+                                              )
                                         sys.exit(2)
                                     
                                     # need temperature conditional for equilibrium constants
@@ -1464,9 +1470,9 @@ def write_jacobian(path, lang, specs, reacs):
                                                  if spec.name == sp), None)
                                     if not spec:
                                         i = reacs.index(rxn)
-                                        print ('Error: species ' + sp + 
-                                               ' in reaction {}'.format(i) + 
-                                               ' not found.\n')
+                                        print('Error: species ' + sp + 
+                                              ' in reaction {}'.format(i) + 
+                                              ' not found.\n')
                                         sys.exit(2)
                                     
                                     # Write temperature conditional for 
@@ -2065,9 +2071,9 @@ def create_jacobian(lang, mech_name, therm_name = None):
         
     lang = lang.lower()
     if lang not in utils.langs:
-        print 'Error: language needs to be one of: '
+        print('Error: language needs to be one of: ')
         for l in utils.langs:
-            print l
+            print(l)
         sys.exit(2)
     
     # create output directory if none exists

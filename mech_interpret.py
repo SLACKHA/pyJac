@@ -1,6 +1,12 @@
 """Chemkin-format mechanism interpreter module.
 """
 
+# Python 2 compatibility
+from __future__ import division
+
+# Standard libraries
+
+# Local imports
 import chem_utilities as chem
 import utils
 

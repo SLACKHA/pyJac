@@ -4,8 +4,15 @@ This is kept separate from Jacobian creation module in order
 to create only the rate subroutines if desired.
 """
 
+# Python 2 compatibility
+from __future__ import division
+from __future__ import print_function
+
+# Standard libraries
 import sys
 import math
+
+# Local imports
 import chem_utilities as chem
 import mech_interpret as mech
 import utils
@@ -341,9 +348,9 @@ def write_rxn_rates(path, lang, specs, reacs):
                     sp = next((sp for sp in specs if 
                                sp.name == prod_sp), None)
                     if not sp:
-                        print ('Error: species ' + prod_sp + ' in reaction '
-                               '{} not found.\n'.format(reacs.index(rxn))
-                               )
+                        print('Error: species ' + prod_sp + ' in reaction '
+                              '{} not found.\n'.format(reacs.index(rxn))
+                              )
                         sys.exit()
                     
                     # need temperature conditional for equilibrium constants
@@ -433,9 +440,9 @@ def write_rxn_rates(path, lang, specs, reacs):
                     sp = next((sp for sp in specs if sp.name == reac_sp), 
                               None)
                     if not sp:
-                        print ('Error: species ' + reac_sp + ' in reaction '
-                               '{} not found.\n'.format(reacs.index(rxn))
-                               )
+                        print('Error: species ' + reac_sp + ' in reaction '
+                              '{} not found.\n'.format(reacs.index(rxn))
+                              )
                         sys.exit()
                         
                     # need temperature conditional 
@@ -2239,9 +2246,9 @@ def create_rate_subs(lang, mech_name, therm_name = None):
         
     lang = lang.lower()
     if lang not in utils.langs:
-        print 'Error: language needs to be one of: '
+        print('Error: language needs to be one of: ')
         for l in utils.langs:
-            print l
+            print(l)
         sys.exit()
     
     # create output directory if none exists

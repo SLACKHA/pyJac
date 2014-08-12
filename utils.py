@@ -1,6 +1,7 @@
 """Module containing utility functions.
 """
 
+# Standard libraries
 import os
 import errno
 

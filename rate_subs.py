@@ -858,23 +858,16 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                         utils.line_end[lang]
                         )
                 file.write(line)
-
-                #exp_10  = dict(c = "pow(10.0, ", cuda = 'exp10(',
-                #fortran = 'exp(log(10)', matlab = 'exp(log(10.0)')
                 
                 line = '  pres_mod'
-                if lang == 'c':
+                if lang in ['c', 'cuda']:
                     line += ('[{}]'.format(pind) + 
-                             ' = pow(10.0, '
-                             )
-                elif lang == 'cuda':
-                    line += ('[{}]'.format(pind) + 
-                             ' = exp10('
+                             ' = ' + utils.exp_10_fun[lang]
                              )
                 elif lang in ['fortran', 'matlab']:
                     # fortran & matlab don't have exp10
                     line += ('({})'.format(pind + 1) + 
-                             ' = exp(log(10.0), '
+                             ' = ' + utils.exp_10_fun[lang]
                              )
                 line += 'logFcent / (1.0 + A * A / (B * B))) '
                 

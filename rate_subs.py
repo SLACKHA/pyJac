@@ -739,7 +739,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
     for rind in pdep_reacs:
         reac = reacs[rind]              # index in reaction list
         pind = pdep_reacs.index(rind)   # index in list of third/pressure-dep reactions
-        
+
         # print reaction index
         if lang in ['c', 'cuda']:
             line = '  // reaction ' + str(rind)
@@ -820,6 +820,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             line += utils.line_end[lang]
             file.write(line)
             
+            simple_falloff = False
             if reac.troe:
                 # Troe form
                 line = ('  logFcent = log10( fmax('
@@ -902,14 +903,32 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     line += ('* {:.8e} * '.format(reac.sri[3]) + 
                              'pow(T, {:.4}) '.format(reac.sri[4])
                              )
+
+            else:
+                simple_falloff = True
+                # A simple unimolecular decomposition reaction (i.e. no F function)
+                line = '  pres_mod'
+                if lang in ['c', 'cuda']:
+                    line += ('[{}]'.format(pind) + 
+                             ' = '
+                             )
+                elif lang in ['fortran', 'matlab']:
+                    # fortran & matlab don't have exp10
+                    line += ('({})'.format(pind + 1) + 
+                             ' = '
+                             )
             
             # regardless of F formulation
             if reac.low:
+                if not simple_falloff:
+                    line += '* '
                 # unimolecular/recombination fall-off reaction
-                line += '* Pr / (1.0 + Pr)'
+                line += 'Pr / (1.0 + Pr)'
             elif reac.high:
+                if not simple_falloff:
+                    line += '/ '
                 # chemically-activated bimolecular reaction
-                line += '/ (1.0 + Pr)'
+                line += '(1.0 + Pr)'
             
             line += utils.line_end[lang]
             file.write(line)

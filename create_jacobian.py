@@ -2050,7 +2050,7 @@ def write_jacobian(path, lang, specs, reacs):
     return
 
 
-def create_jacobian(lang, mech_name, therm_name = None):
+def create_jacobian(lang, mech_name, therm_name = None, skip_jacob = False):
     """Create Jacobian subroutine from mechanism.
     
     Parameters
@@ -2062,13 +2062,16 @@ def create_jacobian(lang, mech_name, therm_name = None):
     therm_name : str, optional
         Thermodynamic database filename (e.g. 'therm.dat') 
         or nothing if info in mechanism file.
+    skip_jacob : bool, optional
+        Allows the user to skip generation of the analytical jacobian 
+        in case a finite difference method is to be used instead
     
     Returns
     -------
     None
     
     """
-        
+    
     lang = lang.lower()
     if lang not in utils.langs:
         print('Error: language needs to be one of: ')
@@ -2146,9 +2149,12 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)
     
+    if skip_jacob:
+        return
+    
     # write Jacobian subroutine
     write_jacobian(build_path, lang, specs, reacs)
-    
+
     return
 
 
@@ -2172,8 +2178,13 @@ if __name__ == "__main__":
                         default = None, 
                         help = 'Thermodynamic database filename (e.g., '
                         'therm.dat), or nothing if in mechanism.')
+    parser.add_argument('-s', '--skip-jacobian',
+                        default = False,
+                        action = "store_true",
+                        help = 'Allows skipping of generation of the analytical Jacobian.'
+                        '  Useful timesaver in the case where a finite difference jacobian will be used instead')
     
     args = parser.parse_args()
     
-    create_jacobian(args.lang, args.input, args.thermo)
+    create_jacobian(args.lang, args.input, args.thermo, args.skip_jacobian)
 

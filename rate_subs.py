@@ -820,6 +820,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             line += utils.line_end[lang]
             file.write(line)
             
+            simple = False
             if reac.troe:
                 # Troe form
                 line = ('  logFcent = log10( fmax('
@@ -902,14 +903,30 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     line += ('* {:.8e} * '.format(reac.sri[3]) + 
                              'pow(T, {:.4}) '.format(reac.sri[4])
                              )
+            else:
+                #simple falloff fn (i.e. F = 1)
+                simple = True
+                line = '  pres_mod'
+                if lang in ['c', 'cuda']:
+                    line += '[{}] ='.format(pind)
+                elif lang in ['fortran', 'matlab']:
+                    line += '({}) ='.format(pind + 1)
+                 # regardless of F formulation
+                if reac.low:
+                    # unimolecular/recombination fall-off reaction
+                    line += ' Pr / (1.0 + Pr)'
+                elif reac.high:
+                    # chemically-activated bimolecular reaction
+                    line += '1.0 / (1.0 + Pr)'
             
-            # regardless of F formulation
-            if reac.low:
-                # unimolecular/recombination fall-off reaction
-                line += '* Pr / (1.0 + Pr)'
-            elif reac.high:
-                # chemically-activated bimolecular reaction
-                line += '/ (1.0 + Pr)'
+            if not simple:
+                # regardless of F formulation
+                if reac.low:
+                    # unimolecular/recombination fall-off reaction
+                    line += '* Pr / (1.0 + Pr)'
+                elif reac.high:
+                    # chemically-activated bimolecular reaction
+                    line += '/ (1.0 + Pr)'
             
             line += utils.line_end[lang]
             file.write(line)

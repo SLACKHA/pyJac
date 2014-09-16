@@ -2085,24 +2085,26 @@ def write_sparse_multiplier(path, lang, sparse_indicies):
         file = open(path + 'sparse_multiplier.h', 'w')
         file.write('#ifndef SPARSE_HEAD\n'
                    '#define SPARSE_HEAD\n'
+                   '\n#define N_A {}'.format(len(sparse_indicies))
                    '\n'
                    '#include "header.h"\n'
                    '\n'
                    'void sparse_multiplier (const Real *, const Real *, const int, '
-                   'Real*);\n'
+                   'const int, Real*);\n'
                    '\n'
                    '#endif\n'
                    )
         file.close()
     elif lang == 'cuda':
         file = open(path + 'sparse_multiplier.cuh', 'w')
-        file.write('#ifndef JACOB_HEAD\n'
-                   '#define JACOB_HEAD\n'
+        file.write('#ifndef SPARSE_HEAD\n'
+                   '#define SPARSE_HEAD\n'
+                   '\n#define N_A {}'.format(len(sparse_indicies))
                    '\n'
                    '#include "header.h"\n'
                    '\n'
                    '__device__ void sparse_multiplier (const Real *, const Real *, '
-                   'const int, Real*);\n'
+                   'const int, const int, Real*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -2114,7 +2116,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies):
     filename = 'sparse_multiplier' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
-    file.write('#incude sparse_multiplier.h\n\n')
+    file.write('#include "sparse_multiplier.h"\n\n')
     
     if lang == 'cuda':
         file.write('__device__\n')

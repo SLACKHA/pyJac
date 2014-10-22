@@ -2137,6 +2137,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
         #get all indicies that belong to row i
         i_list = [x for x in sorted_and_cleaned if x % nvars == i]
         if not len(i_list):
+            file.write("  w[{:}] = 0;\n".format(i))
             continue
         file.write("  w[{:}] =".format(i))
         for index in i_list:
@@ -2160,7 +2161,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.write(
         '    Real A[NN * NN] = {ZERO};\n'
         '    Real v[NN] = {ZERO};\n'
-        '    Real w[NN] = {ZERO};\n'
+        '    //do not zero, tests sparse_multiplier\'s fill of non touched entries\n'
+        '    Real w[NN];\n'
         '    Real w2[NN] = {ZERO};\n'
     )
     for i in range(nvars):

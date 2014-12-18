@@ -756,7 +756,7 @@ def write_jacobian(path, lang, specs, reacs):
                 jline += '{:.8e}'.format(rxn.b)
             elif abs(rxn.E) > 1.0e-90:
                 jline += '({:.8e} / T)'.format(rxn.E)
-            jline += ' + 1.0 - '
+            jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
             
             # loop over reactants
             nu = 0
@@ -788,7 +788,7 @@ def write_jacobian(path, lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.rev_par[1])
                     elif abs(rxn.rev_par[2]) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.rev_par[2])
-                    jline += ' + 1.0 - '
+                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.rev_par[1]) > 1.0e-90) or (abs(rxn.rev_par[2]) > 1.0e-90) else '')
                     
                     nu = 0
                     # loop over products
@@ -806,7 +806,7 @@ def write_jacobian(path, lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.b)
                     elif abs(rxn.E) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.E)
-                    jline += ' + 1.0 - '
+                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
                     
                     nu = 0
                     # loop over products

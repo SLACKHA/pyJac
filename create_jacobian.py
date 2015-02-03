@@ -2062,7 +2062,7 @@ def write_jacobian(path, lang, specs, reacs):
     
     return sparse_indicies
 
-def write_sparse_multiplier(path, lang, sparse_indicies):
+def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     """Write a subroutine that multiplies the non-zero entries of the Jacobian with a column 'j' of another matrix
     
     Parameters
@@ -2073,6 +2073,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies):
         Programming language.
     inidicies : list
         A list of indicies where the Jacobian is non-zero
+    nvars : int 
+        How many variables in the Jacobian matrix
     
     Returns
     -------
@@ -2080,17 +2082,22 @@ def write_sparse_multiplier(path, lang, sparse_indicies):
     
     """
 
+    sorted_and_cleaned = sorted(list(set(sparse_indicies)))
      # first write header file
     if lang == 'c':
         file = open(path + 'sparse_multiplier.h', 'w')
         file.write('#ifndef SPARSE_HEAD\n'
-                   '#define SPARSE_HEAD\n'
-                   '\n#define N_A {}'.format(len(sparse_indicies))
+                   '#define SPARSE_HEAD\n')
+        file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
+        file.write(
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void sparse_multiplier (const Real *, const Real *, const int, '
-                   'const int, Real*);\n'
+                   'void sparse_multiplier (const Real *, const Real *, Real*);\n'
+                   '\n'
+                   '#ifdef COMPILE_TESTING_METHODS\n'
+                   '  int test_sparse_multiplier();\n'
+                   '#endif\n'
                    '\n'
                    '#endif\n'
                    )
@@ -2098,13 +2105,16 @@ def write_sparse_multiplier(path, lang, sparse_indicies):
     elif lang == 'cuda':
         file = open(path + 'sparse_multiplier.cuh', 'w')
         file.write('#ifndef SPARSE_HEAD\n'
-                   '#define SPARSE_HEAD\n'
-                   '\n#define N_A {}'.format(len(sparse_indicies))
+                   '#define SPARSE_HEAD\n')
+        file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
+        file.write(
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ void sparse_multiplier (const Real *, const Real *, '
-                   'const int, const int, Real*);\n'
+                   '__device__ void sparse_multiplier (const Real *, const Real *, Real*);\n'
+                   '#ifdef COMPILE_TESTING_METHODS\n'
+                   '  __device__ int test_sparse_multiplier();\n'
+                   '#endif\n'
                    '\n'
                    '#endif\n'
                    )
@@ -2121,18 +2131,63 @@ def write_sparse_multiplier(path, lang, sparse_indicies):
     if lang == 'cuda':
         file.write('__device__\n')
 
-    file.write("void sparse_multiplier(const Real * A, const Real * Vm, const int j, const int STRIDE, Real* w) {\n")
+    file.write("void sparse_multiplier(const Real * A, const Real * Vm, Real* w) {\n")
 
-    sorted_and_cleaned = sorted(list(set(sparse_indicies)))
-    file.write("  #pragma unroll\n")
-    file.write("  for (int j = 0; j < NN; j++){\n")
-    file.write("      w[j] = 0.0;\n")
-    file.write("  }\n")
-    for index in sorted_and_cleaned:
-        file.write("  if ({:} % NN == j) {{\n".format(index))
-        file.write("      w[{:} / NN] += A[{:}] * Vm[j + STRIDE * ({:} / NN)];\n".format(index, index, index))
-        file.write("  }\n")
-    file.write("}\n\n")
+    for i in range(nvars):
+        #get all indicies that belong to row i
+        i_list = [x for x in sorted_and_cleaned if x % nvars == i]
+        if not len(i_list):
+            continue
+        file.write("  w[{:}] =".format(i))
+        for index in i_list:
+            if i_list.index(index):
+                file.write(" + ")
+            file.write(" A[{:}] * Vm[{:}]".format(index, int(index / nvars)))
+        file.write(";\n")
+    file.write("}\n")
+
+    if lang == 'cuda':
+        file.write(
+        '#ifdef COMPILE_TESTING_METHODS\n'
+        '  __device__ bool test_sparse_multiplier() {\n'
+        )
+    else:
+        file.write(
+        '\n#ifdef COMPILE_TESTING_METHODS\n'
+        '  int test_sparse_multiplier(){\n'
+        )
+    #write test method
+    file.write(
+        '    Real A[NN * NN] = {ZERO};\n'
+        '    Real v[NN] = {ZERO};\n'
+        '    Real w[NN] = {ZERO};\n'
+        '    Real w2[NN] = {ZERO};\n'
+    )
+    for i in range(nvars):
+        #get all indicies that belong to row i
+        i_list = [x for x in sorted_and_cleaned if x % nvars == i]
+        file.write('    v[{:}] = {:};\n'.format(i, i))
+        if not len(i_list):
+            continue
+        for index in i_list:
+            file.write('    A[{:}] = {:};\n'.format(index, index))
+
+    file.write(
+        '    for (uint i = 0; i < NN; ++i) {\n'               
+        '       for (uint j = 0; j < NN; ++j) {\n'
+        '          w2[i] += A[i + (j * NN)] * v[j];\n'
+        '       }\n'
+        '    }\n'
+        )
+    file.write('    sparse_multiplier(A, v, w);\n')
+    file.write('    for (uint i = 0; i < NN; ++i) {\n'
+               '       if (w[i] != w2[i]) \n'
+               '         return 0;\n'
+               '    }\n'
+               '    return 1;\n'
+               '  }\n'
+               '#endif\n'
+        )
     file.close()
 
 
@@ -2235,7 +2290,7 @@ def create_jacobian(lang, mech_name, therm_name = None):
     # write Jacobian subroutine
     sparse_indicies = write_jacobian(build_path, lang, specs, reacs)
 
-    write_sparse_multiplier(build_path, lang, sparse_indicies)
+    write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
 
 if __name__ == "__main__":

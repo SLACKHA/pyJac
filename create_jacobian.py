@@ -16,6 +16,7 @@ import chem_utilities as chem
 import mech_interpret as mech
 import rate_subs as rate
 import utils
+import mech_auxiliary as aux
 
 def write_jacobian(path, lang, specs, reacs):
     """Write Jacobian subroutine in desired language.
@@ -2288,6 +2289,9 @@ def create_jacobian(lang, mech_name, therm_name = None):
     
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)
+
+    # write mechanism initializers and testing methods
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs)
     
     # write Jacobian subroutine
     sparse_indicies = write_jacobian(build_path, lang, specs, reacs)

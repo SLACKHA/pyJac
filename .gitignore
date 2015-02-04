@@ -57,3 +57,6 @@ docs/_build/
 
 #out folder
 out/
+
+#mechanisms folder
+mechs/

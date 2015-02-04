@@ -2008,13 +2008,15 @@ def write_mass_mole(path, lang, specs):
         file.write('#ifndef MASS_MOLE_H\n'
                    '#define MASS_MOLE_H\n'
                    '\n'
+                   '#include "header.h"\n'
+                   '\n'
                    '#ifdef __cplusplus\n'
                    '  extern "C" {\n'
                    '#endif\n'
                    '\n'
                    'void mole2mass (const Real*, Real*);\n'
                    'void mass2mole (const Real*, Real*);\n'
-                   'Real getDensity (Real, Real, Real*);\n'
+                   'Real getDensity (const Real, const Real, const Real*);\n'
                    '\n'
                    '#ifdef __cplusplus\n'
                    '  }\n'
@@ -2033,7 +2035,7 @@ def write_mass_mole(path, lang, specs):
     file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
-        file.write('#include "header.h"\n\n')
+        file.write('#include "mass_mole.h"\n\n')
     
     ###################################################
     # Documentation and function/subroutine initializaton for mole2mass

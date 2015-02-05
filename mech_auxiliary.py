@@ -76,7 +76,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '#elif CONV\n'
                    '    void set_same_initial_conditions(int NUM, double* y_host, double* pres_host, double* rho_host) {\n'
                    '#endif\n'
-                   '        double Xi [NSP];\n'
+                   '        double Xi [NSP] = {0.0};\n'
                    '        //set initial mole fractions here\n\n'
                    '        //Normalize mole fractions to sum to one\n'
                    '        double Xsum = 0.0;\n'

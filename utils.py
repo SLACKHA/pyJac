@@ -142,7 +142,7 @@ def get_index(lang, index):
     if lang == 'c':
         return str(index)
     if lang == 'cuda':
-        if CUDAParams.MemoryStrategy == CudaMemStrats.Global:
+        if CUDAParams.MemoryStrategy == CUDAParams.CudaMemStrats.Global:
             return "CV_LINEAR_OFFSET({})".format(index)
         else:
             return str(index)

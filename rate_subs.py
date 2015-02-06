@@ -1566,9 +1566,23 @@ def write_derivs(path, lang, specs, reacs):
                    '#include "rates.cuh"\n'
                    )
     file.write('\n')
+
+    if lang == 'cuda' and CUDAParams.is_global():
+        file.write('extern __device__ Real* conc;\n')
+        if any(rxn.rev for rxn in reacs):
+            file.write('extern __device__ Real* fwd_rates;\n')
+            file.write('extern __device__ Real* rev_rates;\n')
+        else:
+            file.write('extern __device__ Real* rates;\n')
+        if any(rxn.thd or rxn.pdep for rxn in reacs):
+            file.write('extern __device__ Real* pres_mod;')
     
     # constant pressure
     file.write('#if defined(CONP)\n\n')
+    
+    if lang == 'cuda' and CUDAParams.is_global():
+        file.write('extern __device__ Real* h;\n')
+        file.write('extern __device__ Real* cp;\n')
     
     line = (pre + 'void dydt (const Real t, const Real pres, '
             'const Real * y, Real * dy) {\n\n'
@@ -1740,6 +1754,10 @@ def write_derivs(path, lang, specs, reacs):
     
     # constant volume
     file.write('#elif defined(CONV)\n\n')
+
+    if lang == 'cuda' and CUDAParams.is_global():
+        file.write('extern __device__ Real* h;\n')
+        file.write('extern __device__ Real* cp;\n')
     
     line = (pre + 'void dydt (const Real t, const Real rho, '
             'const Real * y, Real * dy) {\n'

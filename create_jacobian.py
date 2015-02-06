@@ -99,6 +99,25 @@ def write_jacobian(path, lang, specs, reacs):
                    '#include "rates.cuh"\n'
                    '\n'
                    )
+
+        if CUDAParams.is_global():
+            file.write('extern __device__ double* conc;\n')
+            if len(rev_reacs):
+                file.write('extern __device__ Real* fwd_rates;\n'
+                           'extern __device__ Real* rev_rates;\n'
+                           )
+            else:
+                file.write('extern __device__ Real* rates;\n')
+            if len(pdep_reacs):
+                file.write('extern __device__ Real* pres_mod;\n')
+            file.write('extern __device__ Real* sp_rates;\n')
+            file.write('#ifdef CONP\n'
+                       'extern __device__ Real* h;\n'
+                       'extern __device__ Real* cp;\n'
+                       '#else\n'
+                       'extern __device__ Real* u;\n'
+                       'extern __device__ Real* cv;\n'
+                       '#endif')
     
     line = ''
     if lang == 'cuda': line = '__device__ '

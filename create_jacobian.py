@@ -212,32 +212,32 @@ def write_jacobian(path, lang, specs, reacs):
     if lang in ['c', 'cuda']:
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  // evaluate reaction rates\n'
-                       '  Real fwd_rxn_rates[{}];\n'.format(num_r)
+                       '  Real fwd_rates[{}];\n'.format(num_r)
                        )
         if rev_reacs:
             if lang != 'cuda' or not CUDAParams.is_global():
-                file.write('  Real rev_rxn_rates[{}];\n'.format(num_rev))
-            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates, '
-                       'rev_rxn_rates);\n'
+                file.write('  Real rev_rates[{}];\n'.format(num_rev))
+            file.write('  eval_rxn_rates (T, conc, fwd_rates, '
+                       'rev_rates);\n'
                        )
         else:
-            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates);\n')
+            file.write('  eval_rxn_rates (T, conc, fwd_rates);\n')
     elif lang == 'fortran':
         file.write('  ! evaluate reaction rates\n')
         if rev_reacs:
-            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates, '
-                       'rev_rxn_rates)\n'
+            file.write('  eval_rxn_rates (T, conc, fwd_rates, '
+                       'rev_rates)\n'
                        )
         else:
-            file.write('  eval_rxn_rates (T, conc, fwd_rxn_rates)\n')
+            file.write('  eval_rxn_rates (T, conc, fwd_rates)\n')
     elif lang == 'matlab':
         file.write('  % evaluate reaction rates\n')
         if rev_reacs:
-            file.write('  [fwd_rxn_rates, rev_rxn_rates] = eval_rxn_rates '
+            file.write('  [fwd_rates, rev_rates] = eval_rxn_rates '
                        '(T, conc);\n'
                        )
         else:
-            file.write('  fwd_rxn_rates = eval_rxn_rates (T, conc);\n')
+            file.write('  fwd_rates = eval_rxn_rates (T, conc);\n')
     file.write('\n')
     
     
@@ -268,11 +268,11 @@ def write_jacobian(path, lang, specs, reacs):
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  Real sp_rates[{}];\n'.format(num_s))
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, '
+            file.write('  eval_spec_rates (fwd_rates, rev_rates, '
                        'pres_mod, sp_rates);\n'
                        )
         else:
-            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, '
+            file.write('  eval_spec_rates (fwd_rates, pres_mod, '
                        'sp_rates);\n'
                        )
     elif lang == 'fortran':
@@ -280,11 +280,11 @@ def write_jacobian(path, lang, specs, reacs):
                    'concentration\n'
                    )
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, '
+            file.write('  eval_spec_rates (fwd_rates, rev_rates, '
                        'pres_mod, sp_rates)\n'
                        )
         else:
-            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, '
+            file.write('  eval_spec_rates (fwd_rates, pres_mod, '
                        'sp_rates)\n'
                        )
     elif lang == 'matlab':
@@ -292,11 +292,11 @@ def write_jacobian(path, lang, specs, reacs):
                    'concentration\n'
                    )
         if rev_reacs:
-            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, '
-                       'rev_rxn_rates, pres_mod);\n'
+            file.write('  sp_rates = eval_spec_rates(fwd_rates, '
+                       'rev_rates, pres_mod);\n'
                        )
         else:
-            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, '
+            file.write('  sp_rates = eval_spec_rates(fwd_rates, '
                        'pres_mod);\n'
                        )
     file.write('\n')
@@ -643,12 +643,12 @@ def write_jacobian(path, lang, specs, reacs):
                 
                 if rxn.rev:
                     # forward and reverse reaction rates
-                    jline += '(fwd_rxn_rates' + utils.get_array(lang, rind)
-                    jline += ' - rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                    jline += '(fwd_rates' + utils.get_array(lang, rind)
+                    jline += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
                     jline += ')'
                 else:
                     # forward reaction rate only
-                    jline += 'fwd_rxn_rates' + utils.get_array(lang, rind)
+                    jline += 'fwd_rates' + utils.get_array(lang, rind)
                 
                 jline += ' + (pres_mod' + utils.get_array(lang, pind)
                 
@@ -664,12 +664,12 @@ def write_jacobian(path, lang, specs, reacs):
                     
                     if rxn.rev:
                         # forward and reverse reaction rates
-                        jline += '(fwd_rxn_rates'+ utils.get_array(lang, rind)
-                        jline += ' - rev_rxn_rates'+ utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '(fwd_rates'+ utils.get_array(lang, rind)
+                        jline += ' - rev_rates'+ utils.get_array(lang, rev_reacs.index(rxn))
                         jline += ')'
                     else:
                         # forward reaction rate only
-                        jline += 'fwd_rxn_rates'+ utils.get_array(lang, rind)
+                        jline += 'fwd_rates'+ utils.get_array(lang, rind)
                     
                     jline += ' / T) + (pres_mod'+ utils.get_array(lang, pind)
                     
@@ -682,7 +682,7 @@ def write_jacobian(path, lang, specs, reacs):
             jline += ' / T) * ('
             
             # contribution from temperature derivative of forward reaction rate
-            jline += 'fwd_rxn_rates' + utils.get_array(lang, rind)
+            jline += 'fwd_rates' + utils.get_array(lang, rind)
             
             jline += ' * ('
             if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
@@ -703,7 +703,7 @@ def write_jacobian(path, lang, specs, reacs):
             if rxn.rev:
                 # reversible reaction
                 
-                jline += ' - rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                jline += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
                 
                 if rxn.rev_par:
                     # explicit reverse parameters
@@ -937,10 +937,11 @@ def write_jacobian(path, lang, specs, reacs):
                     jline += ') * '
                     
                     if rxn.rev:
-                        jline += '(fwd_rxn_rates' + utils.get_array(lang, rind)
-                        jline += ' - rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '(fwd_rates' + utils.get_array(lang, rind)
+                        jline += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += ')'
                     else:
-                        jline += 'fwd_rxn_rates' + utils.get_array(lang, rind)
+                        jline += 'fwd_rates' + utils.get_array(lang, rind)
                     
                     jline += ' + '
                 elif rxn.pdep:
@@ -1083,11 +1084,11 @@ def write_jacobian(path, lang, specs, reacs):
                     jline += ') * '
                     
                     if rxn.rev:
-                        jline += '(fwd_rxn_rates' + utils.get_array(lang, rind)
-                        jline += ' - rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '(fwd_rates' + utils.get_array(lang, rind)
+                        jline += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
                         jline += ')'
                     else:
-                        jline += 'fwd_rxn_rates' + utils.get_array(lang, rind)
+                        jline += 'fwd_rates' + utils.get_array(lang, rind)
                     
                     jline += ' + '
                 
@@ -1111,7 +1112,7 @@ def write_jacobian(path, lang, specs, reacs):
                             jline += '{} * '.format(float(nu))
                         jline += '('
                         
-                        jline += '-mw_avg * fwd_rxn_rates' + utils.get_array(lang, rind)
+                        jline += '-mw_avg * fwd_rates' + utils.get_array(lang, rind)
                         jline += ' / {:.8e}'.format(sp_j.mw)
                         
                         # only contribution from 2nd part of sp_l is sp_j
@@ -1163,7 +1164,7 @@ def write_jacobian(path, lang, specs, reacs):
                             jline += '{} * '.format(float(nu))
                         jline += '('
                         
-                        jline += '-mw_avg * rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '-mw_avg * rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
                         jline += ' / {:.8e}'.format(sp_j.mw)
                         
                         # only contribution from 2nd part of sp_l is sp_j

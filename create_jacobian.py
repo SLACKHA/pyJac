@@ -186,9 +186,10 @@ def write_jacobian(path, lang, specs, reacs):
     
     # evaluate species molar concentrations
     if lang in ['c', 'cuda']:
-        file.write('  // species molar concentrations\n'
-                   '  Real conc[{}];\n'.format(num_s)
-                   )
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  // species molar concentrations\n'
+                       '  Real conc[{}];\n'.format(num_s)
+                       )
     elif lang == 'fortran':
         file.write('  ! species molar concentrations\n')
     elif lang == 'matlab':

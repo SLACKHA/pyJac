@@ -1748,8 +1748,7 @@ def write_jacobian(path, lang, specs, reacs):
         
         isp = specs.index(sp)
         if not isfirst: line += ' + '
-        line += ' + h' + utils.get_array(lang, isp) + ' * sp_rates' + utils.get_array(lang, isp) + \
-            ' * {1:.8e}'.format(sp.mw)
+        line += ' + h' + utils.get_array(lang, isp) + ' * sp_rates' + utils.get_array(lang, isp) + ' * {:.8e}'.format(sp.mw)
         isfirst = False
     line += ')' + utils.line_end[lang]
     file.write(line)
@@ -1783,7 +1782,7 @@ def write_jacobian(path, lang, specs, reacs):
     line += ')' + utils.line_end[lang]
     file.write(line)
     
-    line = '  jac' + + utils.get_array(lang, 0, twod = 0)
+    line = '  jac' + utils.get_array(lang, 0, twod = 0)
     if lang in ['c', 'cuda']:
         line += ' /= '
         sparse_indicies.append(0)

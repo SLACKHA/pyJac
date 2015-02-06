@@ -282,7 +282,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                     )
             file.write(line)
         
-        line = '  fwd_rxn_rates' + utils.get_array(lang, reacs.index(rxn))
+        line = '  fwd_rxn_rates' + utils.get_array(lang, reacs.index(rxn)) + ' = '
         
         # reactants
         for sp in rxn.reac:
@@ -504,7 +504,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                         )
                 file.write(line)
             
-            line = '  rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+            line = '  rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn)) + ' = '
             
             # reactants (products from forward reaction)
             for sp in rxn.prod:

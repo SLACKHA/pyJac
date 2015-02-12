@@ -167,6 +167,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                    '#include "header.h"\n'
                    '\n'
                    )
+
         if rev_reacs:
             file.write('__device__ void eval_rxn_rates (const Real, '
                        'const Real*, Real*, Real*);\n'
@@ -195,9 +196,10 @@ def write_rxn_rates(path, lang, specs, reacs):
     if lang in ['c', 'cuda']:
         file.write('#include <math.h>\n'
                    '#include "header.h"\n'
-                   '\n'
                    )
-    
+        if lang == 'cuda' and CUDAParams.is_global:
+            file.write('#include "gpu_macros.cuh"\n')
+        file.write('\n')
     line = ''
     if lang == 'cuda': line = '__device__ '
     
@@ -572,8 +574,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
     if lang in ['c', 'cuda']:
         file.write('#include <math.h>\n'
                    '#include "header.h"\n'
-                   '\n'
                    )
+        if lang == 'cuda' and CUDAParams.is_global():
+            file.write('#include "gpu_macros.cuh"\n')
+        file.write('\n')
     
     # list of reactions with third-body or pressure-dependence
     pdep_reacs = []
@@ -865,7 +869,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             else:
                 #simple falloff fn (i.e. F = 1)
                 simple = True
-                line = '  pres_mod' + utils.get_array(lang, pind)
+                line = '  pres_mod' + utils.get_array(lang, pind) + ' = '
                  # regardless of F formulation
                 if reac.low:
                     # unimolecular/recombination fall-off reaction
@@ -930,8 +934,10 @@ def write_spec_rates(path, lang, specs, reacs):
     
     if lang in ['c', 'cuda']:
         file.write('#include "header.h"\n'
-                   '\n'
                    )
+        if CUDAParams.is_global() and lang == 'cuda':
+            file.write('#include "gpu_macros.cuh"\n')
+        file.write('\n')
     
     num_s = len(specs)
     num_r = len(reacs)
@@ -1212,7 +1218,10 @@ def write_chem_utils(path, lang, specs):
     file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
-        file.write('#include "header.h"\n\n')
+        file.write('#include "header.h"\n')
+        if lang == 'cuda' and CUDAParams.is_global():
+            file.write('#include "gpu_macros.cuh"\n')
+        file.write('\n')
     
     pre = ''
     if lang == 'cuda': pre = '__device__ '
@@ -1564,6 +1573,7 @@ def write_derivs(path, lang, specs, reacs):
     elif lang == 'cuda':
         file.write('#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
+                   '#include "gpu_macros.cuh"\n'
                    )
     file.write('\n')
 
@@ -1575,7 +1585,7 @@ def write_derivs(path, lang, specs, reacs):
         else:
             file.write('extern __device__ Real* rates;\n')
         if any(rxn.thd or rxn.pdep for rxn in reacs):
-            file.write('extern __device__ Real* pres_mod;')
+            file.write('extern __device__ Real* pres_mod;\n')
     
     # constant pressure
     file.write('#if defined(CONP)\n\n')
@@ -1721,7 +1731,7 @@ def write_derivs(path, lang, specs, reacs):
         # evaluate enthalpy
         file.write('  // local array for species enthalpies\n'
                    '  Real h[{}];\n'.format(len(specs)))
-    file.write('  eval_h(y' + utils.get_array(lang, 0) + ');\n')
+    file.write('  eval_h(y' + utils.get_array(lang, 0) + ', h);\n')
     
     # energy equation
     file.write('  // rate of change of temperature\n')
@@ -1756,8 +1766,8 @@ def write_derivs(path, lang, specs, reacs):
     file.write('#elif defined(CONV)\n\n')
 
     if lang == 'cuda' and CUDAParams.is_global():
-        file.write('extern __device__ Real* h;\n')
-        file.write('extern __device__ Real* cp;\n')
+        file.write('extern __device__ Real* u;\n')
+        file.write('extern __device__ Real* cv;\n')
     
     line = (pre + 'void dydt (const Real t, const Real rho, '
             'const Real * y, Real * dy) {\n'
@@ -1832,7 +1842,7 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local array holding constant volume specific heat\n'
                    '  Real cv[{}];\n'.format(len(specs))
                    )
-    file.write('  eval_cv(y' + utils.get_array(lang, 0) + ');\n\n')
+    file.write('  eval_cv(y' + utils.get_array(lang, 0) + ', cv);\n\n')
     
     file.write('  // constant volume mass-average specific heat\n')
     line = '  Real cv_avg = '
@@ -1858,7 +1868,7 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local array for species internal energies\n'
                    '  Real u[{}];\n'.format(len(specs))
                    )
-    file.write('  eval_u(y' + utils.get_array(lang, 0) + ');\n')
+    file.write('  eval_u(y' + utils.get_array(lang, 0) + ', u);\n')
     
     # energy equation
     file.write('  // rate of change of temperature\n')

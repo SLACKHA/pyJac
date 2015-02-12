@@ -533,6 +533,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e7', '10')
         file.write('    fclose(fp);\n'
                    '    free(conc_host_full);\n'
+                   '    free(y_host_full);\n'
+                   '#ifdef CONP\n'
+                   '    free(pres_host_full);\n'
+                   '#elif CONV\n'
+                   '    free(rho_host_full);\n'
+                   '#endif\n'
                    '    free(dy_host_full);\n'
                    '    free(jacob_host_full);\n'
                    )

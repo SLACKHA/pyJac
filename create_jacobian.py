@@ -48,7 +48,7 @@ def write_jacobian(path, lang, specs, reacs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void eval_jacob (const Real, const Real, const Real*, '
+                   'void eval_jacob (const Real, const Real, Real*, '
                    'Real*);\n'
                    '\n'
                    '#endif\n'

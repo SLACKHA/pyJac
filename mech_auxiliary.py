@@ -200,6 +200,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    #endif\n'
                    '    #ifdef RATES_TEST\n'
                    )
+        file.write('#ifdef RATES_TEST || PROFILER\n')
         if lang == 'c':
             file.write('    void write_jacobian_and_rates_output();\n'
                        '    #endif\n'
@@ -210,6 +211,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '    #endif\n'
                        '\n'
                        )
+        file.write('#endif\n')
 
         if lang == 'cuda':
             # close previous extern
@@ -224,7 +226,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
         file.write('#include <stdio.h>\n'
                    '#include "mass_mole.h"\n'
                    '#include "mechanism.{}h"\n'.format('cu' if lang == 'cuda' else '') +
-                   '#ifdef RATES_TEST\n'
+                   '#ifdef RATES_TEST || PROFILER\n'
                    '    #include "rates.{}h"\n'.format('cu' if lang == 'cuda' else '') +
                    '    #include "jacob.{}h"\n'.format('cu' if lang == 'cuda' else '') +
                    '#endif\n')
@@ -243,7 +245,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            '#ifdef CONV\n'
                            '    extern double* d_rho;\n'
                            '#endif\n'
-                           '#ifdef RATES_TEST\n'
+                           '#ifdef RATES_TEST || PROFILER\n'
                            '    extern double* d_conc;\n'
                            )
                 if have_rev_rxns:
@@ -341,6 +343,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             file.write('    return size;\n')
 
         file.write('}\n\n')
+        file.write('#ifdef RATES_TEST || PROFILER\n')
         # write utility function that finds concentrations at a given state
         file.write('void get_concentrations(double P, const double* y_host, double* conc_host) {\n'
                    '    double rho;\n'
@@ -563,7 +566,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             file.write('    free_gpu_memory();\n')
 
         file.write('}\n')
-
+        file.write('#endif\n')
     if lang == 'cuda':
         with open(path + 'gpu_memory.cuh', 'w') as file:
             file.write('#ifndef GPU_MEMORY_CUH\n'

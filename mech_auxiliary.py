@@ -46,7 +46,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
 
 
 def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
-    file.write('        fprintf(fp, "{}, {} atm\\n");\n'.format(T, Pretty_P) +
+    file.write('        fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '        y_host[0] = {};\n'.format(T) +
                '        get_concentrations({}, y_host, conc_host);\n'.format(P)
                )
@@ -67,7 +67,7 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
 
 
 def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
-    file.write('    fprintf(fp, "{}, {} atm\\n");\n'.format(T, Pretty_P) +
+    file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
                '    get_concentrations({}, y_host, conc_host);\n'.format(P))
     file.write('#ifdef CONV\n' + 
@@ -375,28 +375,41 @@ def write_mechanism_initializers(path, lang, specs, reacs):
 
         file.write('}\n\n')
 
-        line = 'void write_rates(FILE* fp, const double* fwd_rates_host'
+        line = 'void write_rates(FILE* fp, '
         if have_rev_rxns:
+            line += ' const double* fwd_rates_host'
             line += ', const double* rev_rates_host'
+        else:
+            line += ' const double* rates'
         if have_pdep_rxns:
             line += ', const double* pres_mod_host'
         line += ', const double* dy_host) {\n'
         file.write(line)
         # convience method to write rates to file
-        file.write('    for(int i = 0; i < FWD_RATES; ++i) {\n'
+        if have_rev_rxns:
+            file.write('    fprintf(fp, "Forward Rates\\n");\n'
+                   '    for(int i = 0; i < FWD_RATES; ++i) {\n'
                    '        fprintf(fp, "%.15le\\n", fwd_rates_host[i]);\n'
                    '    }\n'
                    )
-        if have_rev_rxns:
+            file.write('    fprintf(fp, "Rev Rates\\n");\n')
             file.write('    for(int i = 0; i < REV_RATES; ++i) {\n'
                        '        fprintf(fp, "%.15le\\n", rev_rates_host[i]);\n'
                        '    }\n'
                        )
+        else:
+            file.write('    fprintf(fp, "Rates\\n");\n'
+                   '    for(int i = 0; i < RATES; ++i) {\n'
+                   '        fprintf(fp, "%.15le\\n", rates_host[i]);\n'
+                   '    }\n'
+                   )
         if have_pdep_rxns:
+            file.write('    fprintf(fp, "Pres Mod Rates\\n");\n')
             file.write('    for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
                        '        fprintf(fp, "%.15le\\n", pres_mod_host[i]);\n'
                        '    }\n'
                        )
+        file.write('    fprintf(fp, "dy\\n");\n')
         file.write('    for(int i = 0; i < NN; i++) {\n'
                    '        fprintf(fp, "%.15le\\n", dy_host[i]);\n'
                    '    }\n'
@@ -404,6 +417,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    )
 
         file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n'
+                   '    fprintf(fp, "Jacob\\n");\n'
                    '    for (int i = 0; i < NN * NN; ++i) {\n'
                    '        fprintf(fp, "%.15le\\n", jacob_host[i]);\n'
                    '    }\n'

@@ -111,7 +111,7 @@ def write_jacobian(path, lang, specs, reacs):
                 file.write('extern __device__ Real* rates;\n')
             if len(pdep_reacs):
                 file.write('extern __device__ Real* pres_mod;\n')
-            file.write('extern __device__ Real* sp_rates;\n')
+            file.write('extern __device__ Real* dy;\n')
             file.write('#ifdef CONP\n'
                        'extern __device__ Real* h;\n'
                        'extern __device__ Real* cp;\n'
@@ -280,21 +280,20 @@ def write_jacobian(path, lang, specs, reacs):
                    'pres_mod);\n'
                    )
     file.write('\n')
-    
-    
+
     # evaluate species rates
     if lang in ['c', 'cuda']:
         file.write('  // evaluate rate of change of species molar '
                    'concentration\n')
         if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  Real sp_rates[{}];\n'.format(num_s))
+            file.write('  Real dy[{}];\n'.format(num_s))
         if rev_reacs:
             file.write('  eval_spec_rates (fwd_rates, rev_rates, '
-                       'pres_mod, sp_rates);\n'
+                       'pres_mod, dy);\n'
                        )
         else:
             file.write('  eval_spec_rates (fwd_rates, pres_mod, '
-                       'sp_rates);\n'
+                       'dy);\n'
                        )
     elif lang == 'fortran':
         file.write('  ! evaluate rate of change of species molar '
@@ -302,27 +301,26 @@ def write_jacobian(path, lang, specs, reacs):
                    )
         if rev_reacs:
             file.write('  eval_spec_rates (fwd_rates, rev_rates, '
-                       'pres_mod, sp_rates)\n'
+                       'pres_mod, dy)\n'
                        )
         else:
             file.write('  eval_spec_rates (fwd_rates, pres_mod, '
-                       'sp_rates)\n'
+                       'dy)\n'
                        )
     elif lang == 'matlab':
         file.write('  % evaluate rate of change of species molar '
                    'concentration\n'
                    )
         if rev_reacs:
-            file.write('  sp_rates = eval_spec_rates(fwd_rates, '
+            file.write('  dy = eval_spec_rates(fwd_rates, '
                        'rev_rates, pres_mod);\n'
                        )
         else:
-            file.write('  sp_rates = eval_spec_rates(fwd_rates, '
+            file.write('  dy = eval_spec_rates(fwd_rates, '
                        'pres_mod);\n'
                        )
     file.write('\n')
-    
-    
+
     # third-body variable needed for reactions
     if any(rxn.thd for rxn in reacs):
         line = '  '

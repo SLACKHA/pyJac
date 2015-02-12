@@ -70,10 +70,19 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     file.write('    fprintf(fp, "{}, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
                '    get_concentrations({}, y_host, conc_host);\n'.format(P))
-    file.write('    for (int i = 0; i < NUM; ++i) {\n'
+    file.write('#ifdef CONV\n' + 
+               '    double rho = getDensity({}, {}, Xi);\n'.format(T, P) +
+               '#endif\n'
+               '    for (int i = 0; i < NUM; ++i) {\n'
                '        for (int j = 0; j < NSP; ++j) {\n'
                '            conc_host_full[i + j * NUM] = conc_host[j];\n'
-               '        }\n'
+               '        }\n' + 
+               '        y_host_full[i] = {};\n'.format(T) + 
+               '#ifdef CONP\n' + 
+               '        pres_host_full[i] = {};\n'.format(P) + 
+               '#elif CONV\n'
+               '        rho_host_full[i] = rho;\n'
+               '#endif\n'
                '    }\n'
                )
     file.write(
@@ -110,19 +119,27 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                    )
 
     if have_rev_rxns:
-        file.write('    k_eval_spec_rates<<<grid_size, block_size>>>(d_fwd_rates, d_rev_rates,{} d_dy);\n'.format(' d_pres_mod,' if have_pdep_rxns else '') +
-                   '    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, NUM * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
-                   '    for (int j = 0; j < NN; ++j) {\n'
-                   '        dy_host[j] = dy_host_full[j * NUM];\n'
-                   '    }\n' +
-                   '    write_rates(fp,{}{} dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates,', ' pres_mod_host,' if have_pdep_rxns else '') +
-                   '    k_eval_jacob<<<grid_size, block_size>>>(0, {}, d_y, d_jac);\n'.format(P) +
-                   '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, NUM * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
-                   '    for (int j = 0; j < NN * NN; ++j) {\n'
-                   '        jacob_host[j] = jacob_host_full[j * NUM];\n'
-                   '    }\n'
-                   '    write_jacob(fp, jacob_host);\n'
-                   )
+        file.write('    k_eval_spec_rates<<<grid_size, block_size>>>(d_fwd_rates, d_rev_rates,{} d_dy);\n'.format(' d_pres_mod,' if have_pdep_rxns else ''))
+    else:
+        file.write('    k_eval_spec_rates<<<grid_size, block_size>>>(d_rates,{} d_dy);\n'.format(' d_pres_mod,' if have_pdep_rxns else ''))
+    file.write('    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, NUM * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+               '    for (int j = 0; j < NN; ++j) {\n'
+               '        dy_host[j] = dy_host_full[j * NUM];\n'
+               '    }\n' +
+               '    write_rates(fp,{}{} dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates,', ' pres_mod_host,' if have_pdep_rxns else '') + 
+               '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, NUM * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
+               '#ifdef CONP\n'
+               '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host_full, NUM * sizeof(double), cudaMemcpyHostToDevice));\n'
+               '#elif CONV\n'
+               '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host_full, NUM * sizeof(double), cudaMemcpyHostToDevice));\n'
+               '#endif\n'
+               '    k_eval_jacob<<<grid_size, block_size>>>(0, {}, d_y, d_jac);\n'.format(P) +
+               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, NUM * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+               '    for (int j = 0; j < NN * NN; ++j) {\n'
+               '        jacob_host[j] = jacob_host_full[j * NUM];\n'
+               '    }\n'
+               '    write_jacob(fp, jacob_host);\n'
+               )
 
 
 def write_mechanism_initializers(path, lang, specs, reacs):
@@ -316,10 +333,10 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    }\n'
                    )
         if lang == 'cuda':  # copy memory over
-            file.write('    cudaMemcpyToSymbol(d_y, y_host, size * NN * sizeof(double));\n'
-                       '    cudaMemcpyToSymbol(d_pres, pres_host, size * sizeof(double));\n'
+            file.write('    cudaMemcpy(d_y, y_host, size * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
+                       '    cudaMemcpy(d_pres, pres_host, size * sizeof(double), cudaMemcpyHostToDevice);\n'
                        '#ifdef CONV\n'
-                       '    cudaMemcpyToSymbol(d_rho, rho_host, size * sizeof(double));\n'
+                       '    cudaMemcpy(d_rho, rho_host, size * sizeof(double), cudaMemcpyHostToDevice);\n'
                        '#endif\n')
             file.write('    return size;\n')
 
@@ -431,6 +448,19 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '    for (int i = 1; i < NN; ++i) {\n'
                        '        y_host[i] = 1.0 / ((double)NSP);\n'
                        '    }\n'
+                       '    double* y_host_full = (double*)malloc(NUM * NN * sizeof(double));\n'
+                       '    for (int i = 1; i < NN; ++i) {\n'
+                       '        for (int j = 0; j < NUM; ++j) {\n'
+                       '            y_host_full[j + i * NUM] = y_host[i];\n'
+                       '        }\n'
+                       '    }\n'
+                       '#ifdef CONP\n'
+                       '    double* pres_host_full = (double*)malloc(NUM * sizeof(double));\n'
+                       '#elif CONV\n'
+                       '    double* rho_host_full = (double*)malloc(NUM * sizeof(double));\n'
+                       '    double Xi[NSP];\n'
+                       '    mass2mole(&y_host[1], Xi);\n'
+                       '#endif\n'
                        '    double conc_host[NSP];\n'
                        '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n'
                        '    NUM = padded > NUM ? padded : NUM;\n'
@@ -459,24 +489,24 @@ def write_mechanism_initializers(path, lang, specs, reacs):
 
         if not CUDAParams.is_global():
             # need to define arrays
-            file.write('    double* y = cudaMalloc(NUM * NN * sizeof(double));\n'
-                       '    double* pres = cudaMalloc(NUM * sizeof(double));\n'
+            file.write('    double* d_y = cudaMalloc(NUM * NN * sizeof(double));\n'
+                       '    double* d_pres = cudaMalloc(NUM * sizeof(double));\n'
                        '#ifdef CONV\n'
-                       '    double* rho = cudaMalloc(NUM * sizeof(double));\n'
+                       '    double* d_rho = cudaMalloc(NUM * sizeof(double));\n'
                        '#endif\n'
-                       '    double* conc = cudaMalloc(NUM * NSP * sizeof(double));\n'
+                       '    double* d_conc = cudaMalloc(NUM * NSP * sizeof(double));\n'
                        )
             if have_rev_rxns:
-                file.write('    double* fwd_rates = cudaMalloc(NUM * FWD_RATES * sizeof(double));\n'
-                           '    double* rev_rates = cudaMalloc(NUM * REV_RATES * sizeof(double));\n')
+                file.write('    double* d_fwd_rates = cudaMalloc(NUM * FWD_RATES * sizeof(double));\n'
+                           '    double* d_rev_rates = cudaMalloc(NUM * REV_RATES * sizeof(double));\n')
             else:
                 file.write(
-                    '    double* rates = cudaMalloc(NUM * RATES * sizeof(double));\n')
+                    '    double* d_rates = cudaMalloc(NUM * RATES * sizeof(double));\n')
             if have_pdep_rxns:
                 file.write(
-                    '    double* pres_mod = cudaMalloc(NUM * PRES_MOD_RATES * sizeof(double));\n')
+                    '    double* d_pres_mod = cudaMalloc(NUM * PRES_MOD_RATES * sizeof(double));\n')
             file.write(
-                '    double* jac = cudaMalloc(NUM * NN * NN * sizeof(double));\n')
+                '    double* d_jac = cudaMalloc(NUM * NN * NN * sizeof(double));\n')
 
         __write_cuda_rate_evaluator(
             file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')

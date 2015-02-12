@@ -258,7 +258,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             __write_kernels(file, have_rev_rxns, have_pdep_rxns)
 
         needed_arr = ['y', 'pres']
-        needed_arr_conv = ['y', 'pres', 'rho']
+        needed_arr_conv = ['y', 'rho']
         if lang == 'cuda':
             if CUDAParams.is_global():
                 needed_arr = ['double* ' + a + '_host' for a in needed_arr]

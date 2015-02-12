@@ -1639,15 +1639,19 @@ def write_derivs(path, lang, specs, reacs):
     # evaluate reaction rates
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
     if rev_reacs:
-        file.write('  // local arrays holding reaction rates\n'
-                   '  Real fwd_rates[{}];\n'.format(len(reacs)) + 
-                   '  Real rev_rates[{}];\n'.format(len(rev_reacs)) +
-                   '  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', conc, fwd_rates, rev_rates);\n'
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  // local arrays holding reaction rates\n'
+                       '  Real fwd_rates[{}];\n'.format(len(reacs)) + 
+                       '  Real rev_rates[{}];\n'.format(len(rev_reacs)))
+
+        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', conc, fwd_rates, rev_rates);\n'
                    '\n')
     else:
-        file.write('  // local array holding reaction rates\n'
-                   '  Real rates[{}];\n'.format(len(reacs)) +
-                   '  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', conc, rates);\n'
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  // local array holding reaction rates\n'
+                   '  Real rates[{}];\n'.format(len(reacs)))
+
+        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', conc, rates);\n'
                    '\n')
         
     # reaction pressure dependence
@@ -1659,8 +1663,10 @@ def write_derivs(path, lang, specs, reacs):
     num_pdep = len(pdep_reacs)
     if pdep_reacs:
         if lang in ['c', 'cuda']:
-            file.write('  // get pressure modifications to reaction rates\n'
-                       '  Real pres_mod[{}];\n'.format(num_pdep))
+            file.write('  // get pressure modifications to reaction rates\n')
+            if lang != 'cuda' or not CUDAParams.is_global():
+                file.write('  Real pres_mod[{}];\n'.format(num_pdep))
+                
             file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, conc, pres_mod);\n')
         elif lang == 'fortran':
             file.write('  ! get and evaluate pressure modifications to '

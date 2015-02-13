@@ -318,6 +318,9 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                     ['double* ' + a + '_host', 'double* ' + a + '_d'] for a in needed_arr_conv]
                 needed_arr_conv = [
                     a + '_d' for a in itertools.chain(*needed_arr_conv)]
+        else:
+            needed_arr = ['double* ' + a + '_host' for a in needed_arr]
+            needed_arr_conv = ['double* ' + a + '_host' for a in needed_arr_conv]
         file.write('#ifdef CONP\n'
                    '{} set_same_initial_conditions(int NUM{}, {}) \n'.format('int' if lang == 'cuda' else 'void',
                                                                              ', int block_size, int grid_size' if lang == 'cuda' else '', ', '.join(needed_arr)) +

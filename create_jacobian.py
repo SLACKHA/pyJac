@@ -98,6 +98,7 @@ def write_jacobian(path, lang, specs, reacs):
                    '#include "header.h"\n'
                    '#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
+                   '#include "gpu_macros.cuh"\n'
                    '\n'
                    )
 
@@ -118,7 +119,7 @@ def write_jacobian(path, lang, specs, reacs):
                        '#else\n'
                        'extern __device__ Real* u;\n'
                        'extern __device__ Real* cv;\n'
-                       '#endif')
+                       '#endif\n')
 
     line = ''
     if lang == 'cuda':

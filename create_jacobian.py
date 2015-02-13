@@ -1642,8 +1642,8 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ('(y' + utils.get_array(lang, isp + 1) + ' * ' +
-                 utils.get_array(lang, isp))
+        line += ('(y' + utils.get_array(lang, isp + 1) + ' * ' + 'cp' +
+                 utils.get_array(lang, isp) + ')')
 
         isfirst = False
     line += utils.line_end[lang]

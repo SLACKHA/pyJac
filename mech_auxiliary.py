@@ -46,23 +46,23 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
 
 
 def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
-    file.write('        fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
-               '        y_host[0] = {};\n'.format(T) +
-               '        get_concentrations({}, y_host, conc_host);\n'.format(P)
+    file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
+               '    y_host[0] = {};\n'.format(T) +
+               '    get_concentrations({}, y_host, conc_host);\n'.format(P)
                )
     if have_rev_rxns:
         file.write(
-            '        eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
+            '    eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
     else:
         file.write(
-            '        eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
+            '    eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
     if have_pdep_rxns:
         file.write(
-            '        get_rxn_pres_mod ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
-    file.write('        eval_spec_rates ({}{} dy_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host, ', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '        write_rates(fp,{}{} dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host, ', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
-               '        write_jacob(fp, jacob_host);\n'
+            '    get_rxn_pres_mod ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
+    file.write('    eval_spec_rates ({}{} &dy_host[1]);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host, ', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '    write_rates(fp,{}{} dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host, ', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '    eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
+               '    write_jacob(fp, jacob_host);\n'
                )
 
 
@@ -475,26 +475,26 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    )
 
         if lang != 'cuda':
-            file.write('    void write_jacobian_and_rates_output() {\n'
-                       '        //set mass fractions to unity to turn on all reactions\n'
-                       '        double y_host[NN];\n'
-                       '        for (int i = 1; i < NN; ++i) {\n'
-                       '            y_host[i] = 1.0 / ((double)NSP);\n'
-                       '        }\n'
-                       '        double conc_host[NSP];\n'
+            file.write('void write_jacobian_and_rates_output() {\n'
+                       '    //set mass fractions to unity to turn on all reactions\n'
+                       '    double y_host[NN];\n'
+                       '    for (int i = 1; i < NN; ++i) {\n'
+                       '        y_host[i] = 1.0 / ((double)NSP);\n'
+                       '    }\n'
+                       '    double conc_host[NSP];\n'
                        )
             if have_rev_rxns:
-                file.write('        double fwd_rates_host[FWD_RATES];\n'
-                           '        double rev_rates_host[REV_RATES];\n')
+                file.write('    double fwd_rates_host[FWD_RATES];\n'
+                           '    double rev_rates_host[REV_RATES];\n')
             else:
-                file.write('        double rates_host[RATES];\n')
+                file.write('    double rates_host[RATES];\n')
             if have_pdep_rxns:
-                file.write('        double pres_mod_host[PRES_MOD_RATES];\n')
+                file.write('    double pres_mod_host[PRES_MOD_RATES];\n')
 
-            file.write('        double dy_host[NN];\n'
-                       '        double jacob_host[NN * NN];\n'
-                       '        //evaluate and write rates for various conditions\n'
-                       '        FILE* fp = fopen ("rates_data.txt", "w");\n'
+            file.write('    double dy_host[NN];\n'
+                       '    double jacob_host[NN * NN];\n'
+                       '    //evaluate and write rates for various conditions\n'
+                       '    FILE* fp = fopen ("rates_data.txt", "w");\n'
                        )
             __write_c_rate_evaluator(
                 file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
@@ -502,8 +502,8 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 file, have_rev_rxns, have_pdep_rxns, '1600', '1.01325e6', '1')
             __write_c_rate_evaluator(
                 file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e7', '10')
-            file.write('        fclose(fp);\n'
-                       '    }\n'
+            file.write('    fclose(fp);\n'
+                       '}\n'
                        )
         else:
             file.write('void write_jacobian_and_rates_output(int NUM, int block_size, int grid_size) {\n'

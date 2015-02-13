@@ -1839,7 +1839,7 @@ def write_jacobian(path, lang, specs, reacs):
         if not isfirst:
             line += ' + '
         line += '(cp' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp) + \
-            '{:.8e} / rho + '.format(sp.mw) + 'h' + utils.get_array(lang, isp) + ' * jac' + \
+            ' * {:.8e} / rho + '.format(sp.mw) + 'h' + utils.get_array(lang, isp) + ' * jac' + \
             utils.get_array(lang, isp + 1, twod=0) + ')'
         isfirst = False
     line += ')' + utils.line_end[lang]

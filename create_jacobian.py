@@ -125,6 +125,10 @@ def write_jacobian(path, lang, specs, reacs):
     if lang == 'cuda':
         line = '__device__ '
 
+    offset = 0
+    if lang == 'cuda' and CUDAParams.is_global():
+        offset = 1
+
     if lang in ['c', 'cuda']:
         line += ('void eval_jacob (const Real t, const Real pres, '
                  'Real * y, Real * jac) {\n\n')
@@ -1553,7 +1557,7 @@ def write_jacobian(path, lang, specs, reacs):
                     line += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) +
                              '= jac' + utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' + ')
                     sparse_indicies.append((k_sp + 1, j_sp + 1))
-                line += 'dy' + utils.get_array(lang, k_sp)
+                line += 'dy' + utils.get_array(lang, k_sp + offset)
                 line += (' * mw_avg / {:.8e}'.format(sp_j.mw) +
                          utils.line_end[lang]
                          )
@@ -1686,7 +1690,7 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ('(h' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp) + ' * '
+        line += ('(h' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp + offset) + ' * '
                  '{1:.6})'.format(isp, sp.mw))
 
         isfirst = False
@@ -1808,7 +1812,7 @@ def write_jacobian(path, lang, specs, reacs):
             line += ' + '
         line += ' + h' + \
             utils.get_array(
-                lang, isp) + ' * dy' + utils.get_array(lang, isp) + ' * {:.8e}'.format(sp.mw)
+                lang, isp) + ' * dy' + utils.get_array(lang, isp + offset) + ' * {:.8e}'.format(sp.mw)
         isfirst = False
     line += ')' + utils.line_end[lang]
     file.write(line)
@@ -1838,7 +1842,7 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += '(cp' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp) + \
+        line += '(cp' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp + offset) + \
             ' * {:.8e} / rho + '.format(sp.mw) + 'h' + utils.get_array(lang, isp) + ' * jac' + \
             utils.get_array(lang, isp + 1, twod=0) + ')'
         isfirst = False
@@ -1901,7 +1905,7 @@ def write_jacobian(path, lang, specs, reacs):
                 line += ('h' + utils.get_array(lang, k_sp) + ' * ('
                          'jac' + utils.get_array(lang, k_sp + 1 + (num_s + 1) * (isp + 1)) +
                          ' - (cp' + utils.get_array(lang, isp) + ' * dy' +
-                         utils.get_array(lang, k_sp) +
+                         utils.get_array(lang, k_sp + offset) +
                          ' * {:.8e} / (rho * cp_avg)))'.format(sp_k.mw)
                          )
                 sparse_indicies.append(k_sp + 1 + (num_s + 1) * (isp + 1))
@@ -1909,7 +1913,7 @@ def write_jacobian(path, lang, specs, reacs):
                 line += ('h' + utils.get_array(lang, k_sp) + ' * ('
                          'jac' + utils.get_array(lang, k_sp + 1, twod=isp + 1) +
                          ' - (cp' + utils.get_array(lang, isp) + ' * dy' +
-                         utils.get_array(lang, k_sp)
+                         utils.get_array(lang, k_sp + offset)
                          )
                 sparse_indicies.append((k_sp + 1, isp + 1))
             isfirst = False

@@ -532,7 +532,8 @@ def write_jacobian(path, lang, specs, reacs):
                             line += ' + {} * conc'.format(thd_sp[1] - 1.0)
                         elif thd_sp[1] < 1.0:
                             line += ' - {} * conc'.format(1.0 - thd_sp[1])
-                        line += utils.get_array(lang, isp)
+                        if thd_sp[1] != 1.0:
+                            line += utils.get_array(lang, isp)
                     line += ')'
 
                 jline += 'pres_mod' + utils.get_array(lang, pind)
@@ -993,7 +994,8 @@ def write_jacobian(path, lang, specs, reacs):
                                 line += ' + {} * conc'.format(thd_sp[1] - 1.0)
                             elif thd_sp[1] < 1.0:
                                 line += ' - {} * conc'.format(1.0 - thd_sp[1])
-                            line += utils.get_array(lang, isp)
+                            if thd_sp[1] != 1.0:
+                                line += utils.get_array(lang, isp)
                         line += ')'
 
                     if rxn.low:

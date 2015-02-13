@@ -113,7 +113,7 @@ def get_array(lang, index, twod = None):
 
 def get_index(lang, index):
     """
-    Given an integer index (or list/tuple of indexes) this function will return the proper string version of the index
+    Given an integer index this function will return the proper string version of the index
     based on the language and other considerations
 
     Parameters
@@ -129,14 +129,6 @@ def get_index(lang, index):
     """
 
     retval = None
-    if isinstance(index, tuple):
-        retval = ()
-        for ind in index:
-            retval += (get_index(lang, ind),)
-        return retval
-    if isinstance(index, list):
-        return [get_index(lang, ind) for ind in index]
-
     if lang in ['fortran', 'matlab']:
         return str(index + 1)
     if lang == 'c':

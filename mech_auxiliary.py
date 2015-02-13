@@ -245,19 +245,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    {} set_same_initial_conditions(int NUM,{} double* y_host, double* pres_host, double* rho_host);\n'
                    .format('int' if lang == 'cuda' else 'void', ' int block_size, int grid_size, ' if lang == 'cuda' else '') +
                    '    #endif\n'
-                   '    #ifdef RATES_TEST\n'
                    )
-        file.write('#if defined (RATES_TEST) || defined (PROFILER)\n')
+        file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
         if lang == 'c':
-            file.write('    void write_jacobian_and_rates_output();\n'
-                       '    #endif\n'
-                       '\n'
-                       )
+            file.write('    void write_jacobian_and_rates_output();\n')
         else:
-            file.write('    void write_jacobian_and_rates_output(int NUM, int block_size, int grid_size);\n'
-                       '    #endif\n'
-                       '\n'
-                       )
+            file.write('    void write_jacobian_and_rates_output(int NUM, int block_size, int grid_size);\n')
         file.write('#endif\n')
 
         if lang == 'cuda':
@@ -564,78 +557,78 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '    FILE* fp = fopen ("rates_data.txt", "w");\n'
                        )
 
-        if not CUDAParams.is_global():
-            # need to define arrays
-            file.write('    double* d_y = cudaMalloc(NUM * NN * sizeof(double));\n'
-                       '    double* d_pres = cudaMalloc(NUM * sizeof(double));\n'
-                       '#ifdef CONV\n'
-                       '    double* d_rho = cudaMalloc(NUM * sizeof(double));\n'
+            if not CUDAParams.is_global():
+                # need to define arrays
+                file.write('    double* d_y = cudaMalloc(NUM * NN * sizeof(double));\n'
+                           '    double* d_pres = cudaMalloc(NUM * sizeof(double));\n'
+                           '#ifdef CONV\n'
+                           '    double* d_rho = cudaMalloc(NUM * sizeof(double));\n'
+                           '#endif\n'
+                           '    double* d_conc = cudaMalloc(NUM * NSP * sizeof(double));\n'
+                           )
+                if have_rev_rxns:
+                    file.write('    double* d_fwd_rates = cudaMalloc(NUM * FWD_RATES * sizeof(double));\n'
+                               '    double* d_rev_rates = cudaMalloc(NUM * REV_RATES * sizeof(double));\n')
+                else:
+                    file.write(
+                        '    double* d_rates = cudaMalloc(NUM * RATES * sizeof(double));\n')
+                if have_pdep_rxns:
+                    file.write(
+                        '    double* d_pres_mod = cudaMalloc(NUM * PRES_MOD_RATES * sizeof(double));\n')
+                file.write(
+                    '    double* d_jac = cudaMalloc(NUM * NN * NN * sizeof(double));\n')
+
+            __write_cuda_rate_evaluator(
+                file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
+            __write_cuda_rate_evaluator(
+                file, have_rev_rxns, have_pdep_rxns, '1600', '1.01325e6', '1')
+            __write_cuda_rate_evaluator(
+                file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e7', '10')
+            file.write('    fclose(fp);\n'
+                       '    free(conc_host_full);\n'
+                       '    free(y_host_full);\n'
+                       '#ifdef RATES_TEST\n'
+                       '#ifdef CONP\n'
+                       '    free(pres_host_full);\n'
+                       '#elif CONV\n'
+                       '    free(rho_host_full);\n'
                        '#endif\n'
-                       '    double* d_conc = cudaMalloc(NUM * NSP * sizeof(double));\n'
+                       '    free(dy_host_full);\n'
+                       '    free(jacob_host_full);\n'
                        )
             if have_rev_rxns:
-                file.write('    double* d_fwd_rates = cudaMalloc(NUM * FWD_RATES * sizeof(double));\n'
-                           '    double* d_rev_rates = cudaMalloc(NUM * REV_RATES * sizeof(double));\n')
+                file.write('    free(fwd_rates_host_full);\n'
+                           '    free(rev_rates_host_full);\n'
+                           )
             else:
-                file.write(
-                    '    double* d_rates = cudaMalloc(NUM * RATES * sizeof(double));\n')
+                file.write('    free(rates_host_full);\n')
             if have_pdep_rxns:
-                file.write(
-                    '    double* d_pres_mod = cudaMalloc(NUM * PRES_MOD_RATES * sizeof(double));\n')
-            file.write(
-                '    double* d_jac = cudaMalloc(NUM * NN * NN * sizeof(double));\n')
+                file.write('    free(pres_mod_host_full);\n')
 
-        __write_cuda_rate_evaluator(
-            file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
-        __write_cuda_rate_evaluator(
-            file, have_rev_rxns, have_pdep_rxns, '1600', '1.01325e6', '1')
-        __write_cuda_rate_evaluator(
-            file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e7', '10')
-        file.write('    fclose(fp);\n'
-                   '    free(conc_host_full);\n'
-                   '    free(y_host_full);\n'
-                   '#ifdef RATES_TEST\n'
-                   '#ifdef CONP\n'
-                   '    free(pres_host_full);\n'
-                   '#elif CONV\n'
-                   '    free(rho_host_full);\n'
-                   '#endif\n'
-                   '    free(dy_host_full);\n'
-                   '    free(jacob_host_full);\n'
-                   )
-        if have_rev_rxns:
-            file.write('    free(fwd_rates_host_full);\n'
-                       '    free(rev_rates_host_full);\n'
-                       )
-        else:
-            file.write('    free(rates_host_full);\n')
-        if have_pdep_rxns:
-            file.write('    free(pres_mod_host_full);\n')
+            if not CUDAParams.is_global():
+                file.write('    cudaErrorCheck(cudaFree(y));\n'
+                           '    cudaErrorCheck(cudaFree(pres));\n'
+                           '#ifdef CONV\n'
+                           '    cudaErrorCheck(cudaFree(rho));\n'
+                           '#endif'
+                           '    cudaErrorCheck(cudaFree(conc));\n'
+                           )
+                if have_rev_rxns:
+                    file.write('    cudaErrorCheck(cudaFree(fwd_rates));\n')
+                    file.write('    cudaErrorCheck(cudaFree(rev_rates));\n')
+                else:
+                    file.write('    cudaErrorCheck(cudaFree(rates));\n')
 
-        if not CUDAParams.is_global():
-            file.write('    cudaErrorCheck(cudaFree(y));\n'
-                       '    cudaErrorCheck(cudaFree(pres));\n'
-                       '#ifdef CONV\n'
-                       '    cudaErrorCheck(cudaFree(rho));\n'
-                       '#endif'
-                       '    cudaErrorCheck(cudaFree(conc));\n'
-                       )
-            if have_rev_rxns:
-                file.write('    cudaErrorCheck(cudaFree(fwd_rates));\n')
-                file.write('    cudaErrorCheck(cudaFree(rev_rates));\n')
+                if have_pdep_rxns:
+                    file.write('    cudaErrorCheck(cudaFree(pres_mod));\n')
+                file.write('    cudaErrorCheck(cudaFree(jac));\n')
+                file.write('#endif\n')
             else:
-                file.write('    cudaErrorCheck(cudaFree(rates));\n')
-
-            if have_pdep_rxns:
-                file.write('    cudaErrorCheck(cudaFree(pres_mod));\n')
-            file.write('    cudaErrorCheck(cudaFree(jac));\n')
-            file.write('#endif\n')
-        else:
-            file.write('#endif\n')
-            file.write('    free_gpu_memory();\n')
+                file.write('#endif\n')
+                file.write('    free_gpu_memory();\n')
 
 
-        file.write('}\n')
+            file.write('}\n')
         file.write('#endif\n')
     if lang == 'cuda':
         with open(path + 'gpu_memory.cuh', 'w') as file:

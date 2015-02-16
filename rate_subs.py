@@ -1803,7 +1803,7 @@ def write_derivs(path, lang, specs, reacs):
     
     line += ';\n'
     file.write(line)
-    line = '  pres = rho * {:.8e} * y' + utils.get_array(lang, 0) + ' * pres;\n\n'.format(chem.RU)
+    line = '  pres = rho * {:.8e} * y'.format(chem.RU) + utils.get_array(lang, 0) + ' * pres;\n\n'
     file.write(line)
     
     if lang != 'cuda' or not CUDAParams.is_global(): 
@@ -1900,7 +1900,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // calculate rate of change of species mass fractions\n')
     for sp in specs:
         isp = specs.index(sp)
-        line = '  dy' + utils.get_array(lang, isp + 1) + ' *= ({} / rho);\n'.format(isp + 1)
+        line = '  dy' + utils.get_array(lang, isp + 1) + ' *= ({} / rho);\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')

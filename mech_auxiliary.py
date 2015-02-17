@@ -73,9 +73,9 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     file.write('#ifdef CONV\n' + 
                '    double rho = getDensity({}, {}, Xi);\n'.format(T, P) +
                '#endif\n'
-               '    for (int i = 0; i < NUM; ++i) {\n'
+               '    for (int i = 0; i < padded; ++i) {\n'
                '        for (int j = 0; j < NSP; ++j) {\n'
-               '            conc_host_full[i + j * NUM] = conc_host[j];\n'
+               '            conc_host_full[i + j * padded] = conc_host[j];\n'
                '        }\n' + 
                '        y_host_full[i] = {};\n'.format(T) + 
                '#ifdef CONP\n' + 
@@ -86,7 +86,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '    }\n'
                )
     file.write(
-        '    cudaErrorCheck(cudaMemcpy(d_conc, conc_host_full, NUM * NSP * sizeof(double), cudaMemcpyHostToDevice));\n')
+        '    cudaErrorCheck(cudaMemcpy(d_conc, conc_host_full, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));\n')
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
@@ -96,14 +96,14 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                    '    cuProfilerStop();\n'
                    '#endif\n'
                    '#ifdef RATES_TEST\n'
-                   '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, NUM * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-                   '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, d_rev_rates, NUM * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n')
+                   '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+                   '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, d_rev_rates, padded * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n')
         file.write('    for (int j = 0; j < FWD_RATES; ++j) {\n'
-                   '            fwd_rates_host[j] = fwd_rates_host_full[j * NUM];\n'
+                   '            fwd_rates_host[j] = fwd_rates_host_full[j * padded];\n'
                    '    }\n'
                    )
         file.write('    for (int j = 0; j < REV_RATES; ++j) {\n'
-                   '        rev_rates_host[j] = rev_rates_host_full[j * NUM];\n'
+                   '        rev_rates_host[j] = rev_rates_host_full[j * padded];\n'
                    '    }\n'
                    '#endif\n'
                    )
@@ -117,10 +117,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    cuProfilerStop();\n'
             '#endif\n'
             '#ifdef RATES_TEST\n'
-            '    cudaErrorCheck(cudaMemcpy(rates_host_full, d_rates, NUM * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '    cudaErrorCheck(cudaMemcpy(rates_host_full, d_rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
         )
         file.write('    for (int j = 0; j < RATES; ++j) {\n'
-                   '        rates_host[j] = rates_host_full[j * NUM];\n'
+                   '        rates_host[j] = rates_host_full[j * padded];\n'
                    '    }\n'
                    '#endif\n'
                    )
@@ -134,10 +134,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    cuProfilerStop();\n'
             '#endif\n'
             '#ifdef RATES_TEST\n'
-            '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, d_pres_mod, NUM * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, d_pres_mod, padded * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
         )
         file.write('    for (int j = 0; j < PRES_MOD_RATES; ++j) {\n'
-                   '        pres_mod_host[j] = pres_mod_host_full[j * NUM];\n'
+                   '        pres_mod_host[j] = pres_mod_host_full[j * padded];\n'
                    '    }\n'
             '#endif\n'
                    )
@@ -160,17 +160,17 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    cuProfilerStop();\n'
             '#endif\n')
     file.write('#ifdef RATES_TEST\n'
-               '    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, NUM * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+               '    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
                '    for (int j = 0; j < NN; ++j) {\n'
-               '        dy_host[j] = dy_host_full[j * NUM];\n'
+               '        dy_host[j] = dy_host_full[j * padded];\n'
                '    }\n' +
                '    write_rates(fp,{}{} dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates,', ' pres_mod_host,' if have_pdep_rxns else '') + 
                '#endif\n'
-               '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, NUM * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
+               '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
                '#ifdef CONP\n'
-               '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host_full, NUM * sizeof(double), cudaMemcpyHostToDevice));\n'
+               '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
                '#elif CONV\n'
-               '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host_full, NUM * sizeof(double), cudaMemcpyHostToDevice));\n'
+               '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
                '#endif\n'
                '#ifdef PROFILER\n'
                '    cuProfilerStart();\n'
@@ -180,9 +180,9 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '    cuProfilerStop();\n'
                '#endif\n'
                '#ifdef RATES_TEST\n'
-               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, NUM * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
                '    for (int j = 0; j < NN * NN; ++j) {\n'
-               '        jacob_host[j] = jacob_host_full[j * NUM];\n'
+               '        jacob_host[j] = jacob_host_full[j * padded];\n'
                '    }\n'
                '    write_jacob(fp, jacob_host);\n'
                '#endif\n'
@@ -333,13 +333,13 @@ def write_mechanism_initializers(path, lang, specs, reacs):
         if lang == 'cuda':
                 # do cuda mem init and copying
             file.write(
-                '    int size = initialize_gpu_memory(NUM, block_size, grid_size);\n')
+                '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n')
         else:
-            file.write('    int size = NUM;\n')
-        file.write('    y_host = (double*)malloc(NN * size * sizeof(double));\n'
-                   '    pres_host = (double*)malloc(size * sizeof(double));\n'
+            file.write('    int padded = NUM;\n')
+        file.write('    y_host = (double*)malloc(NN * padded * sizeof(double));\n'
+                   '    pres_host = (double*)malloc(padded * sizeof(double));\n'
                    '#ifdef CONV\n'
-                   '    rho_host = (double*)malloc(size * sizeof(double));\n'
+                   '    rho_host = (double*)malloc(padded * sizeof(double));\n'
                    '#endif\n'
                    '    double Xi [NSP] = {0.0};\n'
                    '    //set initial mole fractions here\n\n'
@@ -363,7 +363,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    // set intial temperature, units [K]\n'
                    '    double T0 = 1600;\n\n'
                    '    //load temperature and mass fractions for all threads (cells)\n'
-                   '    for (int i = 0; i < size; ++i) {\n'
+                   '    for (int i = 0; i < padded; ++i) {\n'
                    '        y_host[i] = T0;\n'
                    '        //loop through species\n'
                    '        for (int j = 1; j < NN; ++j) {\n'
@@ -374,7 +374,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    //calculate density\n'
                    '    double rho = getDensity(T0, pres, Xi);\n'
                    '#endif\n\n'
-                   '    for (int i = 0; i < size; ++i) {\n'
+                   '    for (int i = 0; i < padded; ++i) {\n'
                    '#ifdef CONV\n'
                    '        rho_host[i] = rho;\n'
                    '#endif\n'
@@ -382,12 +382,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    }\n'
                    )
         if lang == 'cuda':  # copy memory over
-            file.write('    cudaMemcpy(d_y, y_host, size * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
-                       '    cudaMemcpy(d_pres, pres_host, size * sizeof(double), cudaMemcpyHostToDevice);\n'
+            file.write('    cudaMemcpy(d_y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
+                       '    cudaMemcpy(d_pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
                        '#ifdef CONV\n'
-                       '    cudaMemcpy(d_rho, rho_host, size * sizeof(double), cudaMemcpyHostToDevice);\n'
+                       '    cudaMemcpy(d_rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
                        '#endif\n')
-            file.write('    return size;\n')
+            file.write('    return padded;\n')
 
         file.write('}\n\n')
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n')
@@ -507,53 +507,53 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        )
         else:
             file.write('void write_jacobian_and_rates_output(int NUM, int block_size, int grid_size) {\n'
+                       '    cudaErrorCheck(cudaSetDevice(0));\n'
                        '#ifdef PROFILER\n'
                        '    //bump up shared mem bank size\n'
                        '    cudaErrorCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));\n'
                        '    //and L1 size\n'
                        '    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));\n'
                        '#endif\n'
+                       '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n'
                        '    //set mass fractions to unity to turn on all reactions\n'
                        '    double y_host[NN];\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
                        '        y_host[i] = 1.0 / ((double)NSP);\n'
                        '    }\n'
-                       '    double* y_host_full = (double*)malloc(NUM * NN * sizeof(double));\n'
+                       '    double* y_host_full = (double*)malloc(padded * NN * sizeof(double));\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
-                       '        for (int j = 0; j < NUM; ++j) {\n'
-                       '            y_host_full[j + i * NUM] = y_host[i];\n'
+                       '        for (int j = 0; j < padded; ++j) {\n'
+                       '            y_host_full[j + i * padded] = y_host[i];\n'
                        '        }\n'
                        '    }\n'
                        '#ifdef CONP\n'
-                       '    double* pres_host_full = (double*)malloc(NUM * sizeof(double));\n'
+                       '    double* pres_host_full = (double*)malloc(padded * sizeof(double));\n'
                        '#elif CONV\n'
-                       '    double* rho_host_full = (double*)malloc(NUM * sizeof(double));\n'
+                       '    double* rho_host_full = (double*)malloc(padded * sizeof(double));\n'
                        '    double Xi[NSP];\n'
                        '    mass2mole(&y_host[1], Xi);\n'
                        '#endif\n'
                        '    double conc_host[NSP];\n'
-                       '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n'
-                       '    NUM = padded > NUM ? padded : NUM;\n'
-                       '    double* conc_host_full = (double*)malloc(NUM * NSP * sizeof(double));\n'
+                       '    double* conc_host_full = (double*)malloc(padded * NSP * sizeof(double));\n'
                        )
             file.write('#ifdef RATES_TEST\n')
             if have_rev_rxns:
-                file.write('    double* fwd_rates_host_full = (double*)malloc(NUM * FWD_RATES * sizeof(double));\n'
-                           '    double* rev_rates_host_full = (double*)malloc(NUM * REV_RATES * sizeof(double));\n'
+                file.write('    double* fwd_rates_host_full = (double*)malloc(padded * FWD_RATES * sizeof(double));\n'
+                           '    double* rev_rates_host_full = (double*)malloc(padded * REV_RATES * sizeof(double));\n'
                            '    double fwd_rates_host[FWD_RATES];\n'
                            '    double rev_rates_host[REV_RATES];\n'
                            )
             else:
-                file.write('    double* rates_host_full = (double*)malloc(NUM * RATES * sizeof(double));\n'
+                file.write('    double* rates_host_full = (double*)malloc(padded * RATES * sizeof(double));\n'
                            '    double rates_host[RATES];\n')
             if have_pdep_rxns:
-                file.write('    double* pres_mod_host_full = (double*)malloc(NUM * PRES_MOD_RATES * sizeof(double));\n'
+                file.write('    double* pres_mod_host_full = (double*)malloc(padded * PRES_MOD_RATES * sizeof(double));\n'
                            '    double pres_mod_host[PRES_MOD_RATES];\n')
 
             file.write('    double dy_host[NN];\n'
                        '    double jacob_host[NN * NN];\n'
-                       '    double* dy_host_full = (double*)malloc(NUM * NN * sizeof(double));\n'
-                       '    double* jacob_host_full = (double*)malloc(NUM * NN * NN * sizeof(double));\n'
+                       '    double* dy_host_full = (double*)malloc(padded * NN * sizeof(double));\n'
+                       '    double* jacob_host_full = (double*)malloc(padded * NN * NN * sizeof(double));\n'
                        )
             file.write('#endif\n'
                        '    //evaluate and write rates for various conditions\n'
@@ -562,24 +562,24 @@ def write_mechanism_initializers(path, lang, specs, reacs):
 
             if not CUDAParams.is_global():
                 # need to define arrays
-                file.write('    double* d_y = cudaMalloc(NUM * NN * sizeof(double));\n'
-                           '    double* d_pres = cudaMalloc(NUM * sizeof(double));\n'
+                file.write('    double* d_y = cudaMalloc(padded * NN * sizeof(double));\n'
+                           '    double* d_pres = cudaMalloc(padded * sizeof(double));\n'
                            '#ifdef CONV\n'
-                           '    double* d_rho = cudaMalloc(NUM * sizeof(double));\n'
+                           '    double* d_rho = cudaMalloc(padded * sizeof(double));\n'
                            '#endif\n'
-                           '    double* d_conc = cudaMalloc(NUM * NSP * sizeof(double));\n'
+                           '    double* d_conc = cudaMalloc(padded * NSP * sizeof(double));\n'
                            )
                 if have_rev_rxns:
-                    file.write('    double* d_fwd_rates = cudaMalloc(NUM * FWD_RATES * sizeof(double));\n'
-                               '    double* d_rev_rates = cudaMalloc(NUM * REV_RATES * sizeof(double));\n')
+                    file.write('    double* d_fwd_rates = cudaMalloc(padded * FWD_RATES * sizeof(double));\n'
+                               '    double* d_rev_rates = cudaMalloc(padded * REV_RATES * sizeof(double));\n')
                 else:
                     file.write(
-                        '    double* d_rates = cudaMalloc(NUM * RATES * sizeof(double));\n')
+                        '    double* d_rates = cudaMalloc(padded * RATES * sizeof(double));\n')
                 if have_pdep_rxns:
                     file.write(
-                        '    double* d_pres_mod = cudaMalloc(NUM * PRES_MOD_RATES * sizeof(double));\n')
+                        '    double* d_pres_mod = cudaMalloc(padded * PRES_MOD_RATES * sizeof(double));\n')
                 file.write(
-                    '    double* d_jac = cudaMalloc(NUM * NN * NN * sizeof(double));\n')
+                    '    double* d_jac = cudaMalloc(padded * NN * NN * sizeof(double));\n')
 
             __write_cuda_rate_evaluator(
                 file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
@@ -630,7 +630,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 file.write('#endif\n')
                 file.write('    free_gpu_memory();\n')
 
-
+            file.write('    cudaErrorCheck(cudaDeviceReset());\n')
             file.write('}\n')
         file.write('#endif\n')
     if lang == 'cuda':
@@ -727,12 +727,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            )
                 file.write('\n')
                 file.write('\nint initialize_gpu_memory(int NUM, int block_size, int grid_size) {\n'
-                           '  NUM = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
+                           '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
                            '#ifdef CONP\n')
                 for arr in all_arrays_conp:
                     for a in arr[0]:
                         file.write(
-                            '  ' + malloc_template.format('d_' + a, 'NUM * ' + arr[1]) + '\n')
+                            '  ' + malloc_template.format('d_' + a, 'padded * ' + arr[1]) + '\n')
 
                 file.write('\n  pointer_set_kernel<<<1, 1>>>({});'.format(', '.join(['d_' + a for a in flat_conp + flat_arrays])) +
                            '\n#else\n'
@@ -741,12 +741,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 for arr in all_arrays_conv:
                     for a in arr[0]:
                         file.write(
-                            '  ' + malloc_template.format('d_' + a, 'NUM * ' + arr[1]) + '\n')
+                            '  ' + malloc_template.format('d_' + a, 'padded * ' + arr[1]) + '\n')
 
                 file.write(
                     '\n  pointer_set_kernel<<<1, 1>>>({});'.format(', '.join(['d_' + a for a in flat_conv + flat_arrays])) +
                     '\n#endif\n'
-                    '  return NUM;\n'
+                    '  return padded;\n'
                     '}'
                 )
                 file.write('\n')
@@ -765,12 +765,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double* y_device, double* rho_device)\n'
                            '#endif\n'
                            '{\n'
-                           '    NUM = grid_size * block_size; > NUM ? grid_size * block_size; : NUM;\n'
-                           '    cudaErrorCheck(&y_device, NUM * NN * sizeof(double));\n'
+                           '    int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
+                           '    cudaErrorCheck(&y_device, padded * NN * sizeof(double));\n'
                            '#ifdef CONP\n'
                            '    cudaErrorCheck(&pres_device, NN * sizeof(double));\n'
                            '#else\n'
-                           '    cudaErrorCheck(&rho_device, NUM * NN * sizeof(double));\n'
+                           '    cudaErrorCheck(&rho_device, padded * NN * sizeof(double));\n'
                            '#endif\n'
                            '}\n'
                            )

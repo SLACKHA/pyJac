@@ -1574,25 +1574,17 @@ def write_derivs(path, lang, specs, reacs):
         file.write('#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
                    '#include "gpu_macros.cuh"\n'
+                   '#include "gpu_memory.cuh"\n'
                    )
     file.write('\n')
 
+    modifier = ''
     if lang == 'cuda' and CUDAParams.is_global():
-        file.write('extern __device__ Real* conc;\n')
-        if any(rxn.rev for rxn in reacs):
-            file.write('extern __device__ Real* fwd_rates;\n')
-            file.write('extern __device__ Real* rev_rates;\n')
-        else:
-            file.write('extern __device__ Real* rates;\n')
-        if any(rxn.thd or rxn.pdep for rxn in reacs):
-            file.write('extern __device__ Real* pres_mod;\n')
+        file.write('extern __constant__ gpuMemory memory_pointers;\n')
+        modifier = 'memory_pointers.'
     
     # constant pressure
     file.write('#if defined(CONP)\n\n')
-    
-    if lang == 'cuda' and CUDAParams.is_global():
-        file.write('extern __device__ Real* h;\n')
-        file.write('extern __device__ Real* cp;\n')
     
     line = (pre + 'void dydt (const Real t, const Real pres, '
             'const Real * y, Real * dy) {\n\n'
@@ -1630,7 +1622,7 @@ def write_derivs(path, lang, specs, reacs):
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = '  conc' + utils.get_array(lang, isp) + ' = rho * y' + utils.get_array(lang, isp + 1) + ' / '
+        line = '  {}conc'.format(modifier) + utils.get_array(lang, isp) + ' = rho * y' + utils.get_array(lang, isp + 1) + ' / '
         line += '{}'.format(sp.mw) + utils.line_end[lang]
         file.write(line)
     
@@ -1644,14 +1636,14 @@ def write_derivs(path, lang, specs, reacs):
                        '  Real fwd_rates[{}];\n'.format(len(reacs)) + 
                        '  Real rev_rates[{}];\n'.format(len(rev_reacs)))
 
-        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', conc, fwd_rates, rev_rates);\n'
+        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', {0}conc, {0}fwd_rates, {0}rev_rates);\n'.format(modifier) + 
                    '\n')
     else:
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  // local array holding reaction rates\n'
                    '  Real rates[{}];\n'.format(len(reacs)))
 
-        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', conc, rates);\n'
+        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', {0}conc, {0}rates);\n'.format(modifier) + 
                    '\n')
         
     # reaction pressure dependence
@@ -1667,7 +1659,7 @@ def write_derivs(path, lang, specs, reacs):
             if lang != 'cuda' or not CUDAParams.is_global():
                 file.write('  Real pres_mod[{}];\n'.format(num_pdep))
                 
-            file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, conc, pres_mod);\n')
+            file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
         elif lang == 'fortran':
             file.write('  ! get and evaluate pressure modifications to '
                        'reaction rates\n'
@@ -1692,25 +1684,25 @@ def write_derivs(path, lang, specs, reacs):
                        '\n'
                        )
         else:
-            file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, dy);\n'
+            file.write('  eval_spec_rates ({0}fwd_rates, {0}rev_rates, {0}pres_mod, dy);\n'.format(modifier) + 
                        '\n'
                        )
     elif rev_reacs:
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  eval_spec_rates (fwd_rates, rev_rates, &dy[1]);\n\n')
         else:
-            file.write('  eval_spec_rates (fwd_rates, rev_rates, dy);\n\n')
+            file.write('  eval_spec_rates ({0}fwd_rates, {0}rev_rates, dy);\n\n'.format(modifier))
     else:
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  eval_spec_rates (rates, &dy[1] );\n\n')
         else:
-            file.write('  eval_spec_rates (rates, dy);\n\n')
+            file.write('  eval_spec_rates ({0}rates, dy);\n\n'.format(modifier))
     
     if lang != 'cuda' or not CUDAParams.is_global():
         # evaluate specific heat
         file.write('  // local array holding constant pressure specific heat\n'
                    '  Real cp[{}];\n'.format(len(specs)))
-    file.write('  eval_cp (y' + utils.get_array(lang, 0) + ', cp);\n'
+    file.write('  eval_cp (y' + utils.get_array(lang, 0) + ', {0}cp);\n'.format(modifier) +
                '\n'
                )
     
@@ -1726,7 +1718,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(cp' + utils.get_array(lang, isp) + ' * y' + utils.get_array(lang, isp + 1) + ')'
+        line += '({}cp'.format(modifier) + utils.get_array(lang, isp) + ' * y' + utils.get_array(lang, isp + 1) + ')'
         
         isfirst = False
     
@@ -1737,7 +1729,7 @@ def write_derivs(path, lang, specs, reacs):
         # evaluate enthalpy
         file.write('  // local array for species enthalpies\n'
                    '  Real h[{}];\n'.format(len(specs)))
-    file.write('  eval_h(y' + utils.get_array(lang, 0) + ', h);\n')
+    file.write('  eval_h(y' + utils.get_array(lang, 0) + ', {}h);\n'.format(modifier))
     
     # energy equation
     file.write('  // rate of change of temperature\n')
@@ -1752,7 +1744,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(dy' + utils.get_array(lang, isp + 1) + ' * h' + utils.get_array(lang, isp) + ' * {})'.format(sp.mw)
+        line += '(dy' + utils.get_array(lang, isp + 1) + ' * {}h'.format(modifier) + utils.get_array(lang, isp) + ' * {})'.format(sp.mw)
         
         isfirst = False
     
@@ -1762,7 +1754,7 @@ def write_derivs(path, lang, specs, reacs):
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
     for sp in specs:
-        line = '  dy' + utils.get_array(lang, specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
+        line = '  {}dy'.format(modifier) + utils.get_array(lang, specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')
@@ -1771,10 +1763,6 @@ def write_derivs(path, lang, specs, reacs):
     # constant volume
     file.write('#elif defined(CONV)\n\n')
 
-    if lang == 'cuda' and CUDAParams.is_global():
-        file.write('extern __device__ Real* u;\n')
-        file.write('extern __device__ Real* cv;\n')
-    
     line = (pre + 'void dydt (const Real t, const Real rho, '
             'const Real * y, Real * dy) {\n'
             '\n'
@@ -1814,7 +1802,7 @@ def write_derivs(path, lang, specs, reacs):
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = '  conc' + utils.get_array(lang, isp) + ' = rho * y' + utils.get_array(lang, isp + 1) + ' / {};\n'.format(sp.mw)
+        line = '  {}conc'.format(modifier) + utils.get_array(lang, isp) + ' = rho * y' + utils.get_array(lang, isp + 1) + ' / {};\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')
@@ -1823,14 +1811,14 @@ def write_derivs(path, lang, specs, reacs):
         # evaluate reaction rates
         file.write('  // local array holding reaction rates\n'
                    '  Real rates[{}];\n'.format(len(reacs)))
-    file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', pres, conc, rates);\n'
+    file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', pres, {0}conc, {0}rates);\n'.format(modifier) + 
                '\n'
                )
     #NOTE: Pressure mod was missing... I don't think that's right?
     if lang != 'cuda' or not CUDAParams.is_global():
         file.write('  // get pressure modifications to reaction rates\n'
                    '  Real pres_mod[{}];\n'.format(num_pdep))
-    file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, conc, pres_mod);\n')
+    file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
     # species rate of change of molar concentration
     file.write('  // evaluate rate of change of species molar '
                'concentration\n')
@@ -1839,7 +1827,7 @@ def write_derivs(path, lang, specs, reacs):
                    '\n'
                   )
     else:
-        file.write('  eval_spec_rates (rates, dy);\n'
+        file.write('  eval_spec_rates ({0}rates, dy);\n'.format(modifier) + 
                    '\n'
                   )
     
@@ -1848,7 +1836,7 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local array holding constant volume specific heat\n'
                    '  Real cv[{}];\n'.format(len(specs))
                    )
-    file.write('  eval_cv(y' + utils.get_array(lang, 0) + ', cv);\n\n')
+    file.write('  eval_cv(y' + utils.get_array(lang, 0) + ', {0}cv);\n\n'.format(modifier))
     
     file.write('  // constant volume mass-average specific heat\n')
     line = '  Real cv_avg = '
@@ -1862,7 +1850,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(cv' + utils.get_array(lang, isp) + ' * y' + utils.get_array(lang, isp + 1) + ')'
+        line += '({0}cv'.format(modifier) + utils.get_array(lang, isp) + ' * y' + utils.get_array(lang, isp + 1) + ')'
         
         isfirst = False
     
@@ -1874,7 +1862,7 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local array for species internal energies\n'
                    '  Real u[{}];\n'.format(len(specs))
                    )
-    file.write('  eval_u(y' + utils.get_array(lang, 0) + ', u);\n')
+    file.write('  eval_u(y' + utils.get_array(lang, 0) + ', {0}u);\n'.format(modifier))
     
     # energy equation
     file.write('  // rate of change of temperature\n')
@@ -1889,7 +1877,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(dy' + utils.get_array(lang, isp + 1) + ' * u' + utils.get_array(lang, isp) + ' * {})'.format(sp.mw)
+        line += '(dy' + utils.get_array(lang, isp + 1) + ' * {0}u'.format(modifier) + utils.get_array(lang, isp) + ' * {})'.format(sp.mw)
         
         isfirst = False
     

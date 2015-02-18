@@ -19,30 +19,55 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     """
     Writes kernels that simply act as shells to call the various reaction/species/jacobian
     """
-    if have_rev_rxns:
-        file.write('__global__ void k_eval_rxn_rates(const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
-                   '    eval_rxn_rates(T, conc, fwd_rates, rev_rates);\n'
+    if not CUDAParams.is_global():
+        if have_rev_rxns:
+            file.write('__global__ void k_eval_rxn_rates(const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
+                       '    eval_rxn_rates(T, conc, fwd_rates, rev_rates);\n'
+                       '}\n'
+                       )
+        else:
+            file.write('__global__ void k_eval_rxn_rates(const double T, const double* conc, double* rates) {\n'
+                       '    eval_rxn_rates(T, conc, rates);\n'
+                       '}\n'
+                       )
+        if have_pdep_rxns:
+            file.write('__global__ void k_get_rxn_pres_mod(const double T, const double P, const double* conc, double* pres_mod) {\n'
+                       '    get_rxn_pres_mod(T, P, conc, pres_mod);\n'
+                       '}\n')
+        file.write('__global__ void k_eval_spec_rates({}{} double* dy) {{\n'.format('const double* fwd_rates, const double* rev_rates,' if have_rev_rxns else 'const double* rates,',
+                                                                                    ' const double* pres_mod,' if have_pdep_rxns else '') +
+                   '    eval_spec_rates({}{} dy);\n'.format('fwd_rates, rev_rates,' if have_rev_rxns else 'rates,',
+                                                            ' pres_mod,' if have_pdep_rxns else '') +
                    '}\n'
                    )
-    else:
-        file.write('__global__ void k_eval_rxn_rates(const double T, const double* conc, double* rates) {\n'
-                   '    eval_rxn_rates(T, conc, rates);\n'
-                   '}\n'
-                   )
-    if have_pdep_rxns:
-        file.write('__global__ void k_get_rxn_pres_mod(const double T, const double P, const double* conc, double* pres_mod) {\n'
-                   '    get_rxn_pres_mod(T, P, conc, pres_mod);\n'
+        file.write('__global__ void k_eval_jacob(const double t, const double P, double* y, double* jac) {\n'
+                   '    eval_jacob(t, P, y, jac);\n'
                    '}\n')
-    file.write('__global__ void k_eval_spec_rates({}{} double* dy) {{\n'.format('const double* fwd_rates, const double* rev_rates,' if have_rev_rxns else 'const double* rates,',
-                                                                                ' const double* pres_mod,' if have_pdep_rxns else '') +
-               '    eval_spec_rates({}{} dy);\n'.format('fwd_rates, rev_rates,' if have_rev_rxns else 'rates,',
-                                                        ' pres_mod,' if have_pdep_rxns else '') +
-               '}\n'
-               )
-    file.write('__global__ void k_eval_jacob(const double t, const double P, double* y, double* jac) {\n'
-               '    eval_jacob(t, P, y, jac);\n'
-               '}\n')
-    file.write('\n')
+        file.write('\n')
+    else:
+        if have_rev_rxns:
+            file.write('__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.fwd_rates, memory_pointers.rev_rates);\n'
+                       '}\n'
+                       )
+        else:
+            file.write('__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.rates);\n'
+                       '}\n'
+                       )
+        if have_pdep_rxns:
+            file.write('__global__ void k_get_rxn_pres_mod(const double T, const double P) {\n'
+                       '    get_rxn_pres_mod(T, P, memory_pointers.conc, memory_pointers.pres_mod);\n'
+                       '}\n')
+        file.write('__global__ void k_eval_spec_rates() {{\n'.format() +
+                   '    eval_spec_rates({}{} memory_pointers.dy);\n'.format('memory_pointers.fwd_rates, memory_pointers.rev_rates,' if have_rev_rxns else 'memory_pointers.rates,',
+                                                            ' memory_pointers.pres_mod,' if have_pdep_rxns else '') +
+                   '}\n'
+                   )
+        file.write('__global__ void k_eval_jacob(const double t, const double P) {\n'
+                   '    eval_jacob(t, P, memory_pointers.y, memory_pointers.jac);\n'
+                   '}\n')
+        file.write('\n')
 
 
 def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
@@ -86,18 +111,23 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '    }\n'
                )
     file.write(
-        '    cudaErrorCheck(cudaMemcpy(d_conc, conc_host_full, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));\n')
+    '    cudaErrorCheck(cudaMemcpy({}conc, conc_host_full, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));\n'.format(
+        'host_memory->' if CUDAParams.is_global() else 'd_conc'))
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
                    '#endif\n'
-                   '    k_eval_rxn_rates<<<grid_size, block_size>>>({}, d_conc, d_fwd_rates, d_rev_rates);\n'.format(T) +
+                   '    k_eval_rxn_rates<<<grid_size, block_size>>>({}{});\n'.format(T, ', d_conc, d_fwd_rates, d_rev_rates' if not CUDAParams.is_global() else '') +
                    '#ifdef PROFILER\n'
                    '    cuProfilerStop();\n'
                    '#endif\n'
                    '#ifdef RATES_TEST\n'
-                   '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-                   '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, d_rev_rates, padded * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n')
+                   )
+        file.write(
+               '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, {}fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(
+                    'host_memory->' if CUDAParams.is_global() else 'd_') + 
+               '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, {}rev_rates, padded * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(
+                    'host_memory->' if CUDAParams.is_global() else 'd_'))
         file.write('    for (int j = 0; j < FWD_RATES; ++j) {\n'
                    '            fwd_rates_host[j] = fwd_rates_host_full[j * padded];\n'
                    '    }\n'
@@ -112,13 +142,16 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
             '#endif\n'
-            '    k_eval_rxn_rates<<<grid_size, block_size>>>({}, d_conc, d_rates);\n'.format(T) +
+            '    k_eval_rxn_rates<<<grid_size, block_size>>>({}{});\n'.format(T, ', d_conc, d_rates' if not CUDAParams.is_global() else '') +
             '#ifdef PROFILER\n'
             '    cuProfilerStop();\n'
             '#endif\n'
             '#ifdef RATES_TEST\n'
-            '    cudaErrorCheck(cudaMemcpy(rates_host_full, d_rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-        )
+            )
+        file.write(
+        '    cudaErrorCheck(cudaMemcpy(rates_host_full, {}rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(
+            'host_memory->' if CUDAParams.is_global() else 'd_'))
+
         file.write('    for (int j = 0; j < RATES; ++j) {\n'
                    '        rates_host[j] = rates_host_full[j * padded];\n'
                    '    }\n'
@@ -129,12 +162,15 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
             '#endif\n'
-            '    k_get_rxn_pres_mod<<<grid_size, block_size>>>({}, {}, d_conc, d_pres_mod);\n'.format(T, P) +
+            '    k_get_rxn_pres_mod<<<grid_size, block_size>>>({}, {}{});\n'.format(T, P, ', d_conc, d_pres_mod' if not CUDAParams.is_global() else '') +
             '#ifdef PROFILER\n'
             '    cuProfilerStop();\n'
             '#endif\n'
             '#ifdef RATES_TEST\n'
-            '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, d_pres_mod, padded * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            )
+        file.write(
+        '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, {}pres_mod, padded * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(
+            'host_memory->' if CUDAParams.is_global() else 'd_')
         )
         file.write('    for (int j = 0; j < PRES_MOD_RATES; ++j) {\n'
                    '        pres_mod_host[j] = pres_mod_host_full[j * padded];\n'
@@ -146,7 +182,8 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
                    '#endif\n'
-                   '    k_eval_spec_rates<<<grid_size, block_size>>>(d_fwd_rates, d_rev_rates,{} d_dy);\n'.format(' d_pres_mod,' if have_pdep_rxns else '') + 
+                   '    k_eval_spec_rates<<<grid_size, block_size>>>({});\n'.format(('d_fwd_rates, d_rev_rates' + (', d_pres_mod' if have_pdep_rxns else '') + \
+                        ', d_dy') if not CUDAParams.is_global() else '') + 
                    '#ifdef PROFILER\n'
                    '    cuProfilerStop();\n'
                    '#endif\n')
@@ -155,32 +192,44 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
             '#endif\n'
-            '    k_eval_spec_rates<<<grid_size, block_size>>>(d_rates,{} d_dy);\n'.format(' d_pres_mod,' if have_pdep_rxns else '') + 
+            '    k_eval_spec_rates<<<grid_size, block_size>>>({});\n'.format(('d_rates' + (', d_pres_mod'.format(modifier) if have_pdep_rxns else '') + 
+                ', d_dy')) + 
             '#ifdef PROFILER\n'
             '    cuProfilerStop();\n'
             '#endif\n')
-    file.write('#ifdef RATES_TEST\n'
-               '    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+    file.write('#ifdef RATES_TEST\n')
+    file.write(
+           '    cudaErrorCheck(cudaMemcpy(dy_host_full, {}dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(
+            'host_memory->' if CUDAParams.is_global() else 'd_'))
+    file.write(
                '    for (int j = 0; j < NN; ++j) {\n'
                '        dy_host[j] = dy_host_full[j * padded];\n'
                '    }\n' +
                '    write_rates(fp,{}{} dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates,', ' pres_mod_host,' if have_pdep_rxns else '') + 
                '#endif\n'
-               '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
-               '#ifdef CONP\n'
-               '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
-               '#elif CONV\n'
-               '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
+               )
+    file.write(
+           '    cudaErrorCheck(cudaMemcpy({}y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'.format('host_memory->' if CUDAParams.is_global() else 'd_') +
+           '#ifdef CONP\n'
+           '    cudaErrorCheck(cudaMemcpy({}pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'.format('host_memory->' if CUDAParams.is_global() else 'd_') +
+           '#elif CONV\n'
+           '    cudaErrorCheck(cudaMemcpy({}rho, rho_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'.format('host_memory->' if CUDAParams.is_global() else 'd_')
+           )
+    file.write(
                '#endif\n'
                '#ifdef PROFILER\n'
                '    cuProfilerStart();\n'
                '#endif\n'
-               '    k_eval_jacob<<<grid_size, block_size>>>(0, {}, d_y, d_jac);\n'.format(P) +
+               '    k_eval_jacob<<<grid_size, block_size>>>(0, {}{});\n'.format(P, ', d_y, d_jac' if not CUDAParams.is_global() else '') +
                '#ifdef PROFILER\n'
                '    cuProfilerStop();\n'
                '#endif\n'
                '#ifdef RATES_TEST\n'
-               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+               )
+    file.write(
+           '    cudaErrorCheck(cudaMemcpy(jacob_host_full, {}jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(
+               'host_memory->' if CUDAParams.is_global() else 'd_'))
+    file.write(
                '    for (int j = 0; j < NN * NN; ++j) {\n'
                '        jacob_host[j] = jacob_host_full[j * padded];\n'
                '    }\n'
@@ -282,25 +331,8 @@ def write_mechanism_initializers(path, lang, specs, reacs):
 
             file.write('#include "gpu_macros.cuh"\n')
             if CUDAParams.is_global():
-                file.write('#include "gpu_memory.cuh"\n\n'
-                           'extern double* d_y;\n'
-                           'extern double* d_pres;\n'
-                           'extern double* d_dy;\n'
-                           '#ifdef CONV\n'
-                           '    extern double* d_rho;\n'
-                           '#endif\n'
-                           '#if defined (RATES_TEST) || defined (PROFILER)\n'
-                           '    extern double* d_conc;\n'
-                           )
-                if have_rev_rxns:
-                    file.write('    extern double* d_fwd_rates;\n'
-                               '    extern double* d_rev_rates;\n')
-                else:
-                    file.write('    extern double* d_rates;\n')
-                if have_pdep_rxns:
-                    file.write('    extern double* d_pres_mod;\n')
-                file.write('    extern double* d_jac;\n')
-                file.write('#endif\n\n')
+                file.write('#include "gpu_memory.cuh"\n')
+                file.write('\nextern __constant__ gpuMemory memory_pointers;\n\n')
             __write_kernels(file, have_rev_rxns, have_pdep_rxns)
 
         needed_arr = ['y', 'pres']
@@ -331,9 +363,13 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    )
         file.write('{\n')
         if lang == 'cuda':
+            if CUDAParams.is_global():
+                file.write('gpuMemory* host_memory = NULL;\n'
+                           'int padded = initialize_gpu_memory(NUM, block_size, grid_size, &host_memory);\n')
+            else:
                 # do cuda mem init and copying
-            file.write(
-                '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n')
+                file.write(
+                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n')
         else:
             file.write('    int padded = NUM;\n')
         file.write('    y_host = (double*)malloc(NN * padded * sizeof(double));\n'
@@ -382,11 +418,18 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '    }\n'
                    )
         if lang == 'cuda':  # copy memory over
-            file.write('    cudaMemcpy(d_y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
-                       '    cudaMemcpy(d_pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
-                       '#ifdef CONV\n'
-                       '    cudaMemcpy(d_rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
-                       '#endif\n')
+            if CUDAParams.is_global():
+                file.write('    cudaMemcpy(host_memory->y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
+                           '    cudaMemcpy(host_memory->pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
+                           '#ifdef CONV\n'
+                           '    cudaMemcpy(host_memory->rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n' 
+                           '#endif\n')
+            else:
+                file.write('    cudaMemcpy(d_y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
+                           '    cudaMemcpy(d_pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
+                           '#ifdef CONV\n'
+                           '    cudaMemcpy(d_rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
+                           '#endif\n')
             file.write('    return padded;\n')
 
         file.write('}\n\n')
@@ -514,7 +557,13 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '    //and L1 size\n'
                        '    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));\n'
                        '#endif\n'
-                       '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n'
+                      )
+            if CUDAParams.is_global():
+                file.write('    gpuMemory* host_memory = NULL;\n'
+                       '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &host_memory);\n')
+            else:
+                file.write('    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n')
+            file.write(
                        '    //set mass fractions to unity to turn on all reactions\n'
                        '    double y_host[NN];\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
@@ -628,12 +677,36 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 file.write('#endif\n')
             else:
                 file.write('#endif\n')
-                file.write('    free_gpu_memory();\n')
+                file.write('    free_gpu_memory(&host_memory);\n')
 
             file.write('    cudaErrorCheck(cudaDeviceReset());\n')
             file.write('}\n')
         file.write('#endif\n')
     if lang == 'cuda':
+        conp = [(['h', 'cp'], 'NSP'), (['pres'], '1')]
+        conv = [(['u', 'cv'], 'NSP'), (['rho'], '1')]
+        arrays = [(['jac'], 'NN * NN')]
+        arrays.append(
+            (['y', 'dy', 'f_temp', 'error'], 'NN'))
+        arrays.append((['conc'], 'NSP'))
+        if have_rev_rxns:
+            arrays.append((['fwd_rates'], 'FWD_RATES'))
+            arrays.append((['rev_rates'], 'REV_RATES'))
+        else:
+            arrays.append((['rates'], 'RATES'))
+        if have_pdep_rxns:
+            arrays.append((['pres_mod'], 'PRES_MOD_RATES'))
+        flat_arrays = [
+            x for x in itertools.chain(*[arr[0] for arr in arrays])]
+        flat_conp = [
+            x for x in itertools.chain(*[arr[0] for arr in conp])]
+        flat_conv = [
+            x for x in itertools.chain(*[arr[0] for arr in conv])]
+
+        all_arrays_conv = arrays + conv
+        all_arrays_conp = arrays + conp
+
+        mem_template = 'double* {};'
         with open(path + 'gpu_memory.cuh', 'w') as file:
             file.write('#ifndef GPU_MEMORY_CUH\n'
                        '#define GPU_MEMORY_CUH\n'
@@ -644,8 +717,17 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '\n'
                        )
             if CUDAParams.is_global():
-                file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size);\n'
-                           'void free_gpu_memory();\n'
+                file.write('struct gpuMemory {\n'
+                           '#ifdef CONP\n'
+                           )
+                file.write('\n'.join([mem_template.format(x) for x in flat_conp]))
+                file.write('\n#elif CONV\n')
+                file.write('\n'.join([mem_template.format(x) for x in flat_conv]))
+                file.write('\n#endif\n')
+                file.write('\n'.join([mem_template.format(x) for x in flat_arrays]))
+                file.write('\n};\n\n')
+                file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, gpuMemory** host_memory);\n'
+                           'void free_gpu_memory(gpuMemory** host_memory);\n'
                            '\n'
                            '#endif\n')
             else:
@@ -660,102 +742,46 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            '#endif\n')
 
         with open(path + 'gpu_memory.cu', 'w') as file:
-            malloc_template = 'cudaErrorCheck(cudaMalloc((void**)&{}, {} * sizeof(double)));'
+            init_template = 'initialize_pointer(&{}, {});'
             free_template = 'cudaErrorCheck(cudaFree({}));'
-            file.write('#include "gpu_memory.cuh"\n'
+            file.write('#include <string.h>\n'
+                       '#include "gpu_memory.cuh"\n'
                        '\n')
+            file.write('\n__constant__ gpuMemory memory_pointers;\n')
+            file.write('void initialize_pointer(double** ptr, int size) {\n'
+                       '    cudaErrorCheck(cudaMalloc((void**)ptr, size * sizeof(double)));\n'
+                       '    cudaErrorCheck(cudaMemset(*ptr, 0, size * sizeof(double)));\n'
+                       '}\n')
             if CUDAParams.is_global():
-                file.write('//define global memory pointers')
-                template = '__device__ double* {};'
-                host_template = 'double* d_{};'
-                conp = [(['h', 'cp'], 'NSP'), (['pres'], '1')]
-                conv = [(['u', 'cv'], 'NSP'), (['rho'], '1')]
-                arrays = [(['jac'], 'NN * NN')]
-                arrays.append(
-                    (['y', 'dy', 'f_temp', 'error'], 'NN'))
-                arrays.append((['conc'], 'NSP'))
-                if have_rev_rxns:
-                    arrays.append((['fwd_rates'], 'FWD_RATES'))
-                    arrays.append((['rev_rates'], 'REV_RATES'))
-                else:
-                    arrays.append((['rates'], 'RATES'))
-                if have_pdep_rxns:
-                    arrays.append((['pres_mod'], 'PRES_MOD_RATES'))
-
-                all_arrays_conv = arrays + conv
-                all_arrays_conp = arrays + conp
-                method_template = 'double* {}_in'
-                setter_template = '{} = {}_in;'
-
-                flat_arrays = [
-                    x for x in itertools.chain(*[arr[0] for arr in arrays])]
-                flat_conp = [
-                    x for x in itertools.chain(*[arr[0] for arr in conp])]
-                flat_conv = [
-                    x for x in itertools.chain(*[arr[0] for arr in conv])]
-                file.write('\n#ifdef CONP\n' +
-                           '\n'.join([template.format(arr) for arr in flat_conp]) +
-                           '\n#else\n' +
-                           '\n'.join([template.format(arr) for arr in flat_conv]) +
-                           '\n#endif\n'
-                           )
-                file.write(
-                    '\n'.join([template.format(a) for a in flat_arrays]))
-                file.write('\n\n'
-                           '#ifdef CONP\n'
-                           '__global__ void pointer_set_kernel(' +
-                           ', '.join([method_template.format(a) for a in flat_conp + flat_arrays]) +
-                           ') {\n  ' +
-                           '\n  '.join([setter_template.format(a, a) for a in flat_conp + flat_arrays]) +
-                           '\n}\n'
-                           '#else\n'
-                           '__global__ void pointer_set_kernel(' +
-                           ', '.join([method_template.format(a) for a in flat_conv + flat_arrays]) +
-                           ') {\n  ' +
-                           '\n  '.join([setter_template.format(a, a) for a in flat_conv + flat_arrays]) +
-                           '\n}\n'
-                           '#endif\n'
-                           )
-
-                file.write('\n#ifdef CONP\n' +
-                           '\n'.join([host_template.format(a) for a in flat_conp]) +
-                           '\n#else\n' +
-                           '\n'.join([host_template.format(a) for a in flat_conv]) +
-                           '\n#endif\n' +
-                           '\n'.join([host_template.format(a)
-                                      for a in flat_arrays])
-                           )
                 file.write('\n')
-                file.write('\nint initialize_gpu_memory(int NUM, int block_size, int grid_size) {\n'
+                file.write('\nint initialize_gpu_memory(int NUM, int block_size, int grid_size, gpuMemory** host_memory) {\n'
                            '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
+                           '  *host_memory = (gpuMemory*)malloc(sizeof(gpuMemory));\n'
                            '#ifdef CONP\n')
                 for arr in all_arrays_conp:
                     for a in arr[0]:
                         file.write(
-                            '  ' + malloc_template.format('d_' + a, 'padded * ' + arr[1]) + '\n')
-
-                file.write('\n  pointer_set_kernel<<<1, 1>>>({});'.format(', '.join(['d_' + a for a in flat_conp + flat_arrays])) +
-                           '\n#else\n'
-                           )
-
+                            '  ' + init_template.format('(*host_memory)->' + a, 'padded * ' + arr[1]) + '\n')
+                file.write('#elif CONV\n')
                 for arr in all_arrays_conv:
                     for a in arr[0]:
                         file.write(
-                            '  ' + malloc_template.format('d_' + a, 'padded * ' + arr[1]) + '\n')
+                            '  ' + init_template.format('(*host_memory)->' + a, 'padded * ' + arr[1]) + '\n')
 
+                file.write('#endif\n')
+                file.write('  cudaErrorCheck(cudaMemcpyToSymbol(memory_pointers, (*host_memory), sizeof(gpuMemory)));\n')
                 file.write(
-                    '\n  pointer_set_kernel<<<1, 1>>>({});'.format(', '.join(['d_' + a for a in flat_conv + flat_arrays])) +
-                    '\n#endif\n'
                     '  return padded;\n'
                     '}'
                 )
                 file.write('\n')
-                file.write('\n\nvoid free_gpu_memory() {\n'
+                file.write('\n\nvoid free_gpu_memory(gpuMemory** host_memory) {\n'
                            '#ifdef CONP\n  ' +
-                           '\n  '.join([free_template.format('d_' + a) for a in flat_conp + flat_arrays]) +
+                           '\n  '.join([free_template.format('(*host_memory)->' + a) for a in flat_conp + flat_arrays]) +
                            '\n#else\n  ' +
-                           '\n  '.join([free_template.format('d_' + a) for a in flat_conv + flat_arrays]) +
+                           '\n  '.join([free_template.format('(*host_memory)->' + a) for a in flat_conv + flat_arrays]) +
                            '\n#endif\n'
+                           '  free(*host_memory);\n'
                            '}\n'
                            )
             else:

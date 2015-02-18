@@ -1754,7 +1754,7 @@ def write_derivs(path, lang, specs, reacs):
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
     for sp in specs:
-        line = '  {}dy'.format(modifier) + utils.get_array(lang, specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
+        line = '  dy' + utils.get_array(lang, specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')

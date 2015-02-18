@@ -831,7 +831,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             file.write('#define CU_LINEAR_OFFSET(I) (threadIdx.x + blockIdx.x * blockDim.x + (I) * blockDim.x * gridDim.x)\n'
                        '\n'
                        '#ifdef GLOBAL_MEM\n'
-                       '    #define INDEX(I) (CU_LINEAR_OFFSET(I))\n'
+                       '    #define INDEX(I) (CU_LINEAR_OFFSET((I)))\n'
                        '#else\n'
                        '    #define INDEX(I) ((I))\n'
                        '#endif\n'

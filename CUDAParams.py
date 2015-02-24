@@ -4,7 +4,7 @@
 class CudaMemStrats:
 	Global, Local = range(2)
 
-MemoryStrategy = CudaMemStrats.Global
+MemoryStrategy = CudaMemStrats.Local
 
 def is_global():
 	return MemoryStrategy == CudaMemStrats.Global

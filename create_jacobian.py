@@ -18,6 +18,7 @@ import rate_subs as rate
 import utils
 import mech_auxiliary as aux
 import CUDAParams
+import cache_optimizer as cache
 
 
 def write_jacobian(path, lang, specs, reacs):
@@ -2070,7 +2071,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, cache_optimizer=True):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -2082,7 +2083,7 @@ def create_jacobian(lang, mech_name, therm_name=None, cache_optimizer=True):
     therm_name : str, optional
         Thermodynamic database filename (e.g. 'therm.dat') 
         or nothing if info in mechanism file.
-    cache_optimizer : bool, optional
+    optimize_cache : bool, optional
         If true, use the greedy optimizer to attempt to 
         improve cache hit rates
 
@@ -2147,25 +2148,51 @@ def create_jacobian(lang, mech_name, therm_name=None, cache_optimizer=True):
         for rxn in [rxn for rxn in reacs if rxn.high]:
             rxn.high[2] *= efac
 
+    if optimize_cache:
+        if lang == 'cuda':
+            pool_size = CUDAParams.l1_size / CUDAParams.desired_thread_count
+        else:
+            pool_size = 100 #wild guess
+        #create score functions
+        spec_score = cache.species_rates_score(specs, reacs, pool_size)
+        rxn_score = cache.reaction_rates_score(specs, reacs, pool_size)
+        if any(r.pdep or r.thd for r in reacs):
+            pdep_score = cache.pdep_rates_score(specs, reacs, pool_size)
+
+        spec_order = cache.greedy_optimizer(spec_score)
+        rxn_order = cache.greedy_optimizer(rxn_score)
+        if any(r.pdep or r.thd for r in reacs):
+            pdep_order = cache.greedy_optimizer(pdep_score)
+        else:
+            pdep_order = None
+
+    else:
+        spec_order = [(range(len(specs)), range(len(reacs)))]
+        rxn_order = [(range(len(specs)), range(len(reacs)))]
+        if any(r.pdep or r.thd for r in reacs): 
+            pdep_order = [(range(len(specs)), range(len(reacs)))]
+        else:
+            pdep_order = None
+    
     # now begin writing subroutines
-
+    
     # print reaction rate subroutine
-    rate.write_rxn_rates(build_path, lang, specs, reacs)
-
-    # if third-body/pressure-dependent reactions,
+    rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_order)
+    
+    # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs)
-
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order)
+    
     # write species rates subroutine
-    rate.write_spec_rates(build_path, lang, specs, reacs)
-
+    rate.write_spec_rates(build_path, lang, specs, reacs, spec_order)
+    
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs)
-
+    
     # write derivative subroutines
     rate.write_derivs(build_path, lang, specs, reacs)
-
+    
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)
 

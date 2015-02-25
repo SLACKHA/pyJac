@@ -18,6 +18,7 @@ import mech_interpret as mech
 import utils
 import CUDAParams
 import cache_optimizer as cache
+import mech_auxiliary as aux
 
 def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).
@@ -2305,6 +2306,9 @@ def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False):
     
     # write mass-mole fraction conversion subroutine
     write_mass_mole(build_path, lang, specs)
+
+    # write mechanism initializers and testing methods
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs)
     
     return
 

@@ -17,6 +17,7 @@ import chem_utilities as chem
 import mech_interpret as mech
 import utils
 import CUDAParams
+import cache_optimizer as cache
 
 def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).
@@ -96,7 +97,7 @@ def rxn_rate_const(A, b, E):
     return line
 
 
-def write_rxn_rates(path, lang, specs, reacs):
+def write_rxn_rates(path, lang, specs, reacs, ordering):
     """Write reaction rate subroutine.
     
     Includes conditionals for reversible reactions.
@@ -111,6 +112,8 @@ def write_rxn_rates(path, lang, specs, reacs):
         List of species in the mechanism.
     reacs : list of ReacInfo
         ist of reactions in the mechanism.
+    ordering : List of tuples
+        The order to iterate through the species / reactions
     
     Returns
     _______
@@ -275,265 +278,268 @@ def write_rxn_rates(path, lang, specs, reacs):
     
     file.write('\n')
     
-    for rxn in reacs:
-        
-        # if reversible, save forward rate constant for use
-        if rxn.rev and not rxn.rev_par:
-            line = ('  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E) + 
-                    utils.line_end[lang]
-                    )
-            file.write(line)
-        
-        line = '  fwd_rxn_rates' + utils.get_array(lang, reacs.index(rxn)) + ' = '
-        
-        # reactants
-        for sp in rxn.reac:
-            isp = next(i for i in xrange(len(specs)) if specs[i].name == sp)
-            nu = rxn.reac_nu[rxn.reac.index(sp)]
+    for order in ordering:
+        i_reacs = order[1]
+        for i_rxn in i_reacs:
+            rxn = reacs[i_rxn]
             
-            # check if stoichiometric coefficient is real or integer
-            if isinstance(nu, float):
-                line += 'pow(C' + utils.get_array(lang, isp) + ', {}) *'.format(nu)
-            else:
-                # integer, so just use multiplication
-                for i in range(nu):
-                    line += 'C' + utils.get_array(lang, isp) + ' * '
-        
-        # Rate constant: print if not reversible, or reversible but 
-        # with explicit reverse parameters.
-        if not rxn.rev or rxn.rev_par:
-            line += rxn_rate_const(rxn.A, rxn.b, rxn.E)
-        else:
-            line += 'kf'
-        
-        line += utils.line_end[lang]
-        file.write(line)
-        
-        if rxn.rev:
-            
-            if not rxn.rev_par:
-                
-                line = '  Kc = 0.0' + utils.line_end[lang]
-                file.write(line)
-                
-                # sum of stoichiometric coefficients
-                sum_nu = 0
-                
-                # go through product species
-                for prod_sp in rxn.prod:
-                    isp = rxn.prod.index(prod_sp)
-                    
-                    # check if species also in reactants
-                    if prod_sp in rxn.reac:
-                        isp2 = rxn.reac.index(prod_sp)
-                        nu = rxn.prod_nu[isp] - rxn.reac_nu[isp2]
-                    else:
-                        nu = rxn.prod_nu[isp]
-                    
-                    # Skip species with zero overall 
-                    # stoichiometric coefficient.
-                    if (nu == 0):
-                        continue
-                    
-                    sum_nu += nu
-                    
-                    # get species object
-                    sp = next((sp for sp in specs if 
-                               sp.name == prod_sp), None)
-                    if not sp:
-                        print('Error: species ' + prod_sp + ' in reaction '
-                              '{} not found.\n'.format(reacs.index(rxn))
-                              )
-                        sys.exit()
-                    
-                    # need temperature conditional for equilibrium constants
-                    line = '  if (T <= {:})'.format(sp.Trange[1])
-                    if lang in ['c', 'cuda']:
-                        line += ' {\n'
-                    elif lang == 'fortran':
-                        line += ' then\n'
-                    elif lang == 'matlab':
-                        line += '\n'
-                    file.write(line)
-                    
-                    line = '    Kc '
-                    if lang in ['c', 'cuda']:
-                        if nu < 0:
-                            line += '-= '
-                        elif nu > 0:
-                            line += '+= '
-                    elif lang in ['fortran', 'matlab']:
-                        if nu < 0:
-                            line += '= Kc - '
-                        elif nu > 0:
-                            line += '= Kc + '
-                    line += '{:.2f} * '.format(abs(nu))
-                    line += ('({:.8e} - '.format(sp.lo[6]) + 
-                             '{:.8e} + '.format(sp.lo[0]) + 
-                             '{:.8e} * '.format(sp.lo[0] - 1.0) + 
-                             'logT + T * ('
-                             '{:.8e} + T * ('.format(sp.lo[1] / 2.0) + 
-                             '{:.8e} + T * ('.format(sp.lo[2] / 6.0) + 
-                             '{:.8e} + '.format(sp.lo[3] / 12.0) + 
-                             '{:.8e} * T))) - '.format(sp.lo[4] / 20.0) + 
-                             '{:.8e} / T)'.format(sp.lo[5]) + 
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
-                    
-                    if lang in ['c', 'cuda']:
-                        file.write('  } else {\n')
-                    elif lang in ['fortran', 'matlab']:
-                        file.write('  else\n')
-                    
-                    line = '    Kc '
-                    if lang in ['c', 'cuda']:
-                        if nu < 0:
-                            line += '-= '
-                        elif nu > 0:
-                            line += '+= '
-                    elif lang in ['fortran', 'matlab']:
-                        if nu < 0:
-                            line += '= Kc - '
-                        elif nu > 0:
-                            line += '= Kc + '
-                    line += '{:.2f} * '.format(abs(nu))
-                    line += ('({:.8e} - '.format(sp.hi[6]) + 
-                             '{:.8e} + '.format(sp.hi[0]) + 
-                             '{:.8e} * '.format(sp.hi[0] - 1.0) + 
-                             'logT + T * ('
-                             '{:.8e} + T * ('.format(sp.hi[1] / 2.0) + 
-                             '{:.8e} + T * ('.format(sp.hi[2] / 6.0) + 
-                             '{:.8e} + '.format(sp.hi[3] / 12.0) + 
-                             '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
-                             '{:.8e} / T)'.format(sp.hi[5]) + 
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
-                    
-                    if lang in ['c', 'cuda']:
-                        file.write('  }\n\n')
-                    elif lang == 'fortran':
-                        file.write('  end if\n\n')
-                    elif lang == 'matlab':
-                        file.write('  end\n\n')
-                
-                # now loop through reactants
-                for reac_sp in rxn.reac:
-                    isp = rxn.reac.index(reac_sp)
-                    
-                    # Check if species also in products; 
-                    # if so, already considered).
-                    if reac_sp in rxn.prod: continue
-                    
-                    nu = rxn.reac_nu[isp]
-                    sum_nu -= nu
-                    
-                    # get species object
-                    sp = next((sp for sp in specs if sp.name == reac_sp), 
-                              None)
-                    if not sp:
-                        print('Error: species ' + reac_sp + ' in reaction '
-                              '{} not found.\n'.format(reacs.index(rxn))
-                              )
-                        sys.exit()
-                        
-                    # need temperature conditional 
-                    # for equilibrium constants
-                    line = '  if (T <= {:})'.format(sp.Trange[1])
-                    if lang in ['c', 'cuda']:
-                        line += ' {\n'
-                    elif lang == 'fortran':
-                        line += ' then\n'
-                    elif lang == 'matlab':
-                        line += '\n'
-                    file.write(line)
-                    
-                    line = '    Kc '
-                    if lang in ['c', 'cuda']:
-                        line += '-= '
-                    elif lang in ['fortran', 'matlab']:
-                        line += '= Kc - '
-                    line += '{:.2f} * '.format(nu)
-                    line += ('({:.8e} - '.format(sp.lo[6]) + 
-                             '{:.8e} + '.format(sp.lo[0]) + 
-                             '{:.8e} * '.format(sp.lo[0] - 1.0) + 
-                             'logT + T * ('
-                             '{:.8e} + T * ('.format(sp.lo[1] / 2.0) + 
-                             '{:.8e} + T * ('.format(sp.lo[2] / 6.0) + 
-                             '{:.8e} + '.format(sp.lo[3] / 12.0) + 
-                             '{:.8e} * T))) - '.format(sp.lo[4] / 20.0) + 
-                             '{:.8e} / T)'.format(sp.lo[5]) + 
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
-                    
-                    if lang in ['c', 'cuda']:
-                        file.write('  } else {\n')
-                    elif lang in ['fortran', 'matlab']:
-                        file.write('  else\n')
-                    
-                    line = '    Kc '
-                    if lang in ['c', 'cuda']:
-                        line += '-= '
-                    elif lang in ['fortran', 'matlab']:
-                        line += '= Kc - '
-                    line += '{:.2f} * '.format(nu)
-                    line += ('({:.8e} - '.format(sp.hi[6]) + 
-                             '{:.8e} + '.format(sp.hi[0]) + 
-                             '{:.8e} * '.format(sp.hi[0] - 1.0) + 
-                             'logT + T * ('
-                             '{:.8e} + T * ('.format(sp.hi[1] / 2.0) + 
-                             '{:.8e} + T * ('.format(sp.hi[2] / 6.0) + 
-                             '{:.8e} + '.format(sp.hi[3] / 12.0) + 
-                             '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
-                             '{:.8e} / T)'.format(sp.hi[5]) + 
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
-                    
-                    if lang in ['c', 'cuda']:
-                        file.write('  }\n\n')
-                    elif lang == 'fortran':
-                        file.write('  end if\n\n')
-                    elif lang == 'matlab':
-                        file.write('  end\n\n')
-                
-                line = ('  Kc = '
-                        '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) + 
-                        ' * exp(Kc)' + 
+            # if reversible, save forward rate constant for use
+            if rxn.rev and not rxn.rev_par:
+                line = ('  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E) + 
                         utils.line_end[lang]
                         )
                 file.write(line)
             
-            line = '  rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn)) + ' = '
+            line = '  fwd_rxn_rates' + utils.get_array(lang, reacs.index(rxn)) + ' = '
             
-            # reactants (products from forward reaction)
-            for sp in rxn.prod:
-                isp = next(i for i in xrange(len(specs)) 
-                           if specs[i].name == sp)
-                nu = rxn.prod_nu[rxn.prod.index(sp)]
-            
+            # reactants
+            for sp in rxn.reac:
+                isp = next(i for i in xrange(len(specs)) if specs[i].name == sp)
+                nu = rxn.reac_nu[rxn.reac.index(sp)]
+                
                 # check if stoichiometric coefficient is real or integer
                 if isinstance(nu, float):
-                    line += 'pow(C' + utils.get_array(lang, isp) + ', {}) * '.format(nu)
+                    line += 'pow(C' + utils.get_array(lang, isp) + ', {}) *'.format(nu)
                 else:
                     # integer, so just use multiplication
                     for i in range(nu):
                         line += 'C' + utils.get_array(lang, isp) + ' * '
-        
-            # rate constant
-            if rxn.rev_par:
-                # explicit reverse Arrhenius parameters
-                line += rxn_rate_const(rxn.rev_par[0], 
-                                       rxn.rev_par[1], 
-                                       rxn.rev_par[2]
-                                       )
+            
+            # Rate constant: print if not reversible, or reversible but 
+            # with explicit reverse parameters.
+            if not rxn.rev or rxn.rev_par:
+                line += rxn_rate_const(rxn.A, rxn.b, rxn.E)
             else:
-                # use equilibrium constant
-                line += 'kf / Kc'
+                line += 'kf'
+            
             line += utils.line_end[lang]
             file.write(line)
+            
+            if rxn.rev:
+                
+                if not rxn.rev_par:
+                    
+                    line = '  Kc = 0.0' + utils.line_end[lang]
+                    file.write(line)
+                    
+                    # sum of stoichiometric coefficients
+                    sum_nu = 0
+                    
+                    # go through product species
+                    for prod_sp in rxn.prod:
+                        isp = rxn.prod.index(prod_sp)
+                        
+                        # check if species also in reactants
+                        if prod_sp in rxn.reac:
+                            isp2 = rxn.reac.index(prod_sp)
+                            nu = rxn.prod_nu[isp] - rxn.reac_nu[isp2]
+                        else:
+                            nu = rxn.prod_nu[isp]
+                        
+                        # Skip species with zero overall 
+                        # stoichiometric coefficient.
+                        if (nu == 0):
+                            continue
+                        
+                        sum_nu += nu
+                        
+                        # get species object
+                        sp = next((sp for sp in specs if 
+                                   sp.name == prod_sp), None)
+                        if not sp:
+                            print('Error: species ' + prod_sp + ' in reaction '
+                                  '{} not found.\n'.format(reacs.index(rxn))
+                                  )
+                            sys.exit()
+                        
+                        # need temperature conditional for equilibrium constants
+                        line = '  if (T <= {:})'.format(sp.Trange[1])
+                        if lang in ['c', 'cuda']:
+                            line += ' {\n'
+                        elif lang == 'fortran':
+                            line += ' then\n'
+                        elif lang == 'matlab':
+                            line += '\n'
+                        file.write(line)
+                        
+                        line = '    Kc '
+                        if lang in ['c', 'cuda']:
+                            if nu < 0:
+                                line += '-= '
+                            elif nu > 0:
+                                line += '+= '
+                        elif lang in ['fortran', 'matlab']:
+                            if nu < 0:
+                                line += '= Kc - '
+                            elif nu > 0:
+                                line += '= Kc + '
+                        line += '{:.2f} * '.format(abs(nu))
+                        line += ('({:.8e} - '.format(sp.lo[6]) + 
+                                 '{:.8e} + '.format(sp.lo[0]) + 
+                                 '{:.8e} * '.format(sp.lo[0] - 1.0) + 
+                                 'logT + T * ('
+                                 '{:.8e} + T * ('.format(sp.lo[1] / 2.0) + 
+                                 '{:.8e} + T * ('.format(sp.lo[2] / 6.0) + 
+                                 '{:.8e} + '.format(sp.lo[3] / 12.0) + 
+                                 '{:.8e} * T))) - '.format(sp.lo[4] / 20.0) + 
+                                 '{:.8e} / T)'.format(sp.lo[5]) + 
+                                 utils.line_end[lang]
+                                 )
+                        file.write(line)
+                        
+                        if lang in ['c', 'cuda']:
+                            file.write('  } else {\n')
+                        elif lang in ['fortran', 'matlab']:
+                            file.write('  else\n')
+                        
+                        line = '    Kc '
+                        if lang in ['c', 'cuda']:
+                            if nu < 0:
+                                line += '-= '
+                            elif nu > 0:
+                                line += '+= '
+                        elif lang in ['fortran', 'matlab']:
+                            if nu < 0:
+                                line += '= Kc - '
+                            elif nu > 0:
+                                line += '= Kc + '
+                        line += '{:.2f} * '.format(abs(nu))
+                        line += ('({:.8e} - '.format(sp.hi[6]) + 
+                                 '{:.8e} + '.format(sp.hi[0]) + 
+                                 '{:.8e} * '.format(sp.hi[0] - 1.0) + 
+                                 'logT + T * ('
+                                 '{:.8e} + T * ('.format(sp.hi[1] / 2.0) + 
+                                 '{:.8e} + T * ('.format(sp.hi[2] / 6.0) + 
+                                 '{:.8e} + '.format(sp.hi[3] / 12.0) + 
+                                 '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
+                                 '{:.8e} / T)'.format(sp.hi[5]) + 
+                                 utils.line_end[lang]
+                                 )
+                        file.write(line)
+                        
+                        if lang in ['c', 'cuda']:
+                            file.write('  }\n\n')
+                        elif lang == 'fortran':
+                            file.write('  end if\n\n')
+                        elif lang == 'matlab':
+                            file.write('  end\n\n')
+                    
+                    # now loop through reactants
+                    for reac_sp in rxn.reac:
+                        isp = rxn.reac.index(reac_sp)
+                        
+                        # Check if species also in products; 
+                        # if so, already considered).
+                        if reac_sp in rxn.prod: continue
+                        
+                        nu = rxn.reac_nu[isp]
+                        sum_nu -= nu
+                        
+                        # get species object
+                        sp = next((sp for sp in specs if sp.name == reac_sp), 
+                                  None)
+                        if not sp:
+                            print('Error: species ' + reac_sp + ' in reaction '
+                                  '{} not found.\n'.format(reacs.index(rxn))
+                                  )
+                            sys.exit()
+                            
+                        # need temperature conditional 
+                        # for equilibrium constants
+                        line = '  if (T <= {:})'.format(sp.Trange[1])
+                        if lang in ['c', 'cuda']:
+                            line += ' {\n'
+                        elif lang == 'fortran':
+                            line += ' then\n'
+                        elif lang == 'matlab':
+                            line += '\n'
+                        file.write(line)
+                        
+                        line = '    Kc '
+                        if lang in ['c', 'cuda']:
+                            line += '-= '
+                        elif lang in ['fortran', 'matlab']:
+                            line += '= Kc - '
+                        line += '{:.2f} * '.format(nu)
+                        line += ('({:.8e} - '.format(sp.lo[6]) + 
+                                 '{:.8e} + '.format(sp.lo[0]) + 
+                                 '{:.8e} * '.format(sp.lo[0] - 1.0) + 
+                                 'logT + T * ('
+                                 '{:.8e} + T * ('.format(sp.lo[1] / 2.0) + 
+                                 '{:.8e} + T * ('.format(sp.lo[2] / 6.0) + 
+                                 '{:.8e} + '.format(sp.lo[3] / 12.0) + 
+                                 '{:.8e} * T))) - '.format(sp.lo[4] / 20.0) + 
+                                 '{:.8e} / T)'.format(sp.lo[5]) + 
+                                 utils.line_end[lang]
+                                 )
+                        file.write(line)
+                        
+                        if lang in ['c', 'cuda']:
+                            file.write('  } else {\n')
+                        elif lang in ['fortran', 'matlab']:
+                            file.write('  else\n')
+                        
+                        line = '    Kc '
+                        if lang in ['c', 'cuda']:
+                            line += '-= '
+                        elif lang in ['fortran', 'matlab']:
+                            line += '= Kc - '
+                        line += '{:.2f} * '.format(nu)
+                        line += ('({:.8e} - '.format(sp.hi[6]) + 
+                                 '{:.8e} + '.format(sp.hi[0]) + 
+                                 '{:.8e} * '.format(sp.hi[0] - 1.0) + 
+                                 'logT + T * ('
+                                 '{:.8e} + T * ('.format(sp.hi[1] / 2.0) + 
+                                 '{:.8e} + T * ('.format(sp.hi[2] / 6.0) + 
+                                 '{:.8e} + '.format(sp.hi[3] / 12.0) + 
+                                 '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
+                                 '{:.8e} / T)'.format(sp.hi[5]) + 
+                                 utils.line_end[lang]
+                                 )
+                        file.write(line)
+                        
+                        if lang in ['c', 'cuda']:
+                            file.write('  }\n\n')
+                        elif lang == 'fortran':
+                            file.write('  end if\n\n')
+                        elif lang == 'matlab':
+                            file.write('  end\n\n')
+                    
+                    line = ('  Kc = '
+                            '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) + 
+                            ' * exp(Kc)' + 
+                            utils.line_end[lang]
+                            )
+                    file.write(line)
+                
+                line = '  rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn)) + ' = '
+                
+                # reactants (products from forward reaction)
+                for sp in rxn.prod:
+                    isp = next(i for i in xrange(len(specs)) 
+                               if specs[i].name == sp)
+                    nu = rxn.prod_nu[rxn.prod.index(sp)]
+                
+                    # check if stoichiometric coefficient is real or integer
+                    if isinstance(nu, float):
+                        line += 'pow(C' + utils.get_array(lang, isp) + ', {}) * '.format(nu)
+                    else:
+                        # integer, so just use multiplication
+                        for i in range(nu):
+                            line += 'C' + utils.get_array(lang, isp) + ' * '
+            
+                # rate constant
+                if rxn.rev_par:
+                    # explicit reverse Arrhenius parameters
+                    line += rxn_rate_const(rxn.rev_par[0], 
+                                           rxn.rev_par[1], 
+                                           rxn.rev_par[2]
+                                           )
+                else:
+                    # use equilibrium constant
+                    line += 'kf / Kc'
+                line += utils.line_end[lang]
+                file.write(line)
             
     
     if lang in ['c', 'cuda']:
@@ -548,7 +554,7 @@ def write_rxn_rates(path, lang, specs, reacs):
     return
 
 
-def write_rxn_pressure_mod(path, lang, specs, reacs):
+def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
     """Write subroutine to for reaction pressure dependence modifications.
     
     Parameters
@@ -561,6 +567,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
         List of species in mechanism.
     reacs : list of ReacInfo
         List of reactions in mechanism.
+    ordering : List of tuples
+        The order to iterate through the species / reactions
     
     Returns
     -------
@@ -719,179 +727,181 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                    )
     
     file.write('\n')
-    
-    # loop through third-body and pressure-dependent reactions
-    for rind in pdep_reacs:
-        reac = reacs[rind]              # index in reaction list
-        pind = pdep_reacs.index(rind)   # index in list of third/pressure-dep reactions
-        
-        # print reaction index
-        if lang in ['c', 'cuda']:
-            line = '  // reaction ' + str(rind)
-        elif lang == 'fortran':
-            line = '  ! reaction ' + str(rind + 1)
-        elif lang == 'matlab':
-            line = '  % reaction ' + str(rind + 1)
-        line += utils.line_end[lang]
-        file.write(line)
-        
-        # third-body reaction
-        if reac.thd:
+
+    for order in ordering:
+        i_reacs = order[1]
+        # loop through third-body and pressure-dependent reactions
+        for rind in i_reacs:
+            reac = reacs[rind]              # index in reaction list
+            pind = pdep_reacs.index(rind)   # index in list of third/pressure-dep reactions
             
-            if reac.pdep and not reac.pdep_sp:
-                line = '  thd = m'
-            else:
-                line = '  pres_mod' + utils.get_array(lang, pind) + ' = m'
-            
-            for sp in reac.thd_body:
-                isp = specs.index(next((s for s in specs 
-                                  if s.name == sp[0]), None)
-                                  )
-                if sp[1] > 1.0:
-                    line += ' + {}'.format(sp[1] - 1.0)
-                elif sp[1] < 1.0:
-                    line += ' - {}'.format(1.0 - sp[1])
-                line += ' * C' + utils.get_array(lang, isp)
-            
-            line += utils.line_end[lang]
-            file.write(line)
-        
-        # pressure dependence
-        if reac.pdep:
-            
-            # low-pressure limit rate
-            line = '  k0 = '
-            if reac.low:
-                line += rxn_rate_const(reac.low[0], 
-                                       reac.low[1], 
-                                       reac.low[2]
-                                       )
-            else:
-                line += rxn_rate_const(reac.A, reac.b, reac.E)
-            
+            # print reaction index
+            if lang in ['c', 'cuda']:
+                line = '  // reaction ' + str(rind)
+            elif lang == 'fortran':
+                line = '  ! reaction ' + str(rind + 1)
+            elif lang == 'matlab':
+                line = '  % reaction ' + str(rind + 1)
             line += utils.line_end[lang]
             file.write(line)
             
-            # high-pressure limit rate
-            line = '  kinf = '
-            if reac.high:
-                line += rxn_rate_const(reac.high[0], 
-                                       reac.high[1], 
-                                       reac.high[2]
-                                       )
-            else:
-                line += rxn_rate_const(reac.A, reac.b, reac.E)
-            
-            line += utils.line_end[lang]
-            file.write(line)
-            
-            # reduced pressure
+            # third-body reaction
             if reac.thd:
-                line = '  Pr = k0 * thd / kinf'
-            else:
-                isp = next(i for i in xrange(len(specs))
-                           if specs[i].name == reac.pdep_sp
-                           )
-                line = '  Pr = k0 * C' + utils.get_array(lang, isp) + ' / kinf'
-            line += utils.line_end[lang]
-            file.write(line)
+                
+                if reac.pdep and not reac.pdep_sp:
+                    line = '  thd = m'
+                else:
+                    line = '  pres_mod' + utils.get_array(lang, pind) + ' = m'
+                
+                for sp in reac.thd_body:
+                    isp = specs.index(next((s for s in specs 
+                                      if s.name == sp[0]), None)
+                                      )
+                    if sp[1] > 1.0:
+                        line += ' + {}'.format(sp[1] - 1.0)
+                    elif sp[1] < 1.0:
+                        line += ' - {}'.format(1.0 - sp[1])
+                    line += ' * C' + utils.get_array(lang, isp)
+                
+                line += utils.line_end[lang]
+                file.write(line)
             
-            simple = False
-            if reac.troe:
-                # Troe form
-                line = ('  logFcent = log10( fmax('
-                        '{:.8e} * '.format(1.0 - reac.troe_par[0])
-                        )
-                if reac.troe_par[1] > 0.0:
-                    line += 'exp(-T / {:.8e})'.format(reac.troe_par[1])
-                else:
-                    line += 'exp(T / {:.8e})'.format(abs(reac.troe_par[1]))
+            # pressure dependence
+            if reac.pdep:
                 
-                line += ' + {:.8e} * '.format(reac.troe_par[0])
-                if reac.troe_par[2] > 0.0:
-                    line += 'exp(-T / {:.8e})'.format(reac.troe_par[2])
+                # low-pressure limit rate
+                line = '  k0 = '
+                if reac.low:
+                    line += rxn_rate_const(reac.low[0], 
+                                           reac.low[1], 
+                                           reac.low[2]
+                                           )
                 else:
-                    line += 'exp(T / {:.8e})'.format(abs(reac.troe_par[2]))
+                    line += rxn_rate_const(reac.A, reac.b, reac.E)
                 
-                if len(reac.troe_par) == 4:
-                    line += ' + '
-                    if reac.troe_par[3] > 0.0:
-                        val = reac.troe_par[3]
-                        line += 'exp(-{:.8e} / T)'.format(val)
+                line += utils.line_end[lang]
+                file.write(line)
+                
+                # high-pressure limit rate
+                line = '  kinf = '
+                if reac.high:
+                    line += rxn_rate_const(reac.high[0], 
+                                           reac.high[1], 
+                                           reac.high[2]
+                                           )
+                else:
+                    line += rxn_rate_const(reac.A, reac.b, reac.E)
+                
+                line += utils.line_end[lang]
+                file.write(line)
+                
+                # reduced pressure
+                if reac.thd:
+                    line = '  Pr = k0 * thd / kinf'
+                else:
+                    isp = next(i for i in xrange(len(specs))
+                               if specs[i].name == reac.pdep_sp
+                               )
+                    line = '  Pr = k0 * C' + utils.get_array(lang, isp) + ' / kinf'
+                line += utils.line_end[lang]
+                file.write(line)
+                
+                simple = False
+                if reac.troe:
+                    # Troe form
+                    line = ('  logFcent = log10( fmax('
+                            '{:.8e} * '.format(1.0 - reac.troe_par[0])
+                            )
+                    if reac.troe_par[1] > 0.0:
+                        line += 'exp(-T / {:.8e})'.format(reac.troe_par[1])
                     else:
-                        val = abs(reac.troe_par[3])
-                        line += 'exp({:.8e} / T)'.format(val)
-                line += ', 1.0e-300))' + utils.line_end[lang]
-                file.write(line)
-                
-                line = ('  A = log10(fmax(Pr, 1.0e-300)) - '
-                        '0.67 * logFcent - 0.4' + 
-                        utils.line_end[lang]
-                        )
-                file.write(line)
-                
-                line = ('  B = 0.806 - 1.1762 * logFcent - '
-                        '0.14 * log10(fmax(Pr, 1.0e-300))' +
-                        utils.line_end[lang]
-                        )
-                file.write(line)
-                
-                line = '  pres_mod' + utils.get_array(lang, pind) + ' = ' + utils.exp_10_fun[lang]
-                line += 'logFcent / (1.0 + A * A / (B * B))) '
-                
-            elif reac.sri:
-                # SRI form
-                
-                line = ('  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * '
-                        'log10(fmax(Pr, 1.0e-300)))' + 
-                        utils.line_end[lang]
-                        )
-                file.write(line)
-                
-                line = '  pres_mod' + utils.get_array(lang, pind)
-                line += ' = pow({:4} * '.format(reac.sri[0])
-                # Need to check for negative parameters, and 
-                # skip "-" sign if so.
-                if reac.sri[1] > 0.0:
-                    line += 'exp(-{:.4} / T)'.format(reac.sri[1])
-                else:
-                    line += 'exp({:.4} / T)'.format(abs(reac.sri[1]))
-                
-                if reac.sri[2] > 0.0:
-                    line += ' + exp(-T / {:.4}), X) '.format(reac.sri[2])
-                else:
-                    line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri[2]))
+                        line += 'exp(T / {:.8e})'.format(abs(reac.troe_par[1]))
                     
-                if len(reac.sri) == 5:
-                    line += ('* {:.8e} * '.format(reac.sri[3]) + 
-                             'pow(T, {:.4}) '.format(reac.sri[4])
-                             )
-            else:
-                #simple falloff fn (i.e. F = 1)
-                simple = True
-                line = '  pres_mod' + utils.get_array(lang, pind) + ' = '
-                 # regardless of F formulation
-                if reac.low:
-                    # unimolecular/recombination fall-off reaction
-                    line += ' Pr / (1.0 + Pr)'
-                elif reac.high:
-                    # chemically-activated bimolecular reaction
-                    line += '1.0 / (1.0 + Pr)'
+                    line += ' + {:.8e} * '.format(reac.troe_par[0])
+                    if reac.troe_par[2] > 0.0:
+                        line += 'exp(-T / {:.8e})'.format(reac.troe_par[2])
+                    else:
+                        line += 'exp(T / {:.8e})'.format(abs(reac.troe_par[2]))
+                    
+                    if len(reac.troe_par) == 4:
+                        line += ' + '
+                        if reac.troe_par[3] > 0.0:
+                            val = reac.troe_par[3]
+                            line += 'exp(-{:.8e} / T)'.format(val)
+                        else:
+                            val = abs(reac.troe_par[3])
+                            line += 'exp({:.8e} / T)'.format(val)
+                    line += ', 1.0e-300))' + utils.line_end[lang]
+                    file.write(line)
+                    
+                    line = ('  A = log10(fmax(Pr, 1.0e-300)) - '
+                            '0.67 * logFcent - 0.4' + 
+                            utils.line_end[lang]
+                            )
+                    file.write(line)
+                    
+                    line = ('  B = 0.806 - 1.1762 * logFcent - '
+                            '0.14 * log10(fmax(Pr, 1.0e-300))' +
+                            utils.line_end[lang]
+                            )
+                    file.write(line)
+                    
+                    line = '  pres_mod' + utils.get_array(lang, pind) + ' = ' + utils.exp_10_fun[lang]
+                    line += 'logFcent / (1.0 + A * A / (B * B))) '
+                    
+                elif reac.sri:
+                    # SRI form
+                    
+                    line = ('  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * '
+                            'log10(fmax(Pr, 1.0e-300)))' + 
+                            utils.line_end[lang]
+                            )
+                    file.write(line)
+                    
+                    line = '  pres_mod' + utils.get_array(lang, pind)
+                    line += ' = pow({:4} * '.format(reac.sri[0])
+                    # Need to check for negative parameters, and 
+                    # skip "-" sign if so.
+                    if reac.sri[1] > 0.0:
+                        line += 'exp(-{:.4} / T)'.format(reac.sri[1])
+                    else:
+                        line += 'exp({:.4} / T)'.format(abs(reac.sri[1]))
+                    
+                    if reac.sri[2] > 0.0:
+                        line += ' + exp(-T / {:.4}), X) '.format(reac.sri[2])
+                    else:
+                        line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri[2]))
+                        
+                    if len(reac.sri) == 5:
+                        line += ('* {:.8e} * '.format(reac.sri[3]) + 
+                                 'pow(T, {:.4}) '.format(reac.sri[4])
+                                 )
+                else:
+                    #simple falloff fn (i.e. F = 1)
+                    simple = True
+                    line = '  pres_mod' + utils.get_array(lang, pind) + ' = '
+                     # regardless of F formulation
+                    if reac.low:
+                        # unimolecular/recombination fall-off reaction
+                        line += ' Pr / (1.0 + Pr)'
+                    elif reac.high:
+                        # chemically-activated bimolecular reaction
+                        line += '1.0 / (1.0 + Pr)'
+                
+                if not simple:
+                    # regardless of F formulation
+                    if reac.low:
+                        # unimolecular/recombination fall-off reaction
+                        line += '* Pr / (1.0 + Pr)'
+                    elif reac.high:
+                        # chemically-activated bimolecular reaction
+                        line += '/ (1.0 + Pr)'
+                
+                line += utils.line_end[lang]
+                file.write(line)
             
-            if not simple:
-                # regardless of F formulation
-                if reac.low:
-                    # unimolecular/recombination fall-off reaction
-                    line += '* Pr / (1.0 + Pr)'
-                elif reac.high:
-                    # chemically-activated bimolecular reaction
-                    line += '/ (1.0 + Pr)'
-            
-            line += utils.line_end[lang]
-            file.write(line)
-        
-        # space in between each reaction
-        file.write('\n')
+            # space in between each reaction
+            file.write('\n')
     
     if lang in ['c', 'cuda']:
         file.write('} // end get_rxn_pres_mod\n\n')
@@ -905,7 +915,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
     return
 
 
-def write_spec_rates(path, lang, specs, reacs):
+def write_spec_rates(path, lang, specs, reacs, ordering):
     """Write subroutine to evaluate species rates of production.
     
     Parameters
@@ -918,6 +928,8 @@ def write_spec_rates(path, lang, specs, reacs):
         List of species in mechanism.
     reacs : list of ReacInfo
         List of reactions in mechanism.
+    ordering : List of tuples
+        The order to iterate through the species / reactions
     
     Returns
     -------
@@ -1002,43 +1014,96 @@ def write_spec_rates(path, lang, specs, reacs):
                      )
         line += '  sp_rates = zeros({},1);\n'.format(len(specs))
     file.write(line)
-    
-    # loop through species
-    for sp in specs:
-        line = '  sp_rates' + utils.get_array(lang, specs.index(sp) + offset) + ' = '
-        
-        # continuation line
-        cline = ' ' * ( len(line) - 3)
-        
-        isfirst = True
-        
-        inreac = False
-        
-        # loop through reactions
-        for rxn in reacs:
+
+    seen = [False for spec in specs]
+    for order in ordering:
+        i_specs = order[0]
+        i_reacs = order[1]
+        # loop through species
+        for spind in i_specs:
+            sp = specs[spind]
+
+            line = '  sp_rates' + utils.get_array(lang, spind + offset) + ' {}= '.format('+' if seen[spind] else '')
+            seen[spind] = True
             
-            rind = reacs.index(rxn)
+            # continuation line
+            cline = ' ' * ( len(line) - 3)
             
-            pdep = False
-            if rxn.thd or rxn.pdep: pdep = True
+            isfirst = True
             
-            # move to new line if current line is too long
-            if len(line) > 85:
-                line += '\n'
-                # record position
-                lastPos = file.tell()
-                file.write(line)
-                line = cline
+            inreac = False
             
-            # first check to see if in both products and reactants
-            if sp.name in rxn.prod and sp.name in rxn.reac:
-                inreac = True
-                pisp = rxn.prod.index(sp.name)
-                risp = rxn.reac.index(sp.name)
-                nu = rxn.prod_nu[pisp] - rxn.reac_nu[risp]
+            # loop through reactions
+            for rind in i_reacs:
+                rxn = reacs[rind]
                 
-                if nu > 0.0:
+                pdep = False
+                if rxn.thd or rxn.pdep: pdep = True
+                
+                # move to new line if current line is too long
+                if len(line) > 85:
+                    line += '\n'
+                    # record position
+                    lastPos = file.tell()
+                    file.write(line)
+                    line = cline
+                
+                # first check to see if in both products and reactants
+                if sp.name in rxn.prod and sp.name in rxn.reac:
+                    pisp = rxn.prod.index(sp.name)
+                    risp = rxn.reac.index(sp.name)
+                    nu = rxn.prod_nu[pisp] - rxn.reac_nu[risp]
+                    inreac = inreac or nu != 0
+                    
+                    if nu > 0.0:
+                        if not isfirst: line += ' + '
+                        if nu > 1:
+                            if isinstance(nu, int):
+                                line += '{} * '.format(float(nu))
+                            else:
+                                line += '{:3} * '.format(nu)
+                        elif nu < 1.0:
+                            line += '{} * '.format(nu)
+                        
+                        if rxn.rev:
+                            line += '(fwd_rates' + utils.get_array(lang, rind)
+                            line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                            line += ')'
+                        else:
+                            line += 'fwd_rates' + utils.get_array(lang, rind)
+                    elif nu < 0.0:
+                        if isfirst:
+                            line += '-'
+                        else:
+                            line += ' - '
+                        
+                        if nu < -1:
+                            if isinstance(nu, int):
+                                line += '{} * '.format(float(abs(nu)))
+                            else:
+                                line += '{:3} * '.format(abs(nu))
+                        elif nu > -1:
+                            line += '{} * '.format(abs(nu))
+                        
+                        if rxn.rev:
+                            line += '(fwd_rates' + utils.get_array(lang, rind)
+                            line += ' - rev_rates'+ utils.get_array(lang, rev_reacs.index(rxn))
+                            line += ')'
+                        else:
+                            line += 'fwd_rates' + utils.get_array(lang, rind)
+                    else:
+                        continue
+                    
+                    if isfirst: isfirst = False
+                    
+                # check products
+                elif sp.name in rxn.prod:
+                    inreac = True
+                    isp = rxn.prod.index(sp.name)
+                    nu = rxn.prod_nu[isp]
+                    
                     if not isfirst: line += ' + '
+                    
                     if nu > 1:
                         if isinstance(nu, int):
                             line += '{} * '.format(float(nu))
@@ -1048,103 +1113,55 @@ def write_spec_rates(path, lang, specs, reacs):
                         line += '{} * '.format(nu)
                     
                     if rxn.rev:
-                        line += '(fwd_rates' + utils.get_array(lang, rind)
-                        line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
-                        line += ')'
+                            line += '(fwd_rates' + utils.get_array(lang, rind)
+                            line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                            line += ')'
                     else:
                         line += 'fwd_rates' + utils.get_array(lang, rind)
-                elif nu < 0.0:
+                    
+                    if isfirst: isfirst = False
+                    
+                # check reactants
+                elif sp.name in rxn.reac:
+                    inreac = True
+                    isp = rxn.reac.index(sp.name)
+                    nu = rxn.reac_nu[isp]
+                    
                     if isfirst:
                         line += '-'
                     else:
                         line += ' - '
                     
-                    if nu < -1:
+                    if nu > 1:
                         if isinstance(nu, int):
-                            line += '{} * '.format(float(abs(nu)))
+                            line += '{} * '.format(float(nu))
                         else:
-                            line += '{:3} * '.format(abs(nu))
-                    elif nu > -1:
-                        line += '{} * '.format(abs(nu))
+                            line += '{:3} * '.format(nu)
+                    elif nu < 1.0:
+                        line += '{} * '.format(nu)
                     
                     if rxn.rev:
-                        line += '(fwd_rates' + utils.get_array(lang, rind)
-                        line += ' - rev_rates'+ utils.get_array(lang, rev_reacs.index(rxn))
-                        line += ')'
+                            line += '(fwd_rates' + utils.get_array(lang, rind)
+                            line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                            line += ')'
                     else:
                         line += 'fwd_rates' + utils.get_array(lang, rind)
+                    
+                    if isfirst: isfirst = False
                 else:
-                    inreac = False
                     continue
                 
-                if isfirst: isfirst = False
-                
-            # check products
-            elif sp.name in rxn.prod:
-                inreac = True
-                isp = rxn.prod.index(sp.name)
-                nu = rxn.prod_nu[isp]
-                
-                if not isfirst: line += ' + '
-                
-                if nu > 1:
-                    if isinstance(nu, int):
-                        line += '{} * '.format(float(nu))
-                    else:
-                        line += '{:3} * '.format(nu)
-                elif nu < 1.0:
-                    line += '{} * '.format(nu)
-                
-                if rxn.rev:
-                        line += '(fwd_rates' + utils.get_array(lang, rind)
-                        line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
-                        line += ')'
-                else:
-                    line += 'fwd_rates' + utils.get_array(lang, rind)
-                
-                if isfirst: isfirst = False
-                
-            # check reactants
-            elif sp.name in rxn.reac:
-                inreac = True
-                isp = rxn.reac.index(sp.name)
-                nu = rxn.reac_nu[isp]
-                
-                if isfirst:
-                    line += '-'
-                else:
-                    line += ' - '
-                
-                if nu > 1:
-                    if isinstance(nu, int):
-                        line += '{} * '.format(float(nu))
-                    else:
-                        line += '{:3} * '.format(nu)
-                elif nu < 1.0:
-                    line += '{} * '.format(nu)
-                
-                if rxn.rev:
-                        line += '(fwd_rates' + utils.get_array(lang, rind)
-                        line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
-                        line += ')'
-                else:
-                    line += 'fwd_rates' + utils.get_array(lang, rind)
-                
-                if isfirst: isfirst = False
-            else:
-                continue
+                # pressure dependence modification
+                if pdep:
+                    pind = pdep_reacs.index(rind)
+                    line += ' * pres_mod' + utils.get_array(lang, pind)
             
-            # pressure dependence modification
-            if pdep:
-                pind = pdep_reacs.index(rind)
-                line += ' * pres_mod' + utils.get_array(lang, pind)
-        
-        # species not participate in any reactions
-        if not inreac: line += '0.0'
-        
-        # done with this species
-        line += utils.line_end[lang] + '\n'
-        file.write(line)
+            # species not participate in any reactions
+            if not inreac: line += '0.0'
+            
+            # done with this species
+            line += utils.line_end[lang] + '\n'
+            file.write(line)
     
     if lang in ['c', 'cuda']:
         file.write('} // end eval_spec_rates\n\n')
@@ -2164,7 +2181,7 @@ def write_mass_mole(path, lang, specs):
     return
 
 
-def create_rate_subs(lang, mech_name, therm_name = None):
+def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False):
     """Create rate subroutines from mechanism.
     
     Parameters
@@ -2176,6 +2193,9 @@ def create_rate_subs(lang, mech_name, therm_name = None):
     therm_name : str, optional
         Thermodynamic database filename (e.g. 'therm.dat') 
         or nothing if info in mechanism file.
+    optimize_cache : bool, optional
+        If true, use the greedy optimizer to attempt to 
+        improve cache hit rates
     
     Returns
     -------
@@ -2237,19 +2257,45 @@ def create_rate_subs(lang, mech_name, therm_name = None):
         
         for rxn in [rxn for rxn in reacs if rxn.high]:
             rxn.high[2] *= efac
+
+    if optimize_cache:
+        if lang == 'cuda':
+            pool_size = CUDAParams.l1_size / CUDAParams.desired_thread_count
+        else:
+            pool_size = 100 #wild guess
+        #create score functions
+        spec_score = cache.species_rates_score(specs, reacs, pool_size)
+        rxn_score = cache.reaction_rates_score(specs, reacs, pool_size)
+        if any(r.pdep or r.thd for r in reacs):
+            pdep_score = cache.pdep_rates_score(specs, reacs, pool_size)
+
+        spec_order = cache.greedy_optimizer(spec_score)
+        rxn_order = cache.greedy_optimizer(rxn_score)
+        if any(r.pdep or r.thd for r in reacs):
+            pdep_order = cache.greedy_optimizer(pdep_score)
+        else:
+            pdep_order = None
+
+    else:
+        spec_order = [(range(len(specs)), range(len(reacs)))]
+        rxn_order = [(range(len(specs)), range(len(reacs)))]
+        if any(r.pdep or r.thd for r in reacs): 
+            pdep_order = [(range(len(specs)), range(len(reacs)))]
+        else:
+            pdep_order = None
     
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    write_rxn_rates(build_path, lang, specs, reacs)
+    write_rxn_rates(build_path, lang, specs, reacs, rxn_order)
     
     # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        write_rxn_pressure_mod(build_path, lang, specs, reacs)
+        write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order)
     
     # write species rates subroutine
-    write_spec_rates(build_path, lang, specs, reacs)
+    write_spec_rates(build_path, lang, specs, reacs, spec_order)
     
     # write chem_utils subroutines
     write_chem_utils(build_path, lang, specs)
@@ -2288,8 +2334,14 @@ if __name__ == "__main__":
                         help = 'Thermodynamic database filename (e.g., '
                         'therm.dat), or nothing if in mechanism.'
                         )
+    parser.add_argument('-nco', '--no-cache-optimizer',
+                        dest = 'cache_optimizer',
+                        action = 'store_false',
+                        default = True,
+                        help = 'Attempt to optimize cache store/loading via use '
+                        'of a greedy selection algorithm.')
     
     args = parser.parse_args()
     
-    create_rate_subs(args.lang, args.input, args.thermo)
+    create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer)
 

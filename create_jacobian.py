@@ -2070,7 +2070,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None):
+def create_jacobian(lang, mech_name, therm_name=None, cache_optimizer=True):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -2082,6 +2082,9 @@ def create_jacobian(lang, mech_name, therm_name=None):
     therm_name : str, optional
         Thermodynamic database filename (e.g. 'therm.dat') 
         or nothing if info in mechanism file.
+    cache_optimizer : bool, optional
+        If true, use the greedy optimizer to attempt to 
+        improve cache hit rates
 
     Returns
     -------
@@ -2195,7 +2198,13 @@ if __name__ == "__main__":
                         default=None,
                         help='Thermodynamic database filename (e.g., '
                         'therm.dat), or nothing if in mechanism.')
+    parser.add_argument('-nco', '--no-cache-optimizer',
+                        dest = 'cache_optimizer',
+                        action = 'store_false',
+                        default = True,
+                        help = 'Attempt to optimize cache store/loading via use '
+                        'of a greedy selection algorithm.')
 
     args = parser.parse_args()
 
-    create_jacobian(args.lang, args.input, args.thermo)
+    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer)

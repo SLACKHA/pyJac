@@ -53,22 +53,6 @@ class score_function(object):
         self.r_to_s = [x.copy() for x in self.r_to_s_save]
         self.s_to_r = [x.copy() for x in self.s_to_r_save]
 
-    def update_lists(self, ret_list, spec_list, rxn_list):
-        """
-        Updates the s->r and r->s mappings based on the current reaction and species lists
-        """
-        #update the return list
-        ret_list.append(self.get_list(spec_list, rxn_list))
-        # update the mappings
-        for spec in spec_list:
-            # get list of reactions that match this species
-            my_reacs = [rxn for rxn in rxn_list if rxn in self.s_to_r[spec]]
-            if len(my_reacs):
-                # remove these reactions from s_to_r
-                self.s_to_r[spec] = self.s_to_r[spec].difference(my_reacs)
-                for reac in my_reacs:
-                    self.r_to_s[reac] = self.r_to_s[reac].difference([spec])
-
     def gather_stats(self, the_list):
         raise NotImplementedError
 
@@ -149,9 +133,44 @@ class score_function(object):
     def get_list(self, specs, reacs):
         return ([spec for spec in specs], [reac for reac in reacs])
 
+    def update_lists(self, ret_list, spec_list, rxn_list):
+        """
+        Updates the s->r and r->s mappings based on the current reaction and species lists
+        """
+        #update the return list
+        ret_list.append(self.get_list(spec_list, rxn_list))
+        # update the mappings
+        for spec in spec_list:
+            # get list of reactions that match this species
+            my_reacs = [rxn for rxn in rxn_list if rxn in self.s_to_r[spec]]
+            if len(my_reacs):
+                # remove these reactions from s_to_r
+                self.s_to_r[spec] = self.s_to_r[spec].difference(my_reacs)
+                for reac in my_reacs:
+                    self.r_to_s[reac] = self.r_to_s[reac].difference([spec])
+
 class species_rates_score(score_function):
     def __init__(self, specs, reacs, pool_size, pool_size_reset = 0.9):
         super(species_rates_score, self).__init__(specs, reacs, pool_size)
+
+    def get_list(self, specs, reacs):
+        return ([spec for spec in specs], [reac for reac in reacs])
+
+    def update_lists(self, ret_list, spec_list, rxn_list):
+        """
+        Updates the s->r and r->s mappings based on the current reaction and species lists
+        """
+        # update the mappings
+        for spec in spec_list:
+            # get list of reactions that match this species
+            my_reacs = [rxn for rxn in rxn_list if rxn in self.s_to_r[spec]]
+            if len(my_reacs):
+                #update the return list
+                ret_list.append(self.get_list([spec], my_reacs))
+                # remove these reactions from s_to_r
+                self.s_to_r[spec] = self.s_to_r[spec].difference(my_reacs)
+                for reac in my_reacs:
+                    self.r_to_s[reac] = self.r_to_s[reac].difference([spec])
 
     def gather_initial_stats(self, specs, reacs):
         self.baseline_loads = len(self.s_to_r) + sum(len(s) for s in self.s_to_r)

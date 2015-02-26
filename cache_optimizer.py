@@ -151,7 +151,7 @@ class score_function(object):
 
 class species_rates_score(score_function):
     def __init__(self, specs, reacs, pool_size, pool_size_reset = 0.9):
-        super(species_rates_score, self).__init__(specs, reacs, pool_size, True, pool_size_reset)
+        super(species_rates_score, self).__init__(specs, reacs, pool_size)
 
     def gather_initial_stats(self, specs, reacs):
         self.baseline_loads = len(self.s_to_r) + sum(len(s) for s in self.s_to_r)

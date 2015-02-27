@@ -559,7 +559,8 @@ def write_jacobian(path, lang, specs, reacs):
                                                  beta_0minf, E_0minf
                                                  )
 
-                    jline += '-Pr'
+                    #NOTE: I think this was a bug
+                    jline += '-Pr * '
 
                 # finish writing P_ri
                 line += (' * (' + k0kinf + ')' +

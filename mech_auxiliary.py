@@ -206,7 +206,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
            '    cudaErrorCheck(cudaMemcpy(spec_rates_host_full, {}spec_rates, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor))
     file.write(
                '    for (int j = 0; j < NSP; ++j) {\n'
-               '        spec_rates_host[j] = sp_rates_host_full[j * padded];\n'
+               '        spec_rates_host[j] = spec_rates_host_full[j * padded];\n'
                '    }\n'
                '#endif\n'
                )
@@ -227,7 +227,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '    }\n'
                '#endif\n'
                )
-    file.write(
+    file.write('#ifdef RATES_TEST\n'
                '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') + 
                '#endif\n'
                )
@@ -353,8 +353,8 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '#endif\n')
 
             file.write('#include "gpu_macros.cuh"\n')
+            file.write('#include "gpu_memory.cuh"\n')
             if CUDAParams.is_global():
-                file.write('#include "gpu_memory.cuh"\n')
                 file.write('\nextern __constant__ gpuMemory memory_pointers;\n\n')
             __write_kernels(file, have_rev_rxns, have_pdep_rxns)
 
@@ -366,13 +366,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 needed_arr_conv = [
                     'double* ' + a + '_host' for a in needed_arr_conv]
             else:
-                needed_arr = [['double* ' + a + '_host', 'double* ' + a + '_d']
+                needed_arr = [['double* ' + a + '_host', 'double* d_' + a]
                               for a in needed_arr]
                 needed_arr = [a for a in itertools.chain(*needed_arr)]
                 needed_arr_conv = [
-                    ['double* ' + a + '_host', 'double* ' + a + '_d'] for a in needed_arr_conv]
-                needed_arr_conv = [
-                    a + '_d' for a in itertools.chain(*needed_arr_conv)]
+                    ['double* ' + a + '_host', 'double* d_' + a] for a in needed_arr_conv]
+                needed_arr_conv = [a for a in itertools.chain(*needed_arr_conv)]
         else:
             needed_arr = ['double* ' + a + '_host' for a in needed_arr]
             needed_arr_conv = ['double* ' + a + '_host' for a in needed_arr_conv]
@@ -392,7 +391,12 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             else:
                 # do cuda mem init and copying
                 file.write(
-                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n')
+                    '#ifdef CONP\n'
+                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_pres);\n'
+                    '#elif CONV\n'
+                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_rho);\n'
+                    '#endif\n'
+                    )
         else:
             file.write('    int padded = NUM;\n')
         file.write('    y_host = (double*)malloc(NN * padded * sizeof(double));\n'
@@ -591,7 +595,15 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 file.write('    gpuMemory* host_memory = NULL;\n'
                        '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &host_memory);\n')
             else:
-                file.write('    int padded = initialize_gpu_memory(NUM, block_size, grid_size);\n')
+                file.write('    double *d_y;\n'
+                           '#ifdef CONP\n'
+                           '    double* d_pres;\n'
+                           '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_pres);\n'
+                           '#elif CONV\n'
+                           '    double* d_rho;\n'
+                           '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_rho);\n'
+                           '#endif\n'
+                          )
             file.write(
                        '    //set mass fractions to unity to turn on all reactions\n'
                        '    double y_host[NN];\n'
@@ -642,26 +654,26 @@ def write_mechanism_initializers(path, lang, specs, reacs):
 
             if not CUDAParams.is_global():
                 # need to define arrays
-                file.write('    double* d_spec_rates = cudaMalloc(padded * NSP * sizeof(double));\n'
-                           '    double* d_y = cudaMalloc(padded * NN * sizeof(double));\n'
-                           '    double* d_dy = cudaMalloc(padded * NN * sizeof(double));\n'
-                           '    double* d_pres = cudaMalloc(padded * sizeof(double));\n'
-                           '#ifdef CONV\n'
-                           '    double* d_rho = cudaMalloc(padded * sizeof(double));\n'
-                           '#endif\n'
-                           '    double* d_conc = cudaMalloc(padded * NSP * sizeof(double));\n'
+                file.write('    double* d_spec_rates, *d_dy, *d_conc;\n'
+                           '    cudaMalloc((void**)&d_spec_rates, padded * NSP * sizeof(double));\n'
+                           '    cudaMalloc((void**)&d_dy, padded * NN * sizeof(double));\n'
+                           '    cudaMalloc((void**)&d_conc, padded * NSP * sizeof(double));\n'
                            )
                 if have_rev_rxns:
-                    file.write('    double* d_fwd_rates = cudaMalloc(padded * FWD_RATES * sizeof(double));\n'
-                               '    double* d_rev_rates = cudaMalloc(padded * REV_RATES * sizeof(double));\n')
+                    file.write('    double *d_fwd_rates, *d_rev_rates;\n')
+                    file.write('    cudaMalloc((void**)&d_fwd_rates, padded * FWD_RATES * sizeof(double));\n'
+                               '    cudaMalloc((void**)&d_rev_rates, padded * REV_RATES * sizeof(double));\n')
                 else:
                     file.write(
-                        '    double* d_rates = cudaMalloc(padded * RATES * sizeof(double));\n')
+                        '    double* d_rates;\n'
+                        '    cudaMalloc((void**)&d_rates, padded * RATES * sizeof(double));\n')
                 if have_pdep_rxns:
                     file.write(
-                        '    double* d_pres_mod = cudaMalloc(padded * PRES_MOD_RATES * sizeof(double));\n')
+                        '    double* d_pres_mod;\n'
+                        '    cudaMalloc((void**)&d_pres_mod, padded * PRES_MOD_RATES * sizeof(double));\n')
                 file.write(
-                    '    double* d_jac = cudaMalloc(padded * NN * NN * sizeof(double));\n')
+                    '    double* d_jac;\n'
+                    '    cudaMalloc((void**)&d_jac, padded * NN * NN * sizeof(double));\n')
 
             __write_cuda_rate_evaluator(
                 file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
@@ -698,7 +710,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            '    cudaErrorCheck(cudaFree(d_pres));\n'
                            '#ifdef CONV\n'
                            '    cudaErrorCheck(cudaFree(d_rho));\n'
-                           '#endif'
+                           '#endif\n'
                            '    cudaErrorCheck(cudaFree(d_conc));\n'
                            )
                 if have_rev_rxns:
@@ -768,10 +780,10 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            '#endif\n')
             else:
                 file.write('#ifdef CONP\n'
-                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double* y_device, double* pres_device);\n'
+                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** pres_device);\n'
                            'void free_gpu_memory(double* y_device, double* pres_device);\n'
                            '#else\n'
-                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double* y_device, double* rho_device);\n'
+                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** rho_device);\n'
                            'void free_gpu_memory(double* y_device, double* rho_device);\n'
                            '#endif\n'
                            '\n'
@@ -822,17 +834,17 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            )
             else:
                 file.write('#ifdef CONP\n'
-                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double* y_device, double* pres_device)\n'
+                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** pres_device)\n'
                            '#else\n'
-                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double* y_device, double* rho_device)\n'
+                           'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** rho_device)\n'
                            '#endif\n'
                            '{\n'
                            '    int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
-                           '    cudaErrorCheck(&y_device, padded * NN * sizeof(double));\n'
+                           '    cudaErrorCheck(cudaMalloc((void**)y_device, padded * NN * sizeof(double)));\n'
                            '#ifdef CONP\n'
-                           '    cudaErrorCheck(&pres_device, NN * sizeof(double));\n'
+                           '    cudaErrorCheck(cudaMalloc((void**)pres_device, NN * sizeof(double)));\n'
                            '#else\n'
-                           '    cudaErrorCheck(&rho_device, padded * NN * sizeof(double));\n'
+                           '    cudaErrorCheck(cudaMalloc((void**)rho_device, padded * NN * sizeof(double)));\n'
                            '#endif\n'
                            '}\n'
                            )

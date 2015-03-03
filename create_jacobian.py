@@ -20,6 +20,1638 @@ import mech_auxiliary as aux
 import CUDAParams
 import cache_optimizer as cache
 
+def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind):
+    file.write('  j_temp = ')
+    jline = ''
+    # next, contribution from dR/dYj
+    if rxn.pdep or rxn.thd:
+        jline += 'pres_mod' + utils.get_array(lang, pind)
+        jline += ' * ('
+
+    jline += '-mw_avg * ('
+    #get reac and prod nu sums
+    reac_nu = 0
+    for sp_name in rxn.reac:
+        nu = rxn.reac_nu[rxn.reac.index(sp_name)]
+        if nu == 0:
+            continue
+        reac_nu += nu
+
+    prod_nu = 0
+    if rxn.rev:
+        for sp_name in rxn.prod:
+            nu = rxn.prod_nu[rxn.prod.index(sp_name)]
+            if nu == 0:
+                continue
+            prod_nu += nu
+
+    if reac_nu != 0:
+        if reac_nu == -1:
+            jline += '-'
+        elif reac_nu != 1:
+            jline += '{} * '.format(float(reac_nu))
+        jline += 'fwd_rates' + utils.get_array(lang, rind)
+
+    if prod_nu != 0:
+        if prod_nu == 1:
+            jline += ' - '
+        elif prod_nu == -1:
+            jline += ' + '
+        else:
+            jline += ' - {} * '.format(float(prod_nu))
+        jline += 'rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+
+    jline += ')'
+    
+    if rxn.pdep or rxn.thd:
+        jline += ')'
+    file.write(jline + utils.line_end[lang])
+
+def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind):
+    file.write('  pdep_temp = ')
+    jline = ''
+    if rxn.thd and not rxn.pdep:
+        jline += '(-mw_avg * pres_mod' + \
+                        utils.get_array(lang, pind)
+        jline += ') * '
+        
+        if rxn.rev:
+            jline += '(fwd_rates' + utils.get_array(lang, rind)
+            jline += ' - rev_rates' + \
+                utils.get_array(lang, rev_reacs.index(rxn))
+            jline += ')'
+        else:
+            jline += 'fwd_rates' + utils.get_array(lang, rind)
+
+    else:
+        beta_0minf, E_0minf, k0kinf = get_infs(rxn)
+        jline += 'pres_mod' + utils.get_array(lang, pind)
+        jline += ' * ('
+
+         # dPr/dYj contribution
+        if rxn.low:
+            # unimolecular/recombination
+            jline += '(1.0 / (1.0 + Pr))'
+        elif rxn.high:
+            # chem-activated bimolecular
+            jline += '(-Pr / (1.0 + Pr))'
+
+        if rxn.troe:
+            jline += (' - log(Fcent) * 2.0 * A * (B * '
+                      '{:.6}'.format(1.0 / math.log(10.0)) +
+                      ' + A * '
+                      '{:.6}) / '.format(0.14 / math.log(10.0)) +
+                      '(B * B * B * (1.0 + A * A / (B * B)) '
+                      '* (1.0 + A * A / (B * B)))'
+                      )
+        elif rxn.sri:
+            jline += (' - X * X * '
+                      '{:.6} * '.format(2.0 / math.log(10.0)) +
+                      'log10(Pr) * '
+                      'log({:.4} * '.format(rxn.sri[0]) +
+                      'exp(-{:4} / T) + '.format(rxn.sri[1]) +
+                      'exp(-T / {:.4}))'.format(rxn.sri[2])
+                      )
+
+        jline += ')'
+
+    file.write(jline + utils.line_end[lang])
+
+def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
+    jline = ''
+    if rxn.pdep or rxn.thd:
+        jline += ' + '
+    jline += 'j_temp'
+    if rxn.pdep or rxn.thd:
+        jline += ' + pres_mod' + utils.get_array(lang, pind)
+        jline += ' * ('
+
+    if sp_j.name in rxn.reac:
+        if not rxn.pdep and not rxn.thd:
+            jline += ' + '
+        jline += (rate.rxn_rate_const(rxn.A, rxn.b,
+                                      rxn.E
+                                      ) +
+                  ' * rho '
+                  )
+        nu_temp = rxn.reac_nu[rxn.reac.index(sp_j.name)]
+        if (nu_temp - 1) > 0:
+            if isinstance(nu_temp - 1, float):
+                jline += ' * pow(conc' + \
+                    utils.get_array(lang, j_sp)
+                jline += ', {})'.format(nu_temp - 1)
+            else:
+                # integer, so just use multiplication
+                for i in range(nu_temp - 1):
+                    jline += ' * conc' + \
+                        utils.get_array(lang, j_sp)
+
+        # loop through remaining reactants
+        for sp_reac in rxn.reac:
+            if sp_reac == sp_j.name:
+                continue
+
+            nu_temp = rxn.reac_nu[rxn.reac.index(sp_reac)]
+            isp = next(i for i in xrange(len(specs))
+                       if specs[i].name == sp_reac)
+            if isinstance(nu_temp, float):
+                jline += ' * pow(conc' + \
+                    utils.get_array(lang, isp)
+                jline += ', ' + str(nu_temp) + ')'
+            else:
+                # integer, so just use multiplication
+                for i in range(nu_temp):
+                    jline += ' * conc' + \
+                        utils.get_array(lang, isp)
+
+    if rxn.rev and sp_j.name in rxn.prod:
+        if not rxn.pdep and not rxn.thd and not sp_j.name in rxn.reac:
+            jline += ' + '
+        elif sp_j.name in rxn.reac:
+            jline += ' + '
+
+        if not rxn.rev_par:
+            jline += ('(' +
+                      rate.rxn_rate_const(rxn.A,
+                                          rxn.b,
+                                          rxn.E
+                                          ) +
+                      ' / Kc)'
+                      )
+        else:
+            # explicit reverse coefficients
+            jline += rate.rxn_rate_const(rxn.rev_par[0],
+                                         rxn.rev_par[1],
+                                         rxn.rev_par[2]
+                                         )
+
+        jline += ' * rho'
+
+        temp_nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
+        if (temp_nu - 1) > 0:
+            if isinstance(temp_nu - 1, float):
+                jline += ' * pow(conc' + \
+                    utils.get_array(lang, j_sp)
+                jline += ', {})'.format(temp_nu - 1)
+            else:
+                # integer, so just use multiplication
+                for i in range(temp_nu - 1):
+                    jline += ' * conc' + \
+                        utils.get_array(lang, j_sp)
+
+        # loop through remaining products
+        for sp_reac in rxn.prod:
+            if sp_reac == sp_j.name:
+                continue
+
+            temp_nu = rxn.prod_nu[rxn.prod.index(sp_reac)]
+            isp = next(i for i in xrange(len(specs))
+                       if specs[i].name == sp_reac)
+            if isinstance(temp_nu, float):
+                jline += ' * pow(conc' + \
+                    utils.get_array(lang, isp)
+                jline += ', {})'.format(temp_nu)
+            else:
+                # integer, so just use multiplication
+                jline += ''.join([' * conc' + utils.get_array(lang, isp) for i in range(temp_nu)])
+    
+    if rxn.pdep or rxn.thd:
+        jline += ')'
+    file.write(jline)
+
+def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind):
+    jline = 'pdep_temp * (-mw_avg'
+    if rxn.thd_body:
+        #check alphaij
+        alphaij = next((thd[1] for thd in rxn.thd_body
+                        if thd[0] == sp_j.name), None)
+        if alphaij != 0.0:
+            jline += ' + '
+            if alphaij:
+                jline += '{} * '.format(float(alphaij))
+            # default is 1.0
+            jline += 'rho * '
+    elif rxn.pdep and rxn.pdep_sp == sp_j.name:
+        # NOTE: This Y array previously seems to be a bug, I can't find a reference to it anywhere else
+        #      changing it to y
+        jline += ' + (1.0 / y' + utils.get_array(lang, j_sp)
+        jline += ')'
+
+
+    if rxn.thd or rxn.pdep:
+        if rxn.rev:
+            jline += '(fwd_rates' + utils.get_array(lang, rind)
+            jline += ' - rev_rates' + \
+                utils.get_array(lang, rev_reacs.index(rxn))
+            jline += ')'
+        else:
+            jline += 'fwd_rates' + utils.get_array(lang, rind)
+    jline += ')'
+
+    file.write(jline)
+
+def write_kc(file, lang, specs, rxn):
+    sum_nu = 0
+    for sp_name in set(rxn.reac + rxn.prod):
+        spec = next((spec for spec in specs
+            if spec.name == sp_name), None)
+        nu = get_nu(spec, rxn)
+
+        if nu == 0:
+            continue
+
+        sum_nu += nu
+
+        # need temperature conditional for
+        # equilibrium constants
+        line = ('  if (T <= '
+                '{})'.format(spec.Trange[1])
+                )
+        if lang in ['c', 'cuda']:
+            line += ' {\n'
+        elif lang == 'fortran':
+            line += ' then\n'
+        elif lang == 'matlab':
+            line += '\n'
+        file.write(line)
+
+        line = '    Kc'
+        if lang in ['c', 'cuda']:
+            if nu < 0:
+                line += ' -= '
+            elif nu > 0:
+                line += ' += '
+        elif lang in ['fortran', 'matlab']:
+            if nu < 0:
+                line += ' = Kc - '
+            elif nu > 0:
+                line += ' = Kc + '
+        line += (
+            '{:.2f} * '.format(abs(nu)) +
+            '({:.8e} - '.format(spec.lo[6]) +
+            '{:.8e} + '.format(spec.lo[0]) +
+            '{:.8e}'.format(spec.lo[0] -
+                            1.0) +
+            ' * logT + T * ('
+            '{:.8e}'.format(spec.lo[1] /
+                            2.0) +
+            ' + T * ('
+            '{:.8e}'.format(spec.lo[2] /
+                            6.0) +
+            ' + T * ('
+            '{:.8e}'.format(spec.lo[3] /
+                            12.0) +
+            ' + '
+            '{:.8e}'.format(spec.lo[4] /
+                            20.0) +
+            ' * T))) - '
+            '{:.8e} / T)'.format(spec.lo[5]) +
+            utils.line_end[lang]
+        )
+        file.write(line)
+
+        if lang in ['c', 'cuda']:
+            file.write('  } else {\n')
+        elif lang in ['fortran', 'matlab']:
+            file.write('  else\n')
+
+        line = '    Kc'
+        if lang in ['c', 'cuda']:
+            if nu < 0:
+                line += ' -= '
+            elif nu > 0:
+                line += ' += '
+        elif lang in ['fortran', 'matlab']:
+            if nu < 0:
+                line += ' = Kc - '
+            elif nu > 0:
+                line += ' = Kc + '
+        line += (
+            '{:.2f} * '.format(abs(nu)) +
+            '({:.8e} - '.format(spec.hi[6]) +
+            '{:.8e} + '.format(spec.hi[0]) +
+            '{:.8e}'.format(spec.hi[0] -
+                            1.0) +
+            ' * logT + T * ('
+            '{:.8e}'.format(spec.hi[1] /
+                            2.0) +
+            ' + T * ('
+            '{:.8e}'.format(spec.hi[2] /
+                            6.0) +
+            ' + T * ('
+            '{:.8e}'.format(spec.hi[3] /
+                            12.0) +
+            ' + '
+            '{:.8e}'.format(spec.hi[4] /
+                            20.0) +
+            ' * T))) - '
+            '{:.8e} / T)'.format(spec.hi[5]) +
+            utils.line_end[lang]
+        )
+        file.write(line)
+
+        if lang in ['c', 'cuda']:
+            file.write('  }\n\n')
+        elif lang == 'fortran':
+            file.write('  end if\n\n')
+        elif lang == 'matlab':
+            file.write('  end\n\n')
+
+    line = '  Kc = '
+    if sum_nu != 0:
+        num = (chem.PA / chem.RU) ** sum_nu
+        line += '{:.8e} * '.format(num)
+    line += 'exp(Kc)' + utils.line_end[lang]
+    file.write(line)
+
+def get_nu(sp_k, rxn):
+    if sp_k.name in rxn.prod and sp_k.name in rxn.reac:
+        nu = (rxn.prod_nu[rxn.prod.index(sp_k.name)] -
+              rxn.reac_nu[rxn.reac.index(sp_k.name)])
+        # check if net production zero
+        if nu == 0:
+            return 0
+    elif sp_k.name in rxn.prod:
+        nu = rxn.prod_nu[rxn.prod.index(sp_k.name)]
+    elif sp_k.name in rxn.reac:
+        nu = -rxn.reac_nu[rxn.reac.index(sp_k.name)]
+    else:
+        # doesn't participate in reaction
+        return 0
+    return nu
+
+def get_infs(rxn):
+    if rxn.low:
+        # unimolecular/recombination fall-off
+        beta_0minf = rxn.low[1] - rxn.b
+        E_0minf = rxn.low[2] - rxn.E
+        k0kinf = rate.rxn_rate_const(rxn.low[0] / rxn.A,
+                                     beta_0minf, E_0minf
+                                     )
+    elif rxn.high:
+        # chem-activated bimolecular rxn
+        beta_0minf = rxn.b - rxn.high[1]
+        E_0minf = rxn.E - rxn.high[2]
+        k0kinf = rate.rxn_rate_const(rxn.A / rxn.high[0],
+                                     beta_0minf, E_0minf
+                                     )
+    return beta_0minf, E_0minf, k0kinf
+
+def write_dt_comment(file, lang, rind):
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += ('partial of rxn ' + str(rind) + ' wrt T' +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+def write_dy_comment(file, lang, rind):
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += ('partial of rxn ' + str(rind) + ' wrt species' +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+def write_dt_t_comment(file, lang, sp):
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += 'partial of dT wrt T for spec {}'.format(sp.name) + '\n'
+    file.write(line)
+
+def write_dt_y_comment(file, lang, sp):
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += 'partial of T wrt Y_{}'.format(sp.name) + '\n'
+    file.write(line)
+
+def write_rxn_params_dt(file, rxn, rev=False):
+    jline = ''
+    if rev:
+        if (abs(rxn.rev_par[1]) > 1.0e-90
+            and abs(rxn.rev_par[2]) > 1.0e-90):
+            jline += ('{:.8e} + '.format(rxn.rev_par[1]) +
+                      '({:.8e} / T)'.format(rxn.rev_par[2])
+                      )
+        elif abs(rxn.rev_par[1]) > 1.0e-90:
+            jline += '{:.8e}'.format(rxn.rev_par[1])
+        elif abs(rxn.rev_par[2]) > 1.0e-90:
+            jline += '({:.8e} / T)'.format(rxn.rev_par[2])
+        jline += '{}1.0 - '.format(' + ' if (abs(rxn.rev_par[1]) > 1.0e-90) or (
+            abs(rxn.rev_par[2]) > 1.0e-90) else '')
+    else:
+        if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
+            jline += '{:.8e} + ({:.8e} / T)'.format(rxn.b, rxn.E)
+        elif abs(rxn.b) > 1.0e-90:
+            jline += '{:.8e}'.format(rxn.b)
+        elif abs(rxn.E) > 1.0e-90:
+            jline += '({:.8e} / T)'.format(rxn.E)
+        jline += '{}1.0 - '.format(' + ' if (abs(rxn.b)
+                                             > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
+    file.write(jline)
+
+def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
+    for rxn in rev_reacs:
+        # only reactions with no reverse Arrhenius parameters
+        if rxn.rev_par:
+            continue
+
+        # all participating species
+        for rxn_sp in (rxn.reac + rxn.prod):
+            sp_ind = next((specs.index(s) for s in specs
+                           if s.name == rxn_sp), None)
+
+            # skip if already printed
+            if dBdT_flag[sp_ind]:
+                continue
+
+            dBdT_flag[sp_ind] = True
+
+            dBdT = 'dBdT_'
+            if lang in ['c', 'cuda']:
+                dBdT += str(sp_ind)
+            elif lang in ['fortran', 'matlab']:
+                dBdT += str(sp_ind + 1)
+            # declare dBdT
+            file.write('  Real ' + dBdT + utils.line_end[lang])
+
+            # dB/dT evaluation (with temperature conditional)
+            line = '  if (T <= {:})'.format(specs[sp_ind].Trange[1])
+            if lang in ['c', 'cuda']:
+                line += ' {\n'
+            elif lang == 'fortran':
+                line += ' then\n'
+            elif lang == 'matlab':
+                line += '\n'
+            file.write(line)
+
+            line = ('    ' + dBdT +
+                    ' = ({:.8e}'.format(specs[sp_ind].lo[0] - 1.0) +
+                    ' + {:.8e} / T) / T'.format(specs[sp_ind].lo[5]) +
+                    ' + {:.8e} + T'.format(specs[sp_ind].lo[1] / 2.0) +
+                    ' * ({:.8e}'.format(specs[sp_ind].lo[2] / 3.0) +
+                    ' + T * ({:.8e}'.format(specs[sp_ind].lo[3] / 4.0) +
+                    ' + {:.8e} * T))'.format(specs[sp_ind].lo[4] / 5.0) +
+                    utils.line_end[lang]
+                    )
+            file.write(line)
+
+            if lang in ['c', 'cuda']:
+                file.write('  } else {\n')
+            elif lang in ['fortran', 'matlab']:
+                file.write('  else\n')
+
+            line = ('    ' + dBdT +
+                    ' = ({:.8e}'.format(specs[sp_ind].hi[0] - 1.0) +
+                    ' + {:.8e} / T) / T'.format(specs[sp_ind].hi[5]) +
+                    ' + {:.8e} + T'.format(specs[sp_ind].hi[1] / 2.0) +
+                    ' * ({:.8e}'.format(specs[sp_ind].hi[2] / 3.0) +
+                    ' + T * ({:.8e}'.format(specs[sp_ind].hi[3] / 4.0) +
+                    ' + {:.8e} * T))'.format(specs[sp_ind].hi[4] / 5.0) +
+                    utils.line_end[lang]
+                    )
+            file.write(line)
+
+            if lang in ['c', 'cuda']:
+                file.write('  }\n\n')
+            elif lang == 'fortran':
+                file.write('  end if\n\n')
+            elif lang == 'matlab':
+                file.write('  end\n\n')
+
+def write_db_dt(file, lang, specs, rxn):
+    jline = ''
+    notfirst = False
+    # contribution from dBdT terms from
+    # all participating species
+    for sp in rxn.prod:
+        if sp in rxn.reac:
+            nu = (rxn.prod_nu[rxn.prod.index(sp)] -
+                  rxn.reac_nu[rxn.reac.index(sp)]
+                  )
+        else:
+            nu = rxn.prod_nu[rxn.prod.index(sp)]
+
+        if (nu == 0):
+            continue
+
+        sp_ind = next((specs.index(s) for s in specs
+                       if s.name == sp), None)
+
+        dBdT = 'dBdT_'
+        if lang in ['c', 'cuda']:
+            dBdT += str(sp_ind)
+        elif lang in ['fortran', 'matlab']:
+            dBdT += str(sp_ind + 1)
+
+        if not notfirst:
+            # first entry
+            if nu == 1:
+                jline += dBdT
+            elif nu == -1:
+                jline += '-' + dBdT
+            else:
+                jline += '{} * '.format(float(nu)) + dBdT
+        else:
+            # not first entry
+            if nu == 1:
+                jline += ' + '
+            elif nu == -1:
+                jline += ' - '
+            else:
+                if (nu > 0):
+                    jline += ' + {}'.format(float(nu))
+                else:
+                    jline += ' - {}'.format(float(abs(nu)))
+                jline += ' * '
+            jline += dBdT
+        notfirst = True
+
+    for sp in rxn.reac:
+        # skip species also in products, already counted
+        if sp in rxn.prod:
+            continue
+
+        nu = -rxn.reac_nu[rxn.reac.index(sp)]
+
+        sp_ind = next((specs.index(s) for s in specs
+                       if s.name == sp), None)
+
+        dBdT = 'dBdT_'
+        if lang in ['c', 'cuda']:
+            dBdT += str(sp_ind)
+        elif lang in ['fortran', 'matlab']:
+            dBdT += str(sp_ind + 1)
+
+        # not first entry
+        if nu == 1:
+            jline += ' + '
+        elif nu == -1:
+            jline += ' - '
+        else:
+            if (nu > 0):
+                jline += ' + {}'.format(float(nu))
+            else:
+                jline += ' - {}'.format(float(abs(nu)))
+            jline += ' * '
+        jline += dBdT
+
+    jline += '))'
+
+    file.write(jline)
+
+def write_pr(file, lang, specs, reacs, pdep_reacs, rxn):
+    # print lines for necessary pressure-dependent variables
+    line = '  Pr = '
+
+    if rxn.pdep_sp:
+        line += 'conc' + \
+            utils.get_array(lang, specs.index(rxn.pdep_sp))
+    else:
+        line += '(m'
+
+        for thd_sp in rxn.thd_body:
+            isp = specs.index(next((s for s in specs
+                                    if s.name == thd_sp[0]), None))
+            if thd_sp[1] > 1.0:
+                line += ' + {} * conc'.format(thd_sp[1] - 1.0)
+            elif thd_sp[1] < 1.0:
+                line += ' - {} * conc'.format(1.0 - thd_sp[1])
+            if thd_sp[1] != 1.0:
+                line += utils.get_array(lang, isp)
+        line += ')'
+
+    beta_0minf, E_0minf, k0kinf = get_infs(rxn)
+
+    # finish writing P_ri
+    line += (' * (' + k0kinf + ')' +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+def write_troe(file, lang, rxn):
+    line = ('  Fcent = '
+            '{:.8e} * '.format(1.0 - rxn.troe_par[0]) +
+            'exp(-T / {:.8e})'.format(rxn.troe_par[1]) +
+            ' + {:.8e} * exp(T / '.format(rxn.troe_par[0]) +
+            '{:.8e})'.format(rxn.troe_par[2])
+            )
+    if len(rxn.troe_par) == 4:
+        line += ' + exp(-{:.8e} / T)'.format(rxn.troe_par[3])
+    line += utils.line_end[lang]
+    file.write(line)
+
+    line = ('  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4' +
+            utils.line_end[lang]
+            )
+    file.write(line)
+
+    line = ('  B = 0.806 - 1.1762 * log10(Fcent) - '
+            '0.14 * log10(Pr)' +
+            utils.line_end[lang]
+            )
+    file.write(line)
+
+    line = ('  lnF_AB = 2.0 * log(Fcent) * '
+            'A / (B * B * B * (1.0 + A * A / (B * B)) * '
+            '(1.0 + A * A / (B * B)))' +
+            utils.line_end[lang]
+            )
+    file.write(line)
+
+def write_sri(file, lang):
+    line = ('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' +
+                            utils.line_end[lang]
+                            )
+    file.write(line)
+
+def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind):
+    beta_0minf, E_0minf, k0kinf = get_infs(rxn)
+    jline = '  j_temp = (pres_mod' + utils.get_array(lang, pind)
+    jline += ' * ((' + ('-Pr' if rxn.high else '') #high -> chem-activated bimolecular rxn
+
+    # dPr/dT
+    jline += ('({:.4e} + ('.format(beta_0minf) +
+              '{:.8e} / T) - 1.0) / '.format(E_0minf) +
+              '(T * (1.0 + Pr)))'
+              )
+
+    if rxn.sri:
+        jline += write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf)
+    elif rxn.troe:
+        jline += write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf)
+
+    jline += ') * '
+
+    if rxn.rev:
+        # forward and reverse reaction rates
+        jline += '(fwd_rates' + utils.get_array(lang, rind)
+        jline += ' - rev_rates' + \
+            utils.get_array(lang, rev_reacs.index(rxn))
+        jline += ')'
+    else:
+        # forward reaction rate only
+        jline += 'fwd_rates' + utils.get_array(lang, rind)
+
+    jline += ' + (pres_mod' + utils.get_array(lang, pind)
+
+    file.write(jline)
+
+def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
+    jline = (' + X * ((('
+          '{:.8} / '.format(rxn.sri[0] * rxn.sri[1]) +
+          '(T * T)) * exp(-'
+          '{:.8} / T) - '.format(rxn.sri[1]) +
+          '{:.8e} * '.format(1.0 / rxn.sri[2]) +
+          'exp(-T / {:.8})) / '.format(rxn.sri[2]) +
+          '({:.8} * '.format(rxn.sri[0]) +
+          'exp(-{:.8} / T) + '.format(rxn.sri[1]) +
+          'exp(-T / {:.8})) - '.format(rxn.sri[2]) +
+          'X * {:.8} * '.format(2.0 / math.log(10.0)) +
+          'log10(Pr) * ('
+          '{:.8e} + ('.format(beta_0minf) +
+          '{:.8e} / T) - 1.0) * '.format(E_0minf) +
+          'log({:8} * exp('.format(rxn.sri[0]) +
+          '-{:.8} / T) + '.format(rxn.sri[1]) +
+          'exp(-T / '
+          '{:8})) / T)'.format(rxn.sri[2])
+          )
+
+    if len(rxn.sri) == 5:
+        jline += ' + ({:.8} / T)'.format(rxn.sri[4])
+
+    return jline
+
+def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
+    jline = (' + (((1.0 / '
+              '(Fcent * (1.0 + A * A / (B * B)))) - '
+              'lnF_AB * ('
+              '-{:.8e}'.format(0.67 / math.log(10.0)) +
+              ' * B + '
+              '{:.8e} * '.format(1.1762 / math.log(10.0)) +
+              'A) / Fcent)'
+              ' * ({:.8e}'.format(-(1.0 - rxn.troe_par[0]) /
+                                  rxn.troe_par[1]) +
+              ' * exp(-T / '
+              '{:.8e}) - '.format(rxn.troe_par[1]) +
+              '{:.8e} * '.format(rxn.troe_par[0] /
+                                 rxn.troe_par[2]) +
+              'exp(-T / '
+              '{:.8e})'.format(rxn.troe_par[2])
+              )
+    if len(rxn.troe_par) == 4:
+        jline += (' + ({:.8e} / '.format(rxn.troe_par[3]) +
+                  '(T * T)) * exp('
+                  '-{:.8e} / T)'.format(rxn.troe_par[3])
+                  )
+    jline += '))'
+
+    jline += (' - lnF_AB * ('
+              '{:.8e}'.format(1.0 / math.log(10.0)) +
+              ' * B + '
+              '{:.8e}'.format(0.14 / math.log(10.0)) +
+              ' * A) * '
+              '({:.8e} + ('.format(beta_0minf) +
+              '{:.8e} / T) - 1.0) / T'.format(E_0minf)
+              )
+
+    return jline
+
+def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
+    line = '  if (T <= {:})'.format(sp.Trange[1])
+    if lang in ['c', 'cuda']:
+        line += ' {\n'
+    elif lang == 'fortran':
+        line += ' then\n'
+    elif lang == 'matlab':
+        line += '\n'
+    file.write(line)
+
+    line = '    j_temp'
+
+    if lang in ['c', 'cuda']:
+        line += ' += '
+    elif lang in ['fortran', 'matlab']:
+        line += ' = j_temp'
+    line += 'y' + utils.get_array(lang, isp + 1)
+    line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
+             '{:.8e} + '.format(sp.lo[1]) +
+             'T * ({:.8e} + '.format(2.0 * sp.lo[2]) +
+             'T * ({:.8e} + '.format(3.0 * sp.lo[3]) +
+             '{:.8e} * T)))'.format(4.0 * sp.lo[4]) +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+    if lang in ['c', 'cuda']:
+        file.write('  } else {\n')
+    elif lang in ['fortran', 'matlab']:
+        file.write('  else\n')
+
+    line = '    j_temp'
+
+    if lang in ['c', 'cuda']:
+        line += ' += '
+    elif lang in ['fortran', 'matlab']:
+        line += ' = j_temp + '
+    line += 'y' + utils.get_array(lang, isp + 1)
+    line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
+             '{:.8e} + '.format(sp.hi[1]) +
+             'T * ({:.8e} + '.format(2.0 * sp.hi[2]) +
+             'T * ({:.8e} + '.format(3.0 * sp.hi[3]) +
+             '{:.8e} * T)))'.format(4.0 * sp.hi[4]) +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+    if lang in ['c', 'cuda']:
+        file.write('  }\n\n')
+    elif lang == 'fortran':
+        file.write('  end if\n\n')
+    elif lang == 'matlab':
+        file.write('  end\n\n')
+
+def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset):
+    for k_sp, sp_k in enumerate(specs):
+        line = '  jac'
+        lin_index = (num_s + 1) * (k_sp + 1)
+        if lang in ['c', 'cuda']:
+            line += utils.get_array(lang, lin_index)
+            if not lin_index in sparse_indicies:
+                sparse_indicies.append(lin_index)
+        elif lang in ['fortran', 'matlab']:
+            line += utils.get_array(lang, 1, twod=k_sp + 1)
+            if not (1, k_sp + 1) in sparse_indicies:
+                sparse_indicies.append((1, k_sp + 1))
+        line += ' {}= -('.format('+' if touched[lin_index] else '')
+        touched[lin_index] = True
+
+        if lang in ['c', 'cuda']:
+            line += ('h' + utils.get_array(lang, isp) + ' * ('
+                     'jac' + utils.get_array(lang, isp + 1 + (num_s + 1) * (k_sp + 1)) +
+                     ' - (cp' + utils.get_array(lang, k_sp) + ' * dy' +
+                     utils.get_array(lang, isp + offset) +
+                     ' * {:.8e}))'.format(sp.mw)
+                     )
+        elif lang in ['fortran', 'matlab']:
+            line += ('h' + utils.get_array(lang, isp) + ' * ('
+                     'jac' + utils.get_array(lang, isp + 1, twod=k_sp + 1) +
+                     ' - (cp' + utils.get_array(lang, k_sp) + ' * dy' +
+                     utils.get_array(lang, isp + offset)
+                     )
+        line += ')' + utils.line_end[lang]
+        file.write(line)
+
+def write_dt_y_division(file, lang, specs, num_s):
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += ('Complete dT/dy calculations\n')
+    file.write(line)
+    file.write('  j_temp = rho * cp_avg * cp_avg' + utils.line_end[lang])
+    for k_sp, sp_k in enumerate(specs):
+        line = '  jac'
+        lin_index = (num_s + 1) * (k_sp + 1)
+        if lang in ['c', 'cuda']:
+            line += utils.get_array(lang, lin_index)
+            line += ' /= (j_temp)'
+        elif lang in ['fortran', 'matlab']:
+            line += utils.get_array(lang, 1, twod=k_sp + 1)
+            line += '= jac' + utils.get_array(lang, 1, twod=k_sp + 1)
+            line += ' / (j_temp)'
+        line += utils.line_end[lang]
+        file.write(line)
+    file.write('\n')
+
+def write_dt_completion(file, lang, specs):
+    if lang in ['c', 'cuda']:
+        line = '  //'
+    elif lang == 'fortran':
+        line = '  !'
+    elif lang == 'matlab':
+        line = '  %'
+    line += ('Complete dT wrt T calculations\n')
+    file.write(line)
+    line = '  '
+    if lang in ['c', 'cuda']:
+        line += 'jac' + utils.get_array(lang, 0)
+    elif lang in ['fortran', 'matlab']:
+        line += 'jac' + utils.get_array(lang, 0, twod=0)
+
+    line += ' = ('
+
+    for k_sp, sp_k in enumerate(specs):
+        if k_sp:
+            line += '    + '
+        line += 'dy' + utils.get_array(lang, k_sp + 1) + ' * {:.8e}'.format(sp_k.mw) + ' * '
+        line += '(h' + utils.get_array(lang, k_sp) + ' * (-1.0 + cp_avg * jac' + utils.get_array(lang, k_sp + 1) + ')'
+        line += ' + cp_avg * cp' + utils.get_array(lang, k_sp) + ')'
+        if k_sp != len(specs) - 1:
+            line += '\n'
+
+    line += ') / (rho * cp_avg * cp_avg)'
+    line += utils.line_end[lang]
+    file.write(line)
+
+def write_jacobian_alt(path, lang, specs, reacs):
+    """Write Jacobian subroutine in desired language.
+
+    Parameters
+    ----------
+    path : str
+        Path to build directory for file.
+    lang : {'c', 'cuda', 'fortran', 'matlab'}
+        Programming language.
+    specs : list of SpecInfo
+        List of species in the mechanism.
+    reacs : list of ReacInfo
+        List of reactions in the mechanism.
+
+    Returns
+    -------
+    None
+
+    """
+
+    # first write header file
+    if lang == 'c':
+        file = open(path + 'jacob.h', 'w')
+        file.write('#ifndef JACOB_HEAD\n'
+                   '#define JACOB_HEAD\n'
+                   '\n'
+                   '#include "header.h"\n'
+                   '\n'
+                   'void eval_jacob (const Real, const Real, Real*, '
+                   'Real*);\n'
+                   '\n'
+                   '#endif\n'
+                   )
+        file.close()
+    elif lang == 'cuda':
+        file = open(path + 'jacob.cuh', 'w')
+        file.write('#ifndef JACOB_HEAD\n'
+                   '#define JACOB_HEAD\n'
+                   '\n'
+                   '#include "header.h"\n'
+                   '\n'
+                   '__device__ void eval_jacob (const Real, const Real, '
+                   'Real*, Real*);\n'
+                   '\n'
+                   '#endif\n'
+                   )
+        file.close()
+
+    # numbers of species and reactions
+    num_s = len(specs)
+    num_r = len(reacs)
+    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    num_rev = len(rev_reacs)
+
+    pdep_reacs = []
+    for reac in reacs:
+        if reac.thd or reac.pdep:
+            # add reaction index to list
+            pdep_reacs.append(reacs.index(reac))
+    num_pdep = len(pdep_reacs)
+
+    # create file depending on language
+    filename = 'jacob' + utils.file_ext[lang]
+    file = open(path + filename, 'w')
+
+    # header files
+    if lang == 'c':
+        file.write('#include <math.h>\n'
+                   '#include "header.h"\n'
+                   '#include "chem_utils.h"\n'
+                   '#include "rates.h"\n'
+                   '\n'
+                   )
+    elif lang == 'cuda':
+        file.write('#include <math.h>\n'
+                   '#include "header.h"\n'
+                   '#include "chem_utils.cuh"\n'
+                   '#include "rates.cuh"\n'
+                   '#include "gpu_macros.cuh"\n'
+                   '\n'
+                   )
+
+        if CUDAParams.is_global():
+            file.write('extern __device__ double* conc;\n')
+            if len(rev_reacs):
+                file.write('extern __device__ Real* fwd_rates;\n'
+                           'extern __device__ Real* rev_rates;\n'
+                           )
+            else:
+                file.write('extern __device__ Real* rates;\n')
+            if len(pdep_reacs):
+                file.write('extern __device__ Real* pres_mod;\n')
+            file.write('extern __device__ Real* dy;\n')
+            file.write('#ifdef CONP\n'
+                       'extern __device__ Real* h;\n'
+                       'extern __device__ Real* cp;\n'
+                       '#else\n'
+                       'extern __device__ Real* u;\n'
+                       'extern __device__ Real* cv;\n'
+                       '#endif\n')
+
+    line = ''
+    if lang == 'cuda':
+        line = '__device__ '
+
+    offset = 0
+    if lang == 'cuda' and CUDAParams.is_global():
+        offset = 1
+
+    if lang in ['c', 'cuda']:
+        line += ('void eval_jacob (const Real t, const Real pres, '
+                 'Real * y, Real * jac) {\n\n')
+    elif lang == 'fortran':
+        line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
+
+        # fortran needs type declarations
+        line += ('  implicit none\n'
+                 '  integer, parameter :: wp = kind(1.0d0)'
+                 '  real(wp), intent(in) :: t, pres, y({})\n'.format(num_s) +
+                 '  real(wp), intent(out) :: jac({0},{0})\n'.format(num_s) +
+                 '  \n'
+                 '  real(wp) :: T, rho, cp_avg, logT\n'
+                 )
+        if any(rxn.thd for rxn in rev_reacs):
+            line += '  real(wp) :: m\n'
+        line += ('  real(wp), dimension({}) :: '.format(num_s) +
+                 'conc, cp, h, dy\n'
+                 '  real(wp), dimension({}) :: rxn_rates\n'.format(num_r) +
+                 '  real(wp), dimension({}) :: pres_mod\n'.format(num_pdep)
+                 )
+    elif lang == 'matlab':
+        line += 'function jac = eval_jacob (T, pres, y)\n\n'
+    file.write(line)
+
+    # get temperature
+    if lang in ['c', 'cuda']:
+        line = '  Real T = y' + utils.get_array(lang, 0)
+    elif lang in ['fortran', 'matlab']:
+        line = '  T = y' + utils.get_array(lang, 0)
+    line += utils.line_end[lang]
+    file.write(line)
+
+    file.write('\n')
+
+    # calculation of average molecular weight
+    if lang in ['c', 'cuda']:
+        file.write('  // average molecular weight\n'
+                   '  Real mw_avg;\n'
+                   )
+    elif lang == 'fortran':
+        file.write('  ! average molecular weight\n')
+    elif lang == 'matlab':
+        file.write('  % average molecular weight\n')
+    line = '  mw_avg = '
+    isfirst = True
+    for sp in specs:
+        if len(line) > 70:
+            if lang in ['c', 'cuda']:
+                line += '\n'
+            elif lang == 'fortran':
+                line += ' &\n'
+            elif lang == 'matlab':
+                line += ' ...\n'
+            file.write(line)
+            line = '     '
+
+        if not isfirst:
+            line += ' + '
+        line += '(y' + utils.get_array(lang, specs.index(sp) + 1) + \
+            ' / {:})'.format(sp.mw)
+        isfirst = False
+
+    line += utils.line_end[lang]
+    file.write(line)
+    line = '  mw_avg = 1.0 / mw_avg' + utils.line_end[lang]
+    file.write(line)
+
+    if lang in ['c', 'cuda']:
+        file.write('  // mass-averaged density\n'
+                   '  Real rho;\n'
+                   )
+    elif lang == 'fortran':
+        file.write('  ! mass-averaged density\n')
+    elif lang == 'matlab':
+        file.write('  % mass-averaged density\n')
+    line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(chem.RU)
+    line += utils.line_end[lang]
+    file.write(line)
+
+    file.write('\n')
+
+    # evaluate species molar concentrations
+    if lang in ['c', 'cuda']:
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  // species molar concentrations\n'
+                       '  Real conc[{}];\n'.format(num_s)
+                       )
+    elif lang == 'fortran':
+        file.write('  ! species molar concentrations\n')
+    elif lang == 'matlab':
+        file.write('  % species molar concentrations\n'
+                   '  conc = zeros({},1);\n'.format(num_s)
+                   )
+    # loop through species
+    for sp in specs:
+        isp = specs.index(sp)
+        line = ('  conc' + utils.get_array(lang, isp) +
+                ' = rho * ' +
+                'y' + utils.get_array(lang, isp + 1) +
+                ' / {}'.format(sp.mw)
+                )
+        line += utils.line_end[lang]
+        file.write(line)
+    file.write('\n')
+
+    # evaluate forward and reverse reaction rates
+    if lang in ['c', 'cuda']:
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  // evaluate reaction rates\n'
+                       '  Real fwd_rates[{}];\n'.format(num_r)
+                       )
+        if rev_reacs:
+            if lang != 'cuda' or not CUDAParams.is_global():
+                file.write('  Real rev_rates[{}];\n'.format(num_rev))
+            file.write('  eval_rxn_rates (T, conc, fwd_rates, '
+                       'rev_rates);\n'
+                       )
+        else:
+            file.write('  eval_rxn_rates (T, conc, fwd_rates);\n')
+    elif lang == 'fortran':
+        file.write('  ! evaluate reaction rates\n')
+        if rev_reacs:
+            file.write('  eval_rxn_rates (T, conc, fwd_rates, '
+                       'rev_rates)\n'
+                       )
+        else:
+            file.write('  eval_rxn_rates (T, conc, fwd_rates)\n')
+    elif lang == 'matlab':
+        file.write('  % evaluate reaction rates\n')
+        if rev_reacs:
+            file.write('  [fwd_rates, rev_rates] = eval_rxn_rates '
+                       '(T, conc);\n'
+                       )
+        else:
+            file.write('  fwd_rates = eval_rxn_rates (T, conc);\n')
+    file.write('\n')
+
+    # evaluate third-body and pressure-dependence reaction modifications
+    if lang in ['c', 'cuda']:
+        file.write('  // get pressure modifications to reaction rates\n')
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  Real pres_mod[{}];\n'.format(num_pdep))
+        file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+    elif lang == 'fortran':
+        file.write('  ! get and evaluate pressure modifications to '
+                   'reaction rates\n'
+                   '  get_rxn_pres_mod (T, pres, conc, pres_mod)\n'
+                   )
+    elif lang == 'matlab':
+        file.write('  % get and evaluate pressure modifications to '
+                   'reaction rates\n'
+                   '  pres_mod = get_rxn_pres_mod (T, pres, conc, '
+                   'pres_mod);\n'
+                   )
+    file.write('\n')
+
+    # evaluate species rates
+    if lang in ['c', 'cuda']:
+        file.write('  // evaluate rate of change of species molar '
+                   'concentration\n')
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  Real dy[{}];\n'.format(num_s))
+        if rev_reacs:
+            file.write('  eval_spec_rates (fwd_rates, rev_rates, '
+                       'pres_mod, dy);\n'
+                       )
+        else:
+            file.write('  eval_spec_rates (fwd_rates, pres_mod, '
+                       'dy);\n'
+                       )
+    elif lang == 'fortran':
+        file.write('  ! evaluate rate of change of species molar '
+                   'concentration\n'
+                   )
+        if rev_reacs:
+            file.write('  eval_spec_rates (fwd_rates, rev_rates, '
+                       'pres_mod, dy)\n'
+                       )
+        else:
+            file.write('  eval_spec_rates (fwd_rates, pres_mod, '
+                       'dy)\n'
+                       )
+    elif lang == 'matlab':
+        file.write('  % evaluate rate of change of species molar '
+                   'concentration\n'
+                   )
+        if rev_reacs:
+            file.write('  dy = eval_spec_rates(fwd_rates, '
+                       'rev_rates, pres_mod);\n'
+                       )
+        else:
+            file.write('  dy = eval_spec_rates(fwd_rates, '
+                       'pres_mod);\n'
+                       )
+    file.write('\n')
+
+    # third-body variable needed for reactions
+    if any(rxn.thd for rxn in reacs):
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += ('m = pres / ({:4e} * T)'.format(chem.RU) +
+                 utils.line_end[lang]
+                 )
+        file.write(line)
+
+    # log(T)
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += ('logT = log(T)' +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += '  j_temp = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += '  pdep_temp = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += '  working_temp = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+    # if any reverse reactions, will need Kc
+    if rev_reacs:
+        line = ('  Real Kc' +
+                utils.line_end[lang]
+                )
+        file.write(line)
+
+    # pressure-dependence variables
+    if any(rxn.pdep for rxn in reacs):
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'Pr' + utils.line_end[lang]
+        file.write(line)
+
+    if any(rxn.troe for rxn in reacs):
+        line = '  Real Fcent, A, B, lnF_AB' + utils.line_end[lang]
+        file.write(line)
+
+    if any(rxn.sri for rxn in reacs):
+        line = '  Real X' + utils.line_end[lang]
+        file.write(line)
+
+    # variables for equilibrium constant derivatives, if needed
+    dBdT_flag = [False for sp in specs]
+
+    #define dB/dT's
+    write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag)
+
+    line = ''
+
+    ###################################
+    # now begin Jacobian evaluation
+    ###################################
+
+    # whether this jacobian index has been modified
+    touched = [False for i in range((len(specs) + 1) * (len(specs) + 1))]
+    sparse_indicies = []
+
+    ###################################
+    # partial derivatives of reactions
+    ###################################
+    for rind, rxn in enumerate(reacs):
+        
+        ######################################
+        # with respect to temperature
+        ######################################
+
+        write_dt_comment(file, lang, rind)
+
+        #first we need any pres mod terms
+        pres_mod_flag = False
+
+        jline = ''
+        if rxn.pdep:
+            pind = pdep_reacs.index(rind)
+            pres_mod_flag = True
+            write_pr(file, lang, specs, reacs, pdep_reacs, rxn)
+
+            #dF/dT
+            if rxn.troe:
+                write_troe(file, lang, rxn)
+            elif rxn.sri:
+                write_sri(file, lang)
+            
+            write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind)
+
+        else:
+            # not pressure dependent
+
+            # third body reaction
+            if rxn.thd:
+                pres_mod_flag = True
+                pind = pdep_reacs.index(rind)
+
+                jline = '  j_temp = ((-pres_mod' + utils.get_array(lang, pind)
+                jline += ' * '
+
+                if rxn.rev:
+                    # forward and reverse reaction rates
+                    jline += '(fwd_rates' + utils.get_array(lang, rind)
+                    jline += ' - rev_rates' + \
+                        utils.get_array(lang, rev_reacs.index(rxn))
+                    jline += ')'
+                else:
+                    # forward reaction rate only
+                    jline += 'fwd_rates' + utils.get_array(lang, rind)
+
+                jline += ' / T) + (pres_mod' + utils.get_array(lang, pind)
+
+            else:
+                if lang in ['c', 'cuda', 'matlab']:
+                    jline += '  j_temp = ((1.0'
+                elif lang in ['fortran']:
+                    jline += '  j_temp = ((1.0_wp'
+
+            file.write(jline)
+
+        jline = ' / T) * ('
+
+        # contribution from temperature derivative of forward reaction rate
+        jline += 'fwd_rates' + utils.get_array(lang, rind)
+        jline += ' * ('
+        file.write(jline)
+
+        write_rxn_params_dt(file, rxn, rev=False)
+
+        # loop over reactants
+        jline = ''
+        nu = 0
+        for sp in rxn.reac:
+            nu += rxn.reac_nu[rxn.reac.index(sp)]
+        jline += '{})'.format(float(nu))
+
+
+        # contribution from temperature derivative of reaction rates
+        if rxn.rev:
+            # reversible reaction
+
+            jline += ' - rev_rates' + \
+                utils.get_array(lang, rev_reacs.index(rxn)) + \
+                ' * ('
+
+            file.write(jline)
+            jline = ''
+
+            if rxn.rev_par:
+                write_rxn_params_dt(file, rxn, rev=True)
+
+                nu = 0
+                # loop over products
+                for sp in rxn.prod:
+                    nu += rxn.prod_nu[rxn.prod.index(sp)]
+                jline += '{})'.format(float(nu))
+                file.write(jline)
+            else:
+                write_rxn_params_dt(file, rxn, rev=False)
+
+                write_db_dt(file, lang, specs, rxn)
+
+        # print line for reaction
+        file.write(jline + ') / rho' + utils.line_end[lang])
+
+
+        for rxn_sp in set(rxn.reac + rxn.prod):
+            sp_k, k_sp = next(((s, specs.index(s)) for s in specs
+                           if s.name == rxn_sp), None)
+            line = '  jac'
+            nu = get_nu(sp_k, rxn)
+            if nu == 0:
+                continue
+            if lang in ['c', 'cuda']:
+                line += (utils.get_array(lang, k_sp + 1) +
+                         ' {}= {}j_temp{} * {:.8e}'.format('+' if touched[k_sp + 1] else '',
+                            '' if nu == 1 else ('-' if nu == -1 else ''),
+                            ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
+                            sp_k.mw)
+                         )
+            elif lang in ['fortran', 'matlab']:
+                # NOTE: I believe there was a bug here w/ the previous
+                # fortran/matlab code (as it looks like it would be zero
+                # indexed)
+                line += (utils.get_array(lang, k_sp + 1, twod=1) +
+                         (' = jac' + utils.get_array(lang, k_sp + 1, twod=1) + ' + ' if touched[k_sp + 1] else '') + 
+                         ' {}j_temp{} * {:.8e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
+                            ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
+                            sp_k.mw)
+                         )
+            file.write(line + utils.line_end[lang])
+            touched[k_sp + 1] = True
+            if lang in ['c', 'cuda']:
+                if k_sp + 1 not in sparse_indicies:
+                    sparse_indicies.append(k_sp + 1)
+            elif lang in ['fortran', 'matlab']:
+                if (k_sp + 1, 1) not in sparse_indicies:
+                    sparse_indicies.append((k_sp + 1, 1))
+
+        file.write('\n')
+
+        ######################################
+        # with respect to species
+        ######################################
+        write_dy_comment(file, lang, rind)
+
+        if rxn.rev and not rxn.rev_par:
+            #need to find Kc
+            write_kc(file, lang, specs, rxn)
+
+        if rxn.pdep or rxn.thd:
+            #need to write the pdep parts (independent of any species)
+            write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind)
+
+        #need to write the dr/dy parts (independent of any species)
+        write_dr_dy(file, lang, rev_reacs, rxn, rind, pind)
+
+        #now loop through each species
+        for rxn_sp_j in set(rxn.reac + rxn.prod):
+            sp_j, j_sp = next(((s, specs.index(s)) for s in specs
+                           if s.name == rxn_sp_j), None)
+
+            isFirst = True
+            for rxn_sp_k in set(rxn.reac + rxn.prod):
+                sp_k, k_sp = next(((s, specs.index(s)) for s in specs
+                               if s.name == rxn_sp_k), None)
+
+                nu = get_nu(sp_k, rxn)
+
+                #sparse indexes
+                if lang in ['c', 'cuda']:
+                    if k_sp + 1 + (num_s + 1) * (j_sp + 1) not in sparse_indicies:
+                        sparse_indicies.append(k_sp + 1 + (num_s + 1) * (j_sp + 1))
+                elif lang in ['fortran', 'matlab']:
+                    if (k_sp + 1, j_sp + 1) not in sparse_indicies:
+                        sparse_indicies.append((k_sp + 1, j_sp + 1))
+
+                if nu == 0:
+                    continue
+
+                if isFirst:
+                    jline = '  working_temp = '
+                    file.write(jline)
+
+                    #check if there is any species specific stuff we need to do
+                    if rxn.thd or rxn.pdep:
+                        write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind)
+                    
+                    write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j)
+
+                    jline = ')'
+                    jline += ' * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
+                    jline += utils.line_end[lang]
+                    file.write(jline)
+
+                    isFirst = False
+
+                lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
+                jline = '  jac'
+                if lang in ['c', 'cuda']:
+                    jline += (utils.get_array(lang, lin_index) + 
+                             ' {}= '.format('+' if touched[lin_index] else '')
+                             )
+                elif lang in ['fortran', 'matlab']:
+                    jline += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) +
+                             (' = jac' + utils.get_array(lang, k_sp + 1, twod=j_sp + 1) if touched[k_sp + 1] else '') 
+                             + ' + ')
+
+                if not touched[lin_index]:
+                    touched[lin_index] = True
+
+                jline += '' if nu == 1 else ('-' if nu == -1 else '{} * '.format(float(nu)))
+                jline += 'working_temp'
+                jline += utils.line_end[lang]
+
+                file.write(jline)
+                jline = ''
+
+        file.write('\n')
+
+    ###################################
+    # Partial derivatives of temperature (energy equation)
+    ###################################
+
+    # evaluate enthalpy
+    if lang in ['c', 'cuda']:
+        file.write('  // species enthalpies\n')
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  Real h[{}];\n'.format(num_s))
+        file.write('  eval_h(T, h);\n')
+        file.write(line)
+    elif lang == 'fortran':
+        file.write('  ! species enthalpies\n'
+                   '  call eval_h(T, h)\n'
+                   )
+    elif lang == 'matlab':
+        file.write('  % species enthalpies\n'
+                   '  h = eval_h(T);\n'
+                   )
+    file.write('\n')
+
+    # evaluate specific heat
+    if lang in ['c', 'cuda']:
+        file.write('  // species specific heats\n')
+        if lang != 'cuda' or not CUDAParams.is_global():
+            file.write('  Real cp[{}];\n'.format(num_s))
+        file.write('  eval_cp(T, cp);\n')
+    elif lang == 'fortran':
+        file.write('  ! species specific heats\n'
+                   '  call eval_cp(T, cp)\n'
+                   )
+    elif lang == 'matlab':
+        file.write('  % species specific heats\n'
+                   '  cp = eval_cp(T);\n'
+                   )
+    file.write('\n')
+
+    # average specific heat
+    if lang == 'c':
+        file.write('  // average specific heat\n'
+                   '  Real cp_avg;\n'
+                   )
+    elif lang == 'cuda':
+        file.write('  // average specific heat\n'
+                   '  register Real cp_avg;\n'
+                   )
+    elif lang == 'fortran':
+        file.write('  ! average specific heat\n')
+    elif lang == 'matlab':
+        file.write('  % average specific heat\n')
+
+    line = '  cp_avg = '
+    isfirst = True
+    for sp in specs:
+        if len(line) > 70:
+            if lang in ['c', 'cuda']:
+                line += '\n'
+            elif lang == 'fortran':
+                line += ' &\n'
+            elif lang == 'matlab':
+                line += ' ...\n'
+            file.write(line)
+            line = '     '
+
+        isp = specs.index(sp)
+        if not isfirst:
+            line += ' + '
+        line += ('(y' + utils.get_array(lang, isp + 1) + ' * ' + 'cp' +
+                 utils.get_array(lang, isp) + ')')
+
+        isfirst = False
+    line += utils.line_end[lang]
+    file.write(line)
+
+    #set jac[0] = 0
+    # set to zero
+    line = '  jac'
+    if lang in ['c', 'cuda']:
+        line += utils.get_array(lang, 0) + ' = 0.0'
+        sparse_indicies.append(0)
+    elif lang == 'fortran':
+        line += utils.get_array(lang, 0, twod=0) + ' = 0.0_wp'
+        sparse_indicies.append((1, 1))
+    elif lang == 'matlab':
+        line += utils.get_array(lang, 0, twod=0) + ' = 0.0'
+        sparse_indicies.append((1, 1))
+    touched[0] = True
+    line += utils.line_end[lang]
+    file.write(line)
+
+    ######################################
+    # Derivatives with respect to temperature
+    ######################################
+
+    for isp, sp in enumerate(specs):
+        write_dt_t_comment(file, lang, sp)
+        #write dcp/dT for this species
+        write_dcp_dt(file, lang, sp, isp, sparse_indicies)
+
+        ######################################
+        # Derivative with respect to species
+        ######################################
+        write_dt_y_comment(file, lang, sp)
+        write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset)
+
+        file.write('\n')
+
+    #next need to divide everything out
+    write_dt_y_division(file, lang, specs, num_s)
+
+    #finish the dT entry
+    write_dt_completion(file, lang, specs)
+
+    if lang in ['c', 'cuda']:
+        file.write('} // end eval_jacob\n\n')
+    elif lang == 'fortran':
+        file.write('end subroutine eval_jacob\n\n')
+    elif lang == 'matlab':
+        file.write('end\n\n')
+
+    file.close()
+
+    # remove any duplicates
+    sparse_indicies = list(set(sparse_indicies))
+    return sparse_indicies
+
+
 
 def write_jacobian(path, lang, specs, reacs):
     """Write Jacobian subroutine in desired language.
@@ -512,7 +2144,7 @@ def write_jacobian(path, lang, specs, reacs):
                 if lang in ['c', 'cuda']:
                     jline += ' += '
                 elif lang in ['fortran', 'matlab']:
-                    jline += ' = jac' + utils.get_array(lang, k_sp, twod=1)
+                    jline += ' = jac' + utils.get_array(lang, k_sp, twod=1) + ' + '
 
                 if nu != 1:
                     jline += '{} * '.format(float(nu))
@@ -2201,7 +3833,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
     aux.write_mechanism_initializers(build_path, lang, specs, reacs)
 
     # write Jacobian subroutine
-    sparse_indicies = write_jacobian(build_path, lang, specs, reacs)
+    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs)
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 

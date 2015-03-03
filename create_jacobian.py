@@ -882,7 +882,7 @@ def write_dt_y_division(file, lang, specs, num_s):
         file.write(line)
     file.write('\n')
 
-def write_dt_completion(file, lang, specs):
+def write_dt_completion(file, lang, specs, offset):
     if lang in ['c', 'cuda']:
         line = '  //'
     elif lang == 'fortran':
@@ -902,7 +902,7 @@ def write_dt_completion(file, lang, specs):
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += '    + '
-        line += 'dy' + utils.get_array(lang, k_sp + 1) + ' * {:.8e}'.format(sp_k.mw) + ' * '
+        line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
         line += '(h' + utils.get_array(lang, k_sp) + ' * (-1.0 + cp_avg * jac' + utils.get_array(lang, k_sp + 1) + ')'
         line += ' + cp_avg * cp' + utils.get_array(lang, k_sp) + ')'
         if k_sp != len(specs) - 1:
@@ -1267,7 +1267,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
 
     # if any reverse reactions, will need Kc
     if rev_reacs:
-        line = ('  Real Kc' +
+        line = ('  register Real Kc = 0.0' +
                 utils.line_end[lang]
                 )
         file.write(line)
@@ -1636,7 +1636,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
     write_dt_y_division(file, lang, specs, num_s)
 
     #finish the dT entry
-    write_dt_completion(file, lang, specs)
+    write_dt_completion(file, lang, specs, offset)
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_jacob\n\n')

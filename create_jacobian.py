@@ -1488,7 +1488,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
                     continue
 
                 if isFirst:
-                    jline = '  working_temp = '
+                    jline = '  working_temp = ('
                     file.write(jline)
 
                     #check if there is any species specific stuff we need to do
@@ -1497,7 +1497,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
                     
                     write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j)
 
-                    jline = ' * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
+                    jline = ') * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
                     jline += utils.line_end[lang]
                     file.write(jline)
 

@@ -230,15 +230,15 @@ def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind):
             if alphaij:
                 jline += '{} * '.format(float(alphaij))
             # default is 1.0
-            jline += 'rho * '
+            jline += 'rho'
     elif rxn.pdep and rxn.pdep_sp == sp_j.name:
         # NOTE: This Y array previously seems to be a bug, I can't find a reference to it anywhere else
         #      changing it to y
         jline += ' + (1.0 / y' + utils.get_array(lang, j_sp)
         jline += ')'
 
-
     if rxn.thd or rxn.pdep:
+        jline += ' * '
         if rxn.rev:
             jline += '(fwd_rates' + utils.get_array(lang, rind)
             jline += ' - rev_rates' + \
@@ -1406,6 +1406,8 @@ def write_jacobian_alt(path, lang, specs, reacs):
                 write_rxn_params_dt(file, rxn, rev=False)
 
                 write_db_dt(file, lang, specs, rxn)
+        else:
+            jline += ')'
 
         # print line for reaction
         file.write(jline + ') / rho' + utils.line_end[lang])
@@ -1495,8 +1497,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
                     
                     write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j)
 
-                    jline = ')'
-                    jline += ' * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
+                    jline = ' * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
                     jline += utils.line_end[lang]
                     file.write(jline)
 
@@ -1535,7 +1536,6 @@ def write_jacobian_alt(path, lang, specs, reacs):
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  Real h[{}];\n'.format(num_s))
         file.write('  eval_h(T, h);\n')
-        file.write(line)
     elif lang == 'fortran':
         file.write('  ! species enthalpies\n'
                    '  call eval_h(T, h)\n'

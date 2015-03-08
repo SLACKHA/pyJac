@@ -174,16 +174,16 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
 
     if rxn.rev and sp_j.name in rxn.prod:
         if not rxn.pdep and not rxn.thd and not sp_j.name in rxn.reac:
-            jline += ' - '
+            jline += ' + '
         elif sp_j.name in rxn.reac:
-            jline += ' - '
+            jline += ' + '
 
         nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
         if nu != -1:
             if nu == 1:
                 jline += '-'
             else:
-                jline += '{} * '.format(float(nu))
+                jline += '{} * '.format(float(-1 * nu))
 
 
         if not rxn.rev_par:
@@ -833,12 +833,12 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
         line += '\n'
     file.write(line)
 
-    line = '    j_temp'
+    line = '    working_temp'
 
     if lang in ['c', 'cuda']:
         line += ' += '
     elif lang in ['fortran', 'matlab']:
-        line += ' = j_temp'
+        line += ' = working_temp'
     line += 'y' + utils.get_array(lang, isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.lo[1]) +
@@ -854,12 +854,12 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
     elif lang in ['fortran', 'matlab']:
         file.write('  else\n')
 
-    line = '    j_temp'
+    line = '    working_temp'
 
     if lang in ['c', 'cuda']:
         line += ' += '
     elif lang in ['fortran', 'matlab']:
-        line += ' = j_temp + '
+        line += ' = working_temp + '
     line += 'y' + utils.get_array(lang, isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.hi[1]) +
@@ -895,6 +895,7 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offs
         if lang in ['c', 'cuda']:
             line += ('h' + utils.get_array(lang, isp) + ' * ('
                      'jac' + utils.get_array(lang, isp + 1 + (num_s + 1) * (k_sp + 1)) +
+                     ' * cp_avg * rho' +
                      ' - (cp' + utils.get_array(lang, k_sp) + ' * dy' +
                      utils.get_array(lang, isp + offset) +
                      ' * {:.8e}))'.format(sp.mw)
@@ -902,6 +903,7 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offs
         elif lang in ['fortran', 'matlab']:
             line += ('h' + utils.get_array(lang, isp) + ' * ('
                      'jac' + utils.get_array(lang, isp + 1, twod=k_sp + 1) +
+                     ' * cp_avg * rho' +
                      ' - (cp' + utils.get_array(lang, k_sp) + ' * dy' +
                      utils.get_array(lang, isp + offset)
                      )
@@ -948,18 +950,18 @@ def write_dt_completion(file, lang, specs, offset):
     elif lang in ['fortran', 'matlab']:
         line += 'jac' + utils.get_array(lang, 0, twod=0)
 
-    line += ' = ('
+    line += ' = -('
 
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += '    + '
-        line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
-        line += '(h' + utils.get_array(lang, k_sp) + ' * (-1.0 + cp_avg * jac' + utils.get_array(lang, k_sp + 1) + ')'
-        line += ' + cp_avg * cp' + utils.get_array(lang, k_sp) + ')'
+        line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * ('
+        line += '(-working_temp * h' + utils.get_array(lang, k_sp) + ' / (cp_avg) + ' + 'cp' + utils.get_array(lang, k_sp) + ')'
+        line += ' + jac' + utils.get_array(lang, k_sp) + ' * h' + utils.get_array(lang, k_sp) + ' * rho)'
         if k_sp != len(specs) - 1:
             line += '\n'
 
-    line += ') / (rho * cp_avg * cp_avg)'
+    line += ') / (rho * cp_avg)'
     line += utils.line_end[lang]
     file.write(line)
 

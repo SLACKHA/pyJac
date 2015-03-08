@@ -3910,10 +3910,11 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
         if any(r.pdep or r.thd for r in reacs):
             pdep_score = cache.pdep_rates_score(specs, reacs, pool_size)
 
-        spec_order = cache.greedy_optimizer(spec_score)
-        rxn_order = cache.greedy_optimizer(rxn_score)
+        spec_order = cache.greedy_optimizer(spec_score, [(range(len(specs)), range(len(reacs)))])
+        rxn_order = cache.greedy_optimizer(rxn_score, [(range(len(specs)), range(len(reacs)))])
         if any(r.pdep or r.thd for r in reacs):
-            pdep_order = cache.greedy_optimizer(pdep_score)
+            pdep_order = cache.greedy_optimizer(pdep_score,  [(range(len(specs)), [x for x in range(len(reacs)) \
+                                                                                   if reacs[x].pdep or reacs[x].thd])])
         else:
             pdep_order = None
 
@@ -3921,7 +3922,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
         spec_order = [(range(len(specs)), range(len(reacs)))]
         rxn_order = [(range(len(specs)), range(len(reacs)))]
         if any(r.pdep or r.thd for r in reacs): 
-            pdep_order = [(range(len(specs)), range(len(reacs)))]
+            pdep_order = [(range(len(specs)), [x for x in range(len(reacs)) if x.pdep or x.thd])]
         else:
             pdep_order = None
     

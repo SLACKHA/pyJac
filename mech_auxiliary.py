@@ -419,7 +419,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                    '        Xi[j] /= Xsum;\n'
                    '    }\n\n'
                    '    //convert to mass fractions\n'
-                   '    double Yi[NSP];\n'
+                   '    double Yi[NSP] = {0.0};\n'
                    '    mole2mass(Xi, Yi);\n\n'
                    '    //set initial pressure, units [dyn/cm^2]\n'
                    '    double P = 1.01325e6;\n'
@@ -552,23 +552,23 @@ def write_mechanism_initializers(path, lang, specs, reacs):
         if lang != 'cuda':
             file.write('void write_jacobian_and_rates_output() {\n'
                        '    //set mass fractions to unity to turn on all reactions\n'
-                       '    double y_host[NN];\n'
+                       '    double y_host[NN] = {0.0};\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
                        '        y_host[i] = 1.0 / ((double)NSP);\n'
                        '    }\n'
-                       '    double conc_host[NSP];\n'
+                       '    double conc_host[NSP] = {0.0};\n'
                        )
             if have_rev_rxns:
-                file.write('    double fwd_rates_host[FWD_RATES];\n'
-                           '    double rev_rates_host[REV_RATES];\n')
+                file.write('    double fwd_rates_host[FWD_RATES] = {0.0};\n'
+                           '    double rev_rates_host[REV_RATES] = {0.0};\n')
             else:
-                file.write('    double rates_host[RATES];\n')
+                file.write('    double rates_host[RATES] = {0.0};\n')
             if have_pdep_rxns:
-                file.write('    double pres_mod_host[PRES_MOD_RATES];\n')
+                file.write('    double pres_mod_host[PRES_MOD_RATES] = {0.0};\n')
 
-            file.write('    double spec_rates_host[NSP];\n'
-                       '    double dy_host[NN];\n'
-                       '    double jacob_host[NN * NN];\n'
+            file.write('    double spec_rates_host[NSP] = {0.0};\n'
+                       '    double dy_host[NN] = {0.0};\n'
+                       '    double jacob_host[NN * NN] = {0.0};\n'
                        '    //evaluate and write rates for various conditions\n'
                        '    FILE* fp = fopen ("rates_data.txt", "w");\n'
                        )
@@ -606,7 +606,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                           )
             file.write(
                        '    //set mass fractions to unity to turn on all reactions\n'
-                       '    double y_host[NN];\n'
+                       '    double y_host[NN] = {0.0};\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
                        '        y_host[i] = 1.0 / ((double)NSP);\n'
                        '    }\n'
@@ -620,7 +620,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                        '    double* pres_host_full = (double*)malloc(padded * sizeof(double));\n'
                        '#elif CONV\n'
                        '    double* rho_host_full = (double*)malloc(padded * sizeof(double));\n'
-                       '    double Xi[NSP];\n'
+                       '    double Xi[NSP] = {0.0};\n'
                        '    mass2mole(&y_host[1], Xi);\n'
                        '#endif\n'
                        '    double conc_host[NSP];\n'
@@ -630,19 +630,19 @@ def write_mechanism_initializers(path, lang, specs, reacs):
             if have_rev_rxns:
                 file.write('    double* fwd_rates_host_full = (double*)malloc(padded * FWD_RATES * sizeof(double));\n'
                            '    double* rev_rates_host_full = (double*)malloc(padded * REV_RATES * sizeof(double));\n'
-                           '    double fwd_rates_host[FWD_RATES];\n'
-                           '    double rev_rates_host[REV_RATES];\n'
+                           '    double fwd_rates_host[FWD_RATES] = {0.0};\n'
+                           '    double rev_rates_host[REV_RATES] = {0.0};\n'
                            )
             else:
                 file.write('    double* rates_host_full = (double*)malloc(padded * RATES * sizeof(double));\n'
-                           '    double rates_host[RATES];\n')
+                           '    double rates_host[RATES] = {0.0};\n')
             if have_pdep_rxns:
                 file.write('    double* pres_mod_host_full = (double*)malloc(padded * PRES_MOD_RATES * sizeof(double));\n'
-                           '    double pres_mod_host[PRES_MOD_RATES];\n')
+                           '    double pres_mod_host[PRES_MOD_RATES] = {0.0};\n')
 
-            file.write('    double spec_rates_host[NSP];\n'
-                       '    double dy_host[NN];\n'
-                       '    double jacob_host[NN * NN];\n'
+            file.write('    double spec_rates_host[NSP] = {0.0};\n'
+                       '    double dy_host[NN] = {0.0};\n'
+                       '    double jacob_host[NN * NN] = {0.0};\n'
                        '    double* spec_rates_host_full = (double*)malloc(padded * NSP * sizeof(double));\n'
                        '    double* dy_host_full = (double*)malloc(padded * NN * sizeof(double));\n'
                        '    double* jacob_host_full = (double*)malloc(padded * NN * NN * sizeof(double));\n'

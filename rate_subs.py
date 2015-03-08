@@ -1163,7 +1163,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
             # done with this species
             line += utils.line_end[lang] + '\n'
             file.write(line)
-    
+    for i, seen_sp in enumerate(seen):
+        if not seen_sp:
+            file.write('  sp_rates' + utils.get_array(lang, i + offset) + ' = 0.0' + utils.line_end[lang])
+
     if lang in ['c', 'cuda']:
         file.write('} // end eval_spec_rates\n\n')
     elif lang == 'fortran':

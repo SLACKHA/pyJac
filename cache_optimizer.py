@@ -274,7 +274,7 @@ class pdep_rates_score(reaction_rates_score):
         self.baseline_loads = sum(len(rxn.thd_body) for rxn in reacs)
         self.baseline_stores = len(reacs)
 
-def greedy_optimizer(scorer):
+def greedy_optimizer(scorer, default):
     """
     A method that attempts to optimize cache hit rates via a greedy selection algorithm 
     to choose sets of species / reactions that can be reused in calculation
@@ -284,7 +284,7 @@ def greedy_optimizer(scorer):
     return_list = []
 
     if scorer.to_go() < pool_size:
-        return [(range(len(scorer.s_to_r)), range(len(scorer.s_to_r)))]
+        return default
 
     rxn_list = []
     max_sp, dummy = max(enumerate(scorer.s_to_r), key=lambda x: len(x[1]))

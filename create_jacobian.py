@@ -68,23 +68,14 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind):
     file.write(jline + utils.line_end[lang])
 
 def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind):
-    file.write('  pdep_temp = ')
     jline = ''
     if rxn.thd and not rxn.pdep:
-        jline += '(-mw_avg * pres_mod' + \
-                        utils.get_array(lang, pind)
-        jline += ') * '
-        
-        if rxn.rev:
-            jline += '(fwd_rates' + utils.get_array(lang, rind)
-            jline += ' - rev_rates' + \
-                utils.get_array(lang, rev_reacs.index(rxn))
-            jline += ')'
-        else:
-            jline += 'fwd_rates' + utils.get_array(lang, rind)
-
+        jline = '  thd_temp = '
+        jline += '(-mw_avg * pres_mod' + utils.get_array(lang, pind) + ' + rho'
+        jline += ') * '     
     else:
         beta_0minf, E_0minf, k0kinf = get_infs(rxn)
+        file.write('  pres_mod_temp = ')
         jline += 'pres_mod' + utils.get_array(lang, pind)
         jline += ' * ('
 
@@ -114,8 +105,19 @@ def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind):
                       )
 
         jline += ')'
+        file.write(jline + utils.line_end[lang])
+        jline = '  thd_temp = pres_mod_temp * (-mw_avg + (rho / conc_temp)) * '
+
+    if rxn.rev:
+        jline += '(fwd_rates' + utils.get_array(lang, rind)
+        jline += ' - rev_rates' + \
+            utils.get_array(lang, rev_reacs.index(rxn))
+        jline += ')'
+    else:
+        jline += 'fwd_rates' + utils.get_array(lang, rind)
 
     file.write(jline + utils.line_end[lang])
+
 
 def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
     jline = ''
@@ -129,6 +131,12 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
     if sp_j.name in rxn.reac:
         if not rxn.pdep and not rxn.thd:
             jline += ' + '
+        nu = rxn.reac_nu[rxn.reac.index(sp_j.name)]
+        if nu != 1:
+            if nu == -1:
+                jline += '-'
+            else:
+                jline += '{} * '.format(float(nu))
         jline += (rate.rxn_rate_const(rxn.A, rxn.b,
                                       rxn.E
                                       ) +
@@ -166,9 +174,17 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
 
     if rxn.rev and sp_j.name in rxn.prod:
         if not rxn.pdep and not rxn.thd and not sp_j.name in rxn.reac:
-            jline += ' + '
+            jline += ' - '
         elif sp_j.name in rxn.reac:
-            jline += ' + '
+            jline += ' - '
+
+        nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
+        if nu != -1:
+            if nu == 1:
+                jline += '-'
+            else:
+                jline += '{} * '.format(float(nu))
+
 
         if not rxn.rev_par:
             jline += ('(' +
@@ -220,24 +236,41 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
     file.write(jline)
 
 def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind):
-    jline = 'pdep_temp'
-    if rxn.thd_body:
+    jline = 'thd_temp'
+    mult = False
+    if rxn.thd_body and not rxn.pdep:
         #check alphaij
         alphaij = next((thd[1] for thd in rxn.thd_body
                         if thd[0] == sp_j.name), None)
-        if alphaij != 0.0:
+        if alphaij is not None and alphaij != 1.0:
+            #we already baked the implicit one into there
             jline += ' + '
-            if alphaij:
-                jline += '{} * '.format(float(alphaij))
+            jline += '{} * '.format(float(alphaij - 1.0))
+            # default is 1.0
+            jline += 'rho'
+            mult = True
+            
+    elif rxn.pdep and not rxn.pdep_sp:
+        #check alphaij
+        alphaij = next((thd[1] for thd in rxn.thd_body
+                        if thd[0] == sp_j.name), None)
+        if alphaij is not None and alphaij != 1.0:
+            #thd_temp needs to be multiplied still
+            jline += ' + ('
+            jline += 'pres_mod_temp * '
+            jline += '{} * '.format(float(alphaij - 1.0))
             # default is 1.0
             jline += '(rho / conc_temp)'
+            mult = True
+            jline += ')'
+
     elif rxn.pdep and rxn.pdep_sp == sp_j.name:
         # NOTE: This Y array previously seems to be a bug, I can't find a reference to it anywhere else
         #      changing it to y
         jline += ' + (1.0 / y' + utils.get_array(lang, j_sp)
         jline += ')'
 
-    if rxn.thd_body or (rxn.pdep and rxn.pdep_sp == sp_j.name):
+    if mult:
         jline += ' * '
         if rxn.rev:
             jline += '(fwd_rates' + utils.get_array(lang, rind)
@@ -1275,7 +1308,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
         line += 'Real '
     elif lang == 'cuda':
         line += 'register Real '
-    line += '  j_temp = 0.0' + utils.line_end[lang]
+    line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
     line = '  '
@@ -1283,7 +1316,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
         line += 'Real '
     elif lang == 'cuda':
         line += 'register Real '
-    line += '  pdep_temp = 0.0' + utils.line_end[lang]
+    line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
     line = '  '
@@ -1291,14 +1324,25 @@ def write_jacobian_alt(path, lang, specs, reacs):
         line += 'Real '
     elif lang == 'cuda':
         line += 'register Real '
-    line += '  working_temp = 0.0' + utils.line_end[lang]
+    line += 'thd_temp = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += 'working_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
     # if any reverse reactions, will need Kc
     if rev_reacs:
-        line = ('  register Real Kc = 0.0' +
-                utils.line_end[lang]
-                )
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'Kc = 0.0' + utils.line_end[lang]
         file.write(line)
 
     # pressure-dependence variables
@@ -1308,15 +1352,15 @@ def write_jacobian_alt(path, lang, specs, reacs):
             line += 'Real '
         elif lang == 'cuda':
             line += 'register Real '
-        line += 'Pr' + utils.line_end[lang]
+        line += 'Pr = 0.0' + utils.line_end[lang]
         file.write(line)
 
     if any(rxn.troe for rxn in reacs):
-        line = '  Real Fcent, A, B, lnF_AB' + utils.line_end[lang]
+        line = ''.join(['  Real {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
         file.write(line)
 
     if any(rxn.sri for rxn in reacs):
-        line = '  Real X' + utils.line_end[lang]
+        line = '  Real X = 0.0' + utils.line_end[lang]
         file.write(line)
 
     # variables for equilibrium constant derivatives, if needed
@@ -1348,6 +1392,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
 
         #first we need any pres mod terms
         jline = ''
+        pind = None
         if rxn.pdep:
             pind = pdep_reacs.index(rind)
             write_pr(file, lang, specs, reacs, pdep_reacs, rxn)
@@ -1409,7 +1454,6 @@ def write_jacobian_alt(path, lang, specs, reacs):
             nu += rxn.reac_nu[rxn.reac.index(sp)]
         jline += '{})'.format(float(nu))
 
-
         # contribution from temperature derivative of reaction rates
         if rxn.rev:
             # reversible reaction
@@ -1433,7 +1477,15 @@ def write_jacobian_alt(path, lang, specs, reacs):
             else:
                 write_rxn_params_dt(file, rxn, rev=False)
 
+                nu = 0
+                # loop over products
+                for sp in rxn.prod:
+                    nu += rxn.prod_nu[rxn.prod.index(sp)]
+                jline += '{} - T * ('.format(float(nu))
+                file.write(jline)
+                jline = ''
                 write_db_dt(file, lang, specs, rxn)
+                file.write(')')
         else:
             jline += ')'
 
@@ -1521,7 +1573,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
                     
                     write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j)
 
-                    jline = ') * {:.8e}'.format(1.0 / sp_j.mw)
+                    jline = ') * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
                     jline += utils.line_end[lang]
                     file.write(jline)
 

@@ -957,7 +957,7 @@ def write_dt_completion(file, lang, specs, offset):
             line += '    + '
         line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
         line += '(-working_temp * h' + utils.get_array(lang, k_sp) + ' / cp_avg + ' + 'cp' + utils.get_array(lang, k_sp) + ')'
-        line += ' + jac' + utils.get_array(lang, k_sp) + ' * h' + utils.get_array(lang, k_sp) + ' * rho'
+        line += ' + jac' + utils.get_array(lang, k_sp + 1) + ' * h' + utils.get_array(lang, k_sp) + ' * rho'
         if k_sp != len(specs) - 1:
             line += '\n'
 

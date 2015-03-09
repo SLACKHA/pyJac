@@ -860,6 +860,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                            '#else\n'
                            '    cudaErrorCheck(cudaFree(rho_device));\n'
                            '#endif\n'
+                           '    return padded;\n'
                            '}\n'
                            )
 

@@ -836,9 +836,9 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
     line = '    working_temp'
 
     if lang in ['c', 'cuda']:
-        line += ' += '
+        line += ' {}= '.format('+' if isp > 0 else '')
     elif lang in ['fortran', 'matlab']:
-        line += ' = working_temp'
+        line += ' = {}'.format('working_temp' if isp > 0 else '')
     line += 'y' + utils.get_array(lang, isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.lo[1]) +
@@ -857,9 +857,9 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
     line = '    working_temp'
 
     if lang in ['c', 'cuda']:
-        line += ' += '
+        line += ' {}= '.format('+' if isp > 0 else '')
     elif lang in ['fortran', 'matlab']:
-        line += ' = working_temp + '
+        line += ' = {}'.format('working_temp' if isp > 0 else '')
     line += 'y' + utils.get_array(lang, isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.hi[1]) +
@@ -955,9 +955,9 @@ def write_dt_completion(file, lang, specs, offset):
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += '    + '
-        line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * ('
-        line += '(-working_temp * h' + utils.get_array(lang, k_sp) + ' / (cp_avg) + ' + 'cp' + utils.get_array(lang, k_sp) + ')'
-        line += ' + jac' + utils.get_array(lang, k_sp) + ' * h' + utils.get_array(lang, k_sp) + ' * rho)'
+        line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
+        line += '(-working_temp * h' + utils.get_array(lang, k_sp) + ' / cp_avg + ' + 'cp' + utils.get_array(lang, k_sp) + ')'
+        line += ' + jac' + utils.get_array(lang, k_sp) + ' * h' + utils.get_array(lang, k_sp) + ' * rho'
         if k_sp != len(specs) - 1:
             line += '\n'
 
@@ -1575,7 +1575,7 @@ def write_jacobian_alt(path, lang, specs, reacs):
                     
                     write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j)
 
-                    jline = ') * {:.8e}'.format(round(1.0 / sp_j.mw, 8))
+                    jline = ') / {:.8e}'.format(sp_j.mw)
                     jline += utils.line_end[lang]
                     file.write(jline)
 

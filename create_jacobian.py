@@ -3824,7 +3824,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_moles = ""):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -3839,6 +3839,9 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
     optimize_cache : bool, optional
         If true, use the greedy optimizer to attempt to 
         improve cache hit rates
+    initial_moles : str, optional
+        A comma separated list of moles to use (e.g. H2=1.0,O2=0.5) 
+        as initial conditions
 
     Returns
     -------
@@ -3951,7 +3954,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True):
     rate.write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles)
 
     # write Jacobian subroutine
     sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs)
@@ -3985,7 +3988,12 @@ if __name__ == "__main__":
                         default = True,
                         help = 'Attempt to optimize cache store/loading via use '
                         'of a greedy selection algorithm.')
+    parser.add_argument('-x', '--initial-moles',
+                        type=str,
+                        dest='initial_moles',
+                        required=False,
+                        help = 'A comma separated list of initial moles to set in the set_same_initial_conditions method.')
 
     args = parser.parse_args()
 
-    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer)
+    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles)

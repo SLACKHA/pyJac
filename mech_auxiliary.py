@@ -414,7 +414,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
 
 
-def write_mechanism_initializers(path, lang, specs, reacs):
+def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
@@ -546,22 +546,43 @@ def write_mechanism_initializers(path, lang, specs, reacs):
                 # do cuda mem init and copying
                 file.write(
                     '#ifdef CONP\n'
-                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_pres);\n'
+                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, d_y, d_pres);\n'
                     '#elif CONV\n'
-                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_rho);\n'
+                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, d_y, d_rho);\n'
                     '#endif\n'
                     )
         else:
             file.write('    int padded = NUM;\n')
-        file.write('    y_host = (double*)malloc(NN * padded * sizeof(double));\n'
-                   '    pres_host = (double*)malloc(padded * sizeof(double));\n'
-                   '#ifdef CONV\n'
-                   '    rho_host = (double*)malloc(padded * sizeof(double));\n'
-                   '#endif\n'
-                   '    double Xi [NSP] = {0.0};\n'
+        file.write('    double Xi [NSP] = {0.0};\n'
                    '    //set initial mole fractions here\n\n'
                    '    //Normalize mole fractions to sum to one\n'
                    '    double Xsum = 0.0;\n'
+                   )
+        mole_list = []
+        if initial_moles != "":
+            try:
+                mole_list = [x.strip() for x in initial_moles.split(",")]
+            except:
+                print("Error in initial mole list, not comma separated")
+                sys.exit(1)
+            try:
+                mole_list = [x.split("=") for x in mole_list]
+            except:
+                print("Error in initial mole list, initial moles do not follow SPECIES_NAME=VALUE format")
+                sys.exit(1)
+            try:
+                mole_list = [(split[0], float(split[1])) for split in mole_list]
+            except:
+                print("Unknown (non-float) value found as initial mole number in list")
+                sys.exit(1)
+            try:
+                mole_list = [(next(i for i, spec in enumerate(specs) if spec.name == split[0]), split[1]) for split in mole_list]
+            except:
+                print("Unknown species in initial mole list")
+                sys.exit(1)
+        for x in mole_list:
+            file.write('    Xi[{}] = {}'.format(x[0], x[1]) + utils.line_end[lang])
+        file.write(
                    '    for (int j = 0; j < NSP; ++ j) {\n'
                    '        Xsum += Xi[j];\n'
                    '    }\n'

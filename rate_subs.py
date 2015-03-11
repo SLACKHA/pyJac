@@ -2185,7 +2185,7 @@ def write_mass_mole(path, lang, specs):
     return
 
 
-def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False):
+def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False, initial_moles = ""):
     """Create rate subroutines from mechanism.
     
     Parameters
@@ -2311,7 +2311,7 @@ def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False):
     write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles)
     
     return
 
@@ -2347,8 +2347,13 @@ if __name__ == "__main__":
                         default = True,
                         help = 'Attempt to optimize cache store/loading via use '
                         'of a greedy selection algorithm.')
-    
+    parser.add_argument('-x', '--initial-moles',
+                    type=str,
+                    dest='initial_moles',
+                    required=False,
+                    help = 'A comma separated list of initial moles to set in the set_same_initial_conditions method.')
+
     args = parser.parse_args()
     
-    create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer)
+    create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles)
 

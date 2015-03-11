@@ -461,15 +461,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
             file.write('#ifdef __cplusplus\n'
                        'extern "C" {\n'
                        '#endif\n')
-
         file.write('    //Must be implemented by user on a per mechanism basis in mechanism.c\n'
-                   '    #ifdef CONP\n'
-                   '    {} set_same_initial_conditions(int NUM,{} double** y_host, double** pres_host);\n'
-                   .format('int' if lang == 'cuda' else 'void', ' int block_size, int grid_size, ' if lang == 'cuda' else '') +
-                   '    #elif CONV\n'
-                   '    {} set_same_initial_conditions(int NUM,{} double** y_host, double** rho_host);\n'
-                   .format('int' if lang == 'cuda' else 'void', ' int block_size, int grid_size, ' if lang == 'cuda' else '') +
-                   '    #endif\n'
+               '    {} set_same_initial_conditions(int NUM,{} double**, double**);\n'.format(
+                    'int' if lang == 'cuda' else 'void', ' int, int, double**, double**, ' if lang == 'cuda' else '')
                    )
         file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
         if lang == 'c':
@@ -520,7 +514,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                 needed_arr_conv = [
                     'double** ' + a + '_host' for a in needed_arr_conv]
             else:
-                needed_arr = [['double** ' + a + '_host', 'double* d_' + a]
+                needed_arr = [['double** ' + a + '_host', 'double** d_' + a]
                               for a in needed_arr]
                 needed_arr = [a for a in itertools.chain(*needed_arr)]
                 needed_arr_conv = [

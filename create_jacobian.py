@@ -3753,7 +3753,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     filename = 'sparse_multiplier' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
-    file.write('#include "sparse_multiplier.h"\n\n')
+    file.write('#include "sparse_multiplier.{}h"\n\n'.format('cu' if lang == 'cuda' else ''))
 
     if lang == 'cuda':
         file.write('__device__\n')

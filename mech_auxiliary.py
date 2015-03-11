@@ -23,7 +23,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         if have_rev_rxns:
             file.write('#ifdef PROFILER\n'
                        '__global__ void k_eval_rxn_rates(const double T) {\n'
-                       '    double conc_local[NSP] = {[0 ... NSP] = 1.0};\n'
+                       '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double fwd_rates_local[FWD_RATES];\n'
                        '    double rev_rates_local[REV_RATES];\n'
                        '    eval_rxn_rates(T, conc_local, fwd_rates_local, rev_rates_local);\n'
@@ -51,7 +51,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         else:
             file.write('#ifdef PROFILER\n'
                        '__global__ void k_eval_rxn_rates(const double T) {\n'
-                       '    double conc_local[NSP] = {[0 ... NSP] = 1.0};\n'
+                       '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double rates_local[RATES];\n'
                        '    eval_rxn_rates(T, conc_local, rates_local);\n'
                        '}\n'
@@ -74,7 +74,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         if have_pdep_rxns:
             file.write('#ifdef PROFILER\n'
                        '__global__ void k_get_rxn_pres_mod(const double T, const double P) {\n'
-                       '    double conc_local[NSP] = {[0 ... NSP] = 1.0};\n'
+                       '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double pres_mod_local[PRES_MOD_RATES];\n'
                        '    get_rxn_pres_mod(T, P, conc_local, pres_mod_local);\n'
                        '}\n'
@@ -98,13 +98,13 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '__global__ void k_eval_spec_rates() {\n'
                    )
         if have_rev_rxns:
-            file.write('    double fwd_rates_local[FWD_RATES] = {[0 ... FWD_RATES] = 1.0};\n'
-                       '    double rev_rates_local[REV_RATES] = {[0 ... REV_RATES] = 1.0};\n'
+            file.write('    double fwd_rates_local[FWD_RATES] = {[0 ... FWD_RATES - 1] = 1.0};\n'
+                       '    double rev_rates_local[REV_RATES] = {[0 ... REV_RATES - 1] = 1.0};\n'
                        )
         else:
-            file.write('    double rates_local[RATES] = {[0 ... RATES] = 1.0};\n')
+            file.write('    double rates_local[RATES] = {[0 ... RATES - 1] = 1.0};\n')
         if have_pdep_rxns:
-            file.write('    double pres_mod_local[PRES_MOD_RATES] = {[0 ... PRES_MOD_RATES] = 1.0};\n' if have_pdep_rxns else '')
+            file.write('    double pres_mod_local[PRES_MOD_RATES] = {[0 ... PRES_MOD_RATES - 1] = 1.0};\n' if have_pdep_rxns else '')
         file.write(
                    '    double dy_local[NN];\n'
                    '    eval_spec_rates('
@@ -173,7 +173,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         file.write('#endif\n')
         file.write('#ifdef PROFILER\n'
                    '__global__ void k_eval_dy(const double T, const double P) {\n'
-                   '    double y_local[NN] = {T, [1 ... NN] = 1.0 / NN};\n'
+                   '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
                    '    double dy_local[NN];\n'
                    '    dydt(T, P, y_local, dy_local);\n'
                    '}\n'
@@ -195,19 +195,19 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    )
         file.write('#ifdef PROFILER\n'
                    '__global__ void k_eval_jacob(const double T, const double P) {\n'
-                   '    double y_local[NN] = {T, [1 ... NN] = 1.0 / NN};\n'
+                   '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
                    '    double jac_local[NN * NN];\n'
                    '    eval_jacob(0, P, y_local, jac_local);\n'
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void k_eval_jacob(const int NUM, const double t, const double P, double* y, double* jac) {\n'
                    '    double y_local[NN];\n'
-                   '    double jac_local[NN * NN];\n'
+                   '    double jac_local[NN * NN] = {0.0};\n'
                    '    //copy in\n'
                    '    for (int i = 0; i < NN; i++) {\n'
                    '        y_local[i] = y[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
                    '    }\n'
-                   '    eval_jacob(t, P, y_local, jac_local);\n'
+                   '    eval_jacob(0, P, y_local, jac_local);\n'
                    '    for (int i = 0; i < NN * NN; i++) {\n'
                    '        jac[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = jac_local[i];\n'
                    '    }\n'
@@ -291,7 +291,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
-                   '    k_eval_rxn_rates<<<grid_size, block_size>({});\n'.format(T) + 
+                   '    k_eval_rxn_rates<<<grid_size, block_size>>>({});\n'.format(T) + 
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
                    '    k_eval_rxn_rates<<<grid_size, block_size>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}fwd_rates, {0}rev_rates'.format(descriptor) if not CUDAParams.is_global() else '')

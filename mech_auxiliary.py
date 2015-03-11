@@ -464,10 +464,10 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
 
         file.write('    //Must be implemented by user on a per mechanism basis in mechanism.c\n'
                    '    #ifdef CONP\n'
-                   '    {} set_same_initial_conditions(int NUM,{} double* y_host, double* pres_host);\n'
+                   '    {} set_same_initial_conditions(int NUM,{} double** y_host, double** pres_host);\n'
                    .format('int' if lang == 'cuda' else 'void', ' int block_size, int grid_size, ' if lang == 'cuda' else '') +
                    '    #elif CONV\n'
-                   '    {} set_same_initial_conditions(int NUM,{} double* y_host, double* pres_host, double* rho_host);\n'
+                   '    {} set_same_initial_conditions(int NUM,{} double** y_host, double** rho_host);\n'
                    .format('int' if lang == 'cuda' else 'void', ' int block_size, int grid_size, ' if lang == 'cuda' else '') +
                    '    #endif\n'
                    )
@@ -516,19 +516,19 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
         needed_arr_conv = ['y', 'rho']
         if lang == 'cuda':
             if CUDAParams.is_global():
-                needed_arr = ['double* ' + a + '_host' for a in needed_arr]
+                needed_arr = ['double** ' + a + '_host' for a in needed_arr]
                 needed_arr_conv = [
-                    'double* ' + a + '_host' for a in needed_arr_conv]
+                    'double** ' + a + '_host' for a in needed_arr_conv]
             else:
-                needed_arr = [['double* ' + a + '_host', 'double* d_' + a]
+                needed_arr = [['double** ' + a + '_host', 'double* d_' + a]
                               for a in needed_arr]
                 needed_arr = [a for a in itertools.chain(*needed_arr)]
                 needed_arr_conv = [
-                    ['double* ' + a + '_host', 'double* d_' + a] for a in needed_arr_conv]
+                    ['double** ' + a + '_host', 'double** d_' + a] for a in needed_arr_conv]
                 needed_arr_conv = [a for a in itertools.chain(*needed_arr_conv)]
         else:
-            needed_arr = ['double* ' + a + '_host' for a in needed_arr]
-            needed_arr_conv = ['double* ' + a + '_host' for a in needed_arr_conv]
+            needed_arr = ['double** ' + a + '_host' for a in needed_arr]
+            needed_arr_conv = ['double** ' + a + '_host' for a in needed_arr_conv]
         file.write('#ifdef CONP\n'
                    '{} set_same_initial_conditions(int NUM{}, {}) \n'.format('int' if lang == 'cuda' else 'void',
                                                                              ', int block_size, int grid_size' if lang == 'cuda' else '', ', '.join(needed_arr)) +
@@ -600,37 +600,46 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                    '    double P = 1.01325e6;\n'
                    '    // set intial temperature, units [K]\n'
                    '    double T0 = 1600;\n\n'
+                   '    *y_host = (double*)malloc(padded * NN * sizeof(double));\n'
+                   '#ifdef CONP\n'
+                   '    *pres_host = (double*)malloc(padded * sizeof(double));\n'
+                   '#elif defined(CONV)\n'
+                   '    *rho_host = (double*)malloc(padded * sizeof(double));\n'
+                   '#endif\n'
                    '    //load temperature and mass fractions for all threads (cells)\n'
                    '    for (int i = 0; i < padded; ++i) {\n'
-                   '        y_host[i] = T0;\n'
+                   '        (*y_host)[i] = T0;\n'
                    '        //loop through species\n'
                    '        for (int j = 1; j < NN; ++j) {\n'
-                   '            y_host[i + NUM * j] = Yi[j - 1];\n'
+                   '            (*y_host)[i + NUM * j] = Yi[j - 1];\n'
                    '        }\n'
                    '    }\n\n'
                    '#ifdef CONV\n'
                    '    //calculate density\n'
-                   '    double rho = getDensity(T0, pres, Xi);\n'
+                   '    double rho = getDensity(T0, P, Xi);\n'
                    '#endif\n\n'
                    '    for (int i = 0; i < padded; ++i) {\n'
                    '#ifdef CONV\n'
-                   '        rho_host[i] = rho;\n'
+                   '        (*rho_host)[i] = rho;\n'
+                   '#elif defined(CONP)\n'
+                   '        (*pres_host)[i] = P;\n'
                    '#endif\n'
-                   '        pres_host[i] = P;\n'
                    '    }\n'
                    )
         if lang == 'cuda':  # copy memory over
             if CUDAParams.is_global():
-                file.write('    cudaMemcpy(host_memory->y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
-                           '    cudaMemcpy(host_memory->pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
-                           '#ifdef CONV\n'
-                           '    cudaMemcpy(host_memory->rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n' 
+                file.write('    cudaErrorCheck(cudaMemcpy(host_memory->y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
+                           '#ifdef CONP\n'
+                           '    cudaErrorCheck(cudaMemcpy(host_memory->pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
+                           '#elif CONV\n'
+                           '    cudaErrorCheck(cudaMemcpy(host_memory->rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n' 
                            '#endif\n')
             else:
-                file.write('    cudaMemcpy(d_y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice);\n'
-                           '    cudaMemcpy(d_pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
-                           '#ifdef CONV\n'
-                           '    cudaMemcpy(d_rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice);\n'
+                file.write('    cudaErrorCheck(cudaMemcpy(d_y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
+                           '#ifdef CONP\n'
+                           '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
+                           '#elif CONV\n'
+                           '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
                            '#endif\n')
             file.write('    return padded;\n')
 

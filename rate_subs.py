@@ -2350,6 +2350,7 @@ if __name__ == "__main__":
     parser.add_argument('-x', '--initial-moles',
                     type=str,
                     dest='initial_moles',
+                    default = '',
                     required=False,
                     help = 'A comma separated list of initial moles to set in the set_same_initial_conditions method.')
 

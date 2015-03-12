@@ -629,11 +629,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                            '    cudaErrorCheck(cudaMemcpy(host_memory->rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n' 
                            '#endif\n')
             else:
-                file.write('    cudaErrorCheck(cudaMemcpy(d_y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
+                file.write('    cudaErrorCheck(cudaMemcpy(*d_y, *y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
                            '#ifdef CONP\n'
-                           '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
+                           '    cudaErrorCheck(cudaMemcpy(*d_pres, *pres_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
                            '#elif CONV\n'
-                           '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
+                           '    cudaErrorCheck(cudaMemcpy(*d_rho, *rho_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
                            '#endif\n')
             file.write('    return padded;\n')
 

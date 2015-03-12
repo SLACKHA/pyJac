@@ -12,6 +12,405 @@ import math
 import chem_utilities as chem
 import utils
 
+def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
+    """
+    Writes kernels that simply act as shells to call the various reaction/species/jacobian
+    """
+    if not CUDAParams.is_global():
+        if have_rev_rxns:
+            file.write('#ifdef PROFILER\n'
+                       '__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
+                       '    double fwd_rates_local[FWD_RATES];\n'
+                       '    double rev_rates_local[REV_RATES];\n'
+                       '    eval_rxn_rates(T, conc_local, fwd_rates_local, rev_rates_local);\n'
+                       '}\n'
+                       '#elif RATES_TEST\n'
+                       '__global__ void k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
+                       '    double conc_local[NSP];\n'
+                       '    double fwd_rates_local[FWD_RATES];\n'
+                       '    double rev_rates_local[REV_RATES];\n'
+                       '    //copy in\n'
+                       '    for (int i = 0; i < NSP; i++) {\n'
+                       '        conc_local[i] = conc[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                       '    eval_rxn_rates(T, conc_local, fwd_rates_local, rev_rates_local);\n'
+                       '    //copy back\n'
+                       '    for (int i = 0; i < FWD_RATES; i++) {\n'
+                       '        fwd_rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = fwd_rates_local[i];\n'
+                       '    }\n'
+                       '    for (int i = 0; i < REV_RATES; i++) {\n'
+                       '        rev_rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = rev_rates_local[i];\n'
+                       '    }\n'
+                       '}\n'
+                       '#endif\n'
+                       )
+        else:
+            file.write('#ifdef PROFILER\n'
+                       '__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
+                       '    double rates_local[RATES];\n'
+                       '    eval_rxn_rates(T, conc_local, rates_local);\n'
+                       '}\n'
+                       '#elif RATES_TEST\n'
+                       '__global__ void k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* rates) {\n'
+                       '    double conc_local[NSP];\n'
+                       '    double rates_local[RATES];\n'
+                       '    //copy in\n'
+                       '    for (int i = 0; i < NSP; i++) {\n'
+                       '        conc_local[i] = conc[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                       '    eval_rxn_rates(T, conc_local, rates_local);\n'
+                       '    //copy back\n'
+                       '    for (int i = 0; i < RATES; i++) {\n'
+                       '        rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = rates_local[i];\n'
+                       '    }\n'
+                       '}\n'
+                       '#endif\n'
+                       )
+        if have_pdep_rxns:
+            file.write('#ifdef PROFILER\n'
+                       '__global__ void k_get_rxn_pres_mod(const double T, const double P) {\n'
+                       '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
+                       '    double pres_mod_local[PRES_MOD_RATES];\n'
+                       '    get_rxn_pres_mod(T, P, conc_local, pres_mod_local);\n'
+                       '}\n'
+                       '#elif RATES_TEST\n'
+                       '__global__ void k_get_rxn_pres_mod(const int NUM, const double T, const double P, double* conc, double* pres_mod) {'
+                       '    double conc_local[NSP];\n'
+                       '    double pres_mod_local[PRES_MOD_RATES];\n'
+                       '    //copy in\n'
+                       '    for (int i = 0; i < NSP; i++) {\n'
+                       '        conc_local[i] = conc[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                       '    get_rxn_pres_mod(T, P, conc_local, pres_mod_local);\n'
+                       '    //copy back\n'
+                       '    for (int i = 0; i < PRES_MOD_RATES; i++) {\n'
+                       '        pres_mod[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = pres_mod_local[i];\n'
+                       '    }\n'
+                       '}\n'
+                       '#endif\n'
+                       )
+        file.write('#ifdef PROFILER\n'
+                   '__global__ void k_eval_spec_rates() {\n'
+                   )
+        if have_rev_rxns:
+            file.write('    double fwd_rates_local[FWD_RATES] = {[0 ... FWD_RATES - 1] = 1.0};\n'
+                       '    double rev_rates_local[REV_RATES] = {[0 ... REV_RATES - 1] = 1.0};\n'
+                       )
+        else:
+            file.write('    double rates_local[RATES] = {[0 ... RATES - 1] = 1.0};\n')
+        if have_pdep_rxns:
+            file.write('    double pres_mod_local[PRES_MOD_RATES] = {[0 ... PRES_MOD_RATES - 1] = 1.0};\n' if have_pdep_rxns else '')
+        file.write(
+                   '    double dy_local[NN];\n'
+                   '    eval_spec_rates('
+                   )
+        if have_rev_rxns:
+            file.write('fwd_rates_local, rev_rates_local, ')
+        else:
+            file.write('rates_local, ')
+        if have_pdep_rxns:
+            file.write('pres_mod_local, ')
+        file.write('dy_local);\n')
+        file.write('}\n'
+                   '#elif RATES_TEST\n'
+                   '__global__ void k_eval_spec_rates(const int NUM, '
+                  )
+        if have_rev_rxns:
+            file.write('const double* fwd_rates, const double* rev_rates, ')
+        else:
+            file.write('const double* rates, ')
+        if have_pdep_rxns:
+            file.write('const double* pres_mod, ')
+        file.write('double* dy) {\n')
+        file.write('    //copy in\n')
+        if have_rev_rxns:
+            file.write('    double fwd_rates_local[FWD_RATES];\n'
+                       '    double rev_rates_local[REV_RATES];\n'
+                       )
+        else:
+            file.write('    double rates_local[RATES];\n')
+        if have_pdep_rxns:
+            file.write('    double pres_mod_local[PRES_MOD_RATES];\n' if have_pdep_rxns else '')
+        file.write('    double dy_local[NN];\n')
+        if have_rev_rxns:
+            file.write('    for (int i = 0; i < FWD_RATES; i++) {\n'
+                       '        fwd_rates_local[i] = fwd_rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                       '    for (int i = 0; i < REV_RATES; i++) {\n'
+                       '        rev_rates_local[i] = rev_rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                      )
+        else:
+            file.write('    for (int i = 0; i < RATES; i++) {\n'
+                       '        rates_local[i] = rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                      )
+        if have_pdep_rxns:
+            file.write('    for (int i = 0; i < PRES_MOD_RATES; i++) {\n'
+                       '        pres_mod_local[i] = pres_mod[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                       '    }\n'
+                      )
+        file.write('    eval_spec_rates(')
+        if have_rev_rxns:
+            file.write('fwd_rates_local, rev_rates_local, ')
+        else:
+            file.write('rates_local, ')
+        if have_pdep_rxns:
+            file.write('pres_mod_local, ')
+        file.write('dy_local);\n')
+        file.write(
+                   '   //copy back\n'
+                   '   for (int i = 0; i < NN; i++) {\n'
+                   '        dy[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = dy_local[i];\n'
+                   '    }\n'
+                   '}\n'
+                   )
+        file.write('#endif\n')
+        file.write('#ifdef PROFILER\n'
+                   '__global__ void k_eval_dy(const double T, const double P) {\n'
+                   '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
+                   '    double dy_local[NN];\n'
+                   '    dydt(T, P, y_local, dy_local);\n'
+                   '}\n'
+                   '#elif RATES_TEST\n'
+                   '__global__ void k_eval_dy(const int NUM, const double T, const double P, const double* y, double* dy) {\n'
+                   '    double y_local[NN];\n'
+                   '    double dy_local[NN];\n'
+                   '    //copy in\n'
+                   '    for (int i = 0; i < NN; i++) {\n'
+                   '        y_local[i] = y[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                   '    }\n'
+                   '    dydt(T, P, y_local, dy_local);\n'
+                   '    //copy back\n'
+                   '    for (int i = 0; i < NN; i++) {\n'
+                   '        dy[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = dy_local[i];\n'
+                   '    }\n'
+                   '}\n'
+                   '#endif\n'
+                   )
+        file.write('#ifdef PROFILER\n'
+                   '__global__ void k_eval_jacob(const double T, const double P) {\n'
+                   '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
+                   '    double jac_local[NN * NN];\n'
+                   '    eval_jacob(0, P, y_local, jac_local);\n'
+                   '}\n'
+                   '#elif RATES_TEST\n'
+                   '__global__ void k_eval_jacob(const int NUM, const double t, const double P, double* y, double* jac) {\n'
+                   '    double y_local[NN];\n'
+                   '    double jac_local[NN * NN] = {0.0};\n'
+                   '    //copy in\n'
+                   '    for (int i = 0; i < NN; i++) {\n'
+                   '        y_local[i] = y[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
+                   '    }\n'
+                   '    eval_jacob(0, P, y_local, jac_local);\n'
+                   '    for (int i = 0; i < NN * NN; i++) {\n'
+                   '        jac[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = jac_local[i];\n'
+                   '    }\n'
+                   '}\n'
+                   '#endif\n'
+                   )
+        file.write('\n')
+    else:
+        if have_rev_rxns:
+            file.write('__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.fwd_rates, memory_pointers.rev_rates);\n'
+                       '}\n'
+                       )
+        else:
+            file.write('__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.rates);\n'
+                       '}\n'
+                       )
+        if have_pdep_rxns:
+            file.write('__global__ void k_get_rxn_pres_mod(const double T, const double P) {\n'
+                       '    get_rxn_pres_mod(T, P, memory_pointers.conc, memory_pointers.pres_mod);\n'
+                       '}\n')
+        file.write('__global__ void k_eval_spec_rates() {{\n'.format() +
+                   '    eval_spec_rates({}{} memory_pointers.dy);\n'.format('memory_pointers.fwd_rates, memory_pointers.rev_rates,' if have_rev_rxns else 'memory_pointers.rates,',
+                                                            ' memory_pointers.pres_mod,' if have_pdep_rxns else '') +
+                   '}\n'
+                   )
+        file.write('__global__ void k_eval_dy(const double T, const double P) {\n'
+                   '    dydt(T, P, memory_pointers.y, memory_pointers.dy);\n'
+                   '}\n')
+        file.write('__global__ void k_eval_jacob(const double t, const double P) {\n'
+                   '    eval_jacob(t, P, memory_pointers.y, memory_pointers.jac);\n'
+                   '}\n')
+        file.write('\n')
+
+
+def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
+    file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
+               '    y_host[0] = {};\n'.format(T) +
+               '    get_concentrations({}, y_host, conc_host);\n'.format(P)
+               )
+    if have_rev_rxns:
+        file.write(
+            '    eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
+    else:
+        file.write(
+            '    eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
+    if have_pdep_rxns:
+        file.write(
+            '    get_rxn_pres_mod ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
+    file.write('    eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '    dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
+               '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '    eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
+               '    write_jacob(fp, jacob_host);\n'
+               )
+
+
+def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
+    descriptor = 'd_' if not CUDAParams.is_global() else 'host_memory->'
+    file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
+               '    y_host[0] = {};\n'.format(T) +
+               '    get_concentrations({}, y_host, conc_host);\n'.format(P))
+    file.write('#ifdef CONV\n' + 
+               '    double rho = getDensity({}, {}, Xi);\n'.format(T, P) +
+               '#endif\n'
+               '    for (int i = 0; i < padded; ++i) {\n'
+               '        for (int j = 0; j < NSP; ++j) {\n'
+               '            conc_host_full[i + j * padded] = conc_host[j];\n'
+               '        }\n' + 
+               '        y_host_full[i] = {};\n'.format(T) + 
+               '#ifdef CONP\n' + 
+               '        pres_host_full[i] = {};\n'.format(P) + 
+               '#elif CONV\n'
+               '        rho_host_full[i] = rho;\n'
+               '#endif\n'
+               '    }\n'
+               )
+    file.write(
+    '    cudaErrorCheck(cudaMemcpy({}conc, conc_host_full, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor))
+    if have_rev_rxns:
+        file.write('#ifdef PROFILER\n'
+                   '    cuProfilerStart();\n'
+                   '    k_eval_rxn_rates<<<grid_size, block_size>>>({});\n'.format(T) + 
+                   '    cuProfilerStop();\n'
+                   '#elif RATES_TEST\n'
+                   '    k_eval_rxn_rates<<<grid_size, block_size>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}fwd_rates, {0}rev_rates'.format(descriptor) if not CUDAParams.is_global() else '')
+                   )
+        file.write(
+               '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, {}fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor) + 
+               '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, {}rev_rates, padded * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor)
+               )
+        file.write('    for (int j = 0; j < FWD_RATES; ++j) {\n'
+                   '            fwd_rates_host[j] = fwd_rates_host_full[j * padded];\n'
+                   '    }\n'
+                   )
+        file.write('    for (int j = 0; j < REV_RATES; ++j) {\n'
+                   '        rev_rates_host[j] = rev_rates_host_full[j * padded];\n'
+                   '    }\n'
+                   '#endif\n'
+                   )
+    else:
+        file.write(
+            '#ifdef PROFILER\n'
+            '    cuProfilerStart();\n'
+            '    k_eval_rxn_rates<<<grid_size, block_size>>>({});\n'.format(T) +
+            '    cuProfilerStop();\n'
+            '#elif RATES_TEST\n'
+            '    k_eval_rxn_rates<<<grid_size, block_size>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}rates'.format(descriptor) if not CUDAParams.is_global() else '')
+            )
+        file.write(
+        '    cudaErrorCheck(cudaMemcpy(rates_host_full, {}rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor))
+
+        file.write('    for (int j = 0; j < RATES; ++j) {\n'
+                   '        rates_host[j] = rates_host_full[j * padded];\n'
+                   '    }\n'
+                   '#endif\n'
+                   )
+    if have_pdep_rxns:
+        file.write(
+            '#ifdef PROFILER\n'
+            '    cuProfilerStart();\n'
+            '    k_get_rxn_pres_mod<<<grid_size, block_size>>>({}, {});\n'.format(T, P) +
+            '    cuProfilerStop();\n'
+            '#elif RATES_TEST\n'
+            '    k_get_rxn_pres_mod<<<grid_size, block_size>>>(padded, {}, {}{});\n'.format(T, P, ', {0}conc, {0}pres_mod'.format(descriptor) if not CUDAParams.is_global() else '')
+            )
+        file.write(
+        '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, {}pres_mod, padded * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor)
+        )
+        file.write('    for (int j = 0; j < PRES_MOD_RATES; ++j) {\n'
+                   '        pres_mod_host[j] = pres_mod_host_full[j * padded];\n'
+                   '    }\n'
+            '#endif\n'
+                   )
+
+    if have_rev_rxns:
+        file.write('#ifdef PROFILER\n'
+                   '    cuProfilerStart();\n'
+                   '    k_eval_spec_rates<<<grid_size, block_size>>>();\n'
+                   '    cuProfilerStop();\n'
+                   '#elif RATES_TEST\n'
+                   '    k_eval_spec_rates<<<grid_size, block_size>>>(padded, {});\n'.format(('{0}fwd_rates, {0}rev_rates' + (', {0}pres_mod' if have_pdep_rxns else '') + \
+                        ', {0}spec_rates').format(descriptor) if not CUDAParams.is_global() else '')
+                   )
+    else:
+        file.write(
+            '#ifdef PROFILER\n'
+            '    cuProfilerStart();\n'
+            '    k_eval_spec_rates<<<grid_size, block_size>>>({});\n'
+            '    cuProfilerStop();\n'
+            '#elif RATES_TEST\n'
+            '    k_eval_spec_rates<<<grid_size, block_size>>>(padded, {});\n'.format(('{0}rates' + (', {0}pres_mod' if have_pdep_rxns else '') + 
+                ', {0}spec_rates').format(descriptor))
+            )
+    file.write(
+           '    cudaErrorCheck(cudaMemcpy(spec_rates_host_full, {}spec_rates, padded * NSP * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor))
+    file.write(
+               '    for (int j = 0; j < NSP; ++j) {\n'
+               '        spec_rates_host[j] = spec_rates_host_full[j * padded];\n'
+               '    }\n'
+               '#endif\n'
+               )
+    file.write('#ifdef PROFILER\n'
+                '    cuProfilerStart();\n'
+                '    k_eval_dy<<<grid_size, block_size>>>({}, {});\n'.format(T, P) + 
+                '    cuProfilerStop();\n'
+                '#elif RATES_TEST\n'
+                '    cudaErrorCheck(cudaMemcpy({}y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
+                '    k_eval_dy<<<grid_size, block_size>>>(padded, {}, {}, {});\n'.format(T, P, ('{0}y' + (', {0}dy' if have_pdep_rxns else '')).format(descriptor) if not CUDAParams.is_global()
+                     else '')
+                )
+    file.write('    cudaErrorCheck(cudaMemcpy(dy_host_full, {}dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor))
+    file.write(
+               '    for (int j = 0; j < NN; ++j) {\n'
+               '        dy_host[j] = dy_host_full[j * padded];\n'
+               '    }\n'
+               '#endif\n'
+               )
+    file.write('#ifdef RATES_TEST\n'
+               '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') + 
+               '#endif\n'
+               )
+    file.write(
+           '#ifdef CONP\n'
+           '    cudaErrorCheck(cudaMemcpy({}pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
+           '#elif CONV\n'
+           '    cudaErrorCheck(cudaMemcpy({}rho, rho_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
+           '#endif\n'
+           )
+    file.write(
+               '#ifdef PROFILER\n'
+               '    cuProfilerStart();\n'
+               '    k_eval_jacob<<<grid_size, block_size>>>({}, {});\n'.format(T, P) + 
+               '    cuProfilerStop();\n'
+               '#elif RATES_TEST\n'
+               '    k_eval_jacob<<<grid_size, block_size>>>(padded, 0, {}{});\n'.format(P, ', {0}y, {0}jac'.format(descriptor) if not CUDAParams.is_global() else '') + 
+               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, {}jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor) + 
+               '    for (int j = 0; j < NN * NN; ++j) {\n'
+               '        jacob_host[j] = jacob_host_full[j * padded];\n'
+               '    }\n'
+               '    write_jacob(fp, jacob_host);\n'
+               '#endif\n'
+               )
+
+
 def write_mechanism_initializers(path, lang, specs, reacs):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
@@ -146,7 +545,7 @@ def write_mechanism_initializers(path, lang, specs, reacs):
         # loop through species
         for sp in specs:
             isp = specs.index(sp)
-            line = '        conc[{}] = rho * y[{}] / '.format(isp, isp)
+            line = '    conc[{}] = rho * y[{}] / '.format(isp, isp + 1)
             line += '{}'.format(sp.mw) + utils.line_end[lang]
             file.write(line)
         

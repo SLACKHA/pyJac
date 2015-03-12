@@ -376,6 +376,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                 '    k_eval_dy<<<grid_size, block_size>>>({}, {});\n'.format(T, P) + 
                 '    cuProfilerStop();\n'
                 '#elif RATES_TEST\n'
+                '    cudaErrorCheck(cudaMemcpy({}y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
                 '    k_eval_dy<<<grid_size, block_size>>>(padded, {}, {}, {});\n'.format(T, P, ('{0}y' + (', {0}dy' if have_pdep_rxns else '')).format(descriptor) if not CUDAParams.is_global()
                      else '')
                 )
@@ -391,7 +392,6 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '#endif\n'
                )
     file.write(
-           '    cudaErrorCheck(cudaMemcpy({}y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
            '#ifdef CONP\n'
            '    cudaErrorCheck(cudaMemcpy({}pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
            '#elif CONV\n'
@@ -667,7 +667,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
         # loop through species
         for sp in specs:
             isp = specs.index(sp)
-            line = '    conc_host[{}] = rho * y_host[{}] / '.format(isp, isp)
+            line = '    conc_host[{}] = rho * y_host[{}] / '.format(isp, isp + 1)
             line += '{}'.format(sp.mw) + utils.line_end[lang]
             file.write(line)
 

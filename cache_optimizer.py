@@ -244,7 +244,16 @@ class reaction_rates_score(score_function):
                 len(self.r_to_s[rxn]) and
                 self.r_to_s[rxn].issubset(sp_set)])
 
-        return rxn_list
+        #now order the rxn_list in a good way
+        ret_list = [max(rxn_list, key = lambda x : len(self.r_to_s[x]))]
+        rxn_list.remove(ret_list[0])
+        #now order by most shared with last few
+        while len(rxn_list):
+            max_rxn = max(rxn_list, key = lambda x:
+            len(self.r_to_s[ret_list[-1]].intersection(self.r_to_s[x])) / len(self.r_to_s[ret_list[-1]]))
+            ret_list.append(max_rxn)
+            rxn_list.remove(max_rxn)
+        return ret_list
 
     def update_lists(self, ret_list, spec_list, rxn_list):
         """
@@ -255,6 +264,19 @@ class reaction_rates_score(score_function):
 
     def get_list(self, specs, reacs):
         return ([spec for spec in specs], self.get_all_rxns(specs))
+
+class jacobian_score(reaction_rates_score):
+    def load_s_to_r(self, specs, reacs, load_non_participating=False):
+        self.r_to_s_save = [set() for i in range(len(reacs))]
+        self.s_to_r_save = [set() for i in range(len(specs))]
+        for sind, sp in enumerate(specs):
+            for rind, rxn in enumerate(reacs):
+                thd_sp = [thd[0] for thd in rxn.thd_body]
+                if any(sp.name == x for x in rxn.reac + rxn.prod + thd_sp):
+                    nu = get_nu(sp, rxn)
+                    if nu is not None and (nu != 0 or load_non_participating):
+                        self.r_to_s_save[rind].add(sind)
+                        self.s_to_r_save[sind].add(rind)
 
 
 class pdep_rates_score(reaction_rates_score):
@@ -274,7 +296,7 @@ class pdep_rates_score(reaction_rates_score):
         self.baseline_loads = sum(len(rxn.thd_body) for rxn in reacs)
         self.baseline_stores = len(reacs)
 
-def greedy_optimizer(scorer, default):
+def greedy_optimizer(scorer):
     """
     A method that attempts to optimize cache hit rates via a greedy selection algorithm 
     to choose sets of species / reactions that can be reused in calculation
@@ -284,7 +306,7 @@ def greedy_optimizer(scorer, default):
     return_list = []
 
     if scorer.to_go() < pool_size:
-        return default
+        pool_size = scorer.to_go()
 
     rxn_list = []
     max_sp, dummy = max(enumerate(scorer.s_to_r), key=lambda x: len(x[1]))

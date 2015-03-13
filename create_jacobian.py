@@ -965,7 +965,7 @@ def write_dt_completion(file, lang, specs, offset):
     line += utils.line_end[lang]
     file.write(line)
 
-def write_jacobian_alt(path, lang, specs, reacs):
+def write_jacobian_alt(path, lang, specs, reacs, jac_order):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -978,6 +978,8 @@ def write_jacobian_alt(path, lang, specs, reacs):
         List of species in the mechanism.
     reacs : list of ReacInfo
         List of reactions in the mechanism.
+    jac_order : list of indexes
+        Order to evaluate reactions in
 
     Returns
     -------
@@ -1381,10 +1383,12 @@ def write_jacobian_alt(path, lang, specs, reacs):
     touched = [False for i in range((len(specs) + 1) * (len(specs) + 1))]
     sparse_indicies = []
 
+    index_list = jac_order[0][1]
     ###################################
     # partial derivatives of reactions
     ###################################
-    for rind, rxn in enumerate(reacs):
+    for rind in index_list:
+        rxn = reacs[rind]
         
         ######################################
         # with respect to temperature
@@ -3914,22 +3918,24 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         rxn_score = cache.reaction_rates_score(specs, reacs, pool_size)
         if any(r.pdep or r.thd for r in reacs):
             pdep_score = cache.pdep_rates_score(specs, reacs, pool_size)
+        jac_score = cache.jacobian_score(specs, reacs, pool_size)
 
-        spec_order = cache.greedy_optimizer(spec_score, [(range(len(specs)), range(len(reacs)))])
-        rxn_order = cache.greedy_optimizer(rxn_score, [(range(len(specs)), range(len(reacs)))])
+        spec_order = cache.greedy_optimizer(spec_score)
+        rxn_order = cache.greedy_optimizer(rxn_score)
         if any(r.pdep or r.thd for r in reacs):
-            pdep_order = cache.greedy_optimizer(pdep_score,  [(range(len(specs)), [x for x in range(len(reacs)) \
-                                                                                   if reacs[x].pdep or reacs[x].thd])])
+            pdep_order = cache.greedy_optimizer(pdep_score)
         else:
             pdep_order = None
+        jac_order = cache.greedy_optimizer(jac_score)
 
     else:
         spec_order = [(range(len(specs)), range(len(reacs)))]
         rxn_order = [(range(len(specs)), range(len(reacs)))]
         if any(r.pdep or r.thd for r in reacs): 
-            pdep_order = [(range(len(specs)), [x for x in range(len(reacs)) if x.pdep or x.thd])]
+            pdep_order = [(range(len(specs)), [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd])]
         else:
             pdep_order = None
+        jac_order = [(range(len(specs)), range(len(reacs)))]
     
     # now begin writing subroutines
     
@@ -3957,7 +3963,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles)
 
     # write Jacobian subroutine
-    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs)
+    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order)
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 

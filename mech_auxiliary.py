@@ -605,7 +605,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                    '        (*y_host)[i] = T0;\n'
                    '        //loop through species\n'
                    '        for (int j = 1; j < NN; ++j) {\n'
-                   '            (*y_host)[i + NUM * j] = Yi[j - 1];\n'
+                   '            (*y_host)[i + padded * j] = Yi[j - 1];\n'
                    '        }\n'
                    '    }\n\n'
                    '#ifdef CONV\n'

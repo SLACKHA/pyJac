@@ -326,6 +326,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                     # sum of stoichiometric coefficients
                     sum_nu = 0
                     
+                    coeffs = {}
                     # go through product species
                     for prod_sp in rxn.prod:
                         isp = rxn.prod.index(prod_sp)
@@ -352,78 +353,26 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                                   '{} not found.\n'.format(reacs.index(rxn))
                                   )
                             sys.exit()
-                        
-                        # need temperature conditional for equilibrium constants
-                        line = '  if (T <= {:})'.format(sp.Trange[1])
-                        if lang in ['c', 'cuda']:
-                            line += ' {\n'
-                        elif lang == 'fortran':
-                            line += ' then\n'
-                        elif lang == 'matlab':
-                            line += '\n'
-                        file.write(line)
-                        
-                        line = '    Kc '
-                        if lang in ['c', 'cuda']:
-                            if nu < 0:
-                                line += '-= '
-                            elif nu > 0:
-                                line += '+= '
-                        elif lang in ['fortran', 'matlab']:
-                            if nu < 0:
-                                line += '= Kc - '
-                            elif nu > 0:
-                                line += '= Kc + '
-                        line += '{:.2f} * '.format(abs(nu))
-                        line += ('({:.8e} - '.format(sp.lo[6]) + 
-                                 '{:.8e} + '.format(sp.lo[0]) + 
-                                 '{:.8e} * '.format(sp.lo[0] - 1.0) + 
-                                 'logT + T * ('
-                                 '{:.8e} + T * ('.format(sp.lo[1] / 2.0) + 
-                                 '{:.8e} + T * ('.format(sp.lo[2] / 6.0) + 
-                                 '{:.8e} + '.format(sp.lo[3] / 12.0) + 
-                                 '{:.8e} * T))) - '.format(sp.lo[4] / 20.0) + 
-                                 '{:.8e} / T)'.format(sp.lo[5]) + 
-                                 utils.line_end[lang]
-                                 )
-                        file.write(line)
-                        
-                        if lang in ['c', 'cuda']:
-                            file.write('  } else {\n')
-                        elif lang in ['fortran', 'matlab']:
-                            file.write('  else\n')
-                        
-                        line = '    Kc '
-                        if lang in ['c', 'cuda']:
-                            if nu < 0:
-                                line += '-= '
-                            elif nu > 0:
-                                line += '+= '
-                        elif lang in ['fortran', 'matlab']:
-                            if nu < 0:
-                                line += '= Kc - '
-                            elif nu > 0:
-                                line += '= Kc + '
-                        line += '{:.2f} * '.format(abs(nu))
-                        line += ('({:.8e} - '.format(sp.hi[6]) + 
-                                 '{:.8e} + '.format(sp.hi[0]) + 
-                                 '{:.8e} * '.format(sp.hi[0] - 1.0) + 
-                                 'logT + T * ('
-                                 '{:.8e} + T * ('.format(sp.hi[1] / 2.0) + 
-                                 '{:.8e} + T * ('.format(sp.hi[2] / 6.0) + 
-                                 '{:.8e} + '.format(sp.hi[3] / 12.0) + 
-                                 '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
-                                 '{:.8e} / T)'.format(sp.hi[5]) + 
-                                 utils.line_end[lang]
-                                 )
-                        file.write(line)
-                        
-                        if lang in ['c', 'cuda']:
-                            file.write('  }\n\n')
-                        elif lang == 'fortran':
-                            file.write('  end if\n\n')
-                        elif lang == 'matlab':
-                            file.write('  end\n\n')
+
+                        #put together all our coeffs
+                        lo_array = [round(nu, 2)] + [round(x, 8) for x in [
+                                    sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
+                                    sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                                    sp.lo[5]]
+                                ]
+                        lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
+
+                        hi_array = [round(-nu, 2)] + [round(x, 8) for x in [
+                                    sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
+                                    sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                                    sp.hi[5]]
+                                ]
+                        hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]                     
+                        if not sp.Trange[1] in coeffs:
+                            coeffs[sp.Trange[1]] = lo_array, hi_array
+                        else:
+                            coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
+                                                    [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
                     
                     # now loop through reactants
                     for reac_sp in rxn.reac:
@@ -444,10 +393,29 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                                   '{} not found.\n'.format(reacs.index(rxn))
                                   )
                             sys.exit()
-                            
-                        # need temperature conditional 
-                        # for equilibrium constants
-                        line = '  if (T <= {:})'.format(sp.Trange[1])
+
+                        lo_array = [round(-nu, 2)] + [round(x, 8) for x in [
+                                    sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
+                                    sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                                    sp.lo[5]]
+                                ]
+                        lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
+
+                        hi_array = [round(-nu, 2)] + [round(x, 8) for x in [
+                                    sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
+                                    sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                                    sp.hi[5]]
+                                ]
+                        hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]                     
+                        if not sp.Trange[1] in coeffs:
+                            coeffs[sp.Trange[1]] = lo_array, hi_array
+                        else:
+                            coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
+                                                    [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+
+                    for T_mid in coeffs:
+                        # need temperature conditional for equilibrium constants
+                        line = '  if (T <= {:})'.format(T_mid)
                         if lang in ['c', 'cuda']:
                             line += ' {\n'
                         elif lang == 'fortran':
@@ -455,22 +423,18 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                         elif lang == 'matlab':
                             line += '\n'
                         file.write(line)
+
+                        lo_array, hi_array = coeffs[T_mid]
                         
-                        line = '    Kc '
-                        if lang in ['c', 'cuda']:
-                            line += '-= '
-                        elif lang in ['fortran', 'matlab']:
-                            line += '= Kc - '
-                        line += '{:.2f} * '.format(nu)
-                        line += ('({:.8e} - '.format(sp.lo[6]) + 
-                                 '{:.8e} + '.format(sp.lo[0]) + 
-                                 '{:.8e} * '.format(sp.lo[0] - 1.0) + 
+                        line = '    Kc = '
+                        line += ('({:.8e} + '.format(lo_array[0]) + 
+                                 '{:.8e} * '.format(lo_array[1]) + 
                                  'logT + T * ('
-                                 '{:.8e} + T * ('.format(sp.lo[1] / 2.0) + 
-                                 '{:.8e} + T * ('.format(sp.lo[2] / 6.0) + 
-                                 '{:.8e} + '.format(sp.lo[3] / 12.0) + 
-                                 '{:.8e} * T))) - '.format(sp.lo[4] / 20.0) + 
-                                 '{:.8e} / T)'.format(sp.lo[5]) + 
+                                 '{:.8e} + T * ('.format(lo_array[2]) + 
+                                 '{:.8e} + T * ('.format(lo_array[3]) + 
+                                 '{:.8e} + '.format(lo_array[4]) + 
+                                 '{:.8e} * T))) - '.format(lo_array[5]) + 
+                                 '{:.8e} / T)'.format(lo_array[6]) + 
                                  utils.line_end[lang]
                                  )
                         file.write(line)
@@ -480,21 +444,15 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                         elif lang in ['fortran', 'matlab']:
                             file.write('  else\n')
                         
-                        line = '    Kc '
-                        if lang in ['c', 'cuda']:
-                            line += '-= '
-                        elif lang in ['fortran', 'matlab']:
-                            line += '= Kc - '
-                        line += '{:.2f} * '.format(nu)
-                        line += ('({:.8e} - '.format(sp.hi[6]) + 
-                                 '{:.8e} + '.format(sp.hi[0]) + 
-                                 '{:.8e} * '.format(sp.hi[0] - 1.0) + 
+                        line = '    Kc = '
+                        line += ('({:.8e} + '.format(hi_array[0]) + 
+                                 '{:.8e} * '.format(hi_array[1]) + 
                                  'logT + T * ('
-                                 '{:.8e} + T * ('.format(sp.hi[1] / 2.0) + 
-                                 '{:.8e} + T * ('.format(sp.hi[2] / 6.0) + 
-                                 '{:.8e} + '.format(sp.hi[3] / 12.0) + 
-                                 '{:.8e} * T))) - '.format(sp.hi[4] / 20.0) + 
-                                 '{:.8e} / T)'.format(sp.hi[5]) + 
+                                 '{:.8e} + T * ('.format(hi_array[2]) + 
+                                 '{:.8e} + T * ('.format(hi_array[3]) + 
+                                 '{:.8e} + '.format(hi_array[4]) + 
+                                 '{:.8e} * T))) - '.format(hi_array[5]) + 
+                                 '{:.8e} / T)'.format(hi_array[6]) + 
                                  utils.line_end[lang]
                                  )
                         file.write(line)
@@ -505,7 +463,6 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                             file.write('  end if\n\n')
                         elif lang == 'matlab':
                             file.write('  end\n\n')
-                    
                     line = ('  Kc = '
                             '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) + 
                             ' * exp(Kc)' + 

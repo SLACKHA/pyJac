@@ -384,13 +384,6 @@ def write_kc(file, lang, specs, rxn):
             file.write('  end\n\n')
         isFirst = False
 
-    line = ('  Kc = '
-            '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) + 
-            ' * exp(Kc)' + 
-            utils.line_end[lang]
-            )
-    file.write(line)
-
     line = '  Kc = '
     if sum_nu != 0:
         num = (chem.PA / chem.RU) ** sum_nu

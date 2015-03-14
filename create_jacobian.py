@@ -3764,66 +3764,36 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.write(
         "void sparse_multiplier(const Real * A, const Real * Vm, Real* w) {\n")
 
-    for i in range(nvars):
-        # get all indicies that belong to row i
-        i_list = [x for x in sorted_and_cleaned if x % nvars == i]
-        if not len(i_list):
-            file.write(
-                '  w' + utils.get_array(lang, i) + ' = 0' + utils.line_end[lang])
-            continue
-        file.write('  w' + utils.get_array(lang, i) + ' = ')
-        for index in i_list:
-            if i_list.index(index):
-                file.write(" + ")
-            file.write(' A' + utils.get_array(lang, index) + ' * '
-                       'Vm' + utils.get_array(lang, int(index / nvars)))
-        file.write(";\n")
-    file.write("}\n")
-
-    """
     if lang == 'cuda':
-        file.write(
-        '#ifdef COMPILE_TESTING_METHODS\n'
-        '  __device__ bool test_sparse_multiplier() {\n'
-        )
+        """optimize for cache reusing"""
+        touched = [False for i in range(nvars)]
+        for i in range(nvars):
+            # get all indicies that belong to row i
+            i_list = [x for x in sorted_and_cleaned if int(round(x / nvars)) == i]
+            for index in i_list:
+                file.write('  w' + utils.get_array(lang, index % nvars) + ' {}= '.format('+' if touched[index % nvars] else ''))
+                file.write(' A' + utils.get_array(lang, index) + ' * '
+                           'Vm' + utils.get_array(lang, i) + utils.line_end[lang])
+                touched[index % nvars] = True
+            file.write(";\n")
+        file.write("}\n")
     else:
-        file.write(
-        '\n#ifdef COMPILE_TESTING_METHODS\n'
-        '  int test_sparse_multiplier(){\n'
-        )
-    #write test method
-    file.write(
-        '    Real A[NN * NN] = {ZERO};\n'
-        '    Real v[NN] = {ZERO};\n'
-        '    //do not zero, tests sparse_multiplier\'s fill of non touched entries\n'
-        '    Real w[NN];\n'
-        '    Real w2[NN] = {ZERO};\n'
-    )
-    for i in range(nvars):
-        #get all indicies that belong to row i
-        i_list = [x for x in sorted_and_cleaned if x % nvars == i]
-        file.write('    v[{:}] = {:};\n'.format(i, i))
-        if not len(i_list):
-            continue
-        for index in i_list:
-            file.write('    A[{:}] = {:};\n'.format(index, index))
+        for i in range(nvars):
+            # get all indicies that belong to row i
+            i_list = [x for x in sorted_and_cleaned if x % nvars == i]
+            if not len(i_list):
+                file.write(
+                    '  w' + utils.get_array(lang, i) + ' = 0' + utils.line_end[lang])
+                continue
+            file.write('  w' + utils.get_array(lang, i) + ' = ')
+            for index in i_list:
+                if i_list.index(index):
+                    file.write(" + ")
+                file.write(' A' + utils.get_array(lang, index) + ' * '
+                           'Vm' + utils.get_array(lang, int(index / nvars)))
+            file.write(";\n")
+        file.write("}\n")
 
-    file.write(
-        '    for (uint i = 0; i < NN; ++i) {\n'               
-        '       for (uint j = 0; j < NN; ++j) {\n'
-        '          w2[i] += A[i + (j * NN)] * v[j];\n'
-        '       }\n'
-        '    }\n'
-        )
-    file.write('    sparse_multiplier(A, v, w);\n')
-    file.write('    for (uint i = 0; i < NN; ++i) {\n'
-               '       if (w[i] != w2[i]) \n'
-               '         return 0;\n'
-               '    }\n'
-               '    return 1;\n'
-               '  }\n'
-               '#endif\n'
-        )"""
     file.close()
 
 

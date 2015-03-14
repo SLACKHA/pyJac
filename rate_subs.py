@@ -326,8 +326,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                 
                 if not rxn.rev_par:
                     
-                    line = '  Kc = 0.0' + utils.line_end[lang]
-                    file.write(line)
+                    #line = '  Kc = 0.0' + utils.line_end[lang]
+                    #file.write(line)
                     
                     # sum of stoichiometric coefficients
                     sum_nu = 0
@@ -419,6 +419,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                             coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
                                                     [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
 
+                    isFirst = True
                     for T_mid in coeffs:
                         # need temperature conditional for equilibrium constants
                         line = '  if (T <= {:})'.format(T_mid)
@@ -432,7 +433,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
 
                         lo_array, hi_array = coeffs[T_mid]
                         
-                        line = '    Kc = '
+                        if isFirst:
+                            line = '    Kc = '
+                        else:
+                            if lang in ['cuda', 'c']:
+                                line = '    Kc += '
+                            else:
+                                line = '    Kc = Kc + '
                         line += ('({:.8e} + '.format(lo_array[0]) + 
                                  '{:.8e} * '.format(lo_array[1]) + 
                                  'logT + T * ('
@@ -450,7 +457,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                         elif lang in ['fortran', 'matlab']:
                             file.write('  else\n')
                         
-                        line = '    Kc = '
+                        if isFirst:
+                            line = '    Kc = '
+                        else:
+                            if lang in ['cuda', 'c']:
+                                line = '    Kc += '
+                            else:
+                                line = '    Kc = Kc + '
                         line += ('({:.8e} + '.format(hi_array[0]) + 
                                  '{:.8e} * '.format(hi_array[1]) + 
                                  'logT + T * ('
@@ -469,6 +482,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                             file.write('  end if\n\n')
                         elif lang == 'matlab':
                             file.write('  end\n\n')
+                        isFirst = False
+
                     line = ('  Kc = '
                             '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) + 
                             ' * exp(Kc)' + 

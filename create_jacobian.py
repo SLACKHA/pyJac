@@ -283,8 +283,13 @@ def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind):
     file.write(jline)
 
 def write_kc(file, lang, specs, rxn):
+    def __round_sig(x, sig=8):
+        from math import log10, floor
+        if x == 0:
+            return 0
+        return round(x, sig-int(floor(log10(abs(x))))-1)
     sum_nu = 0
-    isFirst = True
+    coeffs = {}
     for sp_name in set(rxn.reac + rxn.prod):
         spec = next((spec for spec in specs
             if spec.name == sp_name), None)
@@ -295,11 +300,29 @@ def write_kc(file, lang, specs, rxn):
 
         sum_nu += nu
 
-        # need temperature conditional for
-        # equilibrium constants
-        line = ('  if (T <= '
-                '{})'.format(spec.Trange[1])
-                )
+        lo_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
+                    spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1] / 2.0,
+                    spec.lo[2] / 6.0, spec.lo[3] / 12.0, spec.lo[4] / 20.0,
+                    spec.lo[5]]
+                ]
+        lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
+
+        hi_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
+                    spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1] / 2.0,
+                    spec.hi[2] / 6.0, spec.hi[3] / 12.0, spec.hi[4] / 20.0,
+                    spec.hi[5]]
+                ]
+        hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]                     
+        if not spec.Trange[1] in coeffs:
+            coeffs[spec.Trange[1]] = lo_array, hi_array
+        else:
+            coeffs[spec.Trange[1]] = [lo_array[i] + coeffs[spec.Trange[1]][0][i] for i in range(len(lo_array))], \
+                                    [hi_array[i] + coeffs[spec.Trange[1]][1][i] for i in range(len(hi_array))]
+
+    isFirst = True
+    for T_mid in coeffs:
+        # need temperature conditional for equilibrium constants
+        line = '  if (T <= {:})'.format(T_mid)
         if lang in ['c', 'cuda']:
             line += ' {\n'
         elif lang == 'fortran':
@@ -308,89 +331,65 @@ def write_kc(file, lang, specs, rxn):
             line += '\n'
         file.write(line)
 
-        line = '    Kc'
-        if lang in ['c', 'cuda']:
-            if nu < 0:
-                line += ' {}= {}'.format('' if isFirst else '-', '-' if isFirst else '')
-            elif nu > 0:
-                line += ' {}= '.format('' if isFirst else '+')
-        elif lang in ['fortran', 'matlab']:
-            if nu < 0:
-                line += ' = {}'.format('-' if isFirst else 'Kc - ')
-            elif nu > 0:
-                line += ' = {}'.format('' if isFirst else 'Kc + ')
-        line += (
-            '{:.2f} * '.format(abs(nu)) +
-            '({:.8e} - '.format(spec.lo[6]) +
-            '{:.8e} + '.format(spec.lo[0]) +
-            '{:.8e}'.format(spec.lo[0] -
-                            1.0) +
-            ' * logT + T * ('
-            '{:.8e}'.format(spec.lo[1] /
-                            2.0) +
-            ' + T * ('
-            '{:.8e}'.format(spec.lo[2] /
-                            6.0) +
-            ' + T * ('
-            '{:.8e}'.format(spec.lo[3] /
-                            12.0) +
-            ' + '
-            '{:.8e}'.format(spec.lo[4] /
-                            20.0) +
-            ' * T))) - '
-            '{:.8e} / T)'.format(spec.lo[5]) +
-            utils.line_end[lang]
-        )
+        lo_array, hi_array = coeffs[T_mid]
+        
+        if isFirst:
+            line = '    Kc = '
+        else:
+            if lang in ['cuda', 'c']:
+                line = '    Kc += '
+            else:
+                line = '    Kc = Kc + '
+        line += ('({:.8e} + '.format(lo_array[0]) + 
+                 '{:.8e} * '.format(lo_array[1]) + 
+                 'logT + T * ('
+                 '{:.8e} + T * ('.format(lo_array[2]) + 
+                 '{:.8e} + T * ('.format(lo_array[3]) + 
+                 '{:.8e} + '.format(lo_array[4]) + 
+                 '{:.8e} * T))) - '.format(lo_array[5]) + 
+                 '{:.8e} / T)'.format(lo_array[6]) + 
+                 utils.line_end[lang]
+                 )
         file.write(line)
-
+        
         if lang in ['c', 'cuda']:
             file.write('  } else {\n')
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
-
-        line = '    Kc'
-        if lang in ['c', 'cuda']:
-            if nu < 0:
-                line += ' {}= {}'.format('' if isFirst else '-', '-' if isFirst else '')
-            elif nu > 0:
-                line += ' {}= '.format('' if isFirst else '+')
-        elif lang in ['fortran', 'matlab']:
-            if nu < 0:
-                line += ' = {}'.format('-' if isFirst else 'Kc - ')
-            elif nu > 0:
-                line += ' = {}'.format('' if isFirst else 'Kc + ')
-        line += (
-            '{:.2f} * '.format(abs(nu)) +
-            '({:.8e} - '.format(spec.hi[6]) +
-            '{:.8e} + '.format(spec.hi[0]) +
-            '{:.8e}'.format(spec.hi[0] -
-                            1.0) +
-            ' * logT + T * ('
-            '{:.8e}'.format(spec.hi[1] /
-                            2.0) +
-            ' + T * ('
-            '{:.8e}'.format(spec.hi[2] /
-                            6.0) +
-            ' + T * ('
-            '{:.8e}'.format(spec.hi[3] /
-                            12.0) +
-            ' + '
-            '{:.8e}'.format(spec.hi[4] /
-                            20.0) +
-            ' * T))) - '
-            '{:.8e} / T)'.format(spec.hi[5]) +
-            utils.line_end[lang]
-        )
+        
+        if isFirst:
+            line = '    Kc = '
+        else:
+            if lang in ['cuda', 'c']:
+                line = '    Kc += '
+            else:
+                line = '    Kc = Kc + '
+        line += ('({:.8e} + '.format(hi_array[0]) + 
+                 '{:.8e} * '.format(hi_array[1]) + 
+                 'logT + T * ('
+                 '{:.8e} + T * ('.format(hi_array[2]) + 
+                 '{:.8e} + T * ('.format(hi_array[3]) + 
+                 '{:.8e} + '.format(hi_array[4]) + 
+                 '{:.8e} * T))) - '.format(hi_array[5]) + 
+                 '{:.8e} / T)'.format(hi_array[6]) + 
+                 utils.line_end[lang]
+                 )
         file.write(line)
-
+        
         if lang in ['c', 'cuda']:
             file.write('  }\n\n')
         elif lang == 'fortran':
             file.write('  end if\n\n')
         elif lang == 'matlab':
             file.write('  end\n\n')
-
         isFirst = False
+
+    line = ('  Kc = '
+            '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) + 
+            ' * exp(Kc)' + 
+            utils.line_end[lang]
+            )
+    file.write(line)
 
     line = '  Kc = '
     if sum_nu != 0:

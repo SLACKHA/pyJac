@@ -3775,7 +3775,6 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
                 file.write(' A' + utils.get_array(lang, index) + ' * '
                            'Vm' + utils.get_array(lang, i) + utils.line_end[lang])
                 touched[index % nvars] = True
-            file.write(";\n")
         file.write("}\n")
     else:
         for i in range(nvars):

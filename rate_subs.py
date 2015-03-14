@@ -278,6 +278,12 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                        )
     
     file.write('\n')
+
+    def __round_sig(x, sig=8):
+        from math import log10, floor
+        if x == 0:
+            return 0
+        return round(x, sig-int(floor(log10(abs(x))))-1)
     
     for order in ordering:
         i_reacs = order[1]
@@ -355,14 +361,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                             sys.exit()
 
                         #put together all our coeffs
-                        lo_array = [round(nu, 2)] + [round(x, 8) for x in [
+                        lo_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
                                     sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                                     sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                                     sp.lo[5]]
                                 ]
                         lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                        hi_array = [round(-nu, 2)] + [round(x, 8) for x in [
+                        hi_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
                                     sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                                     sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                                     sp.hi[5]]
@@ -394,14 +400,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                                   )
                             sys.exit()
 
-                        lo_array = [round(-nu, 2)] + [round(x, 8) for x in [
+                        lo_array = [__round_sig(-nu, 3)] + [__round_sig(x, 9) for x in [
                                     sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                                     sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                                     sp.lo[5]]
                                 ]
                         lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                        hi_array = [round(-nu, 2)] + [round(x, 8) for x in [
+                        hi_array = [__round_sig(-nu, 3)] + [__round_sig(x, 9) for x in [
                                     sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                                     sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                                     sp.hi[5]]

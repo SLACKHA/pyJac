@@ -93,7 +93,7 @@ def create_dir(path):
         if exception.errno != errno.EEXIST:
             raise
 
-def get_array(lang, index, twod = None):
+def get_array(lang, name, index, twod = None):
     """
     Given a language and an index, returns the proper string index formatted into the appropriate array characters (e.g. [] or ())
 
@@ -101,6 +101,8 @@ def get_array(lang, index, twod = None):
     ----------
     lang : str
         One of the accepted languages
+    name : str
+        The name of the array
     index : int
         The index to format
     twod : int, optional
@@ -108,8 +110,8 @@ def get_array(lang, index, twod = None):
     """
 
     if lang in ['fortran', 'matlab'] and two is not None:
-        return array_chars[lang].format(get_index(lang, index) + ', {}'.format(twod))
-    return array_chars[lang].format(get_index(lang, index))
+        return name + array_chars[lang].format(get_index(lang, index) + ', {}'.format(twod))
+    return name + array_chars[lang].format(get_index(lang, index))
 
 def get_index(lang, index):
     """

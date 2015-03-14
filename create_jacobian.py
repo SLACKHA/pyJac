@@ -19,13 +19,14 @@ import utils
 import mech_auxiliary as aux
 import CUDAParams
 import cache_optimizer as cache
+import shared_memory as shared
 
-def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind):
+def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
     file.write('  j_temp = ')
     jline = ''
     # next, contribution from dR/dYj
     if rxn.pdep or rxn.thd:
-        jline += 'pres_mod' + utils.get_array(lang, pind)
+        jline += '' + get_array(lang, 'pres_mod', pind)
         jline += ' * ('
 
     jline += '-mw_avg * ('
@@ -50,7 +51,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind):
             jline += '-'
         elif reac_nu != 1:
             jline += '{} * '.format(float(reac_nu))
-        jline += 'fwd_rates' + utils.get_array(lang, rind)
+        jline += '' + get_array(lang, 'fwd_rates', rind)
 
     if prod_nu != 0:
         if prod_nu == 1:
@@ -59,7 +60,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind):
             jline += ' + '
         else:
             jline += ' - {} * '.format(float(prod_nu))
-        jline += 'rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+        jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
 
     jline += ')'
     
@@ -67,16 +68,16 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind):
         jline += ')'
     file.write(jline + utils.line_end[lang])
 
-def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind):
+def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
     jline = ''
     if rxn.thd and not rxn.pdep:
         jline = '  thd_temp = '
-        jline += '(-mw_avg * pres_mod' + utils.get_array(lang, pind) + ' + rho'
+        jline += '(-mw_avg * ' + get_array(lang, 'pres_mod', pind) + ' + rho'
         jline += ') * '     
     else:
         beta_0minf, E_0minf, k0kinf = get_infs(rxn)
         file.write('  pres_mod_temp = ')
-        jline += 'pres_mod' + utils.get_array(lang, pind)
+        jline += '' + get_array(lang, 'pres_mod', pind)
         jline += ' * ('
 
          # dPr/dYj contribution
@@ -109,23 +110,23 @@ def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind):
         jline = '  thd_temp = pres_mod_temp * (-mw_avg + (rho / conc_temp)) * '
 
     if rxn.rev:
-        jline += '(fwd_rates' + utils.get_array(lang, rind)
-        jline += ' - rev_rates' + \
-            utils.get_array(lang, rev_reacs.index(rxn))
+        jline += '(' + get_array(lang, 'fwd_rates', rind)
+        jline += ' - ' + \
+            get_array(lang, 'rev_rates', rev_reacs.index(rxn))
         jline += ')'
     else:
-        jline += 'fwd_rates' + utils.get_array(lang, rind)
+        jline += get_array(lang, 'fwd_rates', rind)
 
     file.write(jline + utils.line_end[lang])
 
 
-def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
+def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j, get_array):
     jline = ''
     if rxn.pdep or rxn.thd:
         jline += ' + '
     jline += 'j_temp'
     if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
-        jline += ' + pres_mod' + utils.get_array(lang, pind)
+        jline += ' + ' + get_array(lang, 'pres_mod', pind)
         jline += ' * ('
 
     if sp_j.name in rxn.reac:
@@ -145,14 +146,14 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
         nu_temp = rxn.reac_nu[rxn.reac.index(sp_j.name)]
         if (nu_temp - 1) > 0:
             if isinstance(nu_temp - 1, float):
-                jline += ' * pow(conc' + \
-                    utils.get_array(lang, j_sp)
+                jline += ' * pow(' + \
+                    get_array(lang, 'conc', j_sp)
                 jline += ', {})'.format(nu_temp - 1)
             else:
                 # integer, so just use multiplication
                 for i in range(nu_temp - 1):
-                    jline += ' * conc' + \
-                        utils.get_array(lang, j_sp)
+                    jline += ' * ' + \
+                        get_array(lang, 'conc', j_sp)
 
         # loop through remaining reactants
         for sp_reac in rxn.reac:
@@ -164,13 +165,13 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
                        if specs[i].name == sp_reac)
             if isinstance(nu_temp, float):
                 jline += ' * pow(conc' + \
-                    utils.get_array(lang, isp)
+                    get_array(lang, isp)
                 jline += ', ' + str(nu_temp) + ')'
             else:
                 # integer, so just use multiplication
                 for i in range(nu_temp):
-                    jline += ' * conc' + \
-                        utils.get_array(lang, isp)
+                    jline += ' * ' + \
+                        get_array(lang, 'conc', isp)
 
     if rxn.rev and sp_j.name in rxn.prod:
         if not rxn.pdep and not rxn.thd and not sp_j.name in rxn.reac:
@@ -206,14 +207,14 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
         temp_nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
         if (temp_nu - 1) > 0:
             if isinstance(temp_nu - 1, float):
-                jline += ' * pow(conc' + \
-                    utils.get_array(lang, j_sp)
+                jline += ' * pow(' + \
+                    get_array(lang, 'conc', j_sp)
                 jline += ', {})'.format(temp_nu - 1)
             else:
                 # integer, so just use multiplication
                 for i in range(temp_nu - 1):
-                    jline += ' * conc' + \
-                        utils.get_array(lang, j_sp)
+                    jline += ' * ' + \
+                        get_array(lang, 'conc', j_sp)
 
         # loop through remaining products
         for sp_reac in rxn.prod:
@@ -224,18 +225,18 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j):
             isp = next(i for i in xrange(len(specs))
                        if specs[i].name == sp_reac)
             if isinstance(temp_nu, float):
-                jline += ' * pow(conc' + \
-                    utils.get_array(lang, isp)
+                jline += ' * pow(' + \
+                    get_array(lang, 'conc', isp)
                 jline += ', {})'.format(temp_nu)
             else:
                 # integer, so just use multiplication
-                jline += ''.join([' * conc' + utils.get_array(lang, isp) for i in range(temp_nu)])
+                jline += ''.join([' * ' + get_array(lang, 'conc', isp) for i in range(temp_nu)])
     
     if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
         jline += ')'
     file.write(jline)
 
-def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind):
+def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array):
     jline = 'thd_temp'
     mult = False
     if rxn.thd_body and not rxn.pdep:
@@ -267,18 +268,18 @@ def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind):
     elif rxn.pdep and rxn.pdep_sp == sp_j.name:
         # NOTE: This Y array previously seems to be a bug, I can't find a reference to it anywhere else
         #      changing it to y
-        jline += ' + (1.0 / y' + utils.get_array(lang, j_sp)
+        jline += ' + (1.0 / ' + get_array(lang, 'y', j_sp)
         jline += ')'
 
     if mult:
         jline += ' * '
         if rxn.rev:
-            jline += '(fwd_rates' + utils.get_array(lang, rind)
-            jline += ' - rev_rates' + \
-                utils.get_array(lang, rev_reacs.index(rxn))
+            jline += '(' + get_array(lang, 'fwd_rates', rind)
+            jline += ' - ' + \
+                get_array(lang, 'rev_rates', rev_reacs.index(rxn))
             jline += ')'
         else:
-            jline += 'fwd_rates' + utils.get_array(lang, rind)
+            jline += '' + get_array(lang, 'fwd_rates', rind)
 
     file.write(jline)
 
@@ -653,12 +654,11 @@ def write_db_dt(file, lang, specs, rxn):
 
     file.write(jline)
 
-def write_pr(file, lang, specs, reacs, pdep_reacs, rxn):
+def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array):
     # print lines for necessary pressure-dependent variables
     line = '  {} = '.format('conc_temp' if rxn.thd_body else 'Pr')
     if rxn.pdep_sp:
-        line += 'conc' + \
-            utils.get_array(lang, specs.index(rxn.pdep_sp))
+        line += get_array(lang, 'conc', specs.index(rxn.pdep_sp))
     else:
         line += '(m'
 
@@ -666,11 +666,11 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn):
             isp = specs.index(next((s for s in specs
                                     if s.name == thd_sp[0]), None))
             if thd_sp[1] > 1.0:
-                line += ' + {} * conc'.format(thd_sp[1] - 1.0)
+                line += ' + {} * '.format(thd_sp[1] - 1.0)
             elif thd_sp[1] < 1.0:
-                line += ' - {} * conc'.format(1.0 - thd_sp[1])
+                line += ' - {} * '.format(1.0 - thd_sp[1])
             if thd_sp[1] != 1.0:
-                line += utils.get_array(lang, isp)
+                line += get_array(lang, 'conc', isp)
         line += ')'
 
     if rxn.thd_body:
@@ -723,9 +723,9 @@ def write_sri(file, lang):
                             )
     file.write(line)
 
-def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind):
+def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind, get_array):
     beta_0minf, E_0minf, k0kinf = get_infs(rxn)
-    jline = '  j_temp = (pres_mod' + utils.get_array(lang, pind)
+    jline = '  j_temp = (' + get_array(lang, 'pres_mod', pind)
     jline += ' * ((' + ('-Pr' if rxn.high else '') #high -> chem-activated bimolecular rxn
 
     # dPr/dT
@@ -743,15 +743,15 @@ def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind):
 
     if rxn.rev:
         # forward and reverse reaction rates
-        jline += '(fwd_rates' + utils.get_array(lang, rind)
-        jline += ' - rev_rates' + \
-            utils.get_array(lang, rev_reacs.index(rxn))
+        jline += '(' + get_array(lang, 'fwd_rates', rind)
+        jline += ' - ' + \
+            get_array(lang, 'rev_rates', rev_reacs.index(rxn))
         jline += ')'
     else:
         # forward reaction rate only
-        jline += 'fwd_rates' + utils.get_array(lang, rind)
+        jline += '' + get_array(lang, 'fwd_rates', rind)
 
-    jline += ' + (pres_mod' + utils.get_array(lang, pind)
+    jline += ' + (' + get_array(lang, 'pres_mod', pind)
 
     file.write(jline)
 
@@ -815,7 +815,7 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
 
     return jline
 
-def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
+def write_dcp_dt(file, lang, sp, isp, sparse_indicies, get_array):
     line = '  if (T <= {:})'.format(sp.Trange[1])
     if lang in ['c', 'cuda']:
         line += ' {\n'
@@ -831,7 +831,7 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
         line += ' {}= '.format('+' if isp > 0 else '')
     elif lang in ['fortran', 'matlab']:
         line += ' = {}'.format('working_temp' if isp > 0 else '')
-    line += 'y' + utils.get_array(lang, isp + 1)
+    line += '' + get_array(lang, 'y', isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.lo[1]) +
              'T * ({:.8e} + '.format(2.0 * sp.lo[2]) +
@@ -852,7 +852,7 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
         line += ' {}= '.format('+' if isp > 0 else '')
     elif lang in ['fortran', 'matlab']:
         line += ' = {}'.format('working_temp' if isp > 0 else '')
-    line += 'y' + utils.get_array(lang, isp + 1)
+    line += '' + get_array(lang, 'y', isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.hi[1]) +
              'T * ({:.8e} + '.format(2.0 * sp.hi[2]) +
@@ -869,40 +869,38 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies):
     elif lang == 'matlab':
         file.write('  end\n\n')
 
-def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset):
+def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array):
     for k_sp, sp_k in enumerate(specs):
-        line = '  jac'
+        line = '  '
         lin_index = (num_s + 1) * (k_sp + 1)
         if lang in ['c', 'cuda']:
-            line += utils.get_array(lang, lin_index)
+            line += get_array(lang, 'jac', lin_index)
             if not lin_index in sparse_indicies:
                 sparse_indicies.append(lin_index)
         elif lang in ['fortran', 'matlab']:
-            line += utils.get_array(lang, 1, twod=k_sp + 1)
+            line += get_array(lang, 'jac', 1, twod=k_sp + 1)
             if not (1, k_sp + 1) in sparse_indicies:
                 sparse_indicies.append((1, k_sp + 1))
         line += ' {}= -('.format('+' if touched[lin_index] else '')
         touched[lin_index] = True
 
         if lang in ['c', 'cuda']:
-            line += ('h' + utils.get_array(lang, isp) + ' * ('
-                     'jac' + utils.get_array(lang, isp + 1 + (num_s + 1) * (k_sp + 1)) +
+            line += ('' + get_array(lang, 'h', isp) + ' * ('
+                     '' + get_array(lang, 'jac', isp + 1 + (num_s + 1) * (k_sp + 1)) +
                      ' * cp_avg * rho' +
-                     ' - (cp' + utils.get_array(lang, k_sp) + ' * dy' +
-                     utils.get_array(lang, isp + offset) +
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset) +
                      ' * {:.8e}))'.format(sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
-            line += ('h' + utils.get_array(lang, isp) + ' * ('
-                     'jac' + utils.get_array(lang, isp + 1, twod=k_sp + 1) +
+            line += ('' + get_array(lang, 'h', isp) + ' * ('
+                     '' + get_array(lang, 'jac', isp + 1, twod=k_sp + 1) +
                      ' * cp_avg * rho' +
-                     ' - (cp' + utils.get_array(lang, k_sp) + ' * dy' +
-                     utils.get_array(lang, isp + offset)
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset)
                      )
         line += ')' + utils.line_end[lang]
         file.write(line)
 
-def write_dt_y_division(file, lang, specs, num_s):
+def write_dt_y_division(file, lang, specs, num_s, get_array):
     if lang in ['c', 'cuda']:
         line = '  //'
     elif lang == 'fortran':
@@ -913,21 +911,21 @@ def write_dt_y_division(file, lang, specs, num_s):
     file.write(line)
     file.write('  j_temp = rho * cp_avg * cp_avg' + utils.line_end[lang])
     for k_sp, sp_k in enumerate(specs):
-        line = '  jac'
+        line = '  '
         lin_index = (num_s + 1) * (k_sp + 1)
         if lang in ['c', 'cuda']:
-            line += utils.get_array(lang, lin_index)
+            line += get_array(lang, 'jac', lin_index)
             line += ' /= (j_temp)'
         elif lang in ['fortran', 'matlab']:
-            line += utils.get_array(lang, 1, twod=k_sp + 1)
-            line += '= jac' + utils.get_array(lang, 1, twod=k_sp + 1)
+            line += get_array(lang, 'jac', 1, twod=k_sp + 1)
+            line += '= ' + get_array(lang, 'jac', 1, twod=k_sp + 1)
             line += ' / (j_temp)'
 
         line += utils.line_end[lang]
         file.write(line)
     file.write('\n')
 
-def write_dt_completion(file, lang, specs, offset):
+def write_dt_completion(file, lang, specs, offset, get_array):
     if lang in ['c', 'cuda']:
         line = '  //'
     elif lang == 'fortran':
@@ -938,18 +936,18 @@ def write_dt_completion(file, lang, specs, offset):
     file.write(line)
     line = '  '
     if lang in ['c', 'cuda']:
-        line += 'jac' + utils.get_array(lang, 0)
+        line += '' + get_array(lang, 'jac', 0)
     elif lang in ['fortran', 'matlab']:
-        line += 'jac' + utils.get_array(lang, 0, twod=0)
+        line += '' + get_array(lang, 'jac', 0, twod=0)
 
     line += ' = -('
 
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += '    + '
-        line += 'dy' + utils.get_array(lang, k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
-        line += '(-working_temp * h' + utils.get_array(lang, k_sp) + ' / cp_avg + ' + 'cp' + utils.get_array(lang, k_sp) + ')'
-        line += ' + jac' + utils.get_array(lang, k_sp + 1) + ' * h' + utils.get_array(lang, k_sp) + ' * rho'
+        line += '' + get_array(lang, 'dy', k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
+        line += '(-working_temp * ' + get_array(lang, 'h', k_sp) + ' / cp_avg + ' + '' + get_array(lang, 'cp', k_sp) + ')'
+        line += ' + ' + get_array(lang, 'jac', k_sp + 1) + ' * ' + get_array(lang, 'h', k_sp) + ' * rho'
         if k_sp != len(specs) - 1:
             line += '\n'
 
@@ -957,7 +955,7 @@ def write_dt_completion(file, lang, specs, offset):
     line += utils.line_end[lang]
     file.write(line)
 
-def write_jacobian_alt(path, lang, specs, reacs, jac_order):
+def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=4, num_threads=64):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -972,6 +970,10 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         List of reactions in the mechanism.
     jac_order : list of indexes
         Order to evaluate reactions in
+    num_blocks : int
+        The target number of blocks to run for CUDA
+    num_threads : int
+        The target number of threads to run per block in CUDA
 
     Returns
     -------
@@ -1093,11 +1095,17 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         line += 'function jac = eval_jacob (T, pres, y)\n\n'
     file.write(line)
 
+    get_array = utils.get_array
+    if lang == 'cuda':
+        smm = shared.shared_memory_manager(num_blocks, num_threads)
+        get_array = smm.get_array
+        smm.write_init(file, indent = 2)
+
     # get temperature
     if lang in ['c', 'cuda']:
-        line = '  Real T = y' + utils.get_array(lang, 0)
+        line = '  Real T = ' + get_array(lang, 'y', 0)
     elif lang in ['fortran', 'matlab']:
-        line = '  T = y' + utils.get_array(lang, 0)
+        line = '  T = ' + get_array(lang, 'y', 0)
     line += utils.line_end[lang]
     file.write(line)
 
@@ -1127,7 +1135,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
 
         if not isfirst:
             line += ' + '
-        line += '(y' + utils.get_array(lang, specs.index(sp) + 1) + \
+        line += '(' + get_array(lang, 'y', specs.index(sp) + 1) + \
             ' / {:})'.format(sp.mw)
         isfirst = False
 
@@ -1165,9 +1173,9 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = ('  conc' + utils.get_array(lang, isp) +
+        line = ('  ' + get_array(lang, 'conc', isp) +
                 ' = rho * ' +
-                'y' + utils.get_array(lang, isp + 1) +
+                '' + get_array(lang, 'y', isp + 1) +
                 ' / {}'.format(sp.mw)
                 )
         line += utils.line_end[lang]
@@ -1393,7 +1401,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         pind = None
         if rxn.pdep:
             pind = pdep_reacs.index(rind)
-            write_pr(file, lang, specs, reacs, pdep_reacs, rxn)
+            write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array)
 
             #dF/dT
             if rxn.troe:
@@ -1401,7 +1409,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
             elif rxn.sri:
                 write_sri(file, lang)
             
-            write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind)
+            write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind, get_array)
 
         else:
             # not pressure dependent
@@ -1411,22 +1419,22 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
                 pind = pdep_reacs.index(rind)
 
                 #going to need conc_temp
-                write_pr(file, lang, specs, reacs, pdep_reacs, rxn)
+                write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array)
 
-                jline = '  j_temp = ((-pres_mod' + utils.get_array(lang, pind)
+                jline = '  j_temp = ((-' + get_array(lang, 'pres_mod', pind)
                 jline += ' * '
 
                 if rxn.rev:
                     # forward and reverse reaction rates
-                    jline += '(fwd_rates' + utils.get_array(lang, rind)
-                    jline += ' - rev_rates' + \
-                        utils.get_array(lang, rev_reacs.index(rxn))
+                    jline += '(' + get_array(lang, 'fwd_rates', rind)
+                    jline += ' - ' + \
+                        get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                     jline += ')'
                 else:
                     # forward reaction rate only
-                    jline += 'fwd_rates' + utils.get_array(lang, rind)
+                    jline += '' + get_array(lang, 'fwd_rates', rind)
 
-                jline += ' / T) + (pres_mod' + utils.get_array(lang, pind)
+                jline += ' / T) + (' + get_array(lang, 'pres_mod', pind)
 
             else:
                 if lang in ['c', 'cuda', 'matlab']:
@@ -1439,7 +1447,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         jline = ' / T) * ('
 
         # contribution from temperature derivative of forward reaction rate
-        jline += 'fwd_rates' + utils.get_array(lang, rind)
+        jline += '' + get_array(lang, 'fwd_rates', rind)
         jline += ' * ('
         file.write(jline)
 
@@ -1456,8 +1464,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         if rxn.rev:
             # reversible reaction
 
-            jline += ' - rev_rates' + \
-                utils.get_array(lang, rev_reacs.index(rxn)) + \
+            jline += ' - ' + \
+                get_array(lang, 'rev_rates', rev_reacs.index(rxn)) + \
                 ' * ('
 
             file.write(jline)
@@ -1493,12 +1501,12 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         for rxn_sp in set(rxn.reac + rxn.prod):
             sp_k, k_sp = next(((s, specs.index(s)) for s in specs
                            if s.name == rxn_sp), None)
-            line = '  jac'
+            line = '  '
             nu = get_nu(sp_k, rxn)
             if nu == 0:
                 continue
             if lang in ['c', 'cuda']:
-                line += (utils.get_array(lang, k_sp + 1) +
+                line += (get_array(lang, 'jac', k_sp + 1) +
                          ' {}= {}j_temp{} * {:.8e}'.format('+' if touched[k_sp + 1] else '',
                             '' if nu == 1 else ('-' if nu == -1 else ''),
                             ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
@@ -1508,8 +1516,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
                 # NOTE: I believe there was a bug here w/ the previous
                 # fortran/matlab code (as it looks like it would be zero
                 # indexed)
-                line += (utils.get_array(lang, k_sp + 1, twod=1) +
-                         (' = jac' + utils.get_array(lang, k_sp + 1, twod=1) + ' + ' if touched[k_sp + 1] else '') + 
+                line += (get_array(lang, 'jac', k_sp + 1, twod=1) +
+                         (' = ' + get_array(lang, 'jac', k_sp + 1, twod=1) + ' + ' if touched[k_sp + 1] else '') + 
                          ' {}j_temp{} * {:.8e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
                             ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
                             sp_k.mw)
@@ -1536,10 +1544,10 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
 
         if rxn.pdep or rxn.thd:
             #need to write the pdep parts (independent of any species)
-            write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind)
+            write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind, get_array)
 
         #need to write the dr/dy parts (independent of any species)
-        write_dr_dy(file, lang, rev_reacs, rxn, rind, pind)
+        write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array)
 
         #now loop through each species
         for j_sp, sp_j in enumerate(specs):
@@ -1567,9 +1575,9 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
 
                     #check if there is any species specific stuff we need to do
                     if rxn.thd or rxn.pdep:
-                        write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind)
+                        write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array)
                     
-                    write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j)
+                    write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j, get_array)
 
                     jline = ') / {:.8e}'.format(sp_j.mw)
                     jline += utils.line_end[lang]
@@ -1578,14 +1586,14 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
                     isFirst = False
 
                 lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
-                jline = '  jac'
+                jline = '  '
                 if lang in ['c', 'cuda']:
-                    jline += (utils.get_array(lang, lin_index) + 
+                    jline += (get_array(lang, 'jac', lin_index) + 
                              ' {}= '.format('+' if touched[lin_index] else '')
                              )
                 elif lang in ['fortran', 'matlab']:
-                    jline += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) +
-                             (' = jac' + utils.get_array(lang, k_sp + 1, twod=j_sp + 1) if touched[k_sp + 1] else '') 
+                    jline += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                             (' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if touched[k_sp + 1] else '') 
                              + ' + ')
 
                 if not touched[lin_index]:
@@ -1607,20 +1615,20 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
             lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
             #see if this combo matters
             if touched[lin_index]:
+                line = '  '
                 #zero out if unused
                 if lang in ['c', 'cuda'] and not lin_index in sparse_indicies:
-                    file.write('jac' + utils.get_array(lang, lin_index) + ' = 0.0' + utils.line_end[lang])
+                    file.write(get_array(lang, 'jac', lin_index) + ' = 0.0' + utils.line_end[lang])
                 elif lang in ['fortran', 'matlab'] and not (k_sp + 1, j_sp + 1) in sparse_indicies:
-                    file.write('jac' + utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' = 0.0' + utils.line_end[lang])
+                    file.write(get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = 0.0' + utils.line_end[lang])
                 else:
                     #need to finish
-                    line = '  jac'
                     if lang in ['c', 'cuda']:
-                        line += utils.get_array(lang, lin_index) + ' += '
+                        line += get_array(lang, 'jac', lin_index) + ' += '
                     elif lang in ['fortran', 'matlab']:
-                        line += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) +
-                                 '= jac' + utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' + ')
-                    line += 'dy' + utils.get_array(lang, k_sp + offset)
+                        line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                                 '= ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
+                    line += get_array(lang, 'dy', k_sp + offset)
                     line += (' * mw_avg / {:.8e}'.format(sp_j.mw) +
                              utils.line_end[lang]
                              )
@@ -1632,12 +1640,12 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
             #see if this combo matters
             if touched[lin_index] and ((lang in ['c', 'cuda'] and lin_index in sparse_indicies) or
                 lang in ['fortran', 'matlab'] and (k_sp + 1, j_sp + 1) in sparse_indicies):
-                    line = '  jac'
+                    line = '  '
                     if lang in ['c', 'cuda']:
-                        line += utils.get_array(lang, lin_index) + ' *= '
+                        line += get_array(lang, 'jac', lin_index) + ' *= '
                     elif lang in ['fortran', 'matlab']:
-                        line += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' = jac' +
-                                 utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' * ')
+                        line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = ' +
+                                 get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' * ')
                     line += '{:.8e} / rho'.format(sp_k.mw)
                     line += utils.line_end[lang]
                     file.write(line)
@@ -1708,8 +1716,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ('(y' + utils.get_array(lang, isp + 1) + ' * ' + 'cp' +
-                 utils.get_array(lang, isp) + ')')
+        line += ('(' + get_array(lang, 'y', isp + 1) + ' * ' + '' + get_array(lang, 'cp', isp) + ')')
 
         isfirst = False
     line += utils.line_end[lang]
@@ -1717,15 +1724,15 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
 
     #set jac[0] = 0
     # set to zero
-    line = '  jac'
+    line = '  '
     if lang in ['c', 'cuda']:
-        line += utils.get_array(lang, 0) + ' = 0.0'
+        line += get_array(lang, 'jac', 0) + ' = 0.0'
         sparse_indicies.append(0)
     elif lang == 'fortran':
-        line += utils.get_array(lang, 0, twod=0) + ' = 0.0_wp'
+        line += get_array(lang, 'jac', 0, twod=0) + ' = 0.0_wp'
         sparse_indicies.append((1, 1))
     elif lang == 'matlab':
-        line += utils.get_array(lang, 0, twod=0) + ' = 0.0'
+        line += get_array(lang, 'jac', 0, twod=0) + ' = 0.0'
         sparse_indicies.append((1, 1))
     touched[0] = True
     line += utils.line_end[lang]
@@ -1738,21 +1745,21 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order):
     for isp, sp in enumerate(specs):
         write_dt_t_comment(file, lang, sp)
         #write dcp/dT for this species
-        write_dcp_dt(file, lang, sp, isp, sparse_indicies)
+        write_dcp_dt(file, lang, sp, isp, sparse_indicies, get_array)
 
         ######################################
         # Derivative with respect to species
         ######################################
         write_dt_y_comment(file, lang, sp)
-        write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset)
+        write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array)
 
         file.write('\n')
 
     #next need to divide everything out
-    write_dt_y_division(file, lang, specs, num_s)
+    write_dt_y_division(file, lang, specs, num_s, get_array)
 
     #finish the dT entry
-    write_dt_completion(file, lang, specs, offset)
+    write_dt_completion(file, lang, specs, offset, get_array)
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_jacob\n\n')
@@ -3764,9 +3771,9 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
             # get all indicies that belong to row i
             i_list = [x for x in sorted_and_cleaned if int(round(x / nvars)) == i]
             for index in i_list:
-                file.write('  w' + utils.get_array(lang, index % nvars) + ' {}= '.format('+' if touched[index % nvars] else ''))
-                file.write(' A' + utils.get_array(lang, index) + ' * '
-                           'Vm' + utils.get_array(lang, i) + utils.line_end[lang])
+                file.write(' ' + utils.get_array(lang, 'w', index % nvars) + ' {}= '.format('+' if touched[index % nvars] else ''))
+                file.write(' ' + utils.get_array(lang, 'A', index) + ' * '
+                           + utils.get_array(lang, 'Vm', i) + utils.line_end[lang])
                 touched[index % nvars] = True
         file.write("}\n")
     else:
@@ -3775,14 +3782,14 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
             i_list = [x for x in sorted_and_cleaned if x % nvars == i]
             if not len(i_list):
                 file.write(
-                    '  w' + utils.get_array(lang, i) + ' = 0' + utils.line_end[lang])
+                    '  ' + utils.get_array(lang, 'w', i) + ' = 0' + utils.line_end[lang])
                 continue
-            file.write('  w' + utils.get_array(lang, i) + ' = ')
+            file.write('  ' + utils.get_array(lang, 'w', i) + ' = ')
             for index in i_list:
                 if i_list.index(index):
                     file.write(" + ")
-                file.write(' A' + utils.get_array(lang, index) + ' * '
-                           'Vm' + utils.get_array(lang, int(index / nvars)))
+                file.write(' ' + utils.get_array(lang, 'A', index) + ' * '
+                           + utils.get_array(lang, 'Vm', int(index / nvars)))
             file.write(";\n")
         file.write("}\n")
 

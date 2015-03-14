@@ -19,6 +19,7 @@ import utils
 import CUDAParams
 import cache_optimizer as cache
 import mech_auxiliary as aux
+import shared_memory as shared
 
 def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).
@@ -98,7 +99,7 @@ def rxn_rate_const(A, b, E):
     return line
 
 
-def write_rxn_rates(path, lang, specs, reacs, ordering):
+def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threads=64):
     """Write reaction rate subroutine.
     
     Includes conditionals for reversible reactions.
@@ -115,6 +116,10 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
         ist of reactions in the mechanism.
     ordering : List of tuples
         The order to iterate through the species / reactions
+    num_blocks : int
+        The target number of blocks to run for CUDA
+    num_threads : int
+        The target number of threads to run per block in CUDA
     
     Returns
     _______
@@ -255,6 +260,12 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                      '  fwd_rxn_rates = zeros({},1);\n'.format(num_r)
                      )
     file.write(line)
+
+    get_array = utils.get_array
+    if lang == 'cuda':
+        smm = shared.shared_memory_manager(num_blocks, num_threads)
+        get_array = smm.get_array
+        smm.write_init(file, indent = 2)
     
     pre = '  '
     if lang == 'c':
@@ -297,7 +308,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                         )
                 file.write(line)
             
-            line = '  fwd_rxn_rates' + utils.get_array(lang, reacs.index(rxn)) + ' = '
+            line = '  ' + get_array(lang, 'fwd_rxn_rates', reacs.index(rxn)) + ' = '
             
             # reactants
             for sp in rxn.reac:
@@ -306,11 +317,11 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                 
                 # check if stoichiometric coefficient is real or integer
                 if isinstance(nu, float):
-                    line += 'pow(C' + utils.get_array(lang, isp) + ', {}) *'.format(nu)
+                    line += 'pow(' + get_array(lang, 'C', isp) + ', {}) *'.format(nu)
                 else:
                     # integer, so just use multiplication
                     for i in range(nu):
-                        line += 'C' + utils.get_array(lang, isp) + ' * '
+                        line += '' + get_array(lang, 'C', isp) + ' * '
             
             # Rate constant: print if not reversible, or reversible but 
             # with explicit reverse parameters.
@@ -491,7 +502,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                             )
                     file.write(line)
                 
-                line = '  rev_rxn_rates' + utils.get_array(lang, rev_reacs.index(rxn)) + ' = '
+                line = '  ' + get_array(lang, 'rev_rxn_rates', rev_reacs.index(rxn)) + ' = '
                 
                 # reactants (products from forward reaction)
                 for sp in rxn.prod:
@@ -501,11 +512,11 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
                 
                     # check if stoichiometric coefficient is real or integer
                     if isinstance(nu, float):
-                        line += 'pow(C' + utils.get_array(lang, isp) + ', {}) * '.format(nu)
+                        line += 'pow(' + get_array(lang, 'C', isp) + ', {}) * '.format(nu)
                     else:
                         # integer, so just use multiplication
                         for i in range(nu):
-                            line += 'C' + utils.get_array(lang, isp) + ' * '
+                            line += '' + get_array(lang, 'C', isp) + ' * '
             
                 # rate constant
                 if rxn.rev_par:
@@ -533,7 +544,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering):
     return
 
 
-def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
+def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=4, num_threads=64):
     """Write subroutine to for reaction pressure dependence modifications.
     
     Parameters
@@ -548,6 +559,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
         List of reactions in mechanism.
     ordering : List of tuples
         The order to iterate through the species / reactions
+    num_blocks : int
+        The target number of blocks to run for CUDA
+    num_threads : int
+        The target number of threads to run per block in CUDA
     
     Returns
     -------
@@ -608,6 +623,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                  '  pres_mod = zeros({},1);\n'.format(len(pdep_reacs))
                  )
     file.write(line)
+
+    get_array = utils.get_array
+    if lang == 'cuda':
+        smm = shared.shared_memory_manager(num_blocks, num_threads)
+        get_array = smm.get_array
+        smm.write_init(file, indent = 2)
     
     # declarations for third-body variables
     if thd_flag:
@@ -730,7 +751,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                 if reac.pdep and not reac.pdep_sp:
                     line = '  thd = m'
                 else:
-                    line = '  pres_mod' + utils.get_array(lang, pind) + ' = m'
+                    line = '  ' + get_array(lang, 'pres_mod', pind) + ' = m'
                 
                 for sp in reac.thd_body:
                     isp = specs.index(next((s for s in specs 
@@ -740,7 +761,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                         line += ' + {}'.format(sp[1] - 1.0)
                     elif sp[1] < 1.0:
                         line += ' - {}'.format(1.0 - sp[1])
-                    line += ' * C' + utils.get_array(lang, isp)
+                    line += ' * ' + get_array(lang, 'C', isp)
                 
                 line += utils.line_end[lang]
                 file.write(line)
@@ -781,7 +802,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                     isp = next(i for i in xrange(len(specs))
                                if specs[i].name == reac.pdep_sp
                                )
-                    line = '  Pr = k0 * C' + utils.get_array(lang, isp) + ' / kinf'
+                    line = '  Pr = k0 * ' + get_array(lang, 'C', isp) + ' / kinf'
                 line += utils.line_end[lang]
                 file.write(line)
                 
@@ -825,7 +846,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                             )
                     file.write(line)
                     
-                    line = '  pres_mod' + utils.get_array(lang, pind) + ' = ' + utils.exp_10_fun[lang]
+                    line = '  ' + get_array(lang, 'pres_mod', pind) + ' = ' + utils.exp_10_fun[lang]
                     line += 'logFcent / (1.0 + A * A / (B * B))) '
                     
                 elif reac.sri:
@@ -837,7 +858,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                             )
                     file.write(line)
                     
-                    line = '  pres_mod' + utils.get_array(lang, pind)
+                    line = '  ' + get_array(lang, 'pres_mod', pind)
                     line += ' = pow({:4} * '.format(reac.sri[0])
                     # Need to check for negative parameters, and 
                     # skip "-" sign if so.
@@ -858,7 +879,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
                 else:
                     #simple falloff fn (i.e. F = 1)
                     simple = True
-                    line = '  pres_mod' + utils.get_array(lang, pind) + ' = '
+                    line = '  ' + get_array(lang, 'pres_mod', pind) + ' = '
                      # regardless of F formulation
                     if reac.low:
                         # unimolecular/recombination fall-off reaction
@@ -894,7 +915,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering):
     return
 
 
-def write_spec_rates(path, lang, specs, reacs, ordering):
+def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threads=64):
     """Write subroutine to evaluate species rates of production.
     
     Parameters
@@ -909,6 +930,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
         List of reactions in mechanism.
     ordering : List of tuples
         The order to iterate through the species / reactions
+    num_blocks : int
+        The target number of blocks to run for CUDA
+    num_threads : int
+        The target number of threads to run per block in CUDA
     
     Returns
     -------
@@ -994,6 +1019,12 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
         line += '  sp_rates = zeros({},1);\n'.format(len(specs))
     file.write(line)
 
+    get_array = utils.get_array
+    if lang == 'cuda':
+        smm = shared.shared_memory_manager(num_blocks, num_threads)
+        get_array = smm.get_array
+        smm.write_init(file, indent = 2)
+
     seen = [False for spec in specs]
     for order in ordering:
         i_specs = order[0]
@@ -1002,7 +1033,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
         for spind in i_specs:
             sp = specs[spind]
 
-            line = '  sp_rates' + utils.get_array(lang, spind + offset) + ' {}= '.format('+' if seen[spind] else '')
+            line = '  ' + get_array(lang, 'sp_rates', spind + offset) + ' {}= '.format('+' if seen[spind] else '')
             seen[spind] = True
             
             # continuation line
@@ -1045,11 +1076,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
                             line += '{} * '.format(nu)
                         
                         if rxn.rev:
-                            line += '(fwd_rates' + utils.get_array(lang, rind)
-                            line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                            line += '(' + get_array(lang, 'fwd_rates', rind)
+                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                             line += ')'
                         else:
-                            line += 'fwd_rates' + utils.get_array(lang, rind)
+                            line += '' + get_array(lang, 'fwd_rates', rind)
                     elif nu < 0.0:
                         if isfirst:
                             line += '-'
@@ -1065,11 +1096,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
                             line += '{} * '.format(abs(nu))
                         
                         if rxn.rev:
-                            line += '(fwd_rates' + utils.get_array(lang, rind)
-                            line += ' - rev_rates'+ utils.get_array(lang, rev_reacs.index(rxn))
+                            line += '(' + get_array(lang, 'fwd_rates', rind)
+                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                             line += ')'
                         else:
-                            line += 'fwd_rates' + utils.get_array(lang, rind)
+                            line += '' + get_array(lang, 'fwd_rates', rind)
                     else:
                         continue
                     
@@ -1092,11 +1123,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
                         line += '{} * '.format(nu)
                     
                     if rxn.rev:
-                            line += '(fwd_rates' + utils.get_array(lang, rind)
-                            line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                            line += '(' + get_array(lang, 'fwd_rates', rind)
+                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                             line += ')'
                     else:
-                        line += 'fwd_rates' + utils.get_array(lang, rind)
+                        line += '' + get_array(lang, 'fwd_rates', rind)
                     
                     if isfirst: isfirst = False
                     
@@ -1120,11 +1151,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
                         line += '{} * '.format(nu)
                     
                     if rxn.rev:
-                            line += '(fwd_rates' + utils.get_array(lang, rind)
-                            line += ' - rev_rates' + utils.get_array(lang, rev_reacs.index(rxn))
+                            line += '(' + get_array(lang, 'fwd_rates', rind)
+                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                             line += ')'
                     else:
-                        line += 'fwd_rates' + utils.get_array(lang, rind)
+                        line += '' + get_array(lang, 'fwd_rates', rind)
                     
                     if isfirst: isfirst = False
                 else:
@@ -1133,7 +1164,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
                 # pressure dependence modification
                 if pdep:
                     pind = pdep_reacs.index(rind)
-                    line += ' * pres_mod' + utils.get_array(lang, pind)
+                    line += ' * ' + get_array(lang, 'pres_mod', pind)
             
             # species not participate in any reactions
             if not inreac: line += '0.0'
@@ -1143,7 +1174,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering):
             file.write(line)
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
-            file.write('  sp_rates' + utils.get_array(lang, i + offset) + ' = 0.0' + utils.line_end[lang])
+            file.write('  ' + get_array(lang, 'sp_rates', i + offset) + ' = 0.0' + utils.line_end[lang])
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_spec_rates\n\n')
@@ -1254,7 +1285,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
         
-        line = '    h' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'h', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} + T * ('.format(sp.lo[5]) + 
                  '{:.8e} + T * ('.format(sp.lo[0]) + 
@@ -1271,7 +1302,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
         
-        line = '    h' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'h', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} + T * ('.format(sp.hi[5]) + 
                  '{:.8e} + T * ('.format(sp.hi[0]) + 
@@ -1325,7 +1356,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
         
-        line = '    u' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'u', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} + T * ('.format(sp.lo[5]) + 
                  '{:.8e} - 1.0 + T * ('.format(sp.lo[0]) + 
@@ -1342,7 +1373,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
         
-        line = '    u' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'u', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} + T * ('.format(sp.hi[5]) + 
                  '{:.8e} - 1.0 + T * ('.format(sp.hi[0]) + 
@@ -1396,7 +1427,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
         
-        line = '    cv' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cv', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} - 1.0 + T * ('.format(sp.lo[0]) + 
                  '{:.8e} + T * ('.format(sp.lo[1]) + 
@@ -1412,7 +1443,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
         
-        line = '    cv' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cv', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} - 1.0 + T * ('.format(sp.hi[0]) + 
                  '{:.8e} + T * ('.format(sp.hi[1]) + 
@@ -1465,7 +1496,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
         
-        line = '    cp' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cp', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} + T * ('.format(sp.lo[0]) + 
                  '{:.8e} + T * ('.format(sp.lo[1]) + 
@@ -1481,7 +1512,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
         
-        line = '    cp' + utils.get_array(lang, specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cp', specs.index(sp))
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) + 
                  '({:.8e} + T * ('.format(sp.hi[0]) + 
                  '{:.8e} + T * ('.format(sp.hi[1]) + 
@@ -1603,13 +1634,13 @@ def write_derivs(path, lang, specs, reacs):
             line = '     '
         
         if not isfirst: line += ' + '
-        line += '(y' + utils.get_array(lang, specs.index(sp) + 1) + ' / {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'y', specs.index(sp) + 1) + ' / {})'.format(sp.mw)
         
         isfirst = False
     
     line += ';\n'
     file.write(line)
-    line = '  rho = pres / ({:.8e} * y'.format(chem.RU) + utils.get_array(lang, 0) + ' * rho);\n\n'
+    line = '  rho = pres / ({:.8e} * '.format(chem.RU) + utils.get_array(lang, 'y', 0) + ' * rho);\n\n'
     file.write(line)
     
     # calculation of species molar concentrations
@@ -1621,7 +1652,7 @@ def write_derivs(path, lang, specs, reacs):
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = '  {}conc'.format(modifier) + utils.get_array(lang, isp) + ' = rho * y' + utils.get_array(lang, isp + 1) + ' / '
+        line = '  {}'.format(modifier) + utils.get_array(lang, 'conc', isp) + ' = rho * ' + utils.get_array(lang, 'y', isp + 1) + ' / '
         line += '{}'.format(sp.mw) + utils.line_end[lang]
         file.write(line)
     
@@ -1635,14 +1666,14 @@ def write_derivs(path, lang, specs, reacs):
                        '  Real fwd_rates[{}];\n'.format(len(reacs)) + 
                        '  Real rev_rates[{}];\n'.format(len(rev_reacs)))
 
-        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', {0}conc, {0}fwd_rates, {0}rev_rates);\n'.format(modifier) + 
+        file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', {0}conc, {0}fwd_rates, {0}rev_rates);\n'.format(modifier) + 
                    '\n')
     else:
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  // local array holding reaction rates\n'
                    '  Real rates[{}];\n'.format(len(reacs)))
 
-        file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', {0}conc, {0}rates);\n'.format(modifier) + 
+        file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', {0}conc, {0}rates);\n'.format(modifier) + 
                    '\n')
         
     # reaction pressure dependence
@@ -1658,16 +1689,16 @@ def write_derivs(path, lang, specs, reacs):
             if lang != 'cuda' or not CUDAParams.is_global():
                 file.write('  Real pres_mod[{}];\n'.format(num_pdep))
                 
-            file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
+            file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
         elif lang == 'fortran':
             file.write('  ! get and evaluate pressure modifications to '
                        'reaction rates\n'
-                       '  get_rxn_pres_mod (y' + utils.get_array(lang, 0) + ', pres, conc, pres_mod)\n'
+                       '  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, conc, pres_mod)\n'
                        )
         elif lang == 'matlab':
             file.write('  % get and evaluate pressure modifications to '
                        'reaction rates\n'
-                       '  pres_mod = get_rxn_pres_mod (y' + utils.get_array(lang, 0) + ', pres, conc, '
+                       '  pres_mod = get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, conc, '
                        'pres_mod);\n'
                        )
         file.write('\n')
@@ -1701,7 +1732,7 @@ def write_derivs(path, lang, specs, reacs):
         # evaluate specific heat
         file.write('  // local array holding constant pressure specific heat\n'
                    '  Real cp[{}];\n'.format(len(specs)))
-    file.write('  eval_cp (y' + utils.get_array(lang, 0) + ', {0}cp);\n'.format(modifier) +
+    file.write('  eval_cp (' + utils.get_array(lang, 'y', 0) + ', {0}cp);\n'.format(modifier) +
                '\n'
                )
     
@@ -1717,7 +1748,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '({}cp'.format(modifier) + utils.get_array(lang, isp) + ' * y' + utils.get_array(lang, isp + 1) + ')'
+        line += '({}'.format(modifier) + utils.get_array(lang, 'cp', isp) + ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
         
         isfirst = False
     
@@ -1728,11 +1759,11 @@ def write_derivs(path, lang, specs, reacs):
         # evaluate enthalpy
         file.write('  // local array for species enthalpies\n'
                    '  Real h[{}];\n'.format(len(specs)))
-    file.write('  eval_h(y' + utils.get_array(lang, 0) + ', {}h);\n'.format(modifier))
+    file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', {}h);\n'.format(modifier))
     
     # energy equation
     file.write('  // rate of change of temperature\n')
-    line = '  dy' + utils.get_array(lang, 0) + ' = (-1.0 / (rho * cp_avg)) * ( '
+    line = '  ' + utils.get_array(lang, 'dy', 0) + ' = (-1.0 / (rho * cp_avg)) * ( '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1743,7 +1774,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(dy' + utils.get_array(lang, isp + 1) + ' * {}h'.format(modifier) + utils.get_array(lang, isp) + ' * {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * {}'.format(modifier) + utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
         
         isfirst = False
     
@@ -1753,7 +1784,7 @@ def write_derivs(path, lang, specs, reacs):
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
     for sp in specs:
-        line = '  dy' + utils.get_array(lang, specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
+        line = '  ' + utils.get_array(lang, 'dy', specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')
@@ -1784,13 +1815,13 @@ def write_derivs(path, lang, specs, reacs):
             line = '      '
         
         if not isfirst: line += ' + '
-        line += '(y' + utils.get_array(lang, specs.index(sp) + 1) + ' / {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'y', specs.index(sp) + 1) + ' / {})'.format(sp.mw)
         
         isfirst = False
     
     line += ';\n'
     file.write(line)
-    line = '  pres = rho * {:.8e} * y'.format(chem.RU) + utils.get_array(lang, 0) + ' * pres;\n\n'
+    line = '  pres = rho * {:.8e} * '.format(chem.RU) + utils.get_array(lang, 'y', 0) + ' * pres;\n\n'
     file.write(line)
     
     if lang != 'cuda' or not CUDAParams.is_global(): 
@@ -1801,7 +1832,7 @@ def write_derivs(path, lang, specs, reacs):
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = '  {}conc'.format(modifier) + utils.get_array(lang, isp) + ' = rho * y' + utils.get_array(lang, isp + 1) + ' / {};\n'.format(sp.mw)
+        line = '  {}'.format(modifier) + utils.get_array(lang, 'conc', isp) + ' = rho * ' + utils.get_array(lang, 'y', isp + 1) + ' / {};\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')
@@ -1810,14 +1841,14 @@ def write_derivs(path, lang, specs, reacs):
         # evaluate reaction rates
         file.write('  // local array holding reaction rates\n'
                    '  Real rates[{}];\n'.format(len(reacs)))
-    file.write('  eval_rxn_rates (y' + utils.get_array(lang, 0) + ', pres, {0}conc, {0}rates);\n'.format(modifier) + 
+    file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}rates);\n'.format(modifier) + 
                '\n'
                )
     #NOTE: Pressure mod was missing... I don't think that's right?
     if lang != 'cuda' or not CUDAParams.is_global():
         file.write('  // get pressure modifications to reaction rates\n'
                    '  Real pres_mod[{}];\n'.format(num_pdep))
-    file.write('  get_rxn_pres_mod (y'+ utils.get_array(lang, 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
+    file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
     # species rate of change of molar concentration
     file.write('  // evaluate rate of change of species molar '
                'concentration\n')
@@ -1835,7 +1866,7 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local array holding constant volume specific heat\n'
                    '  Real cv[{}];\n'.format(len(specs))
                    )
-    file.write('  eval_cv(y' + utils.get_array(lang, 0) + ', {0}cv);\n\n'.format(modifier))
+    file.write('  eval_cv(' + utils.get_array(lang, 'y', 0) + ', {0}cv);\n\n'.format(modifier))
     
     file.write('  // constant volume mass-average specific heat\n')
     line = '  Real cv_avg = '
@@ -1849,7 +1880,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '({0}cv'.format(modifier) + utils.get_array(lang, isp) + ' * y' + utils.get_array(lang, isp + 1) + ')'
+        line += '({0}'.format(modifier) + utils.get_array(lang, 'cv', isp) + ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
         
         isfirst = False
     
@@ -1861,11 +1892,11 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local array for species internal energies\n'
                    '  Real u[{}];\n'.format(len(specs))
                    )
-    file.write('  eval_u(y' + utils.get_array(lang, 0) + ', {0}u);\n'.format(modifier))
+    file.write('  eval_u(' + utils.get_array(lang, 'y', 0) + ', {0}u);\n'.format(modifier))
     
     # energy equation
     file.write('  // rate of change of temperature\n')
-    line = '  dy' + utils.get_array(lang, 0) + ' = (-1.0 / (rho * cv_avg)) * ( '
+    line = '  ' + utils.get_array(lang, 'dy', 0) + ' = (-1.0 / (rho * cv_avg)) * ( '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1876,7 +1907,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(dy' + utils.get_array(lang, isp + 1) + ' * {0}u'.format(modifier) + utils.get_array(lang, isp) + ' * {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * {0}'.format(modifier) + utils.get_array(lang, 'u', isp) + ' * {})'.format(sp.mw)
         
         isfirst = False
     
@@ -1887,7 +1918,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // calculate rate of change of species mass fractions\n')
     for sp in specs:
         isp = specs.index(sp)
-        line = '  dy' + utils.get_array(lang, isp + 1) + ' *= ({} / rho);\n'.format(sp.mw)
+        line = '  ' + utils.get_array(lang, 'dy', isp + 1) + ' *= ({} / rho);\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')

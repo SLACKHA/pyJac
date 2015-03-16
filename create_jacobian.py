@@ -3875,7 +3875,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_moles = "", num_blocks=8):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -3890,9 +3890,9 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     optimize_cache : bool, optional
         If true, use the greedy optimizer to attempt to 
         improve cache hit rates
-    initial_moles : str, optional
-        A comma separated list of moles to use (e.g. H2=1.0,O2=0.5) 
-        as initial conditions
+    initial_state : str, optional
+        A comma separated list of the initial conditions to use in form T,P,X (e.g. 800,1,H2=1.0,O2=0.5) 
+        Temperature in K, P in atm
     num_blocks : int, optional
         The target number of blocks / sm to achieve for cuda
 
@@ -4009,7 +4009,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     rate.write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
 
     # write Jacobian subroutine
     sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order, num_blocks)
@@ -4043,12 +4043,16 @@ if __name__ == "__main__":
                         default = True,
                         help = 'Attempt to optimize cache store/loading via use '
                         'of a greedy selection algorithm.')
-    parser.add_argument('-x', '--initial-moles',
+    parser.add_argument('-ic', '--initial-conditions',
                         type=str,
-                        dest='initial_moles',
+                        dest='initial_conditions',
                         default = '',
                         required=False,
-                        help = 'A comma separated list of initial moles to set in the set_same_initial_conditions method.')
+                        help = 'A comma separated list of initial initial conditions to set in the set_same_initial_conditions method. \
+                                Expected Form: T,P,Species1=...,Species2=...,...\n\
+                                Temperature in K\n\
+                                Pressure in Atm\n\
+                                Species in moles')
     parser.add_argument('-nb', '--num-blocks',
                         type=str,
                         dest='num_blocks',
@@ -4058,4 +4062,4 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles, args.num_blocks)
+    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks)

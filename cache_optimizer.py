@@ -265,20 +265,6 @@ class reaction_rates_score(score_function):
     def get_list(self, specs, reacs):
         return ([spec for spec in specs], self.get_all_rxns(specs))
 
-class jacobian_score(reaction_rates_score):
-    def load_s_to_r(self, specs, reacs, load_non_participating=False):
-        self.r_to_s_save = [set() for i in range(len(reacs))]
-        self.s_to_r_save = [set() for i in range(len(specs))]
-        for sind, sp in enumerate(specs):
-            for rind, rxn in enumerate(reacs):
-                thd_sp = [thd[0] for thd in rxn.thd_body]
-                if any(sp.name == x for x in rxn.reac + rxn.prod + thd_sp):
-                    nu = get_nu(sp, rxn)
-                    if nu is not None and (nu != 0 or load_non_participating):
-                        self.r_to_s_save[rind].add(sind)
-                        self.s_to_r_save[sind].add(rind)
-
-
 class pdep_rates_score(reaction_rates_score):
     def __init__(self, specs, reacs, pool_size, pool_size_reset = 0.9):
         super(pdep_rates_score, self).__init__(specs, reacs, pool_size, True, pool_size_reset)
@@ -295,6 +281,19 @@ class pdep_rates_score(reaction_rates_score):
     def gather_initial_stats(self, specs, reacs):
         self.baseline_loads = sum(len(rxn.thd_body) for rxn in reacs)
         self.baseline_stores = len(reacs)
+
+class jacobian_score(reaction_rates_score):
+    def load_s_to_r(self, specs, reacs, load_non_participating=True):
+        self.r_to_s_save = [set() for i in range(len(reacs))]
+        self.s_to_r_save = [set() for i in range(len(specs))]
+        for sind, sp in enumerate(specs):
+            for rind, rxn in enumerate(reacs):
+                thd_sp = [thd[0] for thd in rxn.thd_body]
+                if any(sp.name == x for x in rxn.reac + rxn.prod + thd_sp):
+                    nu = get_nu(sp, rxn)
+                    if (nu is not None and nu != 0) or (nu is None):
+                        self.r_to_s_save[rind].add(sind)
+                        self.s_to_r_save[sind].add(rind)
 
 def greedy_optimizer(scorer):
     """

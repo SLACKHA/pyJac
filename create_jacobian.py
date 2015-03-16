@@ -21,6 +21,72 @@ import CUDAParams
 import cache_optimizer as cache
 import shared_memory as shared
 
+def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
+    #need to figure out shared memory stuff
+    variable_list = []
+    usages = []
+    fwd_usage = 2
+    rev_usage = 0 if not rxn.rev else 2
+    pres_mod_usage = 0 if not (rxn.pdep or rxn.thd) else (4 if rxn.thd else 2)
+    reac_usages = [0 for i in range(len(rxn.reac))]
+    prod_usages = [0 for i in range(len(rxn.prod))]
+    #add variables
+    variable_list.append(utils.get_array('cuda', 'fwd_rates', rind))
+    if rxn.rev:
+        variable_list.append(utils.get_array('cuda', 'rev_rates', rev_reacs.index(rxn)))
+    if rxn.pdep:
+        variable_list.append(utils.get_array('cuda', 'pres_mod', pdep_reacs.index(rind)))
+    for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
+        sp_real = next(spec for spec in specs if spec.name == sp)
+        variable_list.append(utils.get_array('cuda', 'conc', specs.index(sp_real)))
+
+    alphaij_count = 0
+    #calculate usages
+    if rxn.thd or rxn.pdep:
+        fwd_usage +=1
+        if rxn.rev:
+            rev_usage += 1
+        for i, thd in enumerate(rxn.thd_body):
+            #check alphaij
+            alphaij = thd[1]
+            if alphaij is not None and alphaij != 1.0:
+                alphaij_count += 1
+        fwd_usage += alphaij_count
+        if rxn.rev:
+            rev_usage += alphaij_count
+
+    for sp_name in rxn.reac:
+        nu = rxn.reac_nu[rxn.reac.index(sp_name)]
+        reac_usages[rxn.reac.index(sp_name)] += 1
+        if nu - 1 > 0:
+            reac_usages[rxn.reac.index(sp_name)] += 1
+            if rxn.thd:
+                pres_mod_usage += 1
+
+
+    for sp_name in rxn.prod:
+        nu = rxn.prod_nu[rxn.prod.index(sp_name)]
+        prod_usages[rxn.prod.index(sp_name)] += 1
+        if nu - 1 > 0:
+            prod_usages[rxn.prod.index(sp_name)] += 1
+
+    usages.append(fwd_usage)
+    if rxn.rev:
+        usages.append(rev_usage)
+    if rxn.pdep or rxn.thd:
+        usages.append(pres_mod_usage)
+    for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
+        u = 0
+        if sp in rxn.reac:
+            u += reac_usages[rxn.reac.index(sp)]
+        if sp in rxn.prod:
+            u += prod_usages[rxn.prod.index(sp)]
+        if sp in rxn.thd_body:
+            u += 1
+        usages.append(u)
+
+    return variable_list, usages   
+
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
     file.write('  j_temp = ')
     jline = ''
@@ -955,7 +1021,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     line += utils.line_end[lang]
     file.write(line)
 
-def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=4, num_threads=64):
+def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_threads=64):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -1389,6 +1455,11 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=4, num_th
     ###################################
     for rind in index_list:
         rxn = reacs[rind]
+
+        if lang == 'cuda':
+            variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
+            smm.load_into_shared(file, variable_list, usages)
+
         
         ######################################
         # with respect to temperature
@@ -1607,6 +1678,14 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=4, num_th
                 jline = ''
 
         file.write('\n')
+
+        if lang == 'cuda':
+            variable_list = ['fwd_rates[{}]'.format(rind)]
+            if rxn.rev:
+                variable_list.append('rev_rates[{}]'.format(rev_reacs.index(rxn)))
+            if rxn.pdep or rxn.thd:
+                variable_list.append('pres_mod[{}]'.format(pdep_reacs.index(rind)))
+            smm.evict(variable_list)
 
     #need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)
@@ -3796,7 +3875,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_moles = ""):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_moles = "", num_blocks=8):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -3814,6 +3893,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     initial_moles : str, optional
         A comma separated list of moles to use (e.g. H2=1.0,O2=0.5) 
         as initial conditions
+    num_blocks : int, optional
+        The target number of blocks / sm to achieve for cuda
 
     Returns
     -------
@@ -3931,7 +4012,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles)
 
     # write Jacobian subroutine
-    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order)
+    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order, num_blocks)
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
@@ -3968,7 +4049,13 @@ if __name__ == "__main__":
                         default = '',
                         required=False,
                         help = 'A comma separated list of initial moles to set in the set_same_initial_conditions method.')
+    parser.add_argument('-nb', '--num-blocks',
+                        type=str,
+                        dest='num_blocks',
+                        default = 8,
+                        required=False,
+                        help = 'The target number of blocks to achieve for CUDA.')
 
     args = parser.parse_args()
 
-    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles)
+    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles, args.num_blocks)

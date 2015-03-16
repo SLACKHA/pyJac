@@ -99,7 +99,7 @@ def rxn_rate_const(A, b, E):
     return line
 
 
-def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threads=64):
+def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threads=64):
     """Write reaction rate subroutine.
     
     Includes conditionals for reversible reactions.
@@ -300,6 +300,11 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_thread
         i_reacs = order[1]
         for i_rxn in i_reacs:
             rxn = reacs[i_rxn]
+
+            if lang == 'cuda':
+                the_vars = [utils.get_array(lang, 'C', next(isp for isp in range(len(specs)) if specs[isp].name == s))
+                             for s in set(rxn.reac + rxn.prod)]
+                smm.load_into_shared(file, the_vars)
             
             # if reversible, save forward rate constant for use
             if rxn.rev and not rxn.rev_par:
@@ -544,7 +549,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_thread
     return
 
 
-def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=4, num_threads=64):
+def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num_threads=64):
     """Write subroutine to for reaction pressure dependence modifications.
     
     Parameters
@@ -747,6 +752,13 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=4, num
             
             # third-body reaction
             if reac.thd:
+
+                if lang == 'cuda':
+                    the_vars = []
+                    for sp in reac.thd_body:
+                        index = specs.index(next(s for s in specs if s.name == sp[0]))
+                        the_vars.append(utils.get_array(lang, 'C', index))
+                    smm.load_into_shared(file, the_vars)
                 
                 if reac.pdep and not reac.pdep_sp:
                     line = '  thd = m'
@@ -915,7 +927,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=4, num
     return
 
 
-def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threads=64):
+def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threads=64):
     """Write subroutine to evaluate species rates of production.
     
     Parameters
@@ -1042,7 +1054,13 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
             isfirst = True
             
             inreac = False
-            
+            if lang == 'cuda':
+                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not rxn.rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
+                            for rind in i_reacs]
+                the_vars = ['(' + the_vars[i] + ')' for i in range(len(i_reacs)) if reacs[i_reacs[i]].rev]
+                the_vars = [the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' + 
+                            utils.get_array(lang, 'pres_mod', pdep_reacs.index(i_reacs[i])) for i in range(len(i_reacs))]
+                smm.load_into_shared(file, the_vars)
             # loop through reactions
             for rind in i_reacs:
                 rxn = reacs[rind]
@@ -1058,6 +1076,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
                     file.write(line)
                     line = cline
                 
+                rxn_out = ''
                 # first check to see if in both products and reactants
                 if sp.name in rxn.prod and sp.name in rxn.reac:
                     pisp = rxn.prod.index(sp.name)
@@ -1076,11 +1095,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
                             line += '{} * '.format(nu)
                         
                         if rxn.rev:
-                            line += '(' + get_array(lang, 'fwd_rates', rind)
-                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
-                            line += ')'
+                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
                         else:
-                            line += '' + get_array(lang, 'fwd_rates', rind)
+                            rxn_out = get_array(lang, 'fwd_rates', rind)
                     elif nu < 0.0:
                         if isfirst:
                             line += '-'
@@ -1096,11 +1113,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
                             line += '{} * '.format(abs(nu))
                         
                         if rxn.rev:
-                            line += '(' + get_array(lang, 'fwd_rates', rind)
-                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
-                            line += ')'
+                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
                         else:
-                            line += '' + get_array(lang, 'fwd_rates', rind)
+                            rxn_out = get_array(lang, 'fwd_rates', rind)
                     else:
                         continue
                     
@@ -1123,11 +1138,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
                         line += '{} * '.format(nu)
                     
                     if rxn.rev:
-                            line += '(' + get_array(lang, 'fwd_rates', rind)
-                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
-                            line += ')'
+                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
                     else:
-                        line += '' + get_array(lang, 'fwd_rates', rind)
+                        rxn_out = get_array(lang, 'fwd_rates', rind)
                     
                     if isfirst: isfirst = False
                     
@@ -1151,11 +1164,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
                         line += '{} * '.format(nu)
                     
                     if rxn.rev:
-                            line += '(' + get_array(lang, 'fwd_rates', rind)
-                            line += ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
-                            line += ')'
+                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
                     else:
-                        line += '' + get_array(lang, 'fwd_rates', rind)
+                        rxn_out = get_array(lang, 'fwd_rates', rind)
                     
                     if isfirst: isfirst = False
                 else:
@@ -1164,7 +1175,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=4, num_threa
                 # pressure dependence modification
                 if pdep:
                     pind = pdep_reacs.index(rind)
-                    line += ' * ' + get_array(lang, 'pres_mod', pind)
+                    rxn_out += ' * ' + get_array(lang, 'pres_mod', pind)
+
+                if lang == 'cuda':
+                    rxn_out = get_array(lang, rxn_out, None, preformed=True)
+                line += rxn_out
             
             # species not participate in any reactions
             if not inreac: line += '0.0'

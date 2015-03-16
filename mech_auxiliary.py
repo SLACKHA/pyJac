@@ -22,14 +22,18 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     if not CUDAParams.is_global():
         if have_rev_rxns:
             file.write('#ifdef PROFILER\n'
-                       '__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_rxn_rates(const double T) {\n'
                        '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double fwd_rates_local[FWD_RATES];\n'
                        '    double rev_rates_local[REV_RATES];\n'
                        '    eval_rxn_rates(T, conc_local, fwd_rates_local, rev_rates_local);\n'
                        '}\n'
                        '#elif RATES_TEST\n'
-                       '__global__ void k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
                        '    double conc_local[NSP];\n'
                        '    double fwd_rates_local[FWD_RATES];\n'
                        '    double rev_rates_local[REV_RATES];\n'
@@ -50,13 +54,17 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        )
         else:
             file.write('#ifdef PROFILER\n'
-                       '__global__ void k_eval_rxn_rates(const double T) {\n'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_rxn_rates(const double T) {\n'
                        '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double rates_local[RATES];\n'
                        '    eval_rxn_rates(T, conc_local, rates_local);\n'
                        '}\n'
                        '#elif RATES_TEST\n'
-                       '__global__ void k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* rates) {\n'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* rates) {\n'
                        '    double conc_local[NSP];\n'
                        '    double rates_local[RATES];\n'
                        '    //copy in\n'
@@ -73,13 +81,17 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        )
         if have_pdep_rxns:
             file.write('#ifdef PROFILER\n'
-                       '__global__ void k_get_rxn_pres_mod(const double T, const double P) {\n'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_get_rxn_pres_mod(const double T, const double P) {\n'
                        '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double pres_mod_local[PRES_MOD_RATES];\n'
                        '    get_rxn_pres_mod(T, P, conc_local, pres_mod_local);\n'
                        '}\n'
                        '#elif RATES_TEST\n'
-                       '__global__ void k_get_rxn_pres_mod(const int NUM, const double T, const double P, double* conc, double* pres_mod) {'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_get_rxn_pres_mod(const int NUM, const double T, const double P, double* conc, double* pres_mod) {'
                        '    double conc_local[NSP];\n'
                        '    double pres_mod_local[PRES_MOD_RATES];\n'
                        '    //copy in\n'
@@ -95,7 +107,9 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        '#endif\n'
                        )
         file.write('#ifdef PROFILER\n'
-                   '__global__ void k_eval_spec_rates() {\n'
+                       '__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_spec_rates() {\n'
                    )
         if have_rev_rxns:
             file.write('    double fwd_rates_local[FWD_RATES] = {[0 ... FWD_RATES - 1] = 1.0};\n'
@@ -172,13 +186,17 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    )
         file.write('#endif\n')
         file.write('#ifdef PROFILER\n'
-                   '__global__ void k_eval_dy(const double T, const double P) {\n'
+                   '__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_dy(const double T, const double P) {\n'
                    '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
                    '    double dy_local[NN];\n'
                    '    dydt(T, P, y_local, dy_local);\n'
                    '}\n'
                    '#elif RATES_TEST\n'
-                   '__global__ void k_eval_dy(const int NUM, const double T, const double P, const double* y, double* dy) {\n'
+                   '__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_dy(const int NUM, const double T, const double P, const double* y, double* dy) {\n'
                    '    double y_local[NN];\n'
                    '    double dy_local[NN];\n'
                    '    //copy in\n'
@@ -194,13 +212,17 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '#endif\n'
                    )
         file.write('#ifdef PROFILER\n'
-                   '__global__ void k_eval_jacob(const double T, const double P) {\n'
+                   '__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_jacob(const double T, const double P) {\n'
                    '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
                    '    double jac_local[NN * NN];\n'
                    '    eval_jacob(0, P, y_local, jac_local);\n'
                    '}\n'
                    '#elif RATES_TEST\n'
-                   '__global__ void k_eval_jacob(const int NUM, const double t, const double P, double* y, double* jac) {\n'
+                   '__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_jacob(const int NUM, const double t, const double P, double* y, double* jac) {\n'
                    '    double y_local[NN];\n'
                    '    double jac_local[NN * NN] = {0.0};\n'
                    '    //copy in\n'
@@ -217,28 +239,40 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         file.write('\n')
     else:
         if have_rev_rxns:
-            file.write('__global__ void k_eval_rxn_rates(const double T) {\n'
+            file.write('__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_rxn_rates(const double T) {\n'
                        '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.fwd_rates, memory_pointers.rev_rates);\n'
                        '}\n'
                        )
         else:
-            file.write('__global__ void k_eval_rxn_rates(const double T) {\n'
+            file.write('__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_eval_rxn_rates(const double T) {\n'
                        '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.rates);\n'
                        '}\n'
                        )
         if have_pdep_rxns:
-            file.write('__global__ void k_get_rxn_pres_mod(const double T, const double P) {\n'
+            file.write('__global__ void \n'
+                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                       'k_get_rxn_pres_mod(const double T, const double P) {\n'
                        '    get_rxn_pres_mod(T, P, memory_pointers.conc, memory_pointers.pres_mod);\n'
                        '}\n')
-        file.write('__global__ void k_eval_spec_rates() {{\n'.format() +
+        file.write('__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_spec_rates() {{\n'.format() +
                    '    eval_spec_rates({}{} memory_pointers.dy);\n'.format('memory_pointers.fwd_rates, memory_pointers.rev_rates,' if have_rev_rxns else 'memory_pointers.rates,',
                                                             ' memory_pointers.pres_mod,' if have_pdep_rxns else '') +
                    '}\n'
                    )
-        file.write('__global__ void k_eval_dy(const double T, const double P) {\n'
+        file.write('__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_dy(const double T, const double P) {\n'
                    '    dydt(T, P, memory_pointers.y, memory_pointers.dy);\n'
                    '}\n')
-        file.write('__global__ void k_eval_jacob(const double t, const double P) {\n'
+        file.write('__global__ void \n'
+                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
+                   'k_eval_jacob(const double t, const double P) {\n'
                    '    eval_jacob(t, P, memory_pointers.y, memory_pointers.jac);\n'
                    '}\n')
         file.write('\n')
@@ -291,10 +325,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
-                   '    k_eval_rxn_rates<<<grid_size, block_size>>>({});\n'.format(T) + 
+                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'.format(T) + 
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
-                   '    k_eval_rxn_rates<<<grid_size, block_size>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}fwd_rates, {0}rev_rates'.format(descriptor) if not CUDAParams.is_global() else '')
+                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}fwd_rates, {0}rev_rates'.format(descriptor) if not CUDAParams.is_global() else '')
                    )
         file.write(
                '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, {}fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor) + 
@@ -313,10 +347,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
         file.write(
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
-            '    k_eval_rxn_rates<<<grid_size, block_size>>>({});\n'.format(T) +
+            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'.format(T) +
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_eval_rxn_rates<<<grid_size, block_size>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}rates'.format(descriptor) if not CUDAParams.is_global() else '')
+            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}{});\n'.format(T, ', {0}conc, {0}rates'.format(descriptor) if not CUDAParams.is_global() else '')
             )
         file.write(
         '    cudaErrorCheck(cudaMemcpy(rates_host_full, {}rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor))
@@ -330,10 +364,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
         file.write(
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
-            '    k_get_rxn_pres_mod<<<grid_size, block_size>>>({}, {});\n'.format(T, P) +
+            '    k_get_rxn_pres_mod<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_get_rxn_pres_mod<<<grid_size, block_size>>>(padded, {}, {}{});\n'.format(T, P, ', {0}conc, {0}pres_mod'.format(descriptor) if not CUDAParams.is_global() else '')
+            '    k_get_rxn_pres_mod<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', {0}conc, {0}pres_mod'.format(descriptor) if not CUDAParams.is_global() else '')
             )
         file.write(
         '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, {}pres_mod, padded * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor)
@@ -347,20 +381,20 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
-                   '    k_eval_spec_rates<<<grid_size, block_size>>>();\n'
+                   '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>();\n'
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
-                   '    k_eval_spec_rates<<<grid_size, block_size>>>(padded, {});\n'.format(('{0}fwd_rates, {0}rev_rates' + (', {0}pres_mod' if have_pdep_rxns else '') + \
+                   '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format(('{0}fwd_rates, {0}rev_rates' + (', {0}pres_mod' if have_pdep_rxns else '') + \
                         ', {0}spec_rates').format(descriptor) if not CUDAParams.is_global() else '')
                    )
     else:
         file.write(
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
-            '    k_eval_spec_rates<<<grid_size, block_size>>>({});\n'
+            '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_eval_spec_rates<<<grid_size, block_size>>>(padded, {});\n'.format(('{0}rates' + (', {0}pres_mod' if have_pdep_rxns else '') + 
+            '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format(('{0}rates' + (', {0}pres_mod' if have_pdep_rxns else '') + 
                 ', {0}spec_rates').format(descriptor))
             )
     file.write(
@@ -373,11 +407,11 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
     file.write('#ifdef PROFILER\n'
                 '    cuProfilerStart();\n'
-                '    k_eval_dy<<<grid_size, block_size>>>({}, {});\n'.format(T, P) + 
+                '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) + 
                 '    cuProfilerStop();\n'
                 '#elif RATES_TEST\n'
                 '    cudaErrorCheck(cudaMemcpy({}y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'.format(descriptor) +
-                '    k_eval_dy<<<grid_size, block_size>>>(padded, {}, {}, {});\n'.format(T, P, ('{0}y' + (', {0}dy' if have_pdep_rxns else '')).format(descriptor) if not CUDAParams.is_global()
+                '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}, {});\n'.format(T, P, ('{0}y' + (', {0}dy' if have_pdep_rxns else '')).format(descriptor) if not CUDAParams.is_global()
                      else '')
                 )
     file.write('    cudaErrorCheck(cudaMemcpy(dy_host_full, {}dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor))
@@ -401,10 +435,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     file.write(
                '#ifdef PROFILER\n'
                '    cuProfilerStart();\n'
-               '    k_eval_jacob<<<grid_size, block_size>>>({}, {});\n'.format(T, P) + 
+               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) + 
                '    cuProfilerStop();\n'
                '#elif RATES_TEST\n'
-               '    k_eval_jacob<<<grid_size, block_size>>>(padded, 0, {}{});\n'.format(P, ', {0}y, {0}jac'.format(descriptor) if not CUDAParams.is_global() else '') + 
+               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, 0, {}{});\n'.format(P, ', {0}y, {0}jac'.format(descriptor) if not CUDAParams.is_global() else '') + 
                '    cudaErrorCheck(cudaMemcpy(jacob_host_full, {}jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'.format(descriptor) + 
                '    for (int j = 0; j < NN * NN; ++j) {\n'
                '        jacob_host[j] = jacob_host_full[j * padded];\n'
@@ -463,13 +497,13 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                        '#endif\n')
         file.write('    //Must be implemented by user on a per mechanism basis in mechanism.c\n'
                '    {} set_same_initial_conditions(int NUM,{} double**, double**);\n'.format(
-                    'int' if lang == 'cuda' else 'void', ' int, int, double**, double**, ' if lang == 'cuda' else '')
+                    'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
                    )
         file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
         if lang == 'c':
             file.write('    void write_jacobian_and_rates_output();\n')
         else:
-            file.write('    void write_jacobian_and_rates_output(int NUM, int block_size, int grid_size);\n')
+            file.write('    void write_jacobian_and_rates_output(int NUM);\n')
         file.write('#endif\n')
 
         if lang == 'cuda':
@@ -494,6 +528,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
             file.write('#include <cuda.h>\n'
                        '#include <cuda_runtime.h>\n'
                        '#include <helper_cuda.h>\n'
+                       '#include "launch_bounds.cuh"\n'
                        )
             file.write('#ifdef PROFILER\n'
                        '    #include "cuda_profiler_api.h"\n'
@@ -524,25 +559,24 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
             needed_arr = ['double** ' + a + '_host' for a in needed_arr]
             needed_arr_conv = ['double** ' + a + '_host' for a in needed_arr_conv]
         file.write('#ifdef CONP\n'
-                   '{} set_same_initial_conditions(int NUM{}, {}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                             ', int block_size, int grid_size' if lang == 'cuda' else '', ', '.join(needed_arr)) +
+                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void', ', '.join(needed_arr)) +
                    '#elif CONV\n'
-                   '{} set_same_initial_conditions(int NUM{}, {}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                             ', int block_size, int grid_size' if lang == 'cuda' else '', ', '.join(needed_arr_conv)) +
+                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void', ', '.join(needed_arr_conv)) +
                    '#endif\n'
                    )
         file.write('{\n')
         if lang == 'cuda':
+            file.write('    int grid_size = round(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n')
             if CUDAParams.is_global():
                 file.write('gpuMemory* host_memory = NULL;\n'
-                           'int padded = initialize_gpu_memory(NUM, block_size, grid_size, &host_memory);\n')
+                           'int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &host_memory);\n')
             else:
                 # do cuda mem init and copying
                 file.write(
                     '#ifdef CONP\n'
-                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, d_y, d_pres);\n'
+                    '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_y, d_pres);\n'
                     '#elif CONV\n'
-                    '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, d_y, d_rho);\n'
+                    '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_y, d_rho);\n'
                     '#endif\n'
                     )
         else:
@@ -760,26 +794,31 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                        '}\n'
                        )
         else:
-            file.write('void write_jacobian_and_rates_output(int NUM, int block_size, int grid_size) {\n'
+            file.write('void write_jacobian_and_rates_output(int NUM) {\n'
                        '    cudaErrorCheck(cudaSetDevice(0));\n'
                        '#ifdef PROFILER\n'
                        '    //bump up shared mem bank size\n'
                        '    cudaErrorCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));\n'
                        '    //and L1 size\n'
-                       '    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));\n'
                        '#endif\n'
+                       '    int grid_size = round(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n'
                       )
+            file.write('#ifdef PREFERL1\n'
+                       '    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));\n'
+                       '#else\n'
+                       '    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferShared));\n'
+                       '#endif\n')
             if CUDAParams.is_global():
                 file.write('    gpuMemory* host_memory = NULL;\n'
-                       '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &host_memory);\n')
+                       '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &host_memory);\n')
             else:
                 file.write('    double *d_y;\n'
                            '#ifdef CONP\n'
                            '    double* d_pres;\n'
-                           '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_pres);\n'
+                           '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &d_y, &d_pres);\n'
                            '#elif CONV\n'
                            '    double* d_rho;\n'
-                           '    int padded = initialize_gpu_memory(NUM, block_size, grid_size, &d_y, &d_rho);\n'
+                           '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &d_y, &d_rho);\n'
                            '#endif\n'
                           )
             file.write(

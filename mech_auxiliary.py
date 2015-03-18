@@ -448,7 +448,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
 
 
-def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
+def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
@@ -587,12 +587,22 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                    '    double Xsum = 0.0;\n'
                    )
         mole_list = []
-        if initial_moles != "":
+        if initial_conditions != "":
             try:
-                mole_list = [x.strip() for x in initial_moles.split(",")]
+                conditions = [x.strip() for x in initial_conditions.split(",")]
+                if len(conditions) < 3:
+                  print("Initial conditions improperly specified, expecting form T,P,Species1=...,Species2=...")
+                  sys.exit(1)
             except:
-                print("Error in initial mole list, not comma separated")
+                print("Error in initial conditions list, not comma separated")
                 sys.exit(1)
+            try:
+              T0 = float(conditions[0])
+              P = float(conditions[1])
+              mole_list = conditions[2:]
+            except:
+              print("Could not parse initial T or P as floats...")
+              sys.exit(1)
             try:
                 mole_list = [x.split("=") for x in mole_list]
             except:
@@ -624,10 +634,10 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_moles):
                    '    //convert to mass fractions\n'
                    '    double Yi[NSP] = {0.0};\n'
                    '    mole2mass(Xi, Yi);\n\n'
-                   '    //set initial pressure, units [dyn/cm^2]\n'
-                   '    double P = 1.01325e6;\n'
-                   '    // set intial temperature, units [K]\n'
-                   '    double T0 = 1600;\n\n'
+                   '    //set initial pressure, units [dyn/cm^2]\n' +
+                   '    double P = {};\n'.format(1.01325e6 * P) + 
+                   '    // set intial temperature, units [K]\n' +
+                   '    double T0 = {};\n\n'.format(T0) +
                    '    *y_host = (double*)malloc(padded * NN * sizeof(double));\n'
                    '#ifdef CONP\n'
                    '    *pres_host = (double*)malloc(padded * sizeof(double));\n'

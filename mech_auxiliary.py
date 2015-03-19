@@ -587,6 +587,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
                    '    double Xsum = 0.0;\n'
                    )
         mole_list = []
+        T0 = 1600
+        P = 1
         if initial_conditions != "":
             try:
                 conditions = [x.strip() for x in initial_conditions.split(",")]

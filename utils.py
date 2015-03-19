@@ -109,8 +109,8 @@ def get_array(lang, name, index, twod = None):
         If not None and the lang is fortan or matlab this will be formatted as a second index in the array
     """
 
-    if lang in ['fortran', 'matlab'] and two is not None:
-        return name + array_chars[lang].format(get_index(lang, index) + ', {}'.format(twod))
+    if lang in ['fortran', 'matlab'] and twod is not None:
+        return name + array_chars[lang].format(get_index(lang, index) + ', {}'.format(get_index(lang, twod)))
     return name + array_chars[lang].format(get_index(lang, index))
 
 def get_index(lang, index):

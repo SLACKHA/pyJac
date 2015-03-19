@@ -896,7 +896,7 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies, get_array):
     if lang in ['c', 'cuda']:
         line += ' {}= '.format('+' if isp > 0 else '')
     elif lang in ['fortran', 'matlab']:
-        line += ' = {}'.format('working_temp' if isp > 0 else '')
+        line += ' = {}'.format('working_temp + ' if isp > 0 else '')
     line += '' + get_array(lang, 'y', isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.lo[1]) +
@@ -917,7 +917,7 @@ def write_dcp_dt(file, lang, sp, isp, sparse_indicies, get_array):
     if lang in ['c', 'cuda']:
         line += ' {}= '.format('+' if isp > 0 else '')
     elif lang in ['fortran', 'matlab']:
-        line += ' = {}'.format('working_temp' if isp > 0 else '')
+        line += ' = {}'.format('working_temp + ' if isp > 0 else '')
     line += '' + get_array(lang, 'y', isp + 1)
     line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
              '{:.8e} + '.format(sp.hi[1]) +
@@ -944,10 +944,13 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offs
             if not lin_index in sparse_indicies:
                 sparse_indicies.append(lin_index)
         elif lang in ['fortran', 'matlab']:
-            line += get_array(lang, 'jac', 1, twod=k_sp + 1)
+            line += get_array(lang, 'jac', 0, twod=k_sp + 1)
             if not (1, k_sp + 1) in sparse_indicies:
                 sparse_indicies.append((1, k_sp + 1))
-        line += ' {}= -('.format('+' if touched[lin_index] else '')
+        if lang in ['fortran', 'matlab']:
+            line += ' = ' + (get_array(lang, 'jac', 0, twod=k_sp + 1) + ' +' if touched[lin_index] else '') + ' -('
+        else:
+            line += ' {}= -('.format('+' if touched[lin_index] else '')
         touched[lin_index] = True
 
         if lang in ['c', 'cuda']:
@@ -961,7 +964,8 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offs
             line += ('' + get_array(lang, 'h', isp) + ' * ('
                      '' + get_array(lang, 'jac', isp + 1, twod=k_sp + 1) +
                      ' * cp_avg * rho' +
-                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset)
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset) +
+                     ' * {:.8e}))'.format(sp.mw)   
                      )
         line += ')' + utils.line_end[lang]
         file.write(line)
@@ -983,8 +987,8 @@ def write_dt_y_division(file, lang, specs, num_s, get_array):
             line += get_array(lang, 'jac', lin_index)
             line += ' /= (j_temp)'
         elif lang in ['fortran', 'matlab']:
-            line += get_array(lang, 'jac', 1, twod=k_sp + 1)
-            line += '= ' + get_array(lang, 'jac', 1, twod=k_sp + 1)
+            line += get_array(lang, 'jac', 0, twod=k_sp + 1)
+            line += '= ' + get_array(lang, 'jac', 0, twod=k_sp + 1)
             line += ' / (j_temp)'
 
         line += utils.line_end[lang]
@@ -1013,8 +1017,10 @@ def write_dt_completion(file, lang, specs, offset, get_array):
             line += '    + '
         line += '' + get_array(lang, 'dy', k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
         line += '(-working_temp * ' + get_array(lang, 'h', k_sp) + ' / cp_avg + ' + '' + get_array(lang, 'cp', k_sp) + ')'
-        line += ' + ' + get_array(lang, 'jac', k_sp + 1) + ' * ' + get_array(lang, 'h', k_sp) + ' * rho'
+        line += ' + ' + get_array(lang, 'jac', k_sp + 1, twod=0) + ' * ' + get_array(lang, 'h', k_sp) + ' * rho'
         if k_sp != len(specs) - 1:
+            if lang == 'fortran':
+                line += ' &'
             line += '\n'
 
     line += ') / (rho * cp_avg)'
@@ -1265,7 +1271,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
     elif lang == 'fortran':
         file.write('  ! evaluate reaction rates\n')
         if rev_reacs:
-            file.write('  eval_rxn_rates (T, conc, fwd_rates, '
+            file.write('  call eval_rxn_rates (T, conc, fwd_rates, '
                        'rev_rates)\n'
                        )
         else:
@@ -1289,7 +1295,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
     elif lang == 'fortran':
         file.write('  ! get and evaluate pressure modifications to '
                    'reaction rates\n'
-                   '  get_rxn_pres_mod (T, pres, conc, pres_mod)\n'
+                   '  call get_rxn_pres_mod (T, pres, conc, pres_mod)\n'
                    )
     elif lang == 'matlab':
         file.write('  % get and evaluate pressure modifications to '
@@ -1318,7 +1324,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
                    'concentration\n'
                    )
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rates, rev_rates, '
+            file.write('  call eval_spec_rates (fwd_rates, rev_rates, '
                        'pres_mod, dy)\n'
                        )
         else:
@@ -1587,8 +1593,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
                 # NOTE: I believe there was a bug here w/ the previous
                 # fortran/matlab code (as it looks like it would be zero
                 # indexed)
-                line += (get_array(lang, 'jac', k_sp + 1, twod=1) +
-                         (' = ' + get_array(lang, 'jac', k_sp + 1, twod=1) + ' + ' if touched[k_sp + 1] else '') + 
+                line += (get_array(lang, 'jac', k_sp + 1, twod=0) + ' = ' +
+                         (get_array(lang, 'jac', k_sp + 1, twod=0) + ' + ' if touched[k_sp + 1] else '') + 
                          ' {}j_temp{} * {:.8e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
                             ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
                             sp_k.mw)
@@ -4009,7 +4015,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     rate.write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
+    #aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
 
     # write Jacobian subroutine
     sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order, num_blocks)

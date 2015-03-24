@@ -1692,6 +1692,11 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
             if rxn.pdep or rxn.thd:
                 variable_list.append('pres_mod[{}]'.format(pdep_reacs.index(rind)))
             smm.evict(variable_list)
+            mark = []
+            for sp in set([x[0] for x in rxn.thd_body]):
+                index = next(index for index in range(len(specs)) if specs[index].name == sp)
+                mark.append(utils.get_array(lang, 'conc', index))
+            smm.mark_for_eviction(mark)
 
     #need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)

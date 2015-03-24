@@ -250,7 +250,7 @@ class reaction_rates_score(score_function):
         #now order by most shared with last few
         while len(rxn_list):
             max_rxn = max(rxn_list, key=lambda x:
-            sum([len(self.r_to_s[y].intersection(self.r_to_s[x])) / len(self.r_to_s[y]) for y in ret_list[-1:-5]]))
+            sum([len(self.r_to_s[y].intersection(self.r_to_s[x])) / len(self.r_to_s[y]) for y in ret_list[-1:-3]]))
             ret_list.append(max_rxn)
             rxn_list.remove(max_rxn)
         return ret_list

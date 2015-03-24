@@ -99,7 +99,7 @@ def rxn_rate_const(A, b, E):
     return line
 
 
-def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threads=64):
+def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     """Write reaction rate subroutine.
     
     Includes conditionals for reversible reactions.
@@ -116,10 +116,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_thread
         ist of reactions in the mechanism.
     ordering : List of tuples
         The order to iterate through the species / reactions
-    num_blocks : int
-        The target number of blocks to run for CUDA
-    num_threads : int
-        The target number of threads to run per block in CUDA
+    smm : shared_memory_manager, optional
+        If not None, the shared_memory_manager to use for CUDA optimizations
     
     Returns
     _______
@@ -262,8 +260,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_thread
     file.write(line)
 
     get_array = utils.get_array
-    if lang == 'cuda':
-        smm = shared.shared_memory_manager(num_blocks, num_threads)
+    if lang == 'cuda' and smm is not None:
+        smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent = 2)
     
@@ -301,7 +299,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_thread
         for i_rxn in i_reacs:
             rxn = reacs[i_rxn]
 
-            if lang == 'cuda':
+            if lang == 'cuda' and smm is not None:
                 indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
                              for s in set(rxn.reac + rxn.prod)]
                 the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
@@ -545,7 +543,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_thread
                 line += utils.line_end[lang]
                 file.write(line)
 
-            if lang == 'cuda':
+            if lang == 'cuda' and smm is not None:
                 #figure out which to mark for removal
                 indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
                              for s in set(rxn.reac + rxn.prod)]
@@ -576,7 +574,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_thread
     return
 
 
-def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num_threads=64):
+def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     """Write subroutine to for reaction pressure dependence modifications.
     
     Parameters
@@ -591,10 +589,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num
         List of reactions in mechanism.
     ordering : List of tuples
         The order to iterate through the species / reactions
-    num_blocks : int
-        The target number of blocks to run for CUDA
-    num_threads : int
-        The target number of threads to run per block in CUDA
+    smm : shared_memory_manager, optional
+        If not None, the shared_memory_manager to use for CUDA optimizations
     
     Returns
     -------
@@ -657,8 +653,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num
     file.write(line)
 
     get_array = utils.get_array
-    if lang == 'cuda':
-        smm = shared.shared_memory_manager(num_blocks, num_threads)
+    if lang == 'cuda' and smm is not None:
+        smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent = 2)
     
@@ -780,7 +776,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num
             # third-body reaction
             if reac.thd:
 
-                if lang == 'cuda':
+                if lang == 'cuda' and smm is not None:
                     the_vars = []
                     indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
                     the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
@@ -952,7 +948,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num
             
             # space in between each reaction
             file.write('\n')
-            if lang == 'cuda':
+            if lang == 'cuda' and smm is not None:
                 #mark for eviction
                 the_vars = []
                 indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
@@ -985,7 +981,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, num_blocks=8, num
     return
 
 
-def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threads=64):
+def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     """Write subroutine to evaluate species rates of production.
     
     Parameters
@@ -1000,10 +996,8 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threa
         List of reactions in mechanism.
     ordering : List of tuples
         The order to iterate through the species / reactions
-    num_blocks : int
-        The target number of blocks to run for CUDA
-    num_threads : int
-        The target number of threads to run per block in CUDA
+    smm : shared_memory_manager, optional
+        If not None, the shared_memory_manager to use for CUDA optimizations
     
     Returns
     -------
@@ -1090,8 +1084,8 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threa
     file.write(line)
 
     get_array = utils.get_array
-    if lang == 'cuda':
-        smm = shared.shared_memory_manager(num_blocks, num_threads)
+    if lang == 'cuda' and smm is not None:
+        smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent = 2)
 
@@ -1112,7 +1106,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threa
             isfirst = True
             
             inreac = False
-            if lang == 'cuda':
+            if lang == 'cuda' and smm is not None:
                 the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
                             for rind in i_reacs]
                 the_vars = ['(' + the_vars[i] + ')' for i in range(len(i_reacs)) if reacs[i_reacs[i]].rev]
@@ -1254,7 +1248,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, num_blocks=8, num_threa
             line += utils.line_end[lang] + '\n'
             file.write(line)
 
-            if lang == 'cuda':
+            if lang == 'cuda' and smm is not None:
                 the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not rxn.rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
                             for rind in i_reacs]
                 the_vars = ['(' + the_vars[i] + ')' for i in range(len(i_reacs)) if reacs[i_reacs[i]].rev]
@@ -2293,7 +2287,7 @@ def write_mass_mole(path, lang, specs):
     return
 
 
-def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False, initial_moles = ""):
+def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True):
     """Create rate subroutines from mechanism.
     
     Parameters
@@ -2308,6 +2302,17 @@ def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False, i
     optimize_cache : bool, optional
         If true, use the greedy optimizer to attempt to 
         improve cache hit rates
+    initial_state : str, optional
+        A comma separated list of the initial conditions to use in form T,P,X (e.g. 800,1,H2=1.0,O2=0.5) 
+        Temperature in K, P in atm
+    num_blocks : int, optional
+        The target number of blocks / sm to achieve for cuda
+    num_threads : int, optional
+        The target number of threads / blck to achieve for cuda
+    no_shared : bool, optional
+        If true, do not use the shared_memory_manager to attempt to optimize for CUDA
+    L1_preferred : bool, optional
+        If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
     
     Returns
     -------
@@ -2396,18 +2401,24 @@ def create_rate_subs(lang, mech_name, therm_name = None, optimize_cache=False, i
         else:
             pdep_order = None
     
+    smm = None
+    if lang == 'cuda' and not no_shared:
+        smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+    elif no_shared:
+        shared.write_blank(num_blocks, num_threads, L1_preferred)
+
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    write_rxn_rates(build_path, lang, specs, reacs, rxn_order)
+    write_rxn_rates(build_path, lang, specs, reacs, rxn_order, smm)
     
     # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order)
+        write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order, smm)
     
     # write species rates subroutine
-    write_spec_rates(build_path, lang, specs, reacs, spec_order)
+    write_spec_rates(build_path, lang, specs, reacs, spec_order, smm)
     
     # write chem_utils subroutines
     write_chem_utils(build_path, lang, specs)
@@ -2449,20 +2460,44 @@ if __name__ == "__main__":
                         help = 'Thermodynamic database filename (e.g., '
                         'therm.dat), or nothing if in mechanism.'
                         )
-    parser.add_argument('-nco', '--no-cache-optimizer',
-                        dest = 'cache_optimizer',
-                        action = 'store_false',
-                        default = True,
-                        help = 'Attempt to optimize cache store/loading via use '
-                        'of a greedy selection algorithm.')
     parser.add_argument('-x', '--initial-moles',
                     type=str,
                     dest='initial_moles',
                     default = '',
                     required=False,
                     help = 'A comma separated list of initial moles to set in the set_same_initial_conditions method.')
+    #cuda specific
+    parser.add_argument('-nco', '--no-cache-optimizer',
+                        dest = 'cache_optimizer',
+                        action = 'store_false',
+                        default = True,
+                        help = 'Attempt to optimize cache store/loading via use '
+                        'of a greedy selection algorithm.')
+    parser.add_argument('-nosmem', '--no-shared-memory',
+                        dest='no_shared',
+                        action='store_true',
+                        default=False,
+                        help = 'Use this option to turn off attempted shared memory acceleration for CUDA')
+    parser.add_argument('-pshare', '--prefer-shared',
+                        dest='L1_preferred',
+                        action='store_false',
+                        default=True,
+                        help = 'Use this option to allocate more space for shared memory than the L1 cache for CUDA')
+    parser.add_argument('-nb', '--num-blocks',
+                        type=int,
+                        dest='num_blocks',
+                        default = 8,
+                        required=False,
+                        help = 'The target number of blocks / sm to achieve for CUDA.')
+    parser.add_argument('-nt', '--num-threads',
+                        type=int,
+                        dest='num_threads',
+                        default = 64,
+                        required=False,
+                        help = 'The target number of threads / block to achieve for CUDA.')
 
     args = parser.parse_args()
     
-    create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles)
+    create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles, args.num_blocks, args.num_threads\
+                   , args.no_shared, args.L1_preferred)
 

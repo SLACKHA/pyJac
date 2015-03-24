@@ -1027,7 +1027,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     line += utils.line_end[lang]
     file.write(line)
 
-def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_threads=64):
+def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -1042,10 +1042,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
         List of reactions in the mechanism.
     jac_order : list of indexes
         Order to evaluate reactions in
-    num_blocks : int
-        The target number of blocks to run for CUDA
-    num_threads : int
-        The target number of threads to run per block in CUDA
+    smm : shared_memory_manager, optional
+        If not None, use this to manage shared memory optimization
 
     Returns
     -------
@@ -1168,8 +1166,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
     file.write(line)
 
     get_array = utils.get_array
-    if lang == 'cuda':
-        smm = shared.shared_memory_manager(num_blocks, num_threads)
+    if lang == 'cuda' and smm is not None:
+        smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent = 2)
 
@@ -1462,7 +1460,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
     for rind in index_list:
         rxn = reacs[rind]
 
-        if lang == 'cuda':
+        if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
             smm.load_into_shared(file, variable_list, usages)
 
@@ -1685,7 +1683,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, num_blocks=8, num_th
 
         file.write('\n')
 
-        if lang == 'cuda':
+        if lang == 'cuda' and smm is not None:
             variable_list = ['fwd_rates[{}]'.format(rind)]
             if rxn.rev:
                 variable_list.append('rev_rates[{}]'.format(rev_reacs.index(rxn)))
@@ -3886,7 +3884,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -3906,6 +3904,12 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         Temperature in K, P in atm
     num_blocks : int, optional
         The target number of blocks / sm to achieve for cuda
+    num_threads : int, optional
+        The target number of threads / blck to achieve for cuda
+    no_shared : bool, optional
+        If true, do not use the shared_memory_manager to attempt to optimize for CUDA
+    L1_preferred : bool, optional
+        If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
 
     Returns
     -------
@@ -3997,18 +4001,24 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
             pdep_order = None
         jac_order = [(range(len(specs)), range(len(reacs)))]
     
+    smm = None
+    if lang == 'cuda' and not no_shared:
+        smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+    elif no_shared:
+        shared.write_blank(num_blocks, num_threads, L1_preferred)
+
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_order)
+    rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_order, smm)
     
     # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order)
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order, smm)
     
     # write species rates subroutine
-    rate.write_spec_rates(build_path, lang, specs, reacs, spec_order)
+    rate.write_spec_rates(build_path, lang, specs, reacs, spec_order, smm)
     
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs)
@@ -4020,10 +4030,10 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     rate.write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    #aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
 
     # write Jacobian subroutine
-    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order, num_blocks)
+    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order, smm)
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
@@ -4048,12 +4058,6 @@ if __name__ == "__main__":
                         default=None,
                         help='Thermodynamic database filename (e.g., '
                         'therm.dat), or nothing if in mechanism.')
-    parser.add_argument('-nco', '--no-cache-optimizer',
-                        dest = 'cache_optimizer',
-                        action = 'store_false',
-                        default = True,
-                        help = 'Attempt to optimize cache store/loading via use '
-                        'of a greedy selection algorithm.')
     parser.add_argument('-ic', '--initial-conditions',
                         type=str,
                         dest='initial_conditions',
@@ -4064,13 +4068,37 @@ if __name__ == "__main__":
                                 Temperature in K\n\
                                 Pressure in Atm\n\
                                 Species in moles')
+    #cuda specific
+    parser.add_argument('-nco', '--no-cache-optimizer',
+                        dest = 'cache_optimizer',
+                        action = 'store_false',
+                        default = True,
+                        help = 'Attempt to optimize cache store/loading via use '
+                        'of a greedy selection algorithm.')
+    parser.add_argument('-nosmem', '--no-shared-memory',
+                        dest='no_shared',
+                        action='store_true',
+                        default=False,
+                        help = 'Use this option to turn off attempted shared memory acceleration for CUDA')
+    parser.add_argument('-pshare', '--prefer-shared',
+                        dest='L1_preferred',
+                        action='store_false',
+                        default=True,
+                        help = 'Use this option to allocate more space for shared memory than the L1 cache for CUDA')
     parser.add_argument('-nb', '--num-blocks',
-                        type=str,
+                        type=int,
                         dest='num_blocks',
                         default = 8,
                         required=False,
-                        help = 'The target number of blocks to achieve for CUDA.')
+                        help = 'The target number of blocks / sm to achieve for CUDA.')
+    parser.add_argument('-nt', '--num-threads',
+                        type=int,
+                        dest='num_threads',
+                        default = 64,
+                        required=False,
+                        help = 'The target number of threads / block to achieve for CUDA.')
 
     args = parser.parse_args()
 
-    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks)
+    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks, args.num_threads\
+                   , args.no_shared, args.L1_preferred)

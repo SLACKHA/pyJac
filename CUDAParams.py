@@ -9,5 +9,14 @@ MemoryStrategy = CudaMemStrats.Local
 def is_global():
 	return MemoryStrategy == CudaMemStrats.Global
 
-l1_size = 48000 / 8 #doubles
-desired_thread_count = 64 #threads / block
+def get_L1_size(L1_Preferred):
+	if L1_Preferred:
+		return 49152 / 8 #doubles
+	else:
+		return 16384 / 8 #doubles
+
+def get_shared_size(L1_Preferred):
+	if not L1_Preferred:
+		return 49152 / 8 #doubles
+	else:
+		return 16384 / 8 #doubles

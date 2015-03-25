@@ -1,6 +1,7 @@
 """Handles shared memory usage to accelerate memory accesses for CUDA"""
 
 from math import floor
+import CUDAParams
 import utils
 def write_blank(blocks_per_sm = 8, num_threads = 64, L1_PREFERRED = True):
     with open("out/launch_bounds.cuh", "w") as file:
@@ -13,10 +14,7 @@ def write_blank(blocks_per_sm = 8, num_threads = 64, L1_PREFERRED = True):
                        '#endif\n')
 class shared_memory_manager(object):
     def __init__(self, blocks_per_sm = 8, num_threads = 64, L1_PREFERRED=True):
-        if L1_PREFERRED:
-            SHARED_MEMORY_SIZE = 16384 / 8 #per block, in L1 preferred mode
-        else:
-            SHARED_MEMORY_SIZE = 49152 / 8 #per block, in shared preferred mode
+        SHARED_MEMORY_SIZE = CUDAParams.get_shared_size(L1_PREFERRED)
         self.blocks_per_sm = blocks_per_sm
         self.num_threads = num_threads
         self.skeleton = 'shared_temp[{}]'

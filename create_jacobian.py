@@ -3974,7 +3974,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
 
     if optimize_cache:
         if lang == 'cuda':
-            pool_size = CUDAParams.l1_size / CUDAParams.desired_thread_count
+            pool_size = CUDAParams.get_L1_size(L1_preferred) / num_threads
         else:
             pool_size = 100 #wild guess
         #create score functions

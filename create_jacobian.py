@@ -10,6 +10,7 @@ from __future__ import print_function
 import sys
 import math
 from argparse import ArgumentParser
+import os
 
 # Local imports
 import chem_utilities as chem
@@ -3925,7 +3926,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         sys.exit(2)
 
     # create output directory if none exists
-    build_path = './out/'
+    build_path = os.path.join(os.getcwd(), 'out/')
     utils.create_dir(build_path)
 
     # interpret reaction mechanism file
@@ -4003,9 +4004,9 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     
     smm = None
     if lang == 'cuda' and not no_shared:
-        smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+        smm = shared.shared_memory_manager(build_path, num_blocks, num_threads, L1_preferred)
     elif no_shared:
-        shared.write_blank(num_blocks, num_threads, L1_preferred)
+        shared.write_blank(build_path, num_blocks, num_threads, L1_preferred)
 
     # now begin writing subroutines
     

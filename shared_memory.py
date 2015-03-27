@@ -3,17 +3,20 @@
 from math import floor
 import CUDAParams
 import utils
-def write_blank(blocks_per_sm = 8, num_threads = 64, L1_PREFERRED = True):
-    with open("out/launch_bounds.cuh", "w") as file:
-            file.write('#ifndef LAUNCH_BOUNDS_CUH\n'
-                       '#define LAUNCH_BOUNDS_CUH\n'
-                       '#define TARGET_BLOCK_SIZE ({})\n'.format(num_threads) + 
-                       '#define TARGET_BLOCKS ({})\n'.format(blocks_per_sm) +
-                       '#define SHARED_SIZE (0)\n' +
-                       ('#define PREFERL1\n' if L1_PREFERRED else '') +
-                       '#endif\n')
+import os
+def write_blank(builddir, blocks_per_sm = 8, num_threads = 64, L1_PREFERRED = True):
+    with open(os.path.join(builddir, "launch_bounds.cuh"), "w") as file:
+        file.write('#ifndef LAUNCH_BOUNDS_CUH\n'
+                   '#define LAUNCH_BOUNDS_CUH\n'
+                   '#define TARGET_BLOCK_SIZE ({})\n'.format(num_threads) + 
+                   '#define TARGET_BLOCKS ({})\n'.format(blocks_per_sm) +
+                   '#define SHARED_SIZE (0)\n' +
+                   ('#define PREFERL1\n' if L1_PREFERRED else '') +
+                   '#endif\n')
+    with open(os.path.join(builddir, 'regcount'), 'w') as file:
+        file.write(CUDAParams.get_register_count(blocks_per_sm, num_threads))
 class shared_memory_manager(object):
-    def __init__(self, blocks_per_sm = 8, num_threads = 64, L1_PREFERRED=True):
+    def __init__(self, builddir, blocks_per_sm = 8, num_threads = 64, L1_PREFERRED=True):
         SHARED_MEMORY_SIZE = CUDAParams.get_shared_size(L1_PREFERRED)
         self.blocks_per_sm = blocks_per_sm
         self.num_threads = num_threads
@@ -23,7 +26,7 @@ class shared_memory_manager(object):
         self.shared_per_thread = int(floor(self.shared_per_block / self.num_threads))
         self.shared_indexes = range(self.shared_per_thread)
         self.eviction_marking = []
-        with open("out/launch_bounds.cuh", "w") as file:
+        with open(os.path.join(builddir, 'launch_bounds.cuh'), "w") as file:
             file.write('#ifndef LAUNCH_BOUNDS_CUH\n'
                        '#define LAUNCH_BOUNDS_CUH\n'
                        '#define TARGET_BLOCK_SIZE ({})\n'.format(self.num_threads) + 
@@ -31,6 +34,8 @@ class shared_memory_manager(object):
                        '#define SHARED_SIZE ({} * sizeof(double))\n'.format(self.shared_per_block) + 
                        ('#define PREFERL1\n' if L1_PREFERRED else '') +
                        '#endif\n')
+        with open(os.path.join(builddir, 'regcount'), 'w') as file:
+            file.write(CUDAParams.get_register_count(blocks_per_sm, num_threads))
 
     def reset(self):
         self.shared_dict = []

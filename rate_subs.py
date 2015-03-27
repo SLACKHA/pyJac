@@ -2403,9 +2403,9 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
     
     smm = None
     if lang == 'cuda' and not no_shared:
-        smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+        smm = shared.shared_memory_manager(build_path, num_blocks, num_threads, L1_preferred)
     elif no_shared:
-        shared.write_blank(num_blocks, num_threads, L1_preferred)
+        shared.write_blank(build_path, num_blocks, num_threads, L1_preferred)
 
     # now begin writing subroutines
     

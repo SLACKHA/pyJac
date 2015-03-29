@@ -1109,7 +1109,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             if lang == 'cuda' and smm is not None:
                 the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
                             for rind in i_reacs]
-                the_vars = ['(' + the_vars[i] + ')' for i in range(len(i_reacs)) if reacs[i_reacs[i]].rev]
+                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in range(len(i_reacs))]
                 the_vars = [the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' + 
                             utils.get_array(lang, 'pres_mod', pdep_reacs.index(i_reacs[i])) for i in range(len(i_reacs))]
                 #estimate usages
@@ -1249,9 +1249,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             file.write(line)
 
             if lang == 'cuda' and smm is not None:
-                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not rxn.rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
+                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
                             for rind in i_reacs]
-                the_vars = ['(' + the_vars[i] + ')' for i in range(len(i_reacs)) if reacs[i_reacs[i]].rev]
+                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in range(len(i_reacs))]
                 the_vars = [the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' + 
                             utils.get_array(lang, 'pres_mod', pdep_reacs.index(i_reacs[i])) for i in range(len(i_reacs))]
                 #mark for eviction

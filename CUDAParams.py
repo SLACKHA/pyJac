@@ -22,4 +22,4 @@ def get_shared_size(L1_Preferred):
 		return 16384 / 8 #doubles
 
 def get_register_count(num_blocks, num_threads):
-	return max(min((32768 / num_blocks) / num_threads, 64), 1)
+	return max(min((32768 / num_blocks) / num_threads, 63), 1)

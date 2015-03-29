@@ -14,7 +14,7 @@ def write_blank(builddir, blocks_per_sm = 8, num_threads = 64, L1_PREFERRED = Tr
                    ('#define PREFERL1\n' if L1_PREFERRED else '') +
                    '#endif\n')
     with open(os.path.join(builddir, 'regcount'), 'w') as file:
-        file.write(CUDAParams.get_register_count(blocks_per_sm, num_threads))
+        file.write('{}'.format(CUDAParams.get_register_count(blocks_per_sm, num_threads)))
 class shared_memory_manager(object):
     def __init__(self, builddir, blocks_per_sm = 8, num_threads = 64, L1_PREFERRED=True):
         SHARED_MEMORY_SIZE = CUDAParams.get_shared_size(L1_PREFERRED)
@@ -35,7 +35,7 @@ class shared_memory_manager(object):
                        ('#define PREFERL1\n' if L1_PREFERRED else '') +
                        '#endif\n')
         with open(os.path.join(builddir, 'regcount'), 'w') as file:
-            file.write(CUDAParams.get_register_count(blocks_per_sm, num_threads))
+            file.write('{}'.format(CUDAParams.get_register_count(blocks_per_sm, num_threads)))
 
     def reset(self):
         self.shared_dict = []

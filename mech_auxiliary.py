@@ -567,6 +567,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
         file.write('{\n')
         if lang == 'cuda':
             file.write('    int grid_size = round(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n')
+            file.write('    if (grid_size == 0)\n'
+                       '        grid_size = 1;\n')
             if CUDAParams.is_global():
                 file.write('gpuMemory* host_memory = NULL;\n'
                            'int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &host_memory);\n')

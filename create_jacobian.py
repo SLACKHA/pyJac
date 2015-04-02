@@ -572,6 +572,12 @@ def write_rxn_params_dt(file, rxn, rev=False):
     file.write(jline)
 
 def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
+    if lang == 'cuda':
+        if len(rev_reacs):
+            file.write('  Real dBdT[{}]'.format(len(specs)) + utils.line_end[lang])
+        template = 'dBdT[{}]'
+    else:
+        template = 'dBdT_{}'
     for rxn in rev_reacs:
         # only reactions with no reverse Arrhenius parameters
         if rxn.rev_par:
@@ -588,13 +594,13 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
 
             dBdT_flag[sp_ind] = True
 
-            dBdT = 'dBdT_'
             if lang in ['c', 'cuda']:
-                dBdT += str(sp_ind)
+                dBdT = template.format(sp_ind)
             elif lang in ['fortran', 'matlab']:
-                dBdT += str(sp_ind + 1)
+                dBdT = template.format(sp_ind + 1)
             # declare dBdT
-            file.write('  Real ' + dBdT + utils.line_end[lang])
+            if lang != 'cuda':
+                file.write('  Real ' + dBdT + utils.line_end[lang])
 
             # dB/dT evaluation (with temperature conditional)
             line = '  if (T <= {:})'.format(specs[sp_ind].Trange[1])
@@ -641,6 +647,10 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
                 file.write('  end\n\n')
 
 def write_db_dt(file, lang, specs, rxn):
+    if lang == 'cuda':
+        template = 'dBdT[{}]'
+    else:
+        template = 'dBdT_{}'
     jline = ''
     notfirst = False
     # contribution from dBdT terms from
@@ -659,11 +669,10 @@ def write_db_dt(file, lang, specs, rxn):
         sp_ind = next((specs.index(s) for s in specs
                        if s.name == sp), None)
 
-        dBdT = 'dBdT_'
         if lang in ['c', 'cuda']:
-            dBdT += str(sp_ind)
+            dBdT = template.format(sp_ind)
         elif lang in ['fortran', 'matlab']:
-            dBdT += str(sp_ind + 1)
+            dBdT = template.format(sp_ind + 1)
 
         if not notfirst:
             # first entry
@@ -698,12 +707,11 @@ def write_db_dt(file, lang, specs, rxn):
         sp_ind = next((specs.index(s) for s in specs
                        if s.name == sp), None)
 
-        dBdT = 'dBdT_'
         if lang in ['c', 'cuda']:
-            dBdT += str(sp_ind)
+            dBdT = template.format(sp_ind)
         elif lang in ['fortran', 'matlab']:
-            dBdT += str(sp_ind + 1)
-
+            dBdT = template.format(sp_ind + 1)
+            
         # not first entry
         if nu == 1:
             jline += ' + '
@@ -1028,6 +1036,140 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     line += utils.line_end[lang]
     file.write(line)
 
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri):
+    """
+    Writes the header and definitions for of any of the various sub-functions for CUDA
+
+    Returns the opened file
+    """
+    lang = 'cuda'
+    with open(os.path.join(path, 'jacob_' + str(number) + '.h'), 'w') as file:
+        file.write('#ifndef JACOB_HEAD_{}\n'.format(number) + 
+                   '#define JACOB_HEAD_{}\n'.format(number) + 
+                   '\n'
+                   '#include "../header.h"\n'
+                   '\n'
+                   '__device__ void eval_jacob_{} ('.format(number)
+                  )
+        file.write('const Real, const Real*')
+        for rate in rate_list:
+            file.write(', const Real*')
+        if this_thd:
+            file.write(', const Real')
+        file.write(', const Real, const Real, const Real*, const Real, Real*'
+                   ');\n'
+                   '\n'
+                   '#endif\n'
+                   )
+    file = open(os.path.join(path, 'jacob_' + str(number) + utils.file_ext[lang]), 'w')
+    file.write('#include <math.h>\n'
+               '#include "../header.h"\n'
+               '\n'
+               )
+
+    line = '__device__ '
+
+    line += ('void eval_jacob_{} (const Real pres, '.format(number) + 
+            'const Real * conc')
+    for rate in rate_list:
+        line += ', const Real* ' + rate
+    if this_thd:
+        line += ', const Real m'
+    line += ', const Real mw_avg, const Real rho, const Real* dBdT, const Real T, Real* jac) {'
+    file.write(line + '\n')
+
+    file.write('  extern __shared__ double shared_temp[]' + utils.line_end[lang])
+     # third-body variable needed for reactions
+    if this_thd:
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += ('conc_temp' +
+                 utils.line_end[lang]
+                 )
+        file.write(line)
+
+
+    # log(T)
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += ('logT = log(T)' +
+             utils.line_end[lang]
+             )
+    file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += 'j_temp = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+    if this_pdep:
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    if this_thd:
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'thd_temp = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += 'working_temp = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+    # if any reverse reactions, will need Kc
+    if this_rev:
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'Kc = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    # pressure-dependence variables
+    if this_pdep:
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'Pr = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    if this_troe:
+        line = ''.join(['  Real {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
+        file.write(line)
+
+    if this_sri:
+        line = '  Real X = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    return file
+
+
+
+
 def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     """Write Jacobian subroutine in desired language.
 
@@ -1051,6 +1193,17 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     None
 
     """
+
+    if lang == 'cuda':
+        #make paths for separate jacobian files
+        utils.create_dir(os.path.join(path, 'jacobs'))
+        #create include file
+        with open(os.path.join(path, 'jacobs', 'jac_include.h'), 'w') as file:
+            file.write('#ifndef JAC_INCLUDE_H\n'
+                       '#define JAC_INCLUDE_H\n')
+            for i in range(len(reacs)):
+                file.write('#include "jacob_{}.h"\n'.format(i))
+            file.write('#endif\n\n')
 
     # first write header file
     if lang == 'c':
@@ -1107,6 +1260,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                    )
     elif lang == 'cuda':
         file.write('#include <math.h>\n'
+                   '#include "jacobs/jac_include.h"\n'
                    '#include "header.h"\n'
                    '#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
@@ -1253,6 +1407,12 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         file.write(line)
     file.write('\n')
 
+    rate_list = ['fwd_rates']
+    if len(rev_reacs):
+        rate_list.append('rev_rates')
+    if len(pdep_reacs):
+        rate_list.append('pres_mod')
+    rate_list.append('dy')
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
         if lang != 'cuda' or not CUDAParams.is_global():
@@ -1356,15 +1516,16 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                  )
         file.write(line)
 
-        line = '  '
-        if lang == 'c':
-            line += 'Real '
-        elif lang == 'cuda':
-            line += 'register Real '
-        line += ('conc_temp' +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
+        if lang != 'cuda':
+            line = '  '
+            if lang == 'c':
+                line += 'Real '
+            elif lang == 'cuda':
+                line += 'register Real '
+            line += ('conc_temp' +
+                     utils.line_end[lang]
+                     )
+            file.write(line)
 
 
     # log(T)
@@ -1386,21 +1547,23 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
-    line = '  '
-    if lang == 'c':
-        line += 'Real '
-    elif lang == 'cuda':
-        line += 'register Real '
-    line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
-    file.write(line)
+    if any(rxn.pdep for rxn in reacs) and lang != 'cuda':
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
+        file.write(line)
 
-    line = '  '
-    if lang == 'c':
-        line += 'Real '
-    elif lang == 'cuda':
-        line += 'register Real '
-    line += 'thd_temp = 0.0' + utils.line_end[lang]
-    file.write(line)
+    if any(rxn.thd for rxn in reacs) and lang != 'cuda':
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        elif lang == 'cuda':
+            line += 'register Real '
+        line += 'thd_temp = 0.0' + utils.line_end[lang]
+        file.write(line)
 
     line = '  '
     if lang == 'c':
@@ -1411,7 +1574,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     file.write(line)
 
     # if any reverse reactions, will need Kc
-    if rev_reacs:
+    if rev_reacs and lang != 'cuda':
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1421,7 +1584,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         file.write(line)
 
     # pressure-dependence variables
-    if any(rxn.pdep for rxn in reacs):
+    if any(rxn.pdep for rxn in reacs) and lang != 'cuda':
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1430,11 +1593,11 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         line += 'Pr = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if any(rxn.troe for rxn in reacs):
+    if any(rxn.troe for rxn in reacs) and lang != 'cuda':
         line = ''.join(['  Real {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
         file.write(line)
 
-    if any(rxn.sri for rxn in reacs):
+    if any(rxn.sri for rxn in reacs) and lang != 'cuda':
         line = '  Real X = 0.0' + utils.line_end[lang]
         file.write(line)
 
@@ -1460,6 +1623,11 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     ###################################
     for rind in index_list:
         rxn = reacs[rind]
+
+        if lang == 'cuda':
+            file_store = file
+            #write the specific evaluator for this reaction
+            file = write_cuda_intro(os.path.join(path, 'jacobs'), rind, rate_list, rxn.rev, rxn.pdep, rxn.thd, rxn.troe, rxn.sri)
 
         if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
@@ -1696,6 +1864,19 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                 index = next(index for index in range(len(specs)) if specs[index].name == sp)
                 mark.append(utils.get_array(lang, 'conc', index))
             smm.mark_for_eviction(mark)
+
+        if lang == 'cuda':
+            #switch back
+            file.write('}\n\n')
+            file = file_store
+            file.write('  eval_jacob_{}('.format(rind))
+            line = ('pres, conc')
+            for rate in rate_list:
+                line += ', ' + rate
+            if rxn.thd:
+                line += ', m'
+            line += ', mw_avg, rho, dBdT, T, jac)'
+            file.write(line + utils.line_end[lang])
 
     #need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)

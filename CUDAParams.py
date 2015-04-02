@@ -6,6 +6,8 @@ class CudaMemStrats:
 
 MemoryStrategy = CudaMemStrats.Local
 
+Jacob_Unroll = 15
+
 def is_global():
 	return MemoryStrategy == CudaMemStrats.Global
 

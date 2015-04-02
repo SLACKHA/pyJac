@@ -711,7 +711,7 @@ def write_db_dt(file, lang, specs, rxn):
             dBdT = template.format(sp_ind)
         elif lang in ['fortran', 'matlab']:
             dBdT = template.format(sp_ind + 1)
-            
+
         # not first entry
         if nu == 1:
             jline += ' + '
@@ -1194,16 +1194,10 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
 
     """
 
-    if lang == 'cuda':
+    do_unroll = len(specs) > CUDAParams.Jacob_Unroll
+    if lang == 'cuda' and do_unroll:
         #make paths for separate jacobian files
         utils.create_dir(os.path.join(path, 'jacobs'))
-        #create include file
-        with open(os.path.join(path, 'jacobs', 'jac_include.h'), 'w') as file:
-            file.write('#ifndef JAC_INCLUDE_H\n'
-                       '#define JAC_INCLUDE_H\n')
-            for i in range(len(reacs)):
-                file.write('#include "jacob_{}.h"\n'.format(i))
-            file.write('#endif\n\n')
 
     # first write header file
     if lang == 'c':
@@ -1516,7 +1510,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                  )
         file.write(line)
 
-        if lang != 'cuda':
+        if not (lang == 'cuda' and do_unroll):
             line = '  '
             if lang == 'c':
                 line += 'Real '
@@ -1547,7 +1541,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
-    if any(rxn.pdep for rxn in reacs) and lang != 'cuda':
+    if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1556,7 +1550,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if any(rxn.thd for rxn in reacs) and lang != 'cuda':
+    if any(rxn.thd for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1574,7 +1568,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     file.write(line)
 
     # if any reverse reactions, will need Kc
-    if rev_reacs and lang != 'cuda':
+    if rev_reacs and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1584,7 +1578,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         file.write(line)
 
     # pressure-dependence variables
-    if any(rxn.pdep for rxn in reacs) and lang != 'cuda':
+    if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1593,11 +1587,11 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         line += 'Pr = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if any(rxn.troe for rxn in reacs) and lang != 'cuda':
+    if any(rxn.troe for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = ''.join(['  Real {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
         file.write(line)
 
-    if any(rxn.sri for rxn in reacs) and lang != 'cuda':
+    if any(rxn.sri for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  Real X = 0.0' + utils.line_end[lang]
         file.write(line)
 
@@ -1618,16 +1612,40 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     sparse_indicies = []
 
     index_list = jac_order[0][1]
+    count = 0
+    jac_count = 0
+    next_fn_index = 0
+    batch_has_thd = False
     ###################################
     # partial derivatives of reactions
     ###################################
     for rind in index_list:
         rxn = reacs[rind]
 
-        if lang == 'cuda':
+        if lang == 'cuda' and do_unroll and (count == next_fn_index):
             file_store = file
+            #get flags
+            ind = index_list.index(rind)
+            rev = False
+            pdep = False
+            thd = False
+            troe = False
+            sri = False
+            for ind_next in range(ind, min(ind + CUDAParams.Jacob_Unroll, len(index_list))):
+                if reacs[index_list[ind_next]].rev:
+                    rev = True
+                if reacs[index_list[ind_next]].pdep:
+                    pdep = True
+                if reacs[index_list[ind_next]].thd:
+                    thd = True
+                if reacs[index_list[ind_next]].troe:
+                    troe = True
+                if reacs[index_list[ind_next]].sri:
+                    sri = True
+            batch_has_thd = thd
             #write the specific evaluator for this reaction
-            file = write_cuda_intro(os.path.join(path, 'jacobs'), rind, rate_list, rxn.rev, rxn.pdep, rxn.thd, rxn.troe, rxn.sri)
+            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri)
+            next_fn_index += CUDAParams.Jacob_Unroll
 
         if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
@@ -1865,18 +1883,33 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                 mark.append(utils.get_array(lang, 'conc', index))
             smm.mark_for_eviction(mark)
 
-        if lang == 'cuda':
+        if lang == 'cuda' and do_unroll and (count == next_fn_index - 1 or count == len(reacs) - 1):
             #switch back
             file.write('}\n\n')
             file = file_store
-            file.write('  eval_jacob_{}('.format(rind))
+            file.write('  eval_jacob_{}('.format(jac_count))
+            jac_count += 1
             line = ('pres, conc')
             for rate in rate_list:
                 line += ', ' + rate
-            if rxn.thd:
+            if batch_has_thd:
                 line += ', m'
             line += ', mw_avg, rho, dBdT, T, jac)'
             file.write(line + utils.line_end[lang])
+        count += 1
+
+
+    if lang == 'cuda' and do_unroll:
+        #create include file
+        with open(os.path.join(path, 'jacobs', 'jac_include.h'), 'w') as tempfile:
+            tempfile.write('#ifndef JAC_INCLUDE_H\n'
+                       '#define JAC_INCLUDE_H\n')
+            for i in range(jac_count):
+                tempfile.write('#include "jacob_{}.h"\n'.format(i))
+            tempfile.write('#endif\n\n')
+
+        with open(os.path.join(path, 'jacobs', 'jac_list'), 'w') as tempfile:
+            tempfile.write(' '.join(['jacob_{}.cu'.format(i) for i in range(jac_count)]))
 
     #need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)

@@ -23,7 +23,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         if have_rev_rxns:
             file.write('#ifdef PROFILER\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_rxn_rates(const double T) {\n'
                        '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double fwd_rates_local[FWD_RATES];\n'
@@ -32,7 +31,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        '}\n'
                        '#elif RATES_TEST\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
                        '    double conc_local[NSP];\n'
                        '    double fwd_rates_local[FWD_RATES];\n'
@@ -55,7 +53,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         else:
             file.write('#ifdef PROFILER\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_rxn_rates(const double T) {\n'
                        '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double rates_local[RATES];\n'
@@ -63,7 +60,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        '}\n'
                        '#elif RATES_TEST\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* rates) {\n'
                        '    double conc_local[NSP];\n'
                        '    double rates_local[RATES];\n'
@@ -82,7 +78,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         if have_pdep_rxns:
             file.write('#ifdef PROFILER\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_get_rxn_pres_mod(const double T, const double P) {\n'
                        '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                        '    double pres_mod_local[PRES_MOD_RATES];\n'
@@ -90,7 +85,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        '}\n'
                        '#elif RATES_TEST\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_get_rxn_pres_mod(const int NUM, const double T, const double P, double* conc, double* pres_mod) {'
                        '    double conc_local[NSP];\n'
                        '    double pres_mod_local[PRES_MOD_RATES];\n'
@@ -108,7 +102,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                        )
         file.write('#ifdef PROFILER\n'
                        '__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_spec_rates() {\n'
                    )
         if have_rev_rxns:
@@ -187,7 +180,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         file.write('#endif\n')
         file.write('#ifdef PROFILER\n'
                    '__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_dy(const double T, const double P) {\n'
                    '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
                    '    double dy_local[NN];\n'
@@ -195,7 +187,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_dy(const int NUM, const double T, const double P, const double* y, double* dy) {\n'
                    '    double y_local[NN];\n'
                    '    double dy_local[NN];\n'
@@ -213,7 +204,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    )
         file.write('#ifdef PROFILER\n'
                    '__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_jacob(const double T, const double P) {\n'
                    '    double y_local[NN] = {T, [1 ... NN - 1] = 1.0 / NSP};\n'
                    '    double jac_local[NN * NN];\n'
@@ -221,7 +211,6 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_jacob(const int NUM, const double t, const double P, double* y, double* jac) {\n'
                    '    double y_local[NN];\n'
                    '    double jac_local[NN * NN] = {0.0};\n'
@@ -240,38 +229,32 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     else:
         if have_rev_rxns:
             file.write('__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_rxn_rates(const double T) {\n'
                        '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.fwd_rates, memory_pointers.rev_rates);\n'
                        '}\n'
                        )
         else:
             file.write('__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_eval_rxn_rates(const double T) {\n'
                        '    eval_rxn_rates(T, memory_pointers.conc, memory_pointers.rates);\n'
                        '}\n'
                        )
         if have_pdep_rxns:
             file.write('__global__ void \n'
-                       '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                        'k_get_rxn_pres_mod(const double T, const double P) {\n'
                        '    get_rxn_pres_mod(T, P, memory_pointers.conc, memory_pointers.pres_mod);\n'
                        '}\n')
         file.write('__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_spec_rates() {{\n'.format() +
                    '    eval_spec_rates({}{} memory_pointers.dy);\n'.format('memory_pointers.fwd_rates, memory_pointers.rev_rates,' if have_rev_rxns else 'memory_pointers.rates,',
                                                             ' memory_pointers.pres_mod,' if have_pdep_rxns else '') +
                    '}\n'
                    )
         file.write('__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_dy(const double T, const double P) {\n'
                    '    dydt(T, P, memory_pointers.y, memory_pointers.dy);\n'
                    '}\n')
         file.write('__global__ void \n'
-                   '__launch_bounds__(TARGET_BLOCK_SIZE, TARGET_BLOCKS)\n'
                    'k_eval_jacob(const double t, const double P) {\n'
                    '    eval_jacob(t, P, memory_pointers.y, memory_pointers.jac);\n'
                    '}\n')

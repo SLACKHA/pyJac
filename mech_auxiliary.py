@@ -625,11 +625,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
                    '    double P = {};\n'.format(1.01325e6 * P) + 
                    '    // set intial temperature, units [K]\n' +
                    '    double T0 = {};\n\n'.format(T0) +
-                   '    *y_host = (double*)malloc(padded * NN * sizeof(double));\n'
+                   '    cudaMallocHost((void**)y_host, padded * NN * sizeof(double));\n'
                    '#ifdef CONP\n'
-                   '    *pres_host = (double*)malloc(padded * sizeof(double));\n'
+                   '    cudaMallocHost((void**)pres_host, padded * sizeof(double));\n'
                    '#elif defined(CONV)\n'
-                   '    *rho_host = (double*)malloc(padded * sizeof(double));\n'
+                   '    cudaMallocHost((void**)rho_host, padded * sizeof(double));\n'
                    '#endif\n'
                    '    //load temperature and mass fractions for all threads (cells)\n'
                    '    for (int i = 0; i < padded; ++i) {\n'
@@ -652,6 +652,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
                    '    }\n'
                    )
         if lang == 'cuda':  # copy memory over
+            file.write('    return padded;\n')
+        """
             if CUDAParams.is_global():
                 file.write('    cudaErrorCheck(cudaMemcpy(host_memory->y, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n'
                            '#ifdef CONP\n'
@@ -666,7 +668,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
                            '#elif CONV\n'
                            '    cudaErrorCheck(cudaMemcpy(*d_rho, *rho_host, padded * sizeof(double), cudaMemcpyHostToDevice));\n'
                            '#endif\n')
-            file.write('    return padded;\n')
+        """
 
         file.write('}\n\n')
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n')

@@ -187,7 +187,7 @@ def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
     file.write(jline + utils.line_end[lang])
 
 
-def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j, get_array):
+def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array):
     jline = ''
     if rxn.pdep or rxn.thd:
         jline += ' + '
@@ -301,9 +301,9 @@ def write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j, get_array):
     
     if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
         jline += ')'
-    file.write(jline)
+    return jline
 
-def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array):
+def write_pdep_dy_species(lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array):
     jline = 'thd_temp'
     mult = False
     if rxn.thd_body and not rxn.pdep:
@@ -348,7 +348,7 @@ def write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind, get_arra
         else:
             jline += '' + get_array(lang, 'fwd_rates', rind)
 
-    file.write(jline)
+    return jline
 
 def write_kc(file, lang, specs, rxn):
     def __round_sig(x, sig=8):
@@ -1080,7 +1080,7 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
 
     file.write('  extern __shared__ double shared_temp[]' + utils.line_end[lang])
      # third-body variable needed for reactions
-    if this_thd:
+    if this_pdep and this_thd:
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1128,14 +1128,6 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
             line += 'register Real '
         line += 'thd_temp = 0.0' + utils.line_end[lang]
         file.write(line)
-
-    line = '  '
-    if lang == 'c':
-        line += 'Real '
-    elif lang == 'cuda':
-        line += 'register Real '
-    line += 'working_temp = 0.0' + utils.line_end[lang]
-    file.write(line)
 
     # if any reverse reactions, will need Kc
     if this_rev:
@@ -1499,7 +1491,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     file.write('\n')
 
     # third-body variable needed for reactions
-    if any(rxn.thd for rxn in reacs):
+    if any(rxn.pdep and rxn.thd for rxn in reacs):
         line = '  '
         if lang == 'c':
             line += 'Real '
@@ -1558,14 +1550,6 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
             line += 'register Real '
         line += 'thd_temp = 0.0' + utils.line_end[lang]
         file.write(line)
-
-    line = '  '
-    if lang == 'c':
-        line += 'Real '
-    elif lang == 'cuda':
-        line += 'register Real '
-    line += 'working_temp = 0.0' + utils.line_end[lang]
-    file.write(line)
 
     # if any reverse reactions, will need Kc
     if rev_reacs and not (lang == 'cuda' and do_unroll):
@@ -1677,11 +1661,11 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
             # not pressure dependent
 
             # third body reaction
-            if rxn.thd:
+            if rxn.thd_body:
                 pind = pdep_reacs.index(rind)
 
                 #going to need conc_temp
-                write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array)
+                #write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array)
 
                 jline = '  j_temp = ((-' + get_array(lang, 'pres_mod', pind)
                 jline += ' * '
@@ -1832,18 +1816,15 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                     continue
 
                 if isFirst:
-                    jline = '  working_temp = ('
-                    file.write(jline)
+                    working_temp = '('
 
                     #check if there is any species specific stuff we need to do
                     if rxn.thd or rxn.pdep:
-                        write_pdep_dy_species(file, lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array)
+                        working_temp += write_pdep_dy_species(lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array)
                     
-                    write_dr_dy_species(file, lang, specs, rxn, pind, j_sp, sp_j, get_array)
+                    working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array)
 
-                    jline = ') / {:.8e}'.format(sp_j.mw)
-                    jline += utils.line_end[lang]
-                    file.write(jline)
+                    working_temp += ') / {:.8e}'.format(sp_j.mw)
 
                     isFirst = False
 
@@ -1862,7 +1843,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                     touched[lin_index] = True
 
                 jline += '' if nu == 1 else ('-' if nu == -1 else '{} * '.format(float(nu)))
-                jline += 'working_temp'
+                jline += working_temp
                 jline += utils.line_end[lang]
 
                 file.write(jline)
@@ -2039,6 +2020,14 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         sparse_indicies.append((1, 1))
     touched[0] = True
     line += utils.line_end[lang]
+    file.write(line)
+
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += 'working_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
     ######################################

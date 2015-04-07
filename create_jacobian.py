@@ -350,12 +350,13 @@ def write_pdep_dy_species(lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array):
 
     return jline
 
+def __round_sig(x, sig=8):
+    from math import log10, floor
+    if x == 0:
+        return 0
+    return round(x, sig-int(floor(log10(abs(x))))-1)
+
 def write_kc(file, lang, specs, rxn):
-    def __round_sig(x, sig=8):
-        from math import log10, floor
-        if x == 0:
-            return 0
-        return round(x, sig-int(floor(log10(abs(x))))-1)
     sum_nu = 0
     coeffs = {}
     for sp_name in set(rxn.reac + rxn.prod):
@@ -988,17 +989,17 @@ def write_dt_y_division(file, lang, specs, num_s, get_array):
         line = '  %'
     line += ('Complete dT/dy calculations\n')
     file.write(line)
-    file.write('  j_temp = rho * cp_avg * cp_avg' + utils.line_end[lang])
+    file.write('  j_temp = 1.0 / (rho * cp_avg * cp_avg)' + utils.line_end[lang])
     for k_sp, sp_k in enumerate(specs):
         line = '  '
         lin_index = (num_s + 1) * (k_sp + 1)
         if lang in ['c', 'cuda']:
             line += get_array(lang, 'jac', lin_index)
-            line += ' /= (j_temp)'
+            line += ' *= (j_temp)'
         elif lang in ['fortran', 'matlab']:
             line += get_array(lang, 'jac', 0, twod=k_sp + 1)
             line += '= ' + get_array(lang, 'jac', 0, twod=k_sp + 1)
-            line += ' / (j_temp)'
+            line += ' * (j_temp)'
 
         line += utils.line_end[lang]
         file.write(line)
@@ -1824,7 +1825,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                     
                     working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array)
 
-                    working_temp += ') / {:.8e}'.format(sp_j.mw)
+                    working_temp += ') * {:.8e}'.format(1.0 / __round_sig(sp_j.mw, 9))
 
                     isFirst = False
 
@@ -1913,7 +1914,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  '= ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
                     line += get_array(lang, 'dy', k_sp + offset)
-                    line += (' * mw_avg / {:.8e}'.format(sp_j.mw) +
+                    line += (' * mw_avg * {}'.format(1.0 / __round_sig(sp_j.mw, 9)) +
                              utils.line_end[lang]
                              )
                     file.write(line)

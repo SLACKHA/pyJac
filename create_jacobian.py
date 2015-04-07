@@ -1893,47 +1893,14 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         with open(os.path.join(path, 'jacobs', 'jac_list'), 'w') as tempfile:
             tempfile.write(' '.join(['jacob_{}.cu'.format(i) for i in range(jac_count)]))
 
-    #need to finish the dYk/dYj's
-    write_dy_y_finish_comment(file, lang)
-    for k_sp, sp_k in enumerate(specs):
-        for j_sp, sp_j in enumerate(specs):
-            lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
-            #see if this combo matters
-            if touched[lin_index]:
-                line = '  '
-                #zero out if unused
-                if lang in ['c', 'cuda'] and not lin_index in sparse_indicies:
-                    file.write(get_array(lang, 'jac', lin_index) + ' = 0.0' + utils.line_end[lang])
-                elif lang in ['fortran', 'matlab'] and not (k_sp + 1, j_sp + 1) in sparse_indicies:
-                    file.write(get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = 0.0' + utils.line_end[lang])
-                else:
-                    #need to finish
-                    if lang in ['c', 'cuda']:
-                        line += get_array(lang, 'jac', lin_index) + ' += '
-                    elif lang in ['fortran', 'matlab']:
-                        line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
-                                 '= ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
-                    line += get_array(lang, 'dy', k_sp + offset)
-                    line += (' * mw_avg * {}'.format(1.0 / __round_sig(sp_j.mw, 9)) +
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
 
-    for k_sp, sp_k in enumerate(specs):
-        for j_sp, sp_j in enumerate(specs):
-            lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
-            #see if this combo matters
-            if touched[lin_index] and ((lang in ['c', 'cuda'] and lin_index in sparse_indicies) or
-                lang in ['fortran', 'matlab'] and (k_sp + 1, j_sp + 1) in sparse_indicies):
-                    line = '  '
-                    if lang in ['c', 'cuda']:
-                        line += get_array(lang, 'jac', lin_index) + ' *= '
-                    elif lang in ['fortran', 'matlab']:
-                        line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = ' +
-                                 get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' * ')
-                    line += '{:.8e} / rho'.format(sp_k.mw)
-                    line += utils.line_end[lang]
-                    file.write(line)
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
+    file.write(line)
 
     ###################################
     # Partial derivatives of temperature (energy equation)
@@ -2030,6 +1997,71 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         line += 'register Real '
     line += 'working_temp = 0.0' + utils.line_end[lang]
     file.write(line)
+               
+    #need to finish the dYk/dYj's
+    write_dy_y_finish_comment(file, lang)
+    for k_sp, sp_k in enumerate(specs):
+        for j_sp, sp_j in enumerate(specs):
+            lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
+            #see if this combo matters
+            if touched[lin_index]:
+                line = '  '
+                #zero out if unused
+                if lang in ['c', 'cuda'] and not lin_index in sparse_indicies:
+                    file.write(get_array(lang, 'jac', lin_index) + ' = 0.0' + utils.line_end[lang])
+                elif lang in ['fortran', 'matlab'] and not (k_sp + 1, j_sp + 1) in sparse_indicies:
+                    file.write(get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = 0.0' + utils.line_end[lang])
+                else:
+                    #need to finish
+                    if lang in ['c', 'cuda']:
+                        line += get_array(lang, 'jac', lin_index) + ' = ('
+                        line += get_array(lang, 'jac', lin_index) + ' + '
+                    elif lang in ['fortran', 'matlab']:
+                        line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                                 ' = (' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
+                    line += get_array(lang, 'dy', k_sp + offset)
+                    line += ' * mw_avg * {}'.format(1.0 / __round_sig(sp_j.mw, 9))
+                    line += ') * {:.8e} * rho_inv'.format(sp_k.mw)
+                    line += utils.line_end[lang]
+                    file.write(line)
+
+
+            ######################################
+            # Derivative with respect to species
+            ######################################
+            if touched[lin_index]:
+                line = '  '
+                lin_index = (num_s + 1) * (j_sp + 1)
+                if lang in ['c', 'cuda']:
+                    line += get_array(lang, 'jac', lin_index)
+                    if not lin_index in sparse_indicies:
+                        sparse_indicies.append(lin_index)
+                elif lang in ['fortran', 'matlab']:
+                    line += get_array(lang, 'jac', 0, twod=j_sp + 1)
+                    if not (1, j_sp + 1) in sparse_indicies:
+                        sparse_indicies.append((1, j_sp + 1))
+                if lang in ['fortran', 'matlab']:
+                    line += ' = ' + (get_array(lang, 'jac', 0, twod=j_sp + 1) + ' +' if touched[lin_index] else '') + ' -('
+                else:
+                    line += ' {}= -('.format('+' if touched[lin_index] else '')
+                touched[lin_index] = True
+
+                if lang in ['c', 'cuda']:
+                    line += ('' + get_array(lang, 'h', k_sp) + ' * ('
+                             '' + get_array(lang, 'jac', k_sp + 1 + (num_s + 1) * (j_sp + 1)) +
+                             ' * cp_avg * rho' +
+                             ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + get_array(lang, 'dy', k_sp + offset) +
+                             ' * {:.8e}))'.format(sp.mw)
+                             )
+                elif lang in ['fortran', 'matlab']:
+                    line += ('' + get_array(lang, 'h', k_sp) + ' * ('
+                             '' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                             ' * cp_avg * rho' +
+                             ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + get_array(lang, 'dy', k_sp + offset) +
+                             ' * {:.8e}))'.format(sp.mw)   
+                             )
+                line += ')' + utils.line_end[lang]
+                file.write(line)
 
     ######################################
     # Derivatives with respect to temperature
@@ -2043,8 +2075,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         ######################################
         # Derivative with respect to species
         ######################################
-        write_dt_y_comment(file, lang, sp)
-        write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array)
+        #write_dt_y_comment(file, lang, sp)
+        #write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array)
 
         file.write('\n')
 

@@ -288,8 +288,10 @@ class jacobian_score(reaction_rates_score):
         self.s_to_r_save = [set() for i in range(len(specs))]
         for sind, sp in enumerate(specs):
             for rind, rxn in enumerate(reacs):
-                thd_sp = [thd[0] for thd in rxn.thd_body]
-                if any(sp.name == x for x in rxn.reac + rxn.prod + thd_sp):
+                species = set(rxn.reac + rxn.prod)
+                if rxn.pdep:
+                    species = species.union([thd[0] for thd in rxn.thd_body]) 
+                if any(species):
                     nu = get_nu(sp, rxn)
                     if (nu is not None and nu != 0) or (nu is None):
                         self.r_to_s_save[rind].add(sind)

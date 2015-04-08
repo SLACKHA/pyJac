@@ -35,7 +35,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     variable_list.append(utils.get_array('cuda', 'fwd_rates', rind))
     if rxn.rev:
         variable_list.append(utils.get_array('cuda', 'rev_rates', rev_reacs.index(rxn)))
-    if rxn.pdep:
+    if rxn.pdep or rxn.thd:
         variable_list.append(utils.get_array('cuda', 'pres_mod', pdep_reacs.index(rind)))
     for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
         sp_real = next(spec for spec in specs if spec.name == sp)
@@ -1853,17 +1853,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         file.write('\n')
 
         if lang == 'cuda' and smm is not None:
-            variable_list = ['fwd_rates[{}]'.format(rind)]
-            if rxn.rev:
-                variable_list.append('rev_rates[{}]'.format(rev_reacs.index(rxn)))
-            if rxn.pdep or rxn.thd:
-                variable_list.append('pres_mod[{}]'.format(pdep_reacs.index(rind)))
-            smm.evict(variable_list)
-            mark = []
-            for sp in set([x[0] for x in rxn.thd_body]):
-                index = next(index for index in range(len(specs)) if specs[index].name == sp)
-                mark.append(utils.get_array(lang, 'conc', index))
-            smm.mark_for_eviction(mark)
+            smm.mark_for_eviction(variable_list)
 
         if lang == 'cuda' and do_unroll and (count == next_fn_index - 1 or count == len(reacs) - 1):
             #switch back

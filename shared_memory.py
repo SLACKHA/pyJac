@@ -14,7 +14,7 @@ class shared_memory_manager(object):
         self.shared_per_block = int(floor(SHARED_MEMORY_SIZE / self.blocks_per_sm))
         self.shared_per_thread = int(floor(self.shared_per_block / self.num_threads))
         self.shared_indexes = range(self.shared_per_thread)
-        self.eviction_marking = []
+        self.eviction_marking = [False for i in range(self.shared_per_thread)]
 
     def reset(self):
         self.shared_dict = []
@@ -27,6 +27,9 @@ class shared_memory_manager(object):
     def load_into_shared(self, file, variables, estimated_usage = None, indent=2):
         old_variables = [x[0] for x in self.shared_dict]
         old_index = [x[1] for x in self.shared_dict]
+        #simply clear old
+        #self.shared_dict = []
+        #self.shared_indexes = range(self.shared_per_thread)
         #see if anything has been marked for eviction
         if len(self.eviction_marking):
             for i, var in enumerate(old_variables):
@@ -47,7 +50,16 @@ class shared_memory_manager(object):
                 if usage == 0 or usage == 1:
                     continue
                 if len(self.shared_dict) < self.shared_per_thread:
-                    self.shared_dict.append((var, self.shared_indexes.pop(0)))
+                    if var in old_variables:
+                        index = old_index[old_variables.index(var)]
+                        if index not in self.shared_indexes:
+                            #someone checked it out, swap
+                            stored = next((x for x in self.shared_dict if index == x[1]), None)
+                            self.shared_dict.remove(stored)
+                            self.shared_dict.append((stored[0], self.shared_indexes.pop(0)))
+                    else:
+                        index = self.shared_indexes.pop(0)
+                    self.shared_dict.append((var, index))
         if estimated_usage:
             #add any usage = 1 ones if space
             for var, usage in variables:
@@ -58,13 +70,6 @@ class shared_memory_manager(object):
         for var in self.shared_dict:
             if not var[0] in old_variables:
                 file.write(''.join([' ' for i in range(indent)]) + self.__get_string(var[1]) + ' = ' + var[0] + utils.line_end['cuda'])
-
-    def evict(self, variables):
-        for variable in variables:
-            found = next((x for x in self.shared_dict if x[0] == variable), None)
-            if found is not None:
-                self.shared_dict.remove(found)
-                self.shared_indexes.append(found[1])
 
     def mark_for_eviction(self, variables):
         """Like the eviction method, but only evicts if not used in the next load"""

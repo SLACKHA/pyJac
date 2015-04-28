@@ -85,7 +85,7 @@ def __greedy_loop(seed, selection_pool, score_fn, size=None):
         #updater(best_candidate)
     return the_list
 
-def greedy_optimizer(specs, reacs):
+def greedy_optimizer(lang, specs, reacs):
     """
     An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as long as possible
 
@@ -168,6 +168,9 @@ def greedy_optimizer(specs, reacs):
             # add reaction index to list
             pdep_reacs.append(reac)
 
+    if len(pdep_reacs):
+        pdep_r_to_s, pdep_s_to_r = get_mappings(specs, reacs, consider_thd=True, load_non_participating=True)
+
     #First get all the pdep rxn's with thd body's which require the conc_temp = (m + spec_1 + spec_2...)
     conc_reacs = []
     for reac in pdep_reacs:
@@ -175,11 +178,9 @@ def greedy_optimizer(specs, reacs):
             conc_reacs.append(reac)
 
     if len(conc_reacs):
-        #get mappings
-        r_to_s, s_to_r = get_mappings(specs, reacs, consider_thd=True, load_non_participating=True)
         #get ordering
-        max_rxn = conc_reacs[max(range(len(conc_reacs)), key=lambda i: len(r_to_s[i]))]
-        scorer = shared_specs(r_to_s, reacs)
+        max_rxn = conc_reacs[max(range(len(conc_reacs)), key=lambda i: len(pdep_r_to_s[i]))]
+        scorer = shared_specs(pdep_r_to_s, reacs)
         conc_reacs = __greedy_loop(max_rxn, conc_reacs, scorer.get_score)
 
     r_to_s, s_to_r = get_mappings(specs, reacs)
@@ -250,3 +251,42 @@ def greedy_optimizer(specs, reacs):
                 max_score = score
                 store_i = i
         rxn_rate_order.insert(store_i, reacs.index(reac))
+
+    #next we do the pdep reactions, the conc_reacs are already in order
+    pdep_rate_order = [pdep_reacs.index(reac) for reac in conc_reacs]
+    skip = None
+    if not len(pdep_rate_order):
+        pdep_rate_order.append(max(range(len(other_pdep)), key=lambda i: len(pdep_r_to_s[i])))
+        skip = reacs[pdep_rate_order[0]]
+
+    for reac in other_pdep:
+        if skip is not None and reac == skip:
+            continue
+        reac_index = reacs.index(reac)
+        max_score = None
+        store_i = None
+        for i in range(len(pdep_rate_order)):
+            score = get_positioning_score(reac_index, i, pdep_rate_order, r_to_s)
+            if max_score is None or score > max_score:
+                max_score = score
+                store_i = i
+        pdep_rate_order.insert(store_i, reacs.index(reac))
+
+    spec_rate_order = []
+    #species ordering is a bit trickier
+    if lang == 'cuda':
+        #cuda is much better with many independent statements
+        #so simply iterate through reactions and add to each species
+        for i in range(len(reacs)):
+            spec_rate_order.append((list(r_to_s[i]), [i]))
+    else:
+        #otherwise, we're just going to keep it as is for the moment
+        #on the CPU the memory latency shouldn't particularly be an issue
+        for i in range(len(specs)):
+            spec_rate_order.append(([i], list(s_to_r[i])))
+
+    #complete, so now return
+    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order
+
+
+

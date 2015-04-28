@@ -1163,7 +1163,7 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
 
 
 
-def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
+def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -1176,8 +1176,8 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         List of species in the mechanism.
     reacs : list of ReacInfo
         List of reactions in the mechanism.
-    jac_order : list of indexes
-        Order to evaluate reactions in
+    splittings : list of int
+        If not None and lang == 'cuda', this will be used to partition the sub jacobian routines
     smm : shared_memory_manager, optional
         If not None, use this to manage shared memory optimization
 
@@ -1596,41 +1596,39 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
     touched = [False for i in range((len(specs) + 1) * (len(specs) + 1))]
     sparse_indicies = []
 
-    index_list = jac_order[0][1]
-    count = 0
+    last_split_index = None
     jac_count = 0
     next_fn_index = 0
     batch_has_thd = False
     ###################################
     # partial derivatives of reactions
     ###################################
-    for rind in index_list:
-        rxn = reacs[rind]
-
-        if lang == 'cuda' and do_unroll and (count == next_fn_index):
+    for rind, rxn in enumerate(reacs):
+        if lang == 'cuda' and do_unroll and (rind == next_fn_index):
             file_store = file
+            #get next index
+            next_fn_index = rind + splittings[0]
+            splittings = splittings[1:]
             #get flags
-            ind = index_list.index(rind)
             rev = False
             pdep = False
             thd = False
             troe = False
             sri = False
-            for ind_next in range(ind, min(ind + CUDAParams.Jacob_Unroll, len(index_list))):
-                if reacs[index_list[ind_next]].rev:
+            for ind_next in range(rind, next_fn_index):
+                if reacs[ind_next].rev:
                     rev = True
-                if reacs[index_list[ind_next]].pdep:
+                if reacs[ind_next].pdep:
                     pdep = True
-                if reacs[index_list[ind_next]].thd:
+                if reacs[ind_next].thd:
                     thd = True
-                if reacs[index_list[ind_next]].troe:
+                if reacs[ind_next].troe:
                     troe = True
-                if reacs[index_list[ind_next]].sri:
+                if reacs[ind_next].sri:
                     sri = True
             batch_has_thd = thd
             #write the specific evaluator for this reaction
             file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri)
-            next_fn_index += CUDAParams.Jacob_Unroll
 
         if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
@@ -1855,7 +1853,7 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
         if lang == 'cuda' and smm is not None:
             smm.mark_for_eviction(variable_list)
 
-        if lang == 'cuda' and do_unroll and (count == next_fn_index - 1 or count == len(reacs) - 1):
+        if lang == 'cuda' and do_unroll and (rind == next_fn_index - 1 or rind == len(reacs) - 1):
             #switch back
             file.write('}\n\n')
             file = file_store
@@ -1868,7 +1866,6 @@ def write_jacobian_alt(path, lang, specs, reacs, jac_order, smm=None):
                 line += ', m'
             line += ', mw_avg, rho, dBdT, T, jac)'
             file.write(line + utils.line_end[lang])
-        count += 1
 
 
     if lang == 'cuda' and do_unroll:
@@ -4200,16 +4197,16 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
             rxn.high[2] *= efac
 
     if optimize_cache:
-        temp = cache.greedy_optimizer(specs, reacs)
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs)
 
     else:
-        spec_order = [(range(len(specs)), range(len(reacs)))]
-        rxn_order = [(range(len(specs)), range(len(reacs)))]
+        spec_rate_order = [(range(len(specs)), range(len(reacs)))]
+        rxn_order = range(len(reacs))
         if any(r.pdep or r.thd for r in reacs): 
-            pdep_order = [(range(len(specs)), [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd])]
+            pdep_order = [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd]
         else:
             pdep_order = None
-        jac_order = [(range(len(specs)), range(len(reacs)))]
+        splittings = None
     
     if lang == 'cuda':
         CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads, L1_preferred)
@@ -4220,15 +4217,15 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_order, smm)
+    rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_rate_order, smm)
     
     # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order, smm)
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_rate_order, smm)
     
     # write species rates subroutine
-    rate.write_spec_rates(build_path, lang, specs, reacs, spec_order, smm)
+    rate.write_spec_rates(build_path, lang, specs, reacs, spec_rate_order, smm)
     
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs)
@@ -4243,7 +4240,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
 
     # write Jacobian subroutine
-    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, jac_order, smm)
+    sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, splittings, smm)
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 

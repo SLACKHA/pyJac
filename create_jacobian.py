@@ -19,7 +19,7 @@ import rate_subs as rate
 import utils
 import mech_auxiliary as aux
 import CUDAParams
-import cache_optimizer as cache
+import cache_optimizer_alt as cache
 import shared_memory as shared
 
 def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
@@ -4200,24 +4200,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
             rxn.high[2] *= efac
 
     if optimize_cache:
-        if lang == 'cuda':
-            pool_size = CUDAParams.get_L1_size(L1_preferred) / num_threads
-        else:
-            pool_size = 100 #wild guess
-        #create score functions
-        spec_score = cache.species_rates_score(specs, reacs, pool_size)
-        rxn_score = cache.reaction_rates_score(specs, reacs, pool_size)
-        if any(r.pdep or r.thd for r in reacs):
-            pdep_score = cache.pdep_rates_score(specs, reacs, pool_size)
-        jac_score = cache.jacobian_score(specs, reacs, pool_size)
-
-        spec_order = cache.greedy_optimizer(spec_score)
-        rxn_order = cache.greedy_optimizer(rxn_score)
-        if any(r.pdep or r.thd for r in reacs):
-            pdep_order = cache.greedy_optimizer(pdep_score)
-        else:
-            pdep_order = None
-        jac_order = cache.greedy_optimizer(jac_score)
+        temp = cache.greedy_optimizer(specs, reacs)
 
     else:
         spec_order = [(range(len(specs)), range(len(reacs)))]

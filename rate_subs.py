@@ -17,7 +17,7 @@ import chem_utilities as chem
 import mech_interpret as mech
 import utils
 import CUDAParams
-import cache_optimizer as cache
+import cache_optimizer_alt as cache
 import mech_auxiliary as aux
 import shared_memory as shared
 

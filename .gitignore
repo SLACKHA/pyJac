@@ -52,3 +52,11 @@ coverage.xml
 # Sphinx documentation
 docs/_build/
 
+#Pycharm stuff
+.idea/
+
+#out folder
+out/
+
+#mechanisms folder
+mechs/

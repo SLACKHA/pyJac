@@ -820,7 +820,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             line += utils.line_end[lang]
             file.write(line)
             
-            simple_falloff = False
+            simple = False
             if reac.troe:
                 # Troe form
                 line = ('  logFcent = log10( fmax('
@@ -903,32 +903,30 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     line += ('* {:.8e} * '.format(reac.sri[3]) + 
                              'pow(T, {:.4}) '.format(reac.sri[4])
                              )
-
             else:
-                simple_falloff = True
-                # A simple unimolecular decomposition reaction (i.e. no F function)
+                #simple falloff fn (i.e. F = 1)
+                simple = True
                 line = '  pres_mod'
                 if lang in ['c', 'cuda']:
-                    line += ('[{}]'.format(pind) + 
-                             ' = '
-                             )
+                    line += '[{}] ='.format(pind)
                 elif lang in ['fortran', 'matlab']:
-                    # fortran & matlab don't have exp10
-                    line += ('({})'.format(pind + 1) + 
-                             ' = '
-                             )
+                    line += '({}) ='.format(pind + 1)
+                 # regardless of F formulation
+                if reac.low:
+                    # unimolecular/recombination fall-off reaction
+                    line += ' Pr / (1.0 + Pr)'
+                elif reac.high:
+                    # chemically-activated bimolecular reaction
+                    line += '1.0 / (1.0 + Pr)'
             
-            # regardless of F formulation
-            if reac.low:
-                if not simple_falloff:
-                    line += '* '
-                # unimolecular/recombination fall-off reaction
-                line += 'Pr / (1.0 + Pr)'
-            elif reac.high:
-                if not simple_falloff:
-                    line += '/ '
-                # chemically-activated bimolecular reaction
-                line += '(1.0 + Pr)'
+            if not simple:
+                # regardless of F formulation
+                if reac.low:
+                    # unimolecular/recombination fall-off reaction
+                    line += '* Pr / (1.0 + Pr)'
+                elif reac.high:
+                    # chemically-activated bimolecular reaction
+                    line += '/ (1.0 + Pr)'
             
             line += utils.line_end[lang]
             file.write(line)
@@ -2010,13 +2008,15 @@ def write_mass_mole(path, lang, specs):
         file.write('#ifndef MASS_MOLE_H\n'
                    '#define MASS_MOLE_H\n'
                    '\n'
+                   '#include "header.h"\n'
+                   '\n'
                    '#ifdef __cplusplus\n'
                    '  extern "C" {\n'
                    '#endif\n'
                    '\n'
                    'void mole2mass (const Real*, Real*);\n'
                    'void mass2mole (const Real*, Real*);\n'
-                   'Real getDensity (Real, Real, Real*);\n'
+                   'Real getDensity (const Real, const Real, const Real*);\n'
                    '\n'
                    '#ifdef __cplusplus\n'
                    '  }\n'
@@ -2035,7 +2035,7 @@ def write_mass_mole(path, lang, specs):
     file = open(path + filename, 'w')
     
     if lang in ['c', 'cuda']:
-        file.write('#include "header.h"\n\n')
+        file.write('#include "mass_mole.h"\n\n')
     
     ###################################################
     # Documentation and function/subroutine initializaton for mole2mass

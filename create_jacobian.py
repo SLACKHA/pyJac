@@ -16,6 +16,7 @@ import chem_utilities as chem
 import mech_interpret as mech
 import rate_subs as rate
 import utils
+import mech_auxiliary as aux
 
 def write_jacobian(path, lang, specs, reacs):
     """Write Jacobian subroutine in desired language.
@@ -357,7 +358,7 @@ def write_jacobian(path, lang, specs, reacs):
     dBdT_flag = []
     for sp in specs:
         dBdT_flag.append(False)
-    
+
     for rxn in rev_reacs:
         # only reactions with no reverse Arrhenius parameters
         if rxn.rev_par: continue
@@ -431,6 +432,10 @@ def write_jacobian(path, lang, specs, reacs):
     # now begin Jacobian evaluation
     ###################################
     
+
+    #index list for sparse multiplier
+    sparse_indicies = []
+
     ###################################
     # partial derivatives of species
     ###################################
@@ -475,8 +480,10 @@ def write_jacobian(path, lang, specs, reacs):
             jline = '  jac'
             if lang in ['c', 'cuda']:
                 jline += '[{}]'.format(k_sp + 1)
+                sparse_indicies.append(k_sp + 1)
             elif lang in ['fortran', 'matlab']:
                 jline += '({},1)'.format(k_sp + 2)
+                sparse_indicies.append(k_sp + 2)
             
             # first reaction for this species
             if isfirst:
@@ -750,7 +757,7 @@ def write_jacobian(path, lang, specs, reacs):
                 jline += '{:.8e}'.format(rxn.b)
             elif abs(rxn.E) > 1.0e-90:
                 jline += '({:.8e} / T)'.format(rxn.E)
-            jline += ' + 1.0 - '
+            jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
             
             # loop over reactants
             nu = 0
@@ -782,7 +789,7 @@ def write_jacobian(path, lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.rev_par[1])
                     elif abs(rxn.rev_par[2]) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.rev_par[2])
-                    jline += ' + 1.0 - '
+                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.rev_par[1]) > 1.0e-90) or (abs(rxn.rev_par[2]) > 1.0e-90) else '')
                     
                     nu = 0
                     # loop over products
@@ -800,7 +807,7 @@ def write_jacobian(path, lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.b)
                     elif abs(rxn.E) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.E)
-                    jline += ' + 1.0 - '
+                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
                     
                     nu = 0
                     # loop over products
@@ -962,10 +969,12 @@ def write_jacobian(path, lang, specs, reacs):
                 jline = '  jac'
                 if lang in ['c', 'cuda']:
                     jline += '[{}]'.format(k_sp + 1 + (num_s+1) * (j_sp+1))
+                    sparse_indicies.append(k_sp + 1 + (num_s+1) * (j_sp+1))
                 elif lang in ['fortran', 'matlab']:
                     jline += ('({}, '.format(k_sp + 2) + 
                               '{})'.format(j_sp + 2)
                               )
+                    sparse_indicies.append((k_sp + 2, j_sp + 2))
                 
                 if isfirst:
                     jline += ' = '
@@ -1827,10 +1836,13 @@ def write_jacobian(path, lang, specs, reacs):
     line = '  jac'
     if lang in ['c', 'cuda']:
         line += '[0] = 0.0'
+        sparse_indicies.append(0)
     elif lang == 'fortran':
         line += '(1,1) = 0.0_wp'
+        sparse_indicies.append((1,1))
     elif lang == 'matlab':
         line += '(1,1) = 0.0'
+        sparse_indicies.append((1,1))
     line += utils.line_end[lang]
     file.write(line)
     
@@ -1999,8 +2011,10 @@ def write_jacobian(path, lang, specs, reacs):
         line = '  jac'
         if lang in ['c', 'cuda']:
             line += '[{}]'.format((num_s + 1) * (isp + 1))
+            sparse_indicies.append((num_s + 1) * (isp + 1))
         elif lang in ['fortran', 'matlab']:
             line += '(1, {})'.format(isp + 2)
+            sparse_indicies.append((1, isp + 2))
         line += ' = -('
         
         isfirst = True
@@ -2047,7 +2061,137 @@ def write_jacobian(path, lang, specs, reacs):
     
     file.close()
     
-    return
+    return sparse_indicies
+
+def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
+    """Write a subroutine that multiplies the non-zero entries of the Jacobian with a column 'j' of another matrix
+    
+    Parameters
+    ----------
+    path : str
+        Path to build directory for file.
+    lang : {'c', 'cuda', 'fortran', 'matlab'}
+        Programming language.
+    inidicies : list
+        A list of indicies where the Jacobian is non-zero
+    nvars : int 
+        How many variables in the Jacobian matrix
+    
+    Returns
+    -------
+    None
+    
+    """
+
+    sorted_and_cleaned = sorted(list(set(sparse_indicies)))
+     # first write header file
+    if lang == 'c':
+        file = open(path + 'sparse_multiplier.h', 'w')
+        file.write('#ifndef SPARSE_HEAD\n'
+                   '#define SPARSE_HEAD\n')
+        file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
+        file.write(
+                   '\n'
+                   '#include "header.h"\n'
+                   '\n'
+                   'void sparse_multiplier (const Real *, const Real *, Real*);\n'
+                   '\n'
+                   '#ifdef COMPILE_TESTING_METHODS\n'
+                   '  int test_sparse_multiplier();\n'
+                   '#endif\n'
+                   '\n'
+                   '#endif\n'
+                   )
+        file.close()
+    elif lang == 'cuda':
+        file = open(path + 'sparse_multiplier.cuh', 'w')
+        file.write('#ifndef SPARSE_HEAD\n'
+                   '#define SPARSE_HEAD\n')
+        file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
+        file.write(
+                   '\n'
+                   '#include "header.h"\n'
+                   '\n'
+                   '__device__ void sparse_multiplier (const Real *, const Real *, Real*);\n'
+                   '#ifdef COMPILE_TESTING_METHODS\n'
+                   '  __device__ int test_sparse_multiplier();\n'
+                   '#endif\n'
+                   '\n'
+                   '#endif\n'
+                   )
+        file.close()
+    else:
+        raise NotImplementedError
+    
+    # create file depending on language
+    filename = 'sparse_multiplier' + utils.file_ext[lang]
+    file = open(path + filename, 'w')
+
+    file.write('#include "sparse_multiplier.h"\n\n')
+    
+    if lang == 'cuda':
+        file.write('__device__\n')
+
+    file.write("void sparse_multiplier(const Real * A, const Real * Vm, Real* w) {\n")
+
+    for i in range(nvars):
+        #get all indicies that belong to row i
+        i_list = [x for x in sorted_and_cleaned if x % nvars == i]
+        if not len(i_list):
+            file.write("  w[{:}] = 0;\n".format(i))
+            continue
+        file.write("  w[{:}] =".format(i))
+        for index in i_list:
+            if i_list.index(index):
+                file.write(" + ")
+            file.write(" A[{:}] * Vm[{:}]".format(index, int(index / nvars)))
+        file.write(";\n")
+    file.write("}\n")
+
+    if lang == 'cuda':
+        file.write(
+        '#ifdef COMPILE_TESTING_METHODS\n'
+        '  __device__ bool test_sparse_multiplier() {\n'
+        )
+    else:
+        file.write(
+        '\n#ifdef COMPILE_TESTING_METHODS\n'
+        '  int test_sparse_multiplier(){\n'
+        )
+    #write test method
+    file.write(
+        '    Real A[NN * NN] = {ZERO};\n'
+        '    Real v[NN] = {ZERO};\n'
+        '    //do not zero, tests sparse_multiplier\'s fill of non touched entries\n'
+        '    Real w[NN];\n'
+        '    Real w2[NN] = {ZERO};\n'
+    )
+    for i in range(nvars):
+        #get all indicies that belong to row i
+        i_list = [x for x in sorted_and_cleaned if x % nvars == i]
+        file.write('    v[{:}] = {:};\n'.format(i, i))
+        if not len(i_list):
+            continue
+        for index in i_list:
+            file.write('    A[{:}] = {:};\n'.format(index, index))
+
+    file.write(
+        '    for (uint i = 0; i < NN; ++i) {\n'               
+        '       for (uint j = 0; j < NN; ++j) {\n'
+        '          w2[i] += A[i + (j * NN)] * v[j];\n'
+        '       }\n'
+        '    }\n'
+        )
+    file.write('    sparse_multiplier(A, v, w);\n')
+    file.write('    for (uint i = 0; i < NN; ++i) {\n'
+               '       if (w[i] != w2[i]) \n'
+               '         return 0;\n'
+               '    }\n'
+               '    return 1;\n'
+               '  }\n'
+               '#endif\n'
+        )
+    file.close()
 
 
 def create_jacobian(lang, mech_name, therm_name = None, skip_jacob = False):
@@ -2148,12 +2292,17 @@ def create_jacobian(lang, mech_name, therm_name = None, skip_jacob = False):
     
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)
+
+    # write mechanism initializers and testing methods
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs)
     
     if skip_jacob:
         return
     
     # write Jacobian subroutine
-    write_jacobian(build_path, lang, specs, reacs)
+    sparse_indicies = write_jacobian(build_path, lang, specs, reacs)
+
+    write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
     return
 

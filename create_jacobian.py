@@ -4201,11 +4201,11 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
 
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
-        rxn_order = range(len(reacs))
+        rxn_rate_order = range(len(reacs))
         if any(r.pdep or r.thd for r in reacs): 
-            pdep_order = [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd]
+            pdep_rate_order = [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd]
         else:
-            pdep_order = None
+            pdep_rate_order = None
         splittings = None
     
     if lang == 'cuda':

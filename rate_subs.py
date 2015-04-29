@@ -2369,30 +2369,16 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
             rxn.high[2] *= efac
 
     if optimize_cache:
-        if lang == 'cuda':
-            pool_size = CUDAParams.get_L1_size(L1_preferred) / num_threads
-        else:
-            pool_size = 100 #wild guess
-        #create score functions
-        spec_score = cache.species_rates_score(specs, reacs, pool_size)
-        rxn_score = cache.reaction_rates_score(specs, reacs, pool_size)
-        if any(r.pdep or r.thd for r in reacs):
-            pdep_score = cache.pdep_rates_score(specs, reacs, pool_size)
-
-        spec_order = cache.greedy_optimizer(spec_score)
-        rxn_order = cache.greedy_optimizer(rxn_score)
-        if any(r.pdep or r.thd for r in reacs):
-            pdep_order = cache.greedy_optimizer(pdep_score)
-        else:
-            pdep_order = None
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs)
 
     else:
-        spec_order = [(range(len(specs)), range(len(reacs)))]
-        rxn_order = [(range(len(specs)), range(len(reacs)))]
+        spec_rate_order = [(range(len(specs)), range(len(reacs)))]
+        rxn_rate_order = range(len(reacs))
         if any(r.pdep or r.thd for r in reacs): 
-            pdep_order = [(range(len(specs)), range(len(reacs)))]
+            pdep_rate_order = [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd]
         else:
-            pdep_order = None
+            pdep_rate_order = None
+        splittings = None
     
     smm = None
     if lang == 'cuda' and not no_shared:
@@ -2403,15 +2389,15 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
     # now begin writing subroutines
     
     # print reaction rate subroutine
-    write_rxn_rates(build_path, lang, specs, reacs, rxn_order, smm)
+    write_rxn_rates(build_path, lang, specs, reacs, rxn_rate_order, smm)
     
     # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
-        write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_order, smm)
+        write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_rate_order, smm)
     
     # write species rates subroutine
-    write_spec_rates(build_path, lang, specs, reacs, spec_order, smm)
+    write_spec_rates(build_path, lang, specs, reacs, spec_rate_order, smm)
     
     # write chem_utils subroutines
     write_chem_utils(build_path, lang, specs)

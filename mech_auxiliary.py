@@ -624,13 +624,27 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
                    '    //set initial pressure, units [dyn/cm^2]\n' +
                    '    double P = {};\n'.format(1.01325e6 * P) + 
                    '    // set intial temperature, units [K]\n' +
-                   '    double T0 = {};\n\n'.format(T0) +
+                   '    double T0 = {};\n\n'.format(T0)
+                   )
+        if lang == 'cuda':
+            file.write(
                    '    cudaMallocHost((void**)y_host, padded * NN * sizeof(double));\n'
                    '#ifdef CONP\n'
                    '    cudaMallocHost((void**)pres_host, padded * sizeof(double));\n'
                    '#elif defined(CONV)\n'
                    '    cudaMallocHost((void**)rho_host, padded * sizeof(double));\n'
                    '#endif\n'
+                   )
+        else:
+            file.write(
+                   '    (*y_host) = malloc(padded * NN * sizeof(double));\n'
+                   '#ifdef CONP\n'
+                   '    (*pres_host) = malloc(padded * sizeof(double));\n'
+                   '#elif defined(CONV)\n'
+                   '    (*rho_host) = malloc(padded * sizeof(double));\n'
+                   '#endif\n'
+                   )
+        file.write(
                    '    //load temperature and mass fractions for all threads (cells)\n'
                    '    for (int i = 0; i < padded; ++i) {\n'
                    '        (*y_host)[i] = T0;\n'

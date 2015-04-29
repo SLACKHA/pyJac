@@ -4108,7 +4108,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -4134,6 +4134,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         If true, do not use the shared_memory_manager to attempt to optimize for CUDA
     L1_preferred : bool, optional
         If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
+    multi_thread : int, optional
+        The number of threads to use during optimization
 
     Returns
     -------
@@ -4197,7 +4199,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
             rxn.high[2] *= efac
 
     if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs)
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
 
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
@@ -4304,8 +4306,14 @@ if __name__ == "__main__":
                         default = 64,
                         required=False,
                         help = 'The target number of threads / block to achieve for CUDA.')
+    parser.add_argument('-mt', '--multi-threaded',
+                        type=int,
+                        dest='multi_thread',
+                        default=1,
+                        required=False,
+                        help = 'The number of threads to use during the optimization process')
 
     args = parser.parse_args()
 
     create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks, args.num_threads\
-                   , args.no_shared, args.L1_preferred)
+                   , args.no_shared, args.L1_preferred, args.multi_thread)

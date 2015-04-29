@@ -2280,7 +2280,7 @@ def write_mass_mole(path, lang, specs):
     return
 
 
-def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True):
+def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1):
     """Create rate subroutines from mechanism.
     
     Parameters
@@ -2306,6 +2306,8 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
         If true, do not use the shared_memory_manager to attempt to optimize for CUDA
     L1_preferred : bool, optional
         If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
+    multi_thread : int, optional
+        The number of threads to use during optimization
     
     Returns
     -------
@@ -2369,7 +2371,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
             rxn.high[2] *= efac
 
     if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs)
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
 
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
@@ -2474,9 +2476,15 @@ if __name__ == "__main__":
                         default = 64,
                         required=False,
                         help = 'The target number of threads / block to achieve for CUDA.')
+    parser.add_argument('-mt', '--multi-threaded',
+                    type=int,
+                    dest='multi_thread',
+                    default=1,
+                    required=False,
+                    help = 'The number of threads to use during the optimization process')
 
     args = parser.parse_args()
     
     create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles, args.num_blocks, args.num_threads\
-                   , args.no_shared, args.L1_preferred)
+                   , args.no_shared, args.L1_preferred, args.multi_thread)
 

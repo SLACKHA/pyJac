@@ -730,9 +730,15 @@ def write_db_dt(file, lang, specs, rxn):
 
     file.write(jline)
 
-def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array):
+def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp=None):
     # print lines for necessary pressure-dependent variables
     line = '  {} = '.format('conc_temp' if rxn.thd_body else 'Pr')
+    file.write(line)
+    line = ''
+    conc_temp_log = None
+    if thd_body:
+        #take care of the conc_temp collapsing
+        conc_temp_log = []
     if rxn.pdep_sp:
         line += get_array(lang, 'conc', specs.index(rxn.pdep_sp))
     else:
@@ -747,7 +753,34 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array):
                 line += ' - {} * '.format(1.0 - thd_sp[1])
             if thd_sp[1] != 1.0:
                 line += get_array(lang, 'conc', isp)
+                if conc_temp_log is not None:
+                    conc_temp_log.append((thd_sp[0], abs(thd_sp - 1.0)))
         line += ')'
+
+        if last_conc_temp is not None:
+            #need to update based on the last
+            new_conc_temp = []
+            for species, alpha in conc_temp_log:
+                match = next((sp for sp in last_conc_temp if sp[0] == species), None)
+                if match is not None:
+                    coeff = alpha - match[1]
+                else:
+                    coeff = alpha
+                new_conc_temp.append((species, coeff))
+
+            #remake the line with the updated numbers
+            line += '(m'
+
+            for thd_sp in new_conc_temp:
+                isp = specs.index(next((s for s in specs
+                                        if s.name == thd_sp[0]), None))
+                if thd_sp[1] > 1.0:
+                    line += ' + {} * '.format(thd_sp[1] - 1.0)
+                elif thd_sp[1] < 1.0:
+                    line += ' - {} * '.format(1.0 - thd_sp[1])
+                if thd_sp[1] != 1.0:
+                    line += get_array(lang, 'conc', isp)
+            line += ')'
 
     if rxn.thd_body:
         file.write(line + utils.line_end[lang])
@@ -761,6 +794,8 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array):
                  utils.line_end[lang]
                  )
         file.write(line)
+
+    return conc_temp_log
 
 
 def write_troe(file, lang, rxn):
@@ -1600,11 +1635,14 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
     jac_count = 0
     next_fn_index = 0
     batch_has_thd = False
+    last_conc_temp = None
     ###################################
     # partial derivatives of reactions
     ###################################
     for rind, rxn in enumerate(reacs):
         if lang == 'cuda' and do_unroll and (rind == next_fn_index):
+            #clear conc temp
+            last_conc_temp = None
             file_store = file
             #get next index
             next_fn_index = rind + splittings[0]
@@ -1646,7 +1684,7 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
         pind = None
         if rxn.pdep:
             pind = pdep_reacs.index(rind)
-            write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array)
+            last_conc_temp = write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp)
 
             #dF/dT
             if rxn.troe:

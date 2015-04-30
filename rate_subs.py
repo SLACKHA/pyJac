@@ -2280,7 +2280,7 @@ def write_mass_mole(path, lang, specs):
     return
 
 
-def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1):
+def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1, force_optimize=False):
     """Create rate subroutines from mechanism.
     
     Parameters
@@ -2485,9 +2485,14 @@ if __name__ == "__main__":
                     default=1,
                     required=False,
                     help = 'The number of threads to use during the optimization process')
+    parser.add_argument('-fopt', '--force-optimize',
+                        dest='force_optimize',
+                        action='store_true',
+                        default=False,
+                        help='Use this option to force a reoptimization of the mechanism (usually only happens when generating for a different mechanism)')
 
     args = parser.parse_args()
     
     create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_moles, args.num_blocks, args.num_threads\
-                   , args.no_shared, args.L1_preferred, args.multi_thread)
+                   , args.no_shared, args.L1_preferred, args.multi_thread, args.force_optimize)
 

@@ -172,6 +172,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     if not force_optimize:
         try:
             same_mech = False
+            print(build_path)
             with open(build_path + 'optimized.pickle', 'rb') as file:
                 splittings = pickle.load(file)
                 old_specs = pickle.load(file)
@@ -181,9 +182,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                 spec_rate_order = pickle.load(file)
                 spec_ordering = pickle.load(file)
                 rxn_ordering = pickle.load(file)
-            same_mech = all(s in specs for s in old_specs) and len(old_reacs) == len(reacs) \
-                            and all(r in reacs in old_reacs) and len(reacs) == len(old_reacs)
-        except:
+            same_mech = all(any(s == sp for sp in specs) for s in old_specs) and \
+                            len(specs) == len(old_specs) and \
+                            all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
+                            len(reacs) == len(old_reacs)
+        except Exception, e:
+            print(e, e.message)
             same_mech = False
         if same_mech:
             return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering, rxn_ordering
@@ -340,6 +344,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(reacs, file)
         pickle.dump(rxn_rate_order, file)
         pickle.dump(pdep_rate_order, file)
+        pickle.dump(spec_rate_order, file)
         pickle.dump(rxn_ordering, file)
         pickle.dump(spec_ordering, file)
 

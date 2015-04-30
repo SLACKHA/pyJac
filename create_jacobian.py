@@ -733,10 +733,8 @@ def write_db_dt(file, lang, specs, rxn):
 def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp=None):
     # print lines for necessary pressure-dependent variables
     line = '  {} = '.format('conc_temp' if rxn.thd_body else 'Pr')
-    file.write(line)
-    line = ''
     conc_temp_log = None
-    if thd_body:
+    if rxn.thd_body:
         #take care of the conc_temp collapsing
         conc_temp_log = []
     if rxn.pdep_sp:
@@ -754,7 +752,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
             if thd_sp[1] != 1.0:
                 line += get_array(lang, 'conc', isp)
                 if conc_temp_log is not None:
-                    conc_temp_log.append((thd_sp[0], abs(thd_sp - 1.0)))
+                    conc_temp_log.append((thd_sp[0], thd_sp[1] - 1.0))
         line += ')'
 
         if last_conc_temp is not None:
@@ -766,23 +764,26 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                     coeff = alpha - match[1]
                 else:
                     coeff = alpha
-                new_conc_temp.append((species, coeff))
+                if coeff != 0.0:
+                    new_conc_temp.append((species, coeff))
 
-            #remake the line with the updated numbers
-            line += '(m'
+            if len(new_conc_temp):
+                #remake the line with the updated numbers
+                line = 'conc_temp += ('
 
-            for thd_sp in new_conc_temp:
-                isp = specs.index(next((s for s in specs
-                                        if s.name == thd_sp[0]), None))
-                if thd_sp[1] > 1.0:
-                    line += ' + {} * '.format(thd_sp[1] - 1.0)
-                elif thd_sp[1] < 1.0:
-                    line += ' - {} * '.format(1.0 - thd_sp[1])
-                if thd_sp[1] != 1.0:
+                for i, thd_sp in enumerate(new_conc_temp):
+                    isp = specs.index(next((s for s in specs
+                                            if s.name == thd_sp[0]), None))
+                    if i > 0:
+                        line += ' {}{} * '.format('- ' if thd_sp[1] < 0 else '+ ', abs(thd_sp[1]))
+                    else:
+                        line += '{} * '.format(thd_sp[1])
                     line += get_array(lang, 'conc', isp)
-            line += ')'
+                line += ')'
+            else:
+                line = ''
 
-    if rxn.thd_body:
+    if rxn.thd_body and len(line):
         file.write(line + utils.line_end[lang])
 
     if rxn.pdep:
@@ -4237,7 +4238,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
             rxn.high[2] *= efac
 
     if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
+        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
 
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
@@ -4247,6 +4249,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         else:
             pdep_rate_order = None
         splittings = None
+        old_spec_order = range(len(specs))
+        old_rxn_order = range(len(reacs))
     
     if lang == 'cuda':
         CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads, L1_preferred)
@@ -4277,7 +4281,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     rate.write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, old_spec_order, old_rxn_order)
 
     # write Jacobian subroutine
     sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, splittings, smm)

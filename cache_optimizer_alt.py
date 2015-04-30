@@ -155,6 +155,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
 
     spec_rate_order : list of int
         A list indicated the order to evaluate species rates in spec_rates subroutine
+
+    old_species_order : list of int
+        A list indicating the positioning of the species in the original mechanism, used in rate testing
+
+     old_rxn_order : list of int
+        A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
 
     splittings = []
@@ -260,7 +266,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
         score_list = [(score[0], score[1].get()) for score in score_list]
         score_list.sort(key=lambda x: x[0])
         for score in score_list:
-            if max_score is None or score[1] > max_score:
+            if max_score is None or score[1] > max_score or (max_score == score[1] and abs(score[0] - reac_index) < abs(store_i - reac_index)):
                 max_score = score[1]
                 store_i = score[0]
         rxn_rate_order.insert(store_i, reacs.index(reac))
@@ -284,7 +290,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
         score_list = [(score[0], score[1].get()) for score in score_list]
         score_list.sort(key=lambda x: x[0])
         for score in score_list:
-            if max_score is None or score[1] > max_score:
+            if max_score is None or score[1] > max_score or (max_score == score[1] and abs(score[0] - reac_index) < abs(store_i - reac_index)):
                 max_score = score[1]
                 store_i = score[0]
         pdep_rate_order.insert(store_i, reacs.index(reac))
@@ -303,7 +309,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
             spec_rate_order.append(([i], list(s_to_r[i])))
 
     #complete, so now return
-    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order
+    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, rxn_ordering, spec_ordering
 
 
 

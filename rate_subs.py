@@ -2371,7 +2371,8 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
             rxn.high[2] *= efac
 
     if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
+        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
 
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
@@ -2381,6 +2382,8 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
         else:
             pdep_rate_order = None
         splittings = None
+        old_spec_order = range(len(specs))
+        old_rxn_order = range(len(reacs))
     
     smm = None
     if lang == 'cuda' and not no_shared:
@@ -2411,7 +2414,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
     write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles, old_spec_order, old_rxn_order)
     
     return
 

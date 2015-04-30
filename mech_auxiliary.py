@@ -431,7 +431,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
 
 
-def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
+def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, old_spec_order, old_rxn_order):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
@@ -731,45 +731,63 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions):
         line += ', const double* spec_rates_host, const double* dy_host) {\n'
         file.write(line)
         # convience method to write rates to file
+        file.write('    int spec_order[NSP] = {{{}}}'.format(', '.join(old_spec_order)) + utils.line_end[lang])
         if have_rev_rxns:
+            file.write('    int rxn_ord[FWD_RATES] = {{{}}}'.format(', '.join(old_rxn_order)) + utils.line_end[lang])
+            old_rev_order = [rxn for rxn in old_rxn_order if reacs[rxn].rev]
+            rev_reacs = [rxn for rxn in reacs if rxn.rev]
+            old_rev_order = [rev_reacs.index(reacs[rxn]) for rxn in old_rev_order]
+            file.write('    int rev_rxn_ord[REV_RATES] = {{{}}}'.format(', '.join(old_rev_order
+              )) + utils.line_end[lang])
+
             file.write('    fprintf(fp, "Forward Rates\\n");\n'
                    '    for(int i = 0; i < FWD_RATES; ++i) {\n'
-                   '        fprintf(fp, "%.15le\\n", fwd_rates_host[i]);\n'
+                   '        fprintf(fp, "%.15le\\n", fwd_rates_host[rxn_ord[i]]);\n'
                    '    }\n'
                    )
             file.write('    fprintf(fp, "Rev Rates\\n");\n')
             file.write('    for(int i = 0; i < REV_RATES; ++i) {\n'
-                       '        fprintf(fp, "%.15le\\n", rev_rates_host[i]);\n'
+                       '        fprintf(fp, "%.15le\\n", rev_rates_host[rev_rxn_ord[i]]);\n'
                        '    }\n'
                        )
         else:
+            file.write('    int rxn_ord[RATES] = {{{}}}'.format(', '.join(old_rxn_order)) + utils.line_end[lang])
             file.write('    fprintf(fp, "Rates\\n");\n'
                    '    for(int i = 0; i < RATES; ++i) {\n'
-                   '        fprintf(fp, "%.15le\\n", rates_host[i]);\n'
+                   '        fprintf(fp, "%.15le\\n", rates_host[rxn_ord[i]]);\n'
                    '    }\n'
                    )
         if have_pdep_rxns:
+            old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd]
+            pdep_reacs = [rxn for rxn in reacs if rxn.pdep or rxn.thd]
+            old_pdep_order = [pdep_reacs.index(reacs[rxn]) for rxn in old_pdep_order]
+            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{{}}}'.format(', '.join(old_pdep_order)) + utils.line_end[lang])
             file.write('    fprintf(fp, "Pres Mod Rates\\n");\n')
             file.write('    for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
-                       '        fprintf(fp, "%.15le\\n", pres_mod_host[i]);\n'
+                       '        fprintf(fp, "%.15le\\n", pres_mod_host[pdep_rxn_ord[i]]);\n'
                        '    }\n'
                        )
         file.write('    fprintf(fp, "Spec Rates\\n");\n')
         file.write('    for(int i = 0; i < NSP; i++) {\n'
-                   '        fprintf(fp, "%.15le\\n", spec_rates_host[i]);\n'
+                   '        fprintf(fp, "%.15le\\n", spec_rates_host[spec_order[i]]);\n'
                    '    }\n'
                    )
         file.write('    fprintf(fp, "dy\\n");\n')
-        file.write('    for(int i = 0; i < NN; i++) {\n'
-                   '        fprintf(fp, "%.15le\\n", dy_host[i]);\n'
+        file.write('    fprintf(fp, "%.15le\\n", dy_host[0]);\n'
+                   '    for(int i = 0; i < NSP; i++) {\n'
+                   '        fprintf(fp, "%.15le\\n", dy_host[1 + spec_order[i]]);\n'
                    '    }\n'
                    '}\n\n'
                    )
 
         file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n'
+                   '    int spec_order[NSP] = {{{}}}'.format(', '.join(old_spec_order)) + utils.line_end[lang] + 
                    '    fprintf(fp, "Jacob\\n");\n'
-                   '    for (int i = 0; i < NN * NN; ++i) {\n'
-                   '        fprintf(fp, "%.15le\\n", jacob_host[i]);\n'
+                   '    for (int i = 0; i < NN; ++i) {\n'
+                   '        for (int j = 0; j < NN; ++j) {\n'
+                   '            int i_index = 0 ? i == 0 : spec_order[i - 1];\n'
+                   '            int j_index = 0 ? j == 0 : spec_order[j - 1];\n'
+                   '            fprintf(fp, "%.15le\\n", jacob_host[i_index * NN + j_index]);\n'
                    '    }\n'
                    '}\n\n'
                    )

@@ -4147,7 +4147,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state = "", num_blocks=8, 
+    num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1, force_optimize=False):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -4175,6 +4176,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
     multi_thread : int, optional
         The number of threads to use during optimization
+    force_optimize : boo, optional
+        If true, redo the cache optimization even if the same mechanism
 
     Returns
     -------
@@ -4239,8 +4242,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
 
     if optimize_cache:
         splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
-        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
-
+        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path)
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
         rxn_rate_order = range(len(reacs))
@@ -4354,8 +4356,13 @@ if __name__ == "__main__":
                         default=1,
                         required=False,
                         help = 'The number of threads to use during the optimization process')
+    parser.add_argument('-fopt', '--force-optimize',
+                        dest='force_optimize',
+                        action='store_true',
+                        default=False,
+                        help='Use this option to force a reoptimization of the mechanism (usually only happens when generating for a different mechanism)')
 
     args = parser.parse_args()
 
     create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks, args.num_threads\
-                   , args.no_shared, args.L1_preferred, args.multi_thread)
+                   , args.no_shared, args.L1_preferred, args.multi_thread, args.force_optimize)

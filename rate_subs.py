@@ -2372,7 +2372,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
 
     if optimize_cache:
         splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
-        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread)
+        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path)
 
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]

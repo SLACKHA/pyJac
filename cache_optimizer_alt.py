@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 from CUDAParams import Jacob_Unroll
 import multiprocessing
+import pickle
 
 def get_nu(species, rxn):
     if species.name in rxn.prod and species.name in rxn.reac:
@@ -112,7 +113,7 @@ def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s)
         val_1 = (val_1 + val_2) / 2.0
     return val_1
 
-def greedy_optimizer(lang, specs, reacs, multi_thread):
+def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path):
     """
     An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as long as possible
 
@@ -133,6 +134,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
         List of reactions in the mechanism.
     multi_thread : int
         The number of threads to use during optimization
+    force_optimize : bool
+        If true, reoptimize even if past data is available
+    build_path : str
+        The path to the build directory
 
     Returns
     _______
@@ -162,6 +167,26 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
      old_rxn_order : list of int
         A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
+
+    #first try to load past data
+    if not force_optimize:
+        try:
+            same_mech = False
+            with open(build_path + 'optimized.pickle', 'rb') as file:
+                splittings = pickle.load(file)
+                old_specs = pickle.load(file)
+                old_reacs = pickle.load(file)
+                rxn_rate_order = pickle.load(file)
+                pdep_rate_order = pickle.load(file)
+                spec_rate_order = pickle.load(file)
+                spec_ordering = pickle.load(file)
+                rxn_ordering = pickle.load(file)
+            same_mech = all(s in specs for s in old_specs) and len(old_reacs) == len(reacs) \
+                            and all(r in reacs in old_reacs) and len(reacs) == len(old_reacs)
+        except:
+            same_mech = False
+        if same_mech:
+            return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering, rxn_ordering
 
     splittings = []
 
@@ -307,6 +332,16 @@ def greedy_optimizer(lang, specs, reacs, multi_thread):
         #on the CPU the memory latency shouldn't particularly be an issue
         for i in range(len(specs)):
             spec_rate_order.append(([i], list(s_to_r[i])))
+
+    #save to avoid reoptimization if possible
+    with open(build_path + 'optimized.pickle', 'wb') as file:
+        pickle.dump(splittings, file)
+        pickle.dump(specs, file)
+        pickle.dump(reacs, file)
+        pickle.dump(rxn_rate_order, file)
+        pickle.dump(pdep_rate_order, file)
+        pickle.dump(rxn_ordering, file)
+        pickle.dump(spec_ordering, file)
 
     #complete, so now return
     return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, rxn_ordering, spec_ordering

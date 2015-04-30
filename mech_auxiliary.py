@@ -266,20 +266,26 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
                '    y_host[0] = {};\n'.format(T) +
                '    get_concentrations({}, y_host, conc_host);\n'.format(P)
                )
+    file.write('    for (int i = 0; i < NUM; ++i) {\n')
     if have_rev_rxns:
         file.write(
-            '    eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
+            '       eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
     else:
         file.write(
-            '    eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
+            '       eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
     if have_pdep_rxns:
         file.write(
-            '    get_rxn_pres_mod ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
-    file.write('    eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '    dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
-               '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '    eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
+            '       get_rxn_pres_mod ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
+    file.write('        eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '        dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
+               '#ifdef RATES_TEST\n'
+               '        write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '#endif\n'
+               '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
+               '    }\n'
+               '#ifdef RATES_TEST\n'
                '    write_jacob(fp, jacob_host);\n'
+               '#endif\n'
                )
 
 
@@ -483,10 +489,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                     'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
                    )
         file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
-        if lang == 'c':
-            file.write('    void write_jacobian_and_rates_output();\n')
-        else:
-            file.write('    void write_jacobian_and_rates_output(int NUM);\n')
+        file.write('    void write_jacobian_and_rates_output(int NUM);\n')
         file.write('#endif\n')
 
         if lang == 'cuda':
@@ -731,14 +734,13 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
         line += ', const double* spec_rates_host, const double* dy_host) {\n'
         file.write(line)
         # convience method to write rates to file
-        file.write('    int spec_order[NSP] = {{{}}}'.format(', '.join(old_spec_order)) + utils.line_end[lang])
+        file.write('    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang])
         if have_rev_rxns:
-            file.write('    int rxn_ord[FWD_RATES] = {{{}}}'.format(', '.join(old_rxn_order)) + utils.line_end[lang])
+            file.write('    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
             old_rev_order = [rxn for rxn in old_rxn_order if reacs[rxn].rev]
             rev_reacs = [rxn for rxn in reacs if rxn.rev]
             old_rev_order = [rev_reacs.index(reacs[rxn]) for rxn in old_rev_order]
-            file.write('    int rev_rxn_ord[REV_RATES] = {{{}}}'.format(', '.join(old_rev_order
-              )) + utils.line_end[lang])
+            file.write('    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
 
             file.write('    fprintf(fp, "Forward Rates\\n");\n'
                    '    for(int i = 0; i < FWD_RATES; ++i) {\n'
@@ -751,7 +753,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                        '    }\n'
                        )
         else:
-            file.write('    int rxn_ord[RATES] = {{{}}}'.format(', '.join(old_rxn_order)) + utils.line_end[lang])
+            file.write('    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
             file.write('    fprintf(fp, "Rates\\n");\n'
                    '    for(int i = 0; i < RATES; ++i) {\n'
                    '        fprintf(fp, "%.15le\\n", rates_host[rxn_ord[i]]);\n'
@@ -761,7 +763,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
             old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd]
             pdep_reacs = [rxn for rxn in reacs if rxn.pdep or rxn.thd]
             old_pdep_order = [pdep_reacs.index(reacs[rxn]) for rxn in old_pdep_order]
-            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{{}}}'.format(', '.join(old_pdep_order)) + utils.line_end[lang])
+            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) + utils.line_end[lang])
             file.write('    fprintf(fp, "Pres Mod Rates\\n");\n')
             file.write('    for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
                        '        fprintf(fp, "%.15le\\n", pres_mod_host[pdep_rxn_ord[i]]);\n'
@@ -780,8 +782,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                    '}\n\n'
                    )
 
-        file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n'
-                   '    int spec_order[NSP] = {{{}}}'.format(', '.join(old_spec_order)) + utils.line_end[lang] + 
+        file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n' +
+                   '    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang] + 
                    '    fprintf(fp, "Jacob\\n");\n'
                    '    for (int i = 0; i < NN; ++i) {\n'
                    '        for (int j = 0; j < NN; ++j) {\n'
@@ -793,7 +795,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                    )
 
         if lang != 'cuda':
-            file.write('void write_jacobian_and_rates_output() {\n'
+            file.write('void write_jacobian_and_rates_output(int NUM) {\n'
                        '    //set mass fractions to unity to turn on all reactions\n'
                        '    double y_host[NN] = {0.0};\n'
                        '    for (int i = 1; i < NN; ++i) {\n'

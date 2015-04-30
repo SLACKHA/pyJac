@@ -161,6 +161,10 @@ class ReacInfo:
         self.sri = False
         self.sri_par = []
 
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__)
+            and self.__dict__ == other.__dict__)
+
 
 class SpecInfo:
     """Species class.
@@ -197,6 +201,10 @@ class SpecInfo:
         self.lo = [0.0 for j in range(7)]
         # temperature range for thermodynamic coefficients
         self.Trange = [300.0, 1000.0, 5000,0]
+
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__)
+            and self.__dict__ == other.__dict__)
 
 
 def calc_spec_smh(T, specs):

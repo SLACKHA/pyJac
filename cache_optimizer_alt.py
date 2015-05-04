@@ -172,7 +172,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     if not force_optimize:
         try:
             same_mech = False
-            print(build_path)
             with open(build_path + 'optimized.pickle', 'rb') as file:
                 splittings = pickle.load(file)
                 old_specs = pickle.load(file)
@@ -187,7 +186,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                             all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
                             len(reacs) == len(old_reacs)
         except Exception, e:
-            print(e, e.message)
             same_mech = False
         if same_mech:
             return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering, rxn_ordering
@@ -280,6 +278,9 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     temp = specs[:]
     specs = [temp[i] for i in spec_ordering]
 
+    #we have to update our mappings now that things are reordered
+    r_to_s, s_to_r = get_mappings(specs, reacs)
+    pdep_r_to_s, pdep_s_to_r = get_mappings(specs, reacs, consider_thd=True, load_non_participating=True)
     Pool = multiprocessing.Pool(multi_thread)
     #next up, we have to determine the orderings for the various rate subs
 
@@ -315,14 +316,14 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         store_i = None
         score_list = []
         for i in range(len(pdep_rate_order)):
-            score_list.append((i, Pool.apply_async(__get_positioning_score, args=(reac_index, i, pdep_rate_order, r_to_s))))
+            score_list.append((i, Pool.apply_async(__get_positioning_score, args=(reac_index, i, pdep_rate_order, pdep_r_to_s))))
         score_list = [(score[0], score[1].get()) for score in score_list]
         score_list.sort(key=lambda x: x[0])
         for score in score_list:
             if max_score is None or score[1] > max_score or (max_score == score[1] and abs(score[0] - reac_index) < abs(store_i - reac_index)):
                 max_score = score[1]
                 store_i = score[0]
-        pdep_rate_order.insert(store_i, reacs.index(reac))
+        pdep_rate_order.insert(store_i, pdep_reacs.index(reac))
 
     spec_rate_order = []
     #species ordering is a bit trickier
@@ -335,7 +336,20 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         #otherwise, we're just going to keep it as is for the moment
         #on the CPU the memory latency shouldn't particularly be an issue
         for i in range(len(specs)):
-            spec_rate_order.append(([i], list(s_to_r[i])))
+            spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
+
+    print_spec_order = []
+    #finally reorder the spec and rxn orderings to fix for printing
+    for spec_ind in range(len(spec_ordering)):
+        print_spec_order.append(
+            spec_ordering.index(spec_ind)
+        )
+
+    print_rxn_order = []
+    for rxn_ind in range(len(rxn_ordering)):
+        print_rxn_order.append(
+            rxn_ordering.index(rxn_ind)
+        )
 
     #save to avoid reoptimization if possible
     with open(build_path + 'optimized.pickle', 'wb') as file:
@@ -345,11 +359,11 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(rxn_rate_order, file)
         pickle.dump(pdep_rate_order, file)
         pickle.dump(spec_rate_order, file)
-        pickle.dump(rxn_ordering, file)
-        pickle.dump(spec_ordering, file)
+        pickle.dump(print_spec_order, file)
+        pickle.dump(print_rxn_order, file)
 
     #complete, so now return
-    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, rxn_ordering, spec_ordering
+    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order
 
 
 

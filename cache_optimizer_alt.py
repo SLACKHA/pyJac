@@ -178,7 +178,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                 old_reacs = pickle.load(file)
                 rxn_rate_order = pickle.load(file)
                 pdep_rate_order = pickle.load(file)
-                spec_rate_order = pickle.load(file)
                 spec_ordering = pickle.load(file)
                 rxn_ordering = pickle.load(file)
             same_mech = all(any(s == sp for sp in specs) for s in old_specs) and \
@@ -188,6 +187,20 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         except Exception, e:
             same_mech = False
         if same_mech:
+            #we have to do the spec_rate_order each time
+            spec_rate_order = []
+            r_to_s, s_to_r = get_mappings(old_specs, old_reacs)
+            #species ordering is a bit trickier
+            if lang == 'cuda':
+                #cuda is much better with many independent statements
+                #so simply iterate through reactions and add to each species
+                for i in range(len(reacs)):
+                    spec_rate_order.append((list(r_to_s[i]), [i]))
+            else:
+                #otherwise, we're just going to keep it as is for the moment
+                #on the CPU the memory latency shouldn't particularly be an issue
+                for i in range(len(specs)):
+                    spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
             return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering, rxn_ordering
 
     splittings = []
@@ -240,8 +253,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     rxn_ordering = [reacs.index(reac) for reac in conc_reacs] + [reacs.index(reac) for reac in other_pdep]
     if len(rxn_ordering):
-        #add a split
-        splittings.append(len(conc_reacs) + len(other_pdep))
+        the_len = len(rxn_ordering)
+        while the_len > 0:
+            splittings.append(min(Jacob_Unroll, the_len))
+            the_len -= Jacob_Unroll
 
     #and finally order the rest of the reactions
     other_reacs = [reac for reac in reacs if not (reac in conc_reacs or reac in other_pdep)]
@@ -358,7 +373,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(reacs, file)
         pickle.dump(rxn_rate_order, file)
         pickle.dump(pdep_rate_order, file)
-        pickle.dump(spec_rate_order, file)
         pickle.dump(print_spec_order, file)
         pickle.dump(print_rxn_order, file)
 

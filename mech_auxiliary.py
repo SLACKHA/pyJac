@@ -264,23 +264,24 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
 def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
     file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
-               '    get_concentrations({}, y_host, conc_host);\n'.format(P)
+               '    get_concentrations({}, y_host, conc_host);\n'.format(P) +
+               '#ifdef RATES_TEST\n'
+               '    NUM = 1;\n'
+               '#endif\n'
                )
     file.write('    for (int i = 0; i < NUM; ++i) {\n')
     if have_rev_rxns:
         file.write(
-            '       eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
+            '        eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
     else:
         file.write(
-            '       eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
+            '        eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
     if have_pdep_rxns:
         file.write(
-            '       get_rxn_pres_mod ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
+            '        get_rxn_pres_mod  ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
     file.write('        eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
                '        dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
-               '#ifdef RATES_TEST\n'
                '        write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '#endif\n'
                '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
                '    }\n'
                '#ifdef RATES_TEST\n'
@@ -787,9 +788,10 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                    '    fprintf(fp, "Jacob\\n");\n'
                    '    for (int i = 0; i < NN; ++i) {\n'
                    '        for (int j = 0; j < NN; ++j) {\n'
-                   '            int i_index = 0 ? i == 0 : spec_order[i - 1];\n'
-                   '            int j_index = 0 ? j == 0 : spec_order[j - 1];\n'
+                   '            int i_index = i == 0 ? 0 : spec_order[i - 1];\n'
+                   '            int j_index = j == 0 ? 0 : spec_order[j - 1];\n'
                    '            fprintf(fp, "%.15le\\n", jacob_host[i_index * NN + j_index]);\n'
+                   '        }\n'
                    '    }\n'
                    '}\n\n'
                    )

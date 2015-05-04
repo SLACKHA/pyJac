@@ -2077,14 +2077,14 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
                              '' + get_array(lang, 'jac', k_sp + 1 + (num_s + 1) * (j_sp + 1)) +
                              ' * cp_avg * rho' +
                              ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + get_array(lang, 'dy', k_sp + offset) +
-                             ' * {:.8e}))'.format(sp.mw)
+                             ' * {:.8e}))'.format(sp_k.mw)
                              )
                 elif lang in ['fortran', 'matlab']:
                     line += ('' + get_array(lang, 'h', k_sp) + ' * ('
                              '' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                              ' * cp_avg * rho' +
                              ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + get_array(lang, 'dy', k_sp + offset) +
-                             ' * {:.8e}))'.format(sp.mw)   
+                             ' * {:.8e}))'.format(sp_k.mw)   
                              )
                 line += ')' + utils.line_end[lang]
                 file.write(line)

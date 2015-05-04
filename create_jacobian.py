@@ -2263,9 +2263,9 @@ def write_jacobian(path, lang, specs, reacs):
 
     # get temperature
     if lang in ['c', 'cuda']:
-        line = '  Real T = y' + utils.get_array(lang, 0)
+        line = '  Real T = ' + utils.get_array(lang, 'y', 0)
     elif lang in ['fortran', 'matlab']:
-        line = '  T = y' + utils.get_array(lang, 0)
+        line = '  T = ' + utils.get_array(lang, 'y', 0)
     line += utils.line_end[lang]
     file.write(line)
 
@@ -2295,7 +2295,7 @@ def write_jacobian(path, lang, specs, reacs):
 
         if not isfirst:
             line += ' + '
-        line += '(y' + utils.get_array(lang, specs.index(sp) + 1) + \
+        line += '(' + utils.get_array(lang, 'y', specs.index(sp) + 1) + \
             ' / {:})'.format(sp.mw)
         isfirst = False
 
@@ -2333,9 +2333,9 @@ def write_jacobian(path, lang, specs, reacs):
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = ('  conc' + utils.get_array(lang, isp) +
+        line = ('  ' + utils.get_array(lang, 'conc', isp) +
                 ' = rho * ' +
-                'y' + utils.get_array(lang, isp + 1) +
+                '' + utils.get_array(lang, 'y', isp + 1) +
                 ' / {}'.format(sp.mw)
                 )
         line += utils.line_end[lang]
@@ -2604,7 +2604,7 @@ def write_jacobian(path, lang, specs, reacs):
                 continue
 
             # start contribution to Jacobian entry for reaction
-            jline = '  jac' + utils.get_array(lang, k_sp + 1, twod=1)
+            jline = '  ' + utils.get_array(lang, 'jac', k_sp + 1, twod=1)
             sparse_indicies.append(k_sp + 1)
 
             # first reaction for this species
@@ -2618,7 +2618,7 @@ def write_jacobian(path, lang, specs, reacs):
                 if lang in ['c', 'cuda']:
                     jline += ' += '
                 elif lang in ['fortran', 'matlab']:
-                    jline += ' = jac' + utils.get_array(lang, k_sp, twod=1) + ' + '
+                    jline += ' = ' + utils.get_array(lang, 'jac', k_sp, twod=1) + ' + '
 
                 if nu != 1:
                     jline += '{} * '.format(float(nu))
@@ -2631,8 +2631,7 @@ def write_jacobian(path, lang, specs, reacs):
                 pind = pdep_reacs.index(rind)
 
                 if rxn.pdep_sp:
-                    line += 'conc' + \
-                        utils.get_array(lang, specs.index(rxn.pdep_sp))
+                    line += utils.get_array(lang, 'conc', specs.index(rxn.pdep_sp))
                 else:
                     line += '(m'
 
@@ -2640,14 +2639,14 @@ def write_jacobian(path, lang, specs, reacs):
                         isp = specs.index(next((s for s in specs
                                                 if s.name == thd_sp[0]), None))
                         if thd_sp[1] > 1.0:
-                            line += ' + {} * conc'.format(thd_sp[1] - 1.0)
+                            line += ' + {} * '.format(thd_sp[1] - 1.0)
                         elif thd_sp[1] < 1.0:
-                            line += ' - {} * conc'.format(1.0 - thd_sp[1])
+                            line += ' - {} * '.format(1.0 - thd_sp[1])
                         if thd_sp[1] != 1.0:
-                            line += utils.get_array(lang, isp)
+                            line += utils.get_array(lang, 'conc', isp)
                     line += ')'
 
-                jline += 'pres_mod' + utils.get_array(lang, pind)
+                jline += '' + utils.get_array(lang, 'pres_mod', pind)
                 jline += '* (('
 
                 if rxn.low:
@@ -2777,15 +2776,15 @@ def write_jacobian(path, lang, specs, reacs):
 
                 if rxn.rev:
                     # forward and reverse reaction rates
-                    jline += '(fwd_rates' + utils.get_array(lang, rind)
-                    jline += ' - rev_rates' + \
-                        utils.get_array(lang, rev_reacs.index(rxn))
+                    jline += '(' + utils.get_array(lang, 'fwd_rates', rind)
+                    jline += ' - ' + \
+                        utils.get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                     jline += ')'
                 else:
                     # forward reaction rate only
-                    jline += 'fwd_rates' + utils.get_array(lang, rind)
+                    jline += '' + utils.get_array(lang, 'fwd_rates', rind)
 
-                jline += ' + (pres_mod' + utils.get_array(lang, pind)
+                jline += ' + (' + utils.get_array(lang, 'pres_mod', pind)
 
             else:
                 # not pressure dependent
@@ -2794,20 +2793,20 @@ def write_jacobian(path, lang, specs, reacs):
                 if rxn.thd:
                     pind = pdep_reacs.index(rind)
 
-                    jline += '(-pres_mod' + utils.get_array(lang, pind)
+                    jline += '(-' + utils.get_array(lang, 'pres_mod', pind)
                     jline += ' * '
 
                     if rxn.rev:
                         # forward and reverse reaction rates
-                        jline += '(fwd_rates' + utils.get_array(lang, rind)
-                        jline += ' - rev_rates' + \
-                            utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '(' + utils.get_array(lang, 'fwd_rates', rind)
+                        jline += ' - ' + \
+                            utils.get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                         jline += ')'
                     else:
                         # forward reaction rate only
-                        jline += 'fwd_rates' + utils.get_array(lang, rind)
+                        jline += '' + utils.get_array(lang, 'fwd_rates', rind)
 
-                    jline += ' / T) + (pres_mod' + utils.get_array(lang, pind)
+                    jline += ' / T) + (' + utils.get_array(lang, 'pres_mod', pind)
 
                 else:
                     if lang in ['c', 'cuda', 'matlab']:
@@ -2818,7 +2817,7 @@ def write_jacobian(path, lang, specs, reacs):
             jline += ' / T) * ('
 
             # contribution from temperature derivative of forward reaction rate
-            jline += 'fwd_rates' + utils.get_array(lang, rind)
+            jline += '' + utils.get_array(lang, 'fwd_rates', rind)
 
             jline += ' * ('
             if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
@@ -2840,8 +2839,8 @@ def write_jacobian(path, lang, specs, reacs):
             if rxn.rev:
                 # reversible reaction
 
-                jline += ' - rev_rates' + \
-                    utils.get_array(lang, rev_reacs.index(rxn))
+                jline += ' - ' + \
+                    utils.get_array(lang, 'rev_rates', rev_reacs.index(rxn))
 
                 if rxn.rev_par:
                     # explicit reverse parameters
@@ -2978,12 +2977,12 @@ def write_jacobian(path, lang, specs, reacs):
 
             # NOTE: I believe there was a bug here w/ the previous
             # fortran/matlab code (as it looks like it would be zero indexed)
-            line = '  jac' + utils.get_array(lang, k_sp + 1)
+            line = '  ' + utils.get_array(lang, 'jac', k_sp + 1)
             line += ' = 0.0'
         else:
-            line = '  jac'
+            line = '  '
             if lang in ['c', 'cuda']:
-                line += (utils.get_array(lang, k_sp + 1) +
+                line += (utils.get_array(lang, 'jac', k_sp + 1) +
                          ' *= {:.8e} / rho'.format(sp_k.mw)
                          )
             elif lang in ['fortran', 'matlab']:
@@ -2991,7 +2990,7 @@ def write_jacobian(path, lang, specs, reacs):
                 # fortran/matlab code (as it looks like it would be zero
                 # indexed)
                 line += (utils.get_array(lang, k_sp + 1, twod=1) +
-                         ' = jac' + utils.get_array(lang, k_sp + 1, twod=1) +
+                         ' = ' + utils.get_array(lang, 'jac', k_sp + 1, twod=1) +
                          ' * {:.8e} / rho'.format(sp_k.mw)
                          )
 
@@ -3036,13 +3035,13 @@ def write_jacobian(path, lang, specs, reacs):
                     continue
 
                 # start contribution to Jacobian entry for reaction
-                jline = '  jac'
+                jline = '  '
                 if lang in ['c', 'cuda']:
-                    jline += utils.get_array(lang,
+                    jline += utils.get_array(lang, 'jac',
                                              k_sp + 1 + (num_s + 1) * (j_sp + 1))
                     sparse_indicies.append(k_sp + 1 + (num_s + 1) * (j_sp + 1))
                 elif lang in ['fortran', 'matlab']:
-                    jline += utils.get_array(lang, k_sp + 1, twod=j_sp + 1)
+                    jline += utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1)
                     sparse_indicies.append((k_sp + 1, j_sp + 1))
 
                 if isfirst:
@@ -3052,7 +3051,7 @@ def write_jacobian(path, lang, specs, reacs):
                     if lang in ['c', 'cuda']:
                         jline += ' += '
                     elif lang in ['fortran', 'matlab']:
-                        jline += utils.get_array(lang, k_sp + 1, twod=j_sp + 1)
+                        jline += utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1)
 
                 if nu != 1:
                     jline += '{} * '.format(float(nu))
@@ -3064,8 +3063,8 @@ def write_jacobian(path, lang, specs, reacs):
                     # third-body reaction
                     pind = pdep_reacs.index(rind)
 
-                    jline += '(-mw_avg * pres_mod' + \
-                        utils.get_array(lang, pind)
+                    jline += '(-mw_avg * ' + \
+                        utils.get_array(lang, 'pres_mod', pind)
                     jline += ' / {:.8e}'.format(sp_j.mw)
 
                     # check if species of interest is third body in reaction
@@ -3080,12 +3079,12 @@ def write_jacobian(path, lang, specs, reacs):
                     jline += ') * '
 
                     if rxn.rev:
-                        jline += '(fwd_rates' + utils.get_array(lang, rind)
-                        jline += ' - rev_rates' + \
-                            utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '(' + utils.get_array(lang, 'fwd_rates', rind)
+                        jline += ' - ' + \
+                            utils.get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                         jline += ')'
                     else:
-                        jline += 'fwd_rates' + utils.get_array(lang, rind)
+                        jline += '' + utils.get_array(lang, 'fwd_rates', rind)
 
                     jline += ' + '
                 elif rxn.pdep:
@@ -3095,19 +3094,18 @@ def write_jacobian(path, lang, specs, reacs):
                     pind = pdep_reacs.index(rind)
 
                     if rxn.pdep_sp:
-                        line += 'conc' + \
-                            utils.get_array(lang, specs.index(rxn.pdep_sp))
+                        line += utils.get_array(lang, 'conc', specs.index(rxn.pdep_sp))
                     else:
                         line += '(m'
                         for thd_sp in rxn.thd_body:
                             isp = specs.index(next((s for s in specs
                                                     if s.name == thd_sp[0]), None))
                             if thd_sp[1] > 1.0:
-                                line += ' + {} * conc'.format(thd_sp[1] - 1.0)
+                                line += ' + {} * '.format(thd_sp[1] - 1.0)
                             elif thd_sp[1] < 1.0:
-                                line += ' - {} * conc'.format(1.0 - thd_sp[1])
+                                line += ' - {} * '.format(1.0 - thd_sp[1])
                             if thd_sp[1] != 1.0:
-                                line += utils.get_array(lang, isp)
+                                line += utils.get_array(lang, 'conc', isp)
                         line += ')'
 
                     if rxn.low:
@@ -3129,7 +3127,7 @@ def write_jacobian(path, lang, specs, reacs):
                              )
                     file.write(line)
 
-                    jline += 'pres_mod' + utils.get_array(lang, pind)
+                    jline += '' + utils.get_array(lang, 'pres_mod', pind)
                     jline += ' * ('
 
                     # dPr/dYj contribution
@@ -3210,38 +3208,32 @@ def write_jacobian(path, lang, specs, reacs):
                                           thd_sp[0]), None)
                                 isp = specs.index(i)
                                 if thd_sp[1] > 1.0:
-                                    jline += (' + '
-                                              '{}'.format(thd_sp[1] - 1.0) +
-                                              ' * conc'
-                                              )
-                                    jline += utils.get_array(lang, isp)
+                                    line += ' + {} * '.format(thd_sp[1] - 1.0)
                                 elif thd_sp[1] < 1.0:
-                                    jline += (' - '
-                                              '{}'.format(1.0 - thd_sp[1]) +
-                                              ' * conc'
-                                              )
-                                    jline += utils.get_array(lang, isp)
+                                    line += ' - {} * '.format(1.0 - thd_sp[1])
+                                if thd_sp[1] != 1.0:
+                                    line += utils.get_array(lang, 'conc', isp)
                             jline += ') * {:.8e})'.format(sp_j.mw)
                     elif rxn.pdep and rxn.pdep_sp == sp_j.name:
                         # NOTE: This Y array previously seems to be a bug, I can't find a reference to it anywhere else
                         #      changing it to y
-                        jline += ' + (1.0 / y' + utils.get_array(lang, j_sp)
+                        jline += ' + (1.0 / ' + utils.get_array(lang, 'y', j_sp)
                         jline += ')'
                     jline += ') * '
 
                     if rxn.rev:
-                        jline += '(fwd_rates' + utils.get_array(lang, rind)
-                        jline += ' - rev_rates' + \
-                            utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '(' + utils.get_array(lang, 'fwd_rates', rind)
+                        jline += ' - ' + \
+                            utils.get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                         jline += ')'
                     else:
-                        jline += 'fwd_rates' + utils.get_array(lang, rind)
+                        jline += '' + utils.get_array(lang, 'fwd_rates', rind)
 
                     jline += ' + '
 
                 # next, contribution from dR/dYj
                 if rxn.pdep or rxn.thd:
-                    jline += 'pres_mod' + utils.get_array(lang, pind)
+                    jline += '' + utils.get_array(lang, 'pres_mod', pind)
                     jline += ' * ('
 
                 firstSp = True
@@ -3260,8 +3252,8 @@ def write_jacobian(path, lang, specs, reacs):
                             jline += '{} * '.format(float(nu))
                         jline += '('
 
-                        jline += '-mw_avg * fwd_rates' + \
-                            utils.get_array(lang, rind)
+                        jline += '-mw_avg * ' + \
+                            utils.get_array(lang, 'fwd_rates', rind)
                         jline += ' / {:.8e}'.format(sp_j.mw)
 
                         # only contribution from 2nd part of sp_l is sp_j
@@ -3275,14 +3267,14 @@ def write_jacobian(path, lang, specs, reacs):
 
                             if (nu - 1) > 0:
                                 if isinstance(nu - 1, float):
-                                    jline += ' * pow(conc' + \
-                                        utils.get_array(lang, l_sp)
+                                    jline += ' * pow(' + \
+                                        utils.get_array(lang, 'conc', l_sp)
                                     jline += ', {})'.format(nu - 1)
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu - 1):
-                                        jline += ' * conc' + \
-                                            utils.get_array(lang, l_sp)
+                                        jline += ' * ' + \
+                                            utils.get_array(lang, 'conc', l_sp)
 
                             # loop through remaining reactants
                             for sp_reac in rxn.reac:
@@ -3293,14 +3285,14 @@ def write_jacobian(path, lang, specs, reacs):
                                 isp = next(i for i in xrange(len(specs))
                                            if specs[i].name == sp_reac)
                                 if isinstance(nu, float):
-                                    jline += ' * pow(conc' + \
-                                        utils.get_array(lang, isp)
+                                    jline += ' * pow(' + \
+                                        utils.get_array(lang, 'conc', isp)
                                     jline += ', ' + str(nu) + ')'
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu):
-                                        jline += ' * conc' + \
-                                            utils.get_array(lang, isp)
+                                        jline += ' * ' + \
+                                            utils.get_array(lang, 'conc', isp)
                         # end reactant section
                         jline += ')'
 
@@ -3318,8 +3310,8 @@ def write_jacobian(path, lang, specs, reacs):
                             jline += '{} * '.format(float(nu))
                         jline += '('
 
-                        jline += '-mw_avg * rev_rates' + \
-                            utils.get_array(lang, rev_reacs.index(rxn))
+                        jline += '-mw_avg * ' + \
+                            utils.get_array(lang, 'rev_rates', rev_reacs.index(rxn))
                         jline += ' / {:.8e}'.format(sp_j.mw)
 
                         # only contribution from 2nd part of sp_l is sp_j
@@ -3612,8 +3604,8 @@ def write_jacobian(path, lang, specs, reacs):
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu - 1):
-                                        jline += ' * conc' + \
-                                            utils.get_array(lang, l_sp)
+                                        jline += ' * ' + \
+                                            utils.get_array(lang, 'conc', l_sp)
 
                             # loop through remaining products
                             for sp_reac in rxn.prod:
@@ -3630,8 +3622,8 @@ def write_jacobian(path, lang, specs, reacs):
                                 else:
                                     # integer, so just use multiplication
                                     for i in range(nu):
-                                        jline += ' * conc' + \
-                                            utils.get_array(lang, isp)
+                                        jline += ' * ' + \
+                                            utils.get_array(lang, 'conc', isp)
                         # end product section
                         jline += ')'
                 # done with species loop
@@ -3646,39 +3638,38 @@ def write_jacobian(path, lang, specs, reacs):
             if isfirst:
                 # not participating in any reactions, or at least no net
                 # production
-                line = '  jac'
+                line = '  '
                 if lang in ['c', 'cuda']:
-                    line += utils.get_array(lang,
+                    line += utils.get_array(lang, 'jac',
                                             k_sp + 1 + (num_s + 1) * (j_sp + 1))
                     sparse_indicies.append(k_sp + 1 + (num_s + 1) * (j_sp + 1))
                 elif lang in ['fortran', 'matlab']:
-                    line += utils.get_array(lang, k_sp + 1, twod=j_sp + 1)
+                    line += utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1)
                     sparse_indicies.append((k_sp + 1, j_sp + 1))
                 line += ' = 0.0'
             else:
-                line = '  jac'
+                line = '  '
                 if lang in ['c', 'cuda']:
                     i = k_sp + 1 + (num_s + 1) * (j_sp + 1)
-                    line += utils.get_array(lang, i) + ' += '
+                    line += utils.get_array(lang, 'jac', i) + ' += '
                     sparse_indicies.append(i)
                 elif lang in ['fortran', 'matlab']:
-                    line += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) +
-                             '= jac' + utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' + ')
+                    line += (utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                             '= ' + utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
                     sparse_indicies.append((k_sp + 1, j_sp + 1))
-                line += 'dy' + utils.get_array(lang, k_sp + offset)
+                line += '' + utils.get_array(lang, 'dy', k_sp + offset)
                 line += (' * mw_avg / {:.8e}'.format(sp_j.mw) +
                          utils.line_end[lang]
                          )
                 file.write(line)
 
-                line = '  jac'
                 if lang in ['c', 'cuda']:
-                    line += utils.get_array(lang, k_sp +
+                    line += utils.get_array(lang, 'jac', k_sp +
                                             1 + (num_s + 1) * (j_sp + 1)) + ' *= '
                     sparse_indicies.append(k_sp + 1 + (num_s + 1) * (j_sp + 1))
                 elif lang in ['fortran', 'matlab']:
-                    line += (utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' = jac' +
-                             utils.get_array(lang, k_sp + 1, twod=j_sp + 1) + ' * ')
+                    line += (utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = ' +
+                             utils.get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' * ')
                     sparse_indicies.append((k_sp + 1, j_sp + 1))
                 line += '{:.8e} / rho'.format(sp_k.mw)
             line += utils.line_end[lang]
@@ -3754,8 +3745,7 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ('(y' + utils.get_array(lang, isp + 1) + ' * ' + 'cp' +
-                 utils.get_array(lang, isp) + ')')
+        line += ('(' + utils.get_array(lang, 'y', isp + 1) + ' * ' + utils.get_array(lang, 'cp', isp) + ')')
 
         isfirst = False
     line += utils.line_end[lang]
@@ -3798,7 +3788,7 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ('(h' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp + offset) + ' * '
+        line += ('(' + utils.get_array(lang, 'h', isp) + ' * ' + utils.get_array(lang, 'dy', isp + offset) + ' * '
                  '{1:.6})'.format(isp, sp.mw))
 
         isfirst = False
@@ -3821,15 +3811,15 @@ def write_jacobian(path, lang, specs, reacs):
     file.write(line)
 
     # set to zero
-    line = '  jac'
+    line = '  '
     if lang in ['c', 'cuda']:
-        line += utils.get_array(lang, 0) + ' = 0.0'
+        line += utils.get_array(lang, 'jac', 0) + ' = 0.0'
         sparse_indicies.append(0)
     elif lang == 'fortran':
-        line += utils.get_array(lang, 0, twod=0) + ' = 0.0_wp'
+        line += utils.get_array(lang, 'jac', 0, twod=0) + ' = 0.0_wp'
         sparse_indicies.append((1, 1))
     elif lang == 'matlab':
-        line += utils.get_array(lang, 0, twod=0) + ' = 0.0'
+        line += utils.get_array(lang, 'jac', 0, twod=0) + ' = 0.0'
         sparse_indicies.append((1, 1))
     line += utils.line_end[lang]
     file.write(line)
@@ -3847,15 +3837,15 @@ def write_jacobian(path, lang, specs, reacs):
             line += '\n'
         file.write(line)
 
-        line = '    jac' + utils.get_array(lang, 0, twod=0)
+        line = '    ' + utils.get_array(lang, 'jac', 0, twod=0)
 
         if lang in ['c', 'cuda']:
             line += ' += '
             sparse_indicies.append(0)
         elif lang in ['fortran', 'matlab']:
-            line += ' = jac' + utils.get_array(lang, 0, twod=0) + ' + '
+            line += ' = ' + utils.get_array(lang, 'jac', 0, twod=0) + ' + '
             sparse_indicies.append((0, 0))
-        line += 'y' + utils.get_array(lang, isp + 1)
+        line += '' + utils.get_array(lang, 'y', isp + 1)
         line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
                  '{:.8e} + '.format(sp.lo[1]) +
                  'T * ({:.8e} + '.format(2.0 * sp.lo[2]) +
@@ -3870,13 +3860,13 @@ def write_jacobian(path, lang, specs, reacs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
 
-        line = '    jac' + utils.get_array(lang, 0, twod=0)
+        line = '    ' + utils.get_array(lang, 'jac', 0, twod=0)
 
         if lang in ['c', 'cuda']:
             line += ' += '
         elif lang in ['fortran', 'matlab']:
-            line += ' = jac' + utils.get_array(lang, 0, twod=0) + ' + '
-        line += 'y' + utils.get_array(lang, isp + 1)
+            line += ' = ' + utils.get_array(lang, 'jac', 0, twod=0) + ' + '
+        line += '' + utils.get_array(lang, 'y', isp + 1)
         line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
                  '{:.8e} + '.format(sp.hi[1]) +
                  'T * ({:.8e} + '.format(2.0 * sp.hi[2]) +
@@ -3895,10 +3885,10 @@ def write_jacobian(path, lang, specs, reacs):
 
     line = '  '
     if lang in ['c', 'cuda']:
-        line += 'jac' + utils.get_array(lang, 0) + ' *= (-1.0'
+        line += '' + utils.get_array(lang, 'jac', 0) + ' *= (-1.0'
         sparse_indicies.append(0)
     elif lang in ['fortran', 'matlab']:
-        line += 'jac' + utils.get_array(lang, 0, twod=0) + ' = (-jac' + \
+        line += '' + utils.get_array(lang, 'jac', 0, twod=0) + ' = (-jac' + \
             utils.get_array(lang, 0, twod=0)
         sparse_indicies.append((0, 0))
     line += ' / (rho * cp_avg)) * ('
@@ -3918,21 +3908,21 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ' + h' + \
+        line += ' + ' + \
             utils.get_array(
-                lang, isp) + ' * dy' + utils.get_array(lang, isp + offset) + ' * {:.8e}'.format(sp.mw)
+                lang, 'h', isp) + ' * ' + utils.get_array(lang, 'dy', isp + offset) + ' * {:.8e}'.format(sp.mw)
         isfirst = False
     line += ')' + utils.line_end[lang]
     file.write(line)
 
     line = '  '
     if lang in ['c', 'cuda']:
-        line += 'jac' + utils.get_array(lang, 0) + ' += ('
+        line += '' + utils.get_array(lang, 'jac', 0) + ' += ('
         sparse_indicies.append(0)
     elif lang in ['fortran', 'matlab']:
         line += 'jac' + \
             utils.get_array(
-                lang, 0, twod=0) + ' = jac' + utils.get_array(lang, 0, twod=0) + ' + ('
+                lang, 0, twod=0) + ' = ' + utils.get_array(lang, 'jac', 0, twod=0) + ' + ('
         sparse_indicies.append((0, 0))
 
     isfirst = True
@@ -3950,19 +3940,19 @@ def write_jacobian(path, lang, specs, reacs):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += '(cp' + utils.get_array(lang, isp) + ' * dy' + utils.get_array(lang, isp + offset) + \
-            ' * {:.8e} / rho + '.format(sp.mw) + 'h' + utils.get_array(lang, isp) + ' * jac' + \
-            utils.get_array(lang, isp + 1, twod=0) + ')'
+        line += '(' + utils.get_array(lang, 'cp', isp) + ' * ' + utils.get_array(lang, 'dy', isp + offset) + \
+            ' * {:.8e} / rho + '.format(sp.mw) + '' + utils.get_array(lang, 'h', isp) + ' * ' + \
+            utils.get_array(lang, 'jac', isp + 1, twod=0) + ')'
         isfirst = False
     line += ')' + utils.line_end[lang]
     file.write(line)
 
-    line = '  jac' + utils.get_array(lang, 0, twod=0)
+    line = '  ' + utils.get_array(lang, 'jac', 0, twod=0)
     if lang in ['c', 'cuda']:
         line += ' /= '
         sparse_indicies.append(0)
     elif lang in ['fortran', 'matlab']:
-        line += 'jac' + utils.get_array(lang, 0, twod=0) + ' / '
+        line += '' + utils.get_array(lang, 'jac', 0, twod=0) + ' / '
         sparse_indicies.append((0, 0))
     line += '(-cp_avg)' + utils.line_end[lang]
     file.write(line)
@@ -3985,9 +3975,9 @@ def write_jacobian(path, lang, specs, reacs):
                  utils.line_end[lang])
         file.write(line)
 
-        line = '  jac'
+        line = '  '
         if lang in ['c', 'cuda']:
-            line += utils.get_array(lang, (num_s + 1) * (isp + 1))
+            line += utils.get_array(lang, 'jac', (num_s + 1) * (isp + 1))
             sparse_indicies.append((num_s + 1) * (isp + 1))
         elif lang in ['fortran', 'matlab']:
             line += utils.get_array(lang, 1, twod=isp + 1)
@@ -4010,18 +4000,16 @@ def write_jacobian(path, lang, specs, reacs):
             if not isfirst:
                 line += ' + '
             if lang in ['c', 'cuda']:
-                line += ('h' + utils.get_array(lang, k_sp) + ' * ('
-                         'jac' + utils.get_array(lang, k_sp + 1 + (num_s + 1) * (isp + 1)) +
-                         ' - (cp' + utils.get_array(lang, isp) + ' * dy' +
-                         utils.get_array(lang, k_sp + offset) +
+                line += ('' + utils.get_array(lang, 'h', k_sp) + ' * ('
+                         '' + utils.get_array(lang, 'jac', k_sp + 1 + (num_s + 1) * (isp + 1)) +
+                         ' - (' + utils.get_array(lang, 'cp', isp) + ' * ' + utils.get_array(lang, 'dy', k_sp + offset) +
                          ' * {:.8e} / (rho * cp_avg)))'.format(sp_k.mw)
                          )
                 sparse_indicies.append(k_sp + 1 + (num_s + 1) * (isp + 1))
             elif lang in ['fortran', 'matlab']:
-                line += ('h' + utils.get_array(lang, k_sp) + ' * ('
-                         'jac' + utils.get_array(lang, k_sp + 1, twod=isp + 1) +
-                         ' - (cp' + utils.get_array(lang, isp) + ' * dy' +
-                         utils.get_array(lang, k_sp + offset)
+                line += ('' + utils.get_array(lang, 'h', k_sp) + ' * ('
+                         '' + utils.get_array(lang, 'jac', k_sp + 1, twod=isp + 1) +
+                         ' - (' + utils.get_array(lang, 'cp', isp) + ' * ' + utils.get_array(lang, 'dy', k_sp + offset)
                          )
                 sparse_indicies.append((k_sp + 1, isp + 1))
             isfirst = False

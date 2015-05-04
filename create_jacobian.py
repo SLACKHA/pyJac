@@ -766,10 +766,14 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                     coeff = alpha
                 if coeff != 0.0:
                     new_conc_temp.append((species, coeff))
+            for species, alpha in last_conc_temp:
+                match = next((sp for sp in conc_temp_log if sp[0] == species), None)
+                if match is None:
+                    new_conc_temp.append((species, -alpha))
 
             if len(new_conc_temp):
                 #remake the line with the updated numbers
-                line = 'conc_temp += ('
+                line = '  conc_temp += ('
 
                 for i, thd_sp in enumerate(new_conc_temp):
                     isp = specs.index(next((s for s in specs

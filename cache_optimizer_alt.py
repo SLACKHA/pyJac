@@ -31,7 +31,7 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
         for rind, rxn in enumerate(reacs):
             the_set = set(rxn.reac + rxn.prod)
             if consider_thd:
-                thd_sp = [thd[0] for thd in rxn.thd_body]
+                thd_sp = [thd[0] for thd in rxn.thd_body if thd[1] - 1.0 != 0]
                 if thd_sp:
                     the_set = the_set.union(set(thd_sp))
             if any(sp.name == x for x in the_set):
@@ -101,6 +101,23 @@ def __shared_specs_score(the_list, candidate, additional_args):
     ind_1 = reacs.index(the_list[-1])
     ind_2 = reacs.index(candidate)
     return len(r_to_s[ind_1].intersection(r_to_s[ind_2])) / len(r_to_s[ind_1])
+
+def __conc_temp(rxn, specs):
+    ret_list = []
+    for thd_sp in rxn.thd_body:
+        isp = specs.index(next((s for s in specs
+                                if s.name == thd_sp[0]), None))
+        val = thd_sp[1] - 1.0
+        if val != 0.0:
+            ret_list.append(isp)
+    return ret_list
+
+ #a score function that compares the percentage of shared species between 
+def __shared_specs_score_pdep(the_list, candidate, additional_args):
+    reacs = additional_args['reacs']
+    r_to_s = additional_args['r_to_s']
+    ind_1 = reacs.index(the_list[-1])
+    ind_2 = reacs.index(candidate)
 
 def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s):
     #candidate is a potential list index for the reaction 'reac_index'
@@ -205,16 +222,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     splittings = []
 
-    def __conc_temp(rxn, specs):
-        ret_list = []
-        for thd_sp in rxn.thd_body:
-            isp = specs.index(next((s for s in specs
-                                    if s.name == thd_sp[0]), None))
-            val = thd_sp[1] - 1.0
-            if val != 0.0:
-                ret_list.append(isp)
-        return ret_list
-
     #First find pdep reacs
     pdep_reacs = []
     for reac in reacs:
@@ -231,27 +238,39 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         if reac.pdep and reac.thd_body:
             conc_reacs.append(reac)
 
+    rxn_ordering = []
     if len(conc_reacs):
-        #get ordering
-        max_rxn = conc_reacs[max(range(len(conc_reacs)), key=lambda i: len(pdep_r_to_s[i]))]
+        temp = []
         pdep_args = {'r_to_s' : pdep_r_to_s, 'reacs' : reacs}
-        conc_reacs = __greedy_loop(max_rxn, conc_reacs, __shared_specs_score, pdep_args, multi_thread=multi_thread)
+        while len(conc_reacs):
+            #get ordering
+            if len(rxn_ordering):
+                max_rxn = temp[-1]
+            else:
+                max_rxn = conc_reacs[max(range(len(conc_reacs)), key=lambda i: len(pdep_r_to_s[i]))]
+            temp = __greedy_loop(max_rxn, conc_reacs, __shared_specs_score_pdep, additional_args=pdep_args, size=Jacob_Unroll, multi_thread=multi_thread)
+            if len(rxn_ordering):
+                #remove seed
+                temp = temp[1:]
+            rxn_ordering.extend([reacs.index(reac) for reac in temp])
+            conc_reacs = [reac for reac in conc_reacs if not reac in temp]
 
     r_to_s, s_to_r = get_mappings(specs, reacs)
     args = {'r_to_s' : r_to_s, 'reacs' : reacs}
     #next, get all the pdep ones that *aren't* in the conc_reacs
     other_pdep = [reac for reac in pdep_reacs if reac not in conc_reacs]
     if len(other_pdep):
-        if len(conc_reacs):
-            max_rxn = conc_reacs[-1]
+        if len(rxn_ordering):
+            max_rxn = reacs[rxn_ordering[-1]]
         else:
             max_rxn = other_pdep[max(range(len(other_pdep)), key=lambda i: len(r_to_s[i]))]
-        other_pdep = __greedy_loop(max_rxn, other_pdep, __shared_specs_score, args, multi_thread=multi_thread)
-        if len(conc_reacs):
+        temp = __greedy_loop(max_rxn, other_pdep, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
+        if len(rxn_ordering):
             #need to remove the seed
-            other_pdep = other_pdep[1:]
+            temp = temp[1:]
+        rxn_ordering.extend([reacs.index(reac) for reac in temp])
+        other_pdep = [reac for reac in other_pdep if not reac in temp]
 
-    rxn_ordering = [reacs.index(reac) for reac in conc_reacs] + [reacs.index(reac) for reac in other_pdep]
     if len(rxn_ordering):
         the_len = len(rxn_ordering)
         while the_len > 0:
@@ -259,13 +278,13 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             the_len -= Jacob_Unroll
 
     #and finally order the rest of the reactions
-    other_reacs = [reac for reac in reacs if not (reac in conc_reacs or reac in other_pdep)]
+    other_reacs = [reac for reac in reacs if not reacs.index(reac) in rxn_ordering]
     while len(other_reacs):
         if len(rxn_ordering):
             max_rxn = reacs[rxn_ordering[-1]]
         else:
             max_rxn = other_reacs[max(range(len(other_reacs)), key=lambda i: len(r_to_s[i]))]
-        order = __greedy_loop(max_rxn, other_reacs, __shared_specs_score, args, size=Jacob_Unroll, multi_thread=multi_thread)
+        order = __greedy_loop(max_rxn, other_reacs, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
         #remove the seed, it was already added
         order = order[1:]
         rxn_ordering.extend([reacs.index(reac) for reac in order])
@@ -300,8 +319,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     #next up, we have to determine the orderings for the various rate subs
 
     #rxn rates is easy, everything in other_reacs is already in order, we simply need to find a good spot for everything in conc_reacs and other_pdep
-    rxn_rate_order = [reacs.index(reac) for reac in reacs if not (reac in other_pdep or reac in conc_reacs)]
-    for reac in conc_reacs + other_pdep:
+    rxn_rate_order = [reacs.index(reac) for reac in reacs if not reac in pdep_reacs]
+    for reac in pdep_reacs:
         reac_index = reacs.index(reac)
         max_score = None
         store_i = None

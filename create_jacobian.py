@@ -1200,6 +1200,33 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
 
     return file
 
+def write_dy_intros(path, number):
+    lang = 'cuda'
+    with open(os.path.join(path, 'jacob_' + str(number) + '.h'), 'w') as file:
+        file.write('#ifndef JACOB_HEAD_{}\n'.format(number) + 
+                   '#define JACOB_HEAD_{}\n'.format(number) + 
+                   '\n'
+                   '#include "../header.h"\n'
+                   '\n'
+                   '__device__ void eval_jacob_{} ('.format(number)
+                  )
+        file.write('const Real, const Real, const Real, const Real*, const Real*, const Real*, Real*);\n'
+                   '\n'
+                   '#endif\n'
+                   )
+    file = open(os.path.join(path, 'jacob_' + str(number) + utils.file_ext[lang]), 'w')
+    file.write('#include "../header.h"\n'
+               '\n'
+               )
+
+    line = '__device__ '
+
+    line += ('void eval_jacob_{} (const Real mw_avg, const Real rho, const Real cp_avg, const Real* dy, const Real* h, const Real* cp, Real* jac) '.format(number))
+    line += '{\n'
+    line += '  register Real rho_inv = 1.0 / rho;'
+    file.write(line)
+    return file
+
 
 
 
@@ -1910,27 +1937,12 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
             line += ', mw_avg, rho, dBdT, T, jac)'
             file.write(line + utils.line_end[lang])
 
-
-    if lang == 'cuda' and do_unroll:
-        #create include file
-        with open(os.path.join(path, 'jacobs', 'jac_include.h'), 'w') as tempfile:
-            tempfile.write('#ifndef JAC_INCLUDE_H\n'
-                       '#define JAC_INCLUDE_H\n')
-            for i in range(jac_count):
-                tempfile.write('#include "jacob_{}.h"\n'.format(i))
-            tempfile.write('#endif\n\n')
-
-        with open(os.path.join(path, 'jacobs', 'jac_list'), 'w') as tempfile:
-            tempfile.write(' '.join(['jacob_{}.cu'.format(i) for i in range(jac_count)]))
-
-
-    line = '  '
-    if lang == 'c':
-        line += 'Real '
-    elif lang == 'cuda':
-        line += 'register Real '
-    line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
-    file.write(line)
+    if lang != 'cuda':
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
+        file.write(line)
 
     ###################################
     # Partial derivatives of temperature (energy equation)
@@ -2028,9 +2040,15 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
     line += 'working_temp = 0.0' + utils.line_end[lang]
     file.write(line)
                
+    next_fn_index = 0
     #need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)
     for k_sp, sp_k in enumerate(specs):
+        if lang == 'cuda' and do_unroll and k_sp == next_fn_index:
+            store_file = file
+            file = write_dy_intros(os.path.join(path, 'jacobs'), jac_count)
+            next_fn_index += min(10, len(specs) - k_sp)
+
         for j_sp, sp_j in enumerate(specs):
             lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
             #see if this combo matters
@@ -2093,6 +2111,15 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
                 line += ')' + utils.line_end[lang]
                 file.write(line)
 
+        if lang == 'cuda' and do_unroll and k_sp == next_fn_index - 1:
+            #switch back
+            file.write('}\n\n')
+            file = file_store
+            file.write('  eval_jacob_{}('.format(jac_count))
+            jac_count += 1
+            line = 'mw_avg, rho, cp_avg, dy, h, cp, jac)'
+            file.write(line + utils.line_end[lang])
+
     ######################################
     # Derivatives with respect to temperature
     ######################################
@@ -2127,6 +2154,18 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
 
     # remove any duplicates
     sparse_indicies = list(set(sparse_indicies))
+
+    #create include file
+    if lang == 'cuda' and do_unroll:
+        with open(os.path.join(path, 'jacobs', 'jac_include.h'), 'w') as tempfile:
+            tempfile.write('#ifndef JAC_INCLUDE_H\n'
+                       '#define JAC_INCLUDE_H\n')
+            for i in range(jac_count):
+                tempfile.write('#include "jacob_{}.h"\n'.format(i))
+            tempfile.write('#endif\n\n')
+
+        with open(os.path.join(path, 'jacobs', 'jac_list'), 'w') as tempfile:
+            tempfile.write(' '.join(['jacob_{}.cu'.format(i) for i in range(jac_count)]))
     return sparse_indicies
 
 

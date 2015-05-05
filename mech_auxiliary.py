@@ -281,7 +281,9 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
             '        get_rxn_pres_mod  ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
     file.write('        eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
                '        dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
+               '#ifdef RATES_TEST\n'
                '        write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '#endif\n' +
                '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
                '    }\n'
                '#ifdef RATES_TEST\n'

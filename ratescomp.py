@@ -41,7 +41,6 @@ def run_comp(new, baseline):
                     err = 100.0 * abs(n_val - b_val) / b_val
                 if err > error_dict[state][method][0]:
                     error_dict[state][method] = (err, i - start)
-                    print state, method, i - start, n_val, b_val
             except Exception, e:
                 method = new_lines[i]
                 error_dict[state][method] = (0.0, -1)

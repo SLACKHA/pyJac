@@ -6,7 +6,11 @@ from math import floor
 class CudaMemStrats:
     Global, Local = range(2)
 
+class JacRatesCacheStrat:
+    Include, Exclude = range(2)
+
 MemoryStrategy = CudaMemStrats.Local
+JacRateStrat = JacRatesCacheStrat.Include
 
 Jacob_Unroll = 20
 

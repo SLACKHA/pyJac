@@ -86,6 +86,13 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
             u += 1
         usages.append(u)
 
+    if CUDAParams.JacRateStrat == CUDAParams.JacRatesCacheStrat.Exclude:
+        if rxn.rev:
+            usages[0] = 0
+            usages[1] = 0
+        else:
+            usages[0] = 0
+
     return variable_list, usages   
 
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):

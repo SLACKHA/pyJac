@@ -938,59 +938,82 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
 
     return jline
 
-def write_dcp_dt(file, lang, sp, isp, sparse_indicies, get_array):
-    line = '  if (T <= {:})'.format(sp.Trange[1])
-    if lang in ['c', 'cuda']:
-        line += ' {\n'
-    elif lang == 'fortran':
-        line += ' then\n'
-    elif lang == 'matlab':
-        line += '\n'
-    file.write(line)
+def write_dcp_dt(file, lang, specs, sparse_indicies):
+    T_mid_buckets = {}
+    #put all of the same T_mids together
+    for isp, sp in enumerate(specs):
+        if sp.Trange[1] not in T_mid_buckets:
+            T_mid_buckets[sp.Trange[1]] = []
+        T_mid_buckets[sp.Trange[1]].append(isp)
 
-    line = '    working_temp'
 
-    if lang in ['c', 'cuda']:
-        line += ' {}= '.format('+' if isp > 0 else '')
-    elif lang in ['fortran', 'matlab']:
-        line += ' = {}'.format('working_temp + ' if isp > 0 else '')
-    line += '' + get_array(lang, 'y', isp + 1)
-    line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
-             '{:.8e} + '.format(sp.lo[1]) +
-             'T * ({:.8e} + '.format(2.0 * sp.lo[2]) +
-             'T * ({:.8e} + '.format(3.0 * sp.lo[3]) +
-             '{:.8e} * T)))'.format(4.0 * sp.lo[4]) +
-             utils.line_end[lang]
-             )
-    file.write(line)
+    first = True
+    for T_mid in T_mid_buckets:
+        #write the if statement
+        line = '  if (T <= {:})'.format(T_mid)
+        if lang in ['c', 'cuda']:
+            line += ' {\n'
+        elif lang == 'fortran':
+            line += ' then\n'
+        elif lang == 'matlab':
+            line += '\n'
+        file.write(line)
+        #and the update line
+        line = '    working_temp'
+        if lang in ['c', 'cuda']:
+            line += ' {}= '.format('+' if not first else '')
+        elif lang in ['fortran', 'matlab']:
+            line += ' = {}'.format('working_temp + ' if not first else '')
+        for isp in T_mid_buckets[T_mid]:
+            sp = specs[isp]
+            if T_mid_buckets[T_mid].index(isp):
+                line += '\n    + '
+            line += '(' + utils.get_array(lang, 'y', isp + 1)
+            line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
+                     '{:.8e} + '.format(sp.lo[1]) +
+                     'T * ({:.8e} + '.format(2.0 * sp.lo[2]) +
+                     'T * ({:.8e} + '.format(3.0 * sp.lo[3]) +
+                     '{:.8e} * T)))'.format(4.0 * sp.lo[4]) +
+                     ')'
+                     )
+        line += utils.line_end[lang]
+        file.write(line)
 
-    if lang in ['c', 'cuda']:
-        file.write('  } else {\n')
-    elif lang in ['fortran', 'matlab']:
-        file.write('  else\n')
+        #now do the high temperature side
+        if lang in ['c', 'cuda']:
+            file.write('  } else {\n')
+        elif lang in ['fortran', 'matlab']:
+            file.write('  else\n')
+        #and the update line
+        line = '    working_temp'
+        if lang in ['c', 'cuda']:
+            line += ' {}= '.format('+' if not first else '')
+        elif lang in ['fortran', 'matlab']:
+            line += ' = {}'.format('working_temp + ' if not first else '')
 
-    line = '    working_temp'
+        for isp in T_mid_buckets[T_mid]:
+            sp = specs[isp]
+            if T_mid_buckets[T_mid].index(isp):
+                line += '\n    + '
+            line += '(' + utils.get_array(lang, 'y', isp + 1)
+            line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
+                     '{:.8e} + '.format(sp.hi[1]) +
+                     'T * ({:.8e} + '.format(2.0 * sp.hi[2]) +
+                     'T * ({:.8e} + '.format(3.0 * sp.hi[3]) +
+                     '{:.8e} * T)))'.format(4.0 * sp.hi[4]) +
+                     ')'
+                     )
+        line += utils.line_end[lang]
+        file.write(line)
+        #and finish the if
+        if lang in ['c', 'cuda']:
+            file.write('  }\n\n')
+        elif lang == 'fortran':
+            file.write('  end if\n\n')
+        elif lang == 'matlab':
+            file.write('  end\n\n')
 
-    if lang in ['c', 'cuda']:
-        line += ' {}= '.format('+' if isp > 0 else '')
-    elif lang in ['fortran', 'matlab']:
-        line += ' = {}'.format('working_temp + ' if isp > 0 else '')
-    line += '' + get_array(lang, 'y', isp + 1)
-    line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
-             '{:.8e} + '.format(sp.hi[1]) +
-             'T * ({:.8e} + '.format(2.0 * sp.hi[2]) +
-             'T * ({:.8e} + '.format(3.0 * sp.hi[3]) +
-             '{:.8e} * T)))'.format(4.0 * sp.hi[4]) +
-             utils.line_end[lang]
-             )
-    file.write(line)
-
-    if lang in ['c', 'cuda']:
-        file.write('  }\n\n')
-    elif lang == 'fortran':
-        file.write('  end if\n\n')
-    elif lang == 'matlab':
-        file.write('  end\n\n')
+        first = False
 
 def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array):
     for k_sp, sp_k in enumerate(specs):
@@ -1231,7 +1254,7 @@ def write_dy_intros(path, number):
     line += ('void eval_jacob_{} (const Real mw_avg, const Real rho, const Real cp_avg, const Real* dy, const Real* h, const Real* cp, Real* jac) '.format(number))
     line += '{\n'
     line += '  register Real rho_inv = 1.0 / rho;'
-    file.write(line)
+    file.write(line + utils.line_end['cuda'])
     return file
 
 
@@ -2130,19 +2153,15 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
     ######################################
     # Derivatives with respect to temperature
     ######################################
+    write_dcp_dt(file, lang, specs, sparse_indicies)
 
-    for isp, sp in enumerate(specs):
-        write_dt_t_comment(file, lang, sp)
-        #write dcp/dT for this species
-        write_dcp_dt(file, lang, sp, isp, sparse_indicies, get_array)
+    ######################################
+    # Derivative with respect to species
+    ######################################
+    #write_dt_y_comment(file, lang, sp)
+    #write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array)
 
-        ######################################
-        # Derivative with respect to species
-        ######################################
-        #write_dt_y_comment(file, lang, sp)
-        #write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array)
-
-        file.write('\n')
+    file.write('\n')
 
     #next need to divide everything out
     write_dt_y_division(file, lang, specs, num_s, get_array)

@@ -11,6 +11,7 @@ class JacRatesCacheStrat:
 
 MemoryStrategy = CudaMemStrats.Local
 JacRateStrat = JacRatesCacheStrat.Include
+ResetOnJacUnroll = True
 
 Jacob_Unroll = 20
 

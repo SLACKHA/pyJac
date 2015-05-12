@@ -6,7 +6,7 @@
 # Python 2 compatibility
 from __future__ import division
 from __future__ import print_function
-from CUDAParams import Jacob_Unroll
+from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
 import multiprocessing
 import pickle
 
@@ -174,6 +174,18 @@ def __update_split(the_len, splittings):
     else:
         splittings.append(the_len)
 
+def __get_max_rxn(the_list, reacs, spec_scores, reac_scores):
+    reac_inds = [reacs.index(reac) for reac in the_list]
+    max_score = None
+    max_rxn = None
+    for rxn in reac_inds:
+        the_count = 0
+        for spec in reac_scores[rxn]:
+            the_count += len(spec_scores[spec].intersection(reac_inds))
+        if max_score is None or the_count > max_score:
+            max_score = the_count
+            max_rxn = rxn
+    return reacs[max_rxn]
 
 def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path):
     """
@@ -289,12 +301,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pdep_args = {'r_to_s' : pdep_r_to_s, 'reacs' : reacs}
         while len(conc_reac_temp):
             #get ordering
-            if len(rxn_ordering):
+            if len(rxn_ordering) and not ResetOnJacUnroll:
                 max_rxn = temp[-1]
             else:
-                max_rxn = conc_reac_temp[max(range(len(conc_reac_temp)), key=lambda i: len(pdep_r_to_s[i]))]
+                max_rxn = __get_max_rxn(conc_reac_temp, reacs, pdep_s_to_r, pdep_r_to_s)
             temp = __greedy_loop(max_rxn, conc_reac_temp, __shared_specs_score_pdep, additional_args=pdep_args, size=Jacob_Unroll, multi_thread=multi_thread)
-            if len(rxn_ordering):
+            if len(rxn_ordering) and not ResetOnJacUnroll:
                 #remove seed
                 temp = temp[1:]
             rxn_ordering.extend([reacs.index(reac) for reac in temp])
@@ -307,12 +319,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     if len(other_pdep):
         other_pdep_temp = other_pdep[:]
         while len(other_pdep_temp):
-            if len(rxn_ordering):
+            if len(rxn_ordering) and not ResetOnJacUnroll:
                 max_rxn = reacs[rxn_ordering[-1]]
             else:
-                max_rxn = other_pdep_temp[max(range(len(other_pdep_temp)), key=lambda i: len(r_to_s[i]))]
+                max_rxn = __get_max_rxn(other_pdep_temp, reacs, s_to_r, r_to_s)
             temp = __greedy_loop(max_rxn, other_pdep_temp, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
-            if len(rxn_ordering):
+            if len(rxn_ordering) and not ResetOnJacUnroll:
                 #need to remove the seed
                 temp = temp[1:]
             rxn_ordering.extend([reacs.index(reac) for reac in temp])
@@ -323,13 +335,14 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     #and finally order the rest of the reactions
     other_reacs = [reac for reac in reacs if reac not in pdep_reacs]
     while len(other_reacs):
-        if len(rxn_ordering):
+        if len(rxn_ordering) and not ResetOnJacUnroll:
             max_rxn = reacs[rxn_ordering[-1]]
         else:
-            max_rxn = other_reacs[max(range(len(other_reacs)), key=lambda i: len(r_to_s[i]))]
+            max_rxn = __get_max_rxn(other_reacs, reacs, s_to_r, r_to_s)
         order = __greedy_loop(max_rxn, other_reacs, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
         #remove the seed, it was already added
-        order = order[1:]
+        if len(rxn_ordering) and not ResetOnJacUnroll:
+            order = order[1:]
         rxn_ordering.extend([reacs.index(reac) for reac in order])
         other_reacs = [reac for reac in other_reacs if not reac in order]
         splittings.append(len(order))

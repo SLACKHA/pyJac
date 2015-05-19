@@ -4316,7 +4316,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         old_rxn_order = range(len(reacs))
     
     if lang == 'cuda':
-        CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads, L1_preferred)
+        CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads, L1_preferred, no_shared)
     smm = None
     if lang == 'cuda' and not no_shared:
         smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)

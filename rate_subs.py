@@ -2373,7 +2373,6 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
     if optimize_cache:
         splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
         old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path)
-
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
         rxn_rate_order = range(len(reacs))
@@ -2381,15 +2380,20 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
             pdep_rate_order = [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd]
         else:
             pdep_rate_order = None
-        splittings = None
+        the_len = len(reacs)
+        splittings = []
+        while the_len > 0:
+            splittings.append(min(CUDAParams.Jacob_Unroll, the_len))
+            the_len -= CUDAParams.Jacob_Unroll
         old_spec_order = range(len(specs))
         old_rxn_order = range(len(reacs))
     
+    if lang == 'cuda':
+        CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads, L1_preferred, no_shared)
     smm = None
     if lang == 'cuda' and not no_shared:
-        smm = shared.shared_memory_manager(build_path, num_blocks, num_threads, L1_preferred)
-    elif no_shared:
-        shared.write_blank(build_path, num_blocks, num_threads, L1_preferred)
+        smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+
 
     # now begin writing subroutines
     

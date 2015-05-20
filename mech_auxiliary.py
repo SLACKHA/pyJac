@@ -523,6 +523,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                        '    #include "cuda_profiler_api.h"\n'
                        '    #include "cudaProfiler.h"\n'
                        '#endif\n')
+            file.write('#ifndef SHARED_SIZE\n'
+                       '    #define SHARED_SIZE (0)\n'
+                       '#endif\n')
 
             file.write('#include "gpu_macros.cuh"\n')
             file.write('#include "gpu_memory.cuh"\n')

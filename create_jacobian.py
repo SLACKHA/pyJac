@@ -1107,7 +1107,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     line += utils.line_end[lang]
     file.write(line)
 
-def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri):
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, no_shared):
     """
     Writes the header and definitions for of any of the various sub-functions for CUDA
 
@@ -1149,7 +1149,8 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
     line += ', const Real mw_avg, const Real rho, const Real* dBdT, const Real T, Real* jac) {'
     file.write(line + '\n')
 
-    file.write('  extern __shared__ double shared_temp[]' + utils.line_end[lang])
+    if not no_shared:
+        file.write('  extern __shared__ double shared_temp[]' + utils.line_end[lang])
      # third-body variable needed for reactions
     if this_pdep and this_thd:
         line = '  '
@@ -1728,7 +1729,7 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
                     sri = True
             batch_has_thd = thd
             #write the specific evaluator for this reaction
-            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri)
+            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri, smm is None)
 
         if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)

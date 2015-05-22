@@ -802,11 +802,19 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                    )
 
         if lang != 'cuda':
-            file.write('void write_jacobian_and_rates_output(int NUM) {\n'
-                       '    //set mass fractions to unity to turn on all reactions\n'
+            file.write('void write_jacobian_and_rates_output(int NUM) {\n' +
+                       '    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, old_spec_order))) +
+                       '    //set mass fractions to non-zero to turn on all reactions\n'
                        '    double y_host[NN] = {0.0};\n'
+                       '    double sum = 0;\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
-                       '        y_host[i] = 1.0 / ((double)NSP);\n'
+                       '        y_host[i] = (1.0 + spec_order[i - 1]);\n'
+                       '        sum += y_host[i];'
+                       '    }\n'
+                       '    //Normalize\n'
+                       '    for (int i = 1; i < NN; ++i) {\n'
+                       '    {\n'
+                       '        y_host[i] /= sum;\n'
                        '    }\n'
                        '    double conc_host[NSP] = {0.0};\n'
                        )
@@ -861,11 +869,18 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                            '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &d_y, &d_rho);\n'
                            '#endif\n'
                           )
-            file.write(
-                       '    //set mass fractions to unity to turn on all reactions\n'
+            file.write('    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, old_spec_order))) +
+                       '    //set mass fractions to non-zero to turn on all reactions\n'
                        '    double y_host[NN] = {0.0};\n'
+                       '    double sum = 0;\n'
                        '    for (int i = 1; i < NN; ++i) {\n'
-                       '        y_host[i] = 1.0 / ((double)NSP);\n'
+                       '        y_host[i] = (1.0 + spec_order[i - 1]);\n'
+                       '        sum += y_host[i];'
+                       '    }\n'
+                       '    //Normalize\n'
+                       '    for (int i = 1; i < NN; ++i) {\n'
+                       '    {\n'
+                       '        y_host[i] /= sum;\n'
                        '    }\n'
                        '    double* y_host_full = (double*)malloc(padded * NN * sizeof(double));\n'
                        '    for (int i = 1; i < NN; ++i) {\n'

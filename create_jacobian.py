@@ -58,18 +58,24 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
 
     for sp_name in rxn.reac:
         nu = rxn.reac_nu[rxn.reac.index(sp_name)]
-        reac_usages[rxn.reac.index(sp_name)] += 1
         if nu - 1 > 0:
             reac_usages[rxn.reac.index(sp_name)] += 1
             if rxn.thd:
                 pres_mod_usage += 1
+        for sp_name_2 in rxn.reac:
+            if sp_name == sp_name_2:
+                continue
+            reac_usages[rxn.reac.index(sp_name_2)] += 1
 
-
-    for sp_name in rxn.prod:
-        nu = rxn.prod_nu[rxn.prod.index(sp_name)]
-        prod_usages[rxn.prod.index(sp_name)] += 1
-        if nu - 1 > 0:
-            prod_usages[rxn.prod.index(sp_name)] += 1
+    if rxn.rev:
+        for sp_name in rxn.prod:
+            nu = rxn.prod_nu[rxn.prod.index(sp_name)]
+            if nu - 1 > 0:
+                prod_usages[rxn.prod.index(sp_name)] += 1
+            for sp_name_2 in rxn.prod:
+                if sp_name == sp_name_2:
+                    continue
+                prod_usages[rxn.prod.index(sp_name_2)] += 1
 
     usages.append(fwd_usage)
     if rxn.rev:
@@ -291,13 +297,13 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array):
                         get_array(lang, 'conc', j_sp)
 
         # loop through remaining products
-        for sp_reac in rxn.prod:
-            if sp_reac == sp_j.name:
+        for sp_prod in rxn.prod:
+            if sp_prod == sp_j.name:
                 continue
 
-            temp_nu = rxn.prod_nu[rxn.prod.index(sp_reac)]
+            temp_nu = rxn.prod_nu[rxn.prod.index(sp_prod)]
             isp = next(i for i in xrange(len(specs))
-                       if specs[i].name == sp_reac)
+                       if specs[i].name == sp_prod)
             if isinstance(temp_nu, float):
                 jline += ' * pow(' + \
                     get_array(lang, 'conc', isp)

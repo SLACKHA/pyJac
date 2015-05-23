@@ -2418,7 +2418,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True, init
     write_mass_mole(build_path, lang, specs)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles, old_spec_order, old_rxn_order)
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_moles, old_spec_order, old_rxn_order, optimize_cache)
     
     return
 

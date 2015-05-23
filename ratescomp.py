@@ -19,6 +19,7 @@ def run_comp(new, baseline):
         dummy = pickle.load(file)
         dummy = pickle.load(file)
         dummy = pickle.load(file)
+        dummy = pickle.load(file)
         spec_ordering = pickle.load(file)
         num_specs = len(specs)
 

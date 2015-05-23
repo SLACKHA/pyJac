@@ -440,7 +440,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
 
 
-def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, old_spec_order, old_rxn_order):
+def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, old_spec_order, old_rxn_order, cache_optimized=False):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
@@ -494,6 +494,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
         file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
         file.write('    void write_jacobian_and_rates_output(int NUM);\n')
         file.write('#endif\n')
+        file.write('    //apply masking of ICs for cache optimized mechanisms\n')
+        file.write('    void apply_mask(double*);\n')
 
         if lang == 'cuda':
             # close previous extern
@@ -503,9 +505,14 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
 
         file.write('#endif\n\n')
 
+    reversed_specs = []
+    for i in range(len(specs)):
+      reversed_specs.append(old_spec_order.index(i))
+
     # now the mechanism file
     with open(path + 'mechanism.c{}'.format('u' if lang == 'cuda' else ''), 'w') as file:
         file.write('#include <stdio.h>\n'
+                   '#include <string.h>\n'
                    '#include "mass_mole.h"\n'
                    '#include "mechanism.{}h"\n'.format('cu' if lang == 'cuda' else '') +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'
@@ -532,6 +539,17 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
             if CUDAParams.is_global():
                 file.write('\nextern __constant__ gpuMemory memory_pointers;\n\n')
             __write_kernels(file, have_rev_rxns, have_pdep_rxns)
+
+
+        file.write('    //apply masking of ICs for cache optimized mechanisms\n')
+        file.write('    void apply_mask(double* y_specs) {\n')
+        if cache_optimized:
+            file.write('        double temp [NSP];\n'
+                       '        memcpy(temp, y_specs, NSP * sizeof(double));\n')
+            for i, spec in enumerate(old_spec_order):
+                file.write('        y_specs[{0}] = temp[{1}];\n'.format(spec, i))
+        file.write('    }\n')
+
 
         needed_arr = ['y', 'pres']
         needed_arr_conv = ['y', 'rho']
@@ -803,7 +821,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
 
         if lang != 'cuda':
             file.write('void write_jacobian_and_rates_output(int NUM) {\n' +
-                       '    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, old_spec_order))) +
+                       '    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, reversed_specs))) +
                        '    //set mass fractions to non-zero to turn on all reactions\n'
                        '    double y_host[NN] = {0.0};\n'
                        '    double sum = 0;\n'
@@ -868,7 +886,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
                            '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &d_y, &d_rho);\n'
                            '#endif\n'
                           )
-            file.write('    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, old_spec_order))) +
+            file.write('    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, reversed_specs))) +
                        '    //set mass fractions to non-zero to turn on all reactions\n'
                        '    double y_host[NN] = {0.0};\n'
                        '    double sum = 0;\n'

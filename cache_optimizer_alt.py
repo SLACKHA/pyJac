@@ -251,6 +251,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                 old_specs = pickle.load(file)
                 old_reacs = pickle.load(file)
                 rxn_rate_order = pickle.load(file)
+                spec_rate_order = pickle.load(file)
                 pdep_rate_order = pickle.load(file)
                 spec_ordering = pickle.load(file)
                 rxn_ordering = pickle.load(file)
@@ -262,19 +263,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             same_mech = False
         if same_mech:
             #we have to do the spec_rate_order each time
-            spec_rate_order = []
-            r_to_s, s_to_r = get_mappings(old_specs, old_reacs)
-            #species ordering is a bit trickier
-            if lang == 'cuda':
-                #cuda is much better with many independent statements
-                #so simply iterate through reactions and add to each species
-                for i in range(len(reacs)):
-                    spec_rate_order.append((list(r_to_s[i]), [i]))
-            else:
-                #otherwise, we're just going to keep it as is for the moment
-                #on the CPU the memory latency shouldn't particularly be an issue
-                for i in range(len(specs)):
-                    spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
             return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering, rxn_ordering
 
     splittings = []
@@ -286,65 +274,22 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             # add reaction index to list
             pdep_reacs.append(reac)
 
-    if len(pdep_reacs):
-        pdep_r_to_s, pdep_s_to_r = get_mappings(specs, reacs, consider_thd=True, load_non_participating=True)
-
-    #First get all the pdep rxn's with thd body's which require the conc_temp = (m + spec_1 + spec_2...)
-    conc_reacs = []
-    for reac in pdep_reacs:
-        if reac.pdep and reac.thd_body:
-            conc_reacs.append(reac)
-
     rxn_ordering = []
-    if len(conc_reacs):
-        conc_reac_temp = conc_reacs[:]
-        pdep_args = {'r_to_s' : pdep_r_to_s, 'reacs' : reacs}
-        while len(conc_reac_temp):
-            #get ordering
-            if len(rxn_ordering) and not ResetOnJacUnroll:
-                max_rxn = temp[-1]
-            else:
-                max_rxn = __get_max_rxn(conc_reac_temp, reacs, pdep_s_to_r, pdep_r_to_s)
-            temp = __greedy_loop(max_rxn, conc_reac_temp, __shared_specs_score_pdep, additional_args=pdep_args, size=Jacob_Unroll, multi_thread=multi_thread)
-            if len(rxn_ordering) and not ResetOnJacUnroll:
-                #remove seed
-                temp = temp[1:]
-            rxn_ordering.extend([reacs.index(reac) for reac in temp])
-            conc_reac_temp = [reac for reac in conc_reac_temp if not reac in temp]
-
     r_to_s, s_to_r = get_mappings(specs, reacs)
     args = {'r_to_s' : r_to_s, 'reacs' : reacs}
-    #next, get all the pdep ones that *aren't* in the conc_reacs
-    other_pdep = [reac for reac in pdep_reacs if reac not in conc_reacs]
-    if len(other_pdep):
-        other_pdep_temp = other_pdep[:]
-        while len(other_pdep_temp):
-            if len(rxn_ordering) and not ResetOnJacUnroll:
-                max_rxn = reacs[rxn_ordering[-1]]
-            else:
-                max_rxn = __get_max_rxn(other_pdep_temp, reacs, s_to_r, r_to_s)
-            temp = __greedy_loop(max_rxn, other_pdep_temp, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
-            if len(rxn_ordering) and not ResetOnJacUnroll:
-                #need to remove the seed
-                temp = temp[1:]
-            rxn_ordering.extend([reacs.index(reac) for reac in temp])
-            other_pdep_temp = [reac for reac in other_pdep_temp if not reac in temp]
-
-    __update_split(len(rxn_ordering), splittings)
-
+    reac_list = reacs[:]
     #and finally order the rest of the reactions
-    other_reacs = [reac for reac in reacs if reac not in pdep_reacs]
-    while len(other_reacs):
+    while len(reac_list):
         if len(rxn_ordering) and not ResetOnJacUnroll:
             max_rxn = reacs[rxn_ordering[-1]]
         else:
-            max_rxn = __get_max_rxn(other_reacs, reacs, s_to_r, r_to_s)
-        order = __greedy_loop(max_rxn, other_reacs, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
+            max_rxn = __get_max_rxn(reac_list, reacs, s_to_r, r_to_s)
+        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
         #remove the seed, it was already added
         if len(rxn_ordering) and not ResetOnJacUnroll:
             order = order[1:]
         rxn_ordering.extend([reacs.index(reac) for reac in order])
-        other_reacs = [reac for reac in other_reacs if not reac in order]
+        reac_list = [reac for reac in reac_list if not reac in order]
         splittings.append(len(order))
 
     #the reactions order is now determined, so let's reorder them
@@ -352,17 +297,19 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     reacs = [temp[i] for i in rxn_ordering]
 
     #up next we will reorder the species so they are stored in the order that we will be loading them in the jacobian
-
     spec_ordering = []
     for reac in reacs:
-        if reac.thd_body:
-            thd_body = __conc_temp(reac, specs)
-            spec_ordering.extend([thd for thd in thd_body if not thd in spec_ordering])
         for spec_name in set(reac.reac + reac.prod):
             spec = next(sp for sp in specs if sp.name == spec_name)
-            isp = specs.index(spec)
-            if isp not in spec_ordering:
-                spec_ordering.append(isp)
+            if get_nu(spec, reac):
+                isp = specs.index(spec)
+                if isp not in spec_ordering:
+                    spec_ordering.append(isp)
+
+    #make sure we have them all (i.e. 3rd body only)
+    for isp in range(len(specs)):
+        if not isp in spec_ordering:
+            spec_ordering.append(isp)
 
     #now reorder
     temp = specs[:]
@@ -370,63 +317,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     #we have to update our mappings now that things are reordered
     r_to_s, s_to_r = get_mappings(specs, reacs)
-    pdep_r_to_s, pdep_s_to_r = get_mappings(specs, reacs, consider_thd=True, load_non_participating=True)
-    Pool = multiprocessing.Pool(multi_thread)
-    #next up, we have to determine the orderings for the various rate subs
-
-    #rxn rates is easy, everything in other_reacs is already in order, we simply need to find a good spot for everything in conc_reacs and other_pdep
-    rxn_rate_order = [reacs.index(reac) for reac in reacs if reac not in pdep_reacs]
-    for reac in pdep_reacs:
-        reac_index = reacs.index(reac)
-        max_score = None
-        store_i = None
-        score_list = []
-        for i in range(len(rxn_rate_order)):
-            score_list.append((i, Pool.apply_async(__get_positioning_score, args=(reac_index, i, rxn_rate_order, r_to_s))))
-        score_list = [(score[0], score[1].get()) for score in score_list]
-        score_list.sort(key=lambda x: x[0])
-        for score in score_list:
-            if max_score is None or score[1] > max_score or (max_score == score[1] and abs(score[0] - reac_index) < abs(store_i - reac_index)):
-                max_score = score[1]
-                store_i = score[0]
-        rxn_rate_order.insert(store_i, reacs.index(reac))
-
-    #next we do the pdep reactions, the conc_reacs are already in order
-    pdep_rate_order = [pdep_reacs.index(reac) for reac in conc_reacs]
-    skip = None
-    if not len(pdep_rate_order):
-        pdep_rate_order.append(max(range(len(other_pdep)), key=lambda i: len(pdep_r_to_s[i])))
-        skip = reacs[pdep_rate_order[0]]
-
-    for reac in other_pdep:
-        if skip is not None and reac == skip:
-            continue
-        reac_index = reacs.index(reac)
-        max_score = None
-        store_i = None
-        score_list = []
-        for i in range(len(pdep_rate_order)):
-            score_list.append((i, Pool.apply_async(__get_positioning_score, args=(reac_index, i, pdep_rate_order, pdep_r_to_s))))
-        score_list = [(score[0], score[1].get()) for score in score_list]
-        score_list.sort(key=lambda x: x[0])
-        for score in score_list:
-            if max_score is None or score[1] > max_score or (max_score == score[1] and abs(score[0] - reac_index) < abs(store_i - reac_index)):
-                max_score = score[1]
-                store_i = score[0]
-        pdep_rate_order.insert(store_i, pdep_reacs.index(reac))
-
+    
+    rxn_rate_order = range(len(reacs))
+    pdep_rate_order = [reacs.index(reac) for reac in pdep_reacs]
     spec_rate_order = []
-    #species ordering is a bit trickier
-    if lang == 'cuda':
-        #cuda is much better with many independent statements
-        #so simply iterate through reactions and add to each species
-        for i in range(len(reacs)):
-            spec_rate_order.append((list(r_to_s[i]), [i]))
-    else:
-        #otherwise, we're just going to keep it as is for the moment
-        #on the CPU the memory latency shouldn't particularly be an issue
-        for i in range(len(specs)):
-            spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
+    for i in range(len(specs)):
+        spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
 
     print_spec_order = []
     #finally reorder the spec and rxn orderings to fix for printing
@@ -447,6 +343,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(specs, file)
         pickle.dump(reacs, file)
         pickle.dump(rxn_rate_order, file)
+        pickle.dump(spec_rate_order, file)
         pickle.dump(pdep_rate_order, file)
         pickle.dump(print_spec_order, file)
         pickle.dump(print_rxn_order, file)

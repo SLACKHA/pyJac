@@ -160,6 +160,16 @@ class ReacInfo:
         
         self.sri = False
         self.sri_par = []
+        
+        self.cheb = False
+        self.cheb_n_temp = 0
+        self.cheb_n_pres = 0
+        self.cheb_plim = [0.001, 100.]
+        self.cheb_tlim = [300., 2500.]
+        self.cheb_par = None
+        
+        self.plog = False
+        self.plog_par = None
 
 
 class SpecInfo:
@@ -196,7 +206,7 @@ class SpecInfo:
         # low-temp range thermodynamic coefficients
         self.lo = [0.0 for j in range(7)]
         # temperature range for thermodynamic coefficients
-        self.Trange = [300.0, 1000.0, 5000,0]
+        self.Trange = [300.0, 1000.0, 5000.0]
 
 
 def calc_spec_smh(T, specs):

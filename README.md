@@ -17,19 +17,23 @@ To run it as a script, change to the appropriate directory and run:
 
 The generated source code is placed within the `out` directory, which is created if it doesn't exist initially.
 
+Input reaction mechanisms are supported in Chemkin or Cantera formats. For Cantera, the
+Cantera Python package must be installed, and the program looks for files ending with
+.cti or .xml.
+
 Options
 -------
 
 In the above, `[options]` indicates where command line options should be specified. The options available can be seen using `-h` or `--help`, or below:
 
     -h, --help            show this help message and exit
-    -l {c,cuda,fortran,matlab}, --lang {c,cuda,fortran,matlab}
+    -l {c,cuda}, --lang {c,cuda}
                           Programming language for output source files.
     -i INPUT, --input INPUT
                           Input mechanism filename (e.g., mech.dat).
     -t THERMO, --thermo THERMO
                           Thermodynamic database filename (e.g., therm.dat), or
-                          nothing if in mechanism.
+                          nothing if in mechanism (or Cantera-format).
 
 License
 -------

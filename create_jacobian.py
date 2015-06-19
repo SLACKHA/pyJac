@@ -2067,6 +2067,7 @@ def write_jacobian(path, lang, specs, reacs):
 
     return sparse_indicies
 
+
 def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     """Write a subroutine that multiplies the non-zero entries of the Jacobian with a column 'j' of another matrix
 
@@ -2197,8 +2198,10 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
         )
     file.close()
 
+    return None
 
-def create_jacobian(lang, mech_name, therm_name = None, skip_jacob = False):
+
+def create_jacobian(lang, mech_name, therm_name=None, skip_jacob=False):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -2231,26 +2234,12 @@ def create_jacobian(lang, mech_name, therm_name = None, skip_jacob = False):
     build_path = './out/'
     utils.create_dir(build_path)
 
-    # interpret reaction mechanism file, depending on Cantera or
-    # Chemkin format
+    # Interpret reaction mechanism file, depending on Cantera or
+    # Chemkin format.
     if mech_name.endswith(tuple(['.cti','.xml'])):
         [elems, specs, reacs, units] = mech.read_mech_ct(mech_name)
     else:
-        [elems, specs, reacs, units] = mech.read_mech(mech_name)
-
-        # interpret thermodynamic database file (if it exists & needed)
-        therm_flag = True
-        if therm_name:
-            # check for any species missing molecular weight
-            for sp in specs:
-                if not sp.mw:
-                    therm_flag = False
-                    break
-            if not therm_flag:
-                # need to read thermo file
-                file = open(therm_name, 'r')
-                mech.read_thermo(file, elems, specs)
-                file.close()
+        [elems, specs, reacs, units] = mech.read_mech(mech_name, therm_name)
 
     # convert activation energy units to K (if needed)
     if units != 'kelvins':
@@ -2317,7 +2306,7 @@ def create_jacobian(lang, mech_name, therm_name = None, skip_jacob = False):
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
-    return
+    return None
 
 
 if __name__ == "__main__":
@@ -2325,27 +2314,31 @@ if __name__ == "__main__":
     # command line arguments
     parser = ArgumentParser(description = 'Generates source code '
                                           'for analytical Jacobian.')
-    parser.add_argument('-l', '--lang',
-                        type = str,
-                        choices = utils.langs,
+    parser.add_argument('-l', '--lang', type = str, choices = utils.langs,
                         required = True,
-                        help = 'Programming language for output '
-                        'source files.')
-    parser.add_argument('-i', '--input',
-                        type = str,
-                        required = True,
-                        help = 'Input mechanism filename (e.g., mech.dat).')
-    parser.add_argument('-t', '--thermo',
-                        type = str,
-                        default = None,
-                        help = 'Thermodynamic database filename (e.g., '
-                        'therm.dat), or nothing if in mechanism.')
-    parser.add_argument('-s', '--skip-jacobian',
-                        default = False,
+                        help = ('Programming language for output '
+                                'source files.'
+                                )
+                        )
+    parser.add_argument('-i', '--input', type = str, required = True,
+                        help = ('Input mechanism filename in either Chemkin'
+                                ' (e.g., mech.dat) or Cantera (e.g.,'
+                                ' mech.cti, mech.xml) formats.'
+                                )
+                        )
+    parser.add_argument('-t', '--thermo', type = str, default = None,
+                        help = ('Thermodynamic database filename (e.g., '
+                                'therm.dat), or nothing if in mechanism.'
+                                )
+                        )
+    parser.add_argument('-s', '--skip-jacobian', default = False,
                         action = "store_true",
-                        help = 'Allows skipping of generation of the analytical Jacobian.'
-                        '  Useful timesaver in the case where a finite difference jacobian will be used instead')
-
+                        help = ('Allows skipping of generation of the '
+                                'analytical Jacobian. Useful timesaver in '
+                                'the case where a finite difference jacobian'
+                                ' will be used instead.'
+                                )
+                        )
     args = parser.parse_args()
 
     create_jacobian(args.lang, args.input, args.thermo, args.skip_jacobian)

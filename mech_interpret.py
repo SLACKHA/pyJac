@@ -24,7 +24,7 @@ except ImportError:
 # get local element atomic weight dict
 elem_wt = chem.get_elem_wt()
 
-def read_mech(filename):
+def read_mech(mech_filename, therm_filename):
     """Read and interpret mechanism file for elements, species, and reactions.
 
     Note
@@ -33,8 +33,10 @@ def read_mech(filename):
 
     Parameters
     ----------
-    filename : str
+    mech_filename : str
         Reaction mechanism filename (e.g. 'mech.dat')
+    therm_filename : str, optional
+        Thermodynamic database filename (e.g., 'therm.dat')
 
     Returns
     -------
@@ -49,7 +51,7 @@ def read_mech(filename):
 
     """
 
-    file = open(filename, 'r')
+    file = open(mech_filename, 'r')
 
     elems = []
     reacs = []
@@ -57,6 +59,10 @@ def read_mech(filename):
 
     units = ''
     key = ''
+
+    # By default, need to read thermo database if file given.
+    if therm_filename:
+        therm_flag = True
 
     # start line reading loop
     while True:
@@ -115,12 +121,7 @@ def read_mech(filename):
             continue
         elif line[0:4].lower() == 'ther':
             # thermo data is in mechanism file
-
-            # rewind a line
-            file.seek(last_line)
-
-            read_thermo(file, elems, specs)
-
+            read_thermo(mech_filename, elems, specs)
             continue
         elif line[0:3].lower() == 'end':
             key = ''
@@ -488,7 +489,8 @@ def read_mech(filename):
                     else:
                         # first CHEB line
                         cheb_flag = True
-                        # Don't want Cheb reactions lumped in with standard falloff
+                        # Don't want Cheb reactions lumped in with
+                        # standard falloff.
                         reacs[-1].pdep = False
                         reacs[-1].cheb_n_temp = int(line_split[1])
                         reacs[-1].cheb_n_pres = int(line_split[2])
@@ -514,7 +516,8 @@ def read_mech(filename):
                         reacs[-1].plog_par.append(np.array(pars))
                     else:
                         reacs[-1].plog = True
-                        # Don't want Plog reactions lumped in with standard falloff
+                        # Don't want Plog reactions lumped in with
+                        # standard falloff.
                         reacs[-1].pdep = False
                         reacs[-1].plog_par = []
                         pars = [float(n) for n in line_split[1:5]]
@@ -526,6 +529,8 @@ def read_mech(filename):
                     for i in range(0, len(line_split), 2):
                         pair = [line_split[i], float(line_split[i + 1])]
                         reacs[-1].thd_body.append(pair)
+
+    file.close()
 
     # process some reaction auxiliary info
     for idx, reac in enumerate(reacs):
@@ -540,10 +545,21 @@ def read_mech(filename):
             else:
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
 
+    # Read seperate thermo file if present and needed
+    if any([not sp.mw for sp in specs]):
+        if therm_filename:
+            read_thermo(therm_filename, elems, specs)
+        else:
+            print('Error: no thermo file specified, but species missing \n'
+                  'data. Either specify file, or ensure complete data in\n'
+                  'mechanism file with THERMO option.'
+                  )
+            sys.exit(1)
+
     return (elems, specs, reacs, units)
 
 
-def read_thermo(file, elems, specs):
+def read_thermo(filename, elems, specs):
     """Read and interpret thermodynamic database for species data.
 
     Reads the thermodynamic file and returns the species thermodynamic
@@ -552,8 +568,8 @@ def read_thermo(file, elems, specs):
 
     Parameters
     ----------
-    file : file
-        Pointer to open thermo database file.
+    filename : str
+        Name of thermo database file.
     elems : list of str
         List of element names in mechanism.
     specs : list of SpecInfo
@@ -565,127 +581,130 @@ def read_thermo(file, elems, specs):
 
     """
 
-    # loop through intro lines
-    while True:
+    with open(filename, 'r') as file:
+
+        # loop through intro lines
+        while True:
+            line = file.readline()
+
+            # skip blank or commented lines
+            if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+
+            # skip 'thermo' at beginning
+            if line[0:6].lower() == 'thermo': break
+
+        # next line either has common temperature ranges or first species
+        last_line = file.tell()
         line = file.readline()
 
-        # skip blank or commented lines
-        if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
-
-        # skip 'thermo' at beginning
-        if line[0:6].lower() == 'thermo': break
-
-    # next line either has common temperature ranges or first species
-    last_line = file.tell()
-    line = file.readline()
-
-    line_split = line.split()
-    if line_split[0][0:1].isdigit():
-        T_ranges = utils.read_str_num(line)
-    else:
-        # no common temperature info
-        file.seek(last_line)
-        # default
-
-    # now start reading species thermo info
-    while True:
-        # first line of species info
-        line = file.readline()
-
-        # don't convert to lowercase, needs to match thermo for Chemkin
-
-        # break if end of file
-        if line is None or line[0:3].lower() == 'end': break
-        # skip blank/commented line
-        if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
-
-        # species name, columns 0:18
-        spec = line[0:18].strip()
-
-        # Apparently, in some cases, notes are in the
-        # columns of shorter species names, so make
-        # sure no spaces.
-        if spec.find(' ') > 0:
-            spec = spec[0 : spec.find(' ')]
-
-        # now need to determine if this species is in mechanism
-        if next((sp for sp in specs if sp.name == spec), None):
-            sp_ind = next(i for i in xrange(len(specs))
-                          if specs[i].name == spec)
+        line_split = line.split()
+        if line_split[0][0:1].isdigit():
+            T_ranges = utils.read_str_num(line)
         else:
-            # not in mechanism, read next three lines and continue
+            # no common temperature info
+            file.seek(last_line)
+            # default
+
+        # now start reading species thermo info
+        while True:
+            # first line of species info
             line = file.readline()
+
+            # don't convert to lowercase, needs to match thermo for Chemkin
+
+            # break if end of file
+            if line is None or line[0:3].lower() == 'end': break
+            # skip blank/commented line
+            if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+
+            # species name, columns 0:18
+            spec = line[0:18].strip()
+
+            # Apparently, in some cases, notes are in the
+            # columns of shorter species names, so make
+            # sure no spaces.
+            if spec.find(' ') > 0:
+                spec = spec[0 : spec.find(' ')]
+
+            # now need to determine if this species is in mechanism
+            if next((sp for sp in specs if sp.name == spec), None):
+                sp_ind = next(i for i in xrange(len(specs))
+                              if specs[i].name == spec
+                              )
+            else:
+                # not in mechanism, read next three lines and continue
+                line = file.readline()
+                line = file.readline()
+                line = file.readline()
+                continue
+
+            # set species to the one matched
+            spec = specs[sp_ind]
+
+            # ensure not reading the same species more than once...
+            if spec.mw:
+                # already done! skip next three lines
+                line = file.readline()
+                line = file.readline()
+                line = file.readline()
+                continue
+
+            # now get element composition of species, columns 24:44
+            # each piece of data is 5 characters long (2 for element, 3 for #)
+            elem_str = utils.split_str(line[24:44], 5)
+
+            for e_str in elem_str:
+                e = e_str[0:2].strip()
+                # skip if blank
+                if e == '' or e == '0': continue
+                # may need to convert to float first, in case of e.g. "1."
+                e_num = float( e_str[2:].strip() )
+                e_num = int(e_num)
+
+                spec.elem.append([e, e_num])
+
+                # calculate molecular weight
+                spec.mw += e_num * elem_wt[e.lower()]
+
+            # temperatures for species
+            T_spec = utils.read_str_num(line[45:73])
+            T_low  = T_spec[0]
+            T_high = T_spec[1]
+            if len(T_spec) == 3: T_com = T_spec[2]
+            else: T_com = T_ranges[1]
+
+            spec.Trange = [T_low, T_com, T_high]
+
+            # second species line
             line = file.readline()
+            coeffs = utils.split_str(line[0:75], 15)
+            spec.hi[0] = float( coeffs[0] )
+            spec.hi[1] = float( coeffs[1] )
+            spec.hi[2] = float( coeffs[2] )
+            spec.hi[3] = float( coeffs[3] )
+            spec.hi[4] = float( coeffs[4] )
+
+            # third species line
             line = file.readline()
-            continue
+            coeffs = utils.split_str(line[0:75], 15)
+            spec.hi[5] = float( coeffs[0] )
+            spec.hi[6] = float( coeffs[1] )
+            spec.lo[0] = float( coeffs[2] )
+            spec.lo[1] = float( coeffs[3] )
+            spec.lo[2] = float( coeffs[4] )
 
-        # set species to the one matched
-        spec = specs[sp_ind]
-
-        # ensure not reading the same species more than once...
-        if spec.mw:
-            # already done! skip next three lines
+            # fourth species line
             line = file.readline()
-            line = file.readline()
-            line = file.readline()
-            continue
+            coeffs = utils.split_str(line[0:75], 15)
+            spec.lo[3] = float( coeffs[0] )
+            spec.lo[4] = float( coeffs[1] )
+            spec.lo[5] = float( coeffs[2] )
+            spec.lo[6] = float( coeffs[3] )
 
-        # now get element composition of species, columns 24:44
-        # each piece of data is 5 characters long (2 for element, 3 for #)
-        elem_str = utils.split_str(line[24:44], 5)
+            # stop reading if all species in mechanism accounted for
+            if not next((sp for sp in specs if sp.mw == 0.0), None): break
 
-        for e_str in elem_str:
-            e = e_str[0:2].strip()
-            # skip if blank
-            if e == '' or e == '0': continue
-            # may need to convert to float first, in case of e.g. "1."
-            e_num = float( e_str[2:].strip() )
-            e_num = int(e_num)
-
-            spec.elem.append([e, e_num])
-
-            # calculate molecular weight
-            spec.mw += e_num * elem_wt[e.lower()]
-
-        # temperatures for species
-        T_spec = utils.read_str_num(line[45:73])
-        T_low  = T_spec[0]
-        T_high = T_spec[1]
-        if len(T_spec) == 3: T_com = T_spec[2]
-        else: T_com = T_ranges[1]
-
-        spec.Trange = [T_low, T_com, T_high]
-
-        # second species line
-        line = file.readline()
-        coeffs = utils.split_str(line[0:75], 15)
-        spec.hi[0] = float( coeffs[0] )
-        spec.hi[1] = float( coeffs[1] )
-        spec.hi[2] = float( coeffs[2] )
-        spec.hi[3] = float( coeffs[3] )
-        spec.hi[4] = float( coeffs[4] )
-
-        # third species line
-        line = file.readline()
-        coeffs = utils.split_str(line[0:75], 15)
-        spec.hi[5] = float( coeffs[0] )
-        spec.hi[6] = float( coeffs[1] )
-        spec.lo[0] = float( coeffs[2] )
-        spec.lo[1] = float( coeffs[3] )
-        spec.lo[2] = float( coeffs[4] )
-
-        # fourth species line
-        line = file.readline()
-        coeffs = utils.split_str(line[0:75], 15)
-        spec.lo[3] = float( coeffs[0] )
-        spec.lo[4] = float( coeffs[1] )
-        spec.lo[5] = float( coeffs[2] )
-        spec.lo[6] = float( coeffs[3] )
-
-        # stop reading if all species in mechanism accounted for
-        if not next((sp for sp in specs if sp.mw == 0.0), None): break
-
-    return
+    return None
 
 
 def read_mech_ct(filename):
@@ -884,3 +903,5 @@ def read_mech_ct(filename):
     # Individual reactions already converted to activation temperature, so no
     # need to convert later.
     units = 'joules/kmole'
+
+    return (elems, specs, reacs, units)

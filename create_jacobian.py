@@ -46,8 +46,8 @@ def write_jacobian(path, lang, specs, reacs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void eval_jacob (const double, const double, const double*, '
-                   'double*);\n'
+                   'void eval_jacob (const double, const double,'
+                   ' const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -59,8 +59,8 @@ def write_jacobian(path, lang, specs, reacs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ void eval_jacob (const double, const double, '
-                   'const double*, double*);\n'
+                   '__device__ void eval_jacob (const double, const double,'
+                   ' const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -252,56 +252,56 @@ def write_jacobian(path, lang, specs, reacs):
                    '  get_rxn_pres_mod (T, pres, conc, pres_mod);\n'
                    )
     elif lang == 'fortran':
-        file.write('  ! get and evaluate pressure modifications to '
-                   'reaction rates\n'
+        file.write('  ! get and evaluate pressure modifications to'
+                   ' reaction rates\n'
                    '  get_rxn_pres_mod (T, pres, conc, pres_mod)\n'
                    )
     elif lang == 'matlab':
-        file.write('  % get and evaluate pressure modifications to '
-                   'reaction rates\n'
-                   '  pres_mod = get_rxn_pres_mod (T, pres, conc, '
-                   'pres_mod);\n'
+        file.write('  % get and evaluate pressure modifications to'
+                   ' reaction rates\n'
+                   '  pres_mod = get_rxn_pres_mod (T, pres, conc,'
+                   ' pres_mod);\n'
                    )
     file.write('\n')
 
 
     # evaluate species rates
     if lang in ['c', 'cuda']:
-        file.write('  // evaluate rate of change of species molar '
-                   'concentration\n'
+        file.write('  // evaluate rate of change of species molar'
+                   ' concentration\n'
                    '  double sp_rates[{}];\n'.format(num_s)
                    )
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, '
-                       'pres_mod, sp_rates);\n'
+            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates,'
+                       ' pres_mod, sp_rates);\n'
                        )
         else:
-            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, '
-                       'sp_rates);\n'
+            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod,'
+                       ' sp_rates);\n'
                        )
     elif lang == 'fortran':
-        file.write('  ! evaluate rate of change of species molar '
-                   'concentration\n'
+        file.write('  ! evaluate rate of change of species molar'
+                   ' concentration\n'
                    )
         if rev_reacs:
-            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates, '
-                       'pres_mod, sp_rates)\n'
+            file.write('  eval_spec_rates (fwd_rxn_rates, rev_rxn_rates,'
+                       ' pres_mod, sp_rates)\n'
                        )
         else:
-            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod, '
-                       'sp_rates)\n'
+            file.write('  eval_spec_rates (fwd_rxn_rates, pres_mod,'
+                       ' sp_rates)\n'
                        )
     elif lang == 'matlab':
-        file.write('  % evaluate rate of change of species molar '
-                   'concentration\n'
+        file.write('  % evaluate rate of change of species molar'
+                   ' concentration\n'
                    )
         if rev_reacs:
-            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, '
-                       'rev_rxn_rates, pres_mod);\n'
+            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates,'
+                       ' rev_rxn_rates, pres_mod);\n'
                        )
         else:
-            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates, '
-                       'pres_mod);\n'
+            file.write('  sp_rates = eval_spec_rates(fwd_rxn_rates,'
+                       ' pres_mod);\n'
                        )
     file.write('\n')
 
@@ -743,9 +743,11 @@ def write_jacobian(path, lang, specs, reacs):
 
             jline += ' / T) * ('
 
-            # contribution from temperature derivative of forward reaction rate
+            # contribution from temperature derivative of
+            # forward reaction rate:
 
-            # Plog reactions have conditional contribution, depends on pressure range
+            # Plog reactions have conditional contribution,
+            # depends on pressure range
             #if rxn.plog:
 
             jline += 'fwd_rxn_rates'
@@ -761,7 +763,9 @@ def write_jacobian(path, lang, specs, reacs):
                 jline += '{:.8e}'.format(rxn.b)
             elif abs(rxn.E) > 1.0e-90:
                 jline += '({:.8e} / T)'.format(rxn.E)
-            jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
+            jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or
+                                       (abs(rxn.E) > 1.0e-90) else ''
+                                       )
 
             # loop over reactants
             nu = 0
@@ -782,18 +786,24 @@ def write_jacobian(path, lang, specs, reacs):
                 if rxn.rev_par:
                     # explicit reverse parameters
 
+                    rev_b = rxn.rev_par[1]
+                    rev_E = rxn.rev_par[2]
+
                     jline += ' * ('
                     # check which parameters are > 0 (effectively)
-                    if (abs(rxn.rev_par[1]) > 1.0e-90
-                        and abs(rxn.rev_par[2]) > 1.0e-90):
-                        jline += ('{:.8e} + '.format(rxn.rev_par[1]) +
-                                  '({:.8e} / T)'.format(rxn.rev_par[2])
+                    if (abs(rev_b) > 1.0e-90
+                        and abs(rev_E) > 1.0e-90):
+                        jline += ('{:.8e} + '.format(rev_b) +
+                                  '({:.8e} / T)'.format(rev_E)
                                   )
-                    elif abs(rxn.rev_par[1]) > 1.0e-90:
-                        jline += '{:.8e}'.format(rxn.rev_par[1])
-                    elif abs(rxn.rev_par[2]) > 1.0e-90:
-                        jline += '({:.8e} / T)'.format(rxn.rev_par[2])
-                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.rev_par[1]) > 1.0e-90) or (abs(rxn.rev_par[2]) > 1.0e-90) else '')
+                    elif abs(rev_b) > 1.0e-90:
+                        jline += '{:.8e}'.format(rev_b)
+                    elif abs(rev_E) > 1.0e-90:
+                        jline += '({:.8e} / T)'.format(rev_E)
+                    jline += '{}1.0 - '.format(' + ' if (abs(rev_b) > 1.0e-90)
+                                               or (abs(rev_E) > 1.0e-90)
+                                               else ''
+                                               )
 
                     nu = 0
                     # loop over products
@@ -811,7 +821,10 @@ def write_jacobian(path, lang, specs, reacs):
                         jline += '{:.8e}'.format(rxn.b)
                     elif abs(rxn.E) > 1.0e-90:
                         jline += '({:.8e} / T)'.format(rxn.E)
-                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
+                    jline += '{}1.0 - '.format(' + ' if (abs(rxn.b) > 1.0e-90)
+                                               or (abs(rxn.E) > 1.0e-90)
+                                               else ''
+                                               )
 
                     nu = 0
                     # loop over products
@@ -1352,7 +1365,8 @@ def write_jacobian(path, lang, specs, reacs):
                                     else:
                                         nu = rxn.prod_nu[rxn.prod.index(sp)]
 
-                                    # skip if overall stoich coefficient is zero
+                                    # skip if overall stoich
+                                    # coefficient is zero
                                     if (nu == 0):
                                         continue
 
@@ -1369,7 +1383,8 @@ def write_jacobian(path, lang, specs, reacs):
                                               )
                                         sys.exit(2)
 
-                                    # need temperature conditional for equilibrium constants
+                                    # need temperature conditional for
+                                    # equilibrium constants
                                     line = ('  if (T <= '
                                             '{})'.format(spec.Trange[1])
                                             )
@@ -1659,7 +1674,8 @@ def write_jacobian(path, lang, specs, reacs):
                 file.write(jline)
 
             if isfirst:
-                # not participating in any reactions, or at least no net production
+                # not participating in any reactions,
+                # or at least no net production
                 line = '  jac'
                 if lang in ['c', 'cuda']:
                     line += '[{}]'.format(k_sp + 1 + (num_s + 1) * (j_sp + 1))
@@ -1778,22 +1794,22 @@ def write_jacobian(path, lang, specs, reacs):
 
     # sum of enthalpy * species rate * molecular weight for all species
     if lang == 'c':
-        file.write('  // sum of enthalpy * species rate * molecular weight '
-                   'for all species\n'
+        file.write('  // sum of enthalpy * species rate * molecular weight'
+                   ' for all species\n'
                    '  double sum_hwW;\n'
                    )
     elif lang == 'cuda':
-        file.write('  // sum of enthalpy * species rate * molecular weight '
-                   'for all species\n'
+        file.write('  // sum of enthalpy * species rate * molecular weight'
+                   ' for all species\n'
                    '  register double sum_hwW;\n'
                    )
     elif lang == 'fortran':
-        file.write('  ! sum of enthalpy * species rate * molecular weight '
-                   'for all species\n'
+        file.write('  ! sum of enthalpy * species rate * molecular weight'
+                   ' for all species\n'
                    )
     elif lang == 'matlab':
-        file.write('  % sum of enthalpy * species rate * molecular weight '
-                   'for all species\n'
+        file.write('  % sum of enthalpy * species rate * molecular weight'
+                   ' for all species\n'
                    )
     file.write('\n')
     line = '  sum_hwW = '
@@ -2069,7 +2085,8 @@ def write_jacobian(path, lang, specs, reacs):
 
 
 def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
-    """Write a subroutine that multiplies the non-zero entries of the Jacobian with a column 'j' of another matrix
+    """Write a subroutine that multiplies the non-zero entries of the
+    Jacobian with a column 'j' of another matrix.
 
     Parameters
     ----------
@@ -2099,7 +2116,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void sparse_multiplier (const double *, const double *, double*);\n'
+                   'void sparse_multiplier (const double *, const double *,'
+                   ' double*);\n'
                    '\n'
                    '#ifdef COMPILE_TESTING_METHODS\n'
                    '  int test_sparse_multiplier();\n'
@@ -2117,7 +2135,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ void sparse_multiplier (const double *, const double *, double*);\n'
+                   '__device__ void sparse_multiplier (const double *,'
+                   ' const double *, double*);\n'
                    '#ifdef COMPILE_TESTING_METHODS\n'
                    '  __device__ int test_sparse_multiplier();\n'
                    '#endif\n'
@@ -2137,7 +2156,9 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     if lang == 'cuda':
         file.write('__device__\n')
 
-    file.write("void sparse_multiplier(const double * A, const double * Vm, double* w) {\n")
+    file.write('void sparse_multiplier(const double * A, const double * Vm,'
+               ' double* w) {\n'
+               )
 
     for i in range(nvars):
         #get all indicies that belong to row i
@@ -2167,7 +2188,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.write(
         '    double A[NN * NN] = {ZERO};\n'
         '    double v[NN] = {ZERO};\n'
-        '    //do not zero, tests sparse_multiplier\'s fill of non touched entries\n'
+        '    //do not zero, tests sparse_multiplier\'s fill of non'
+        ' touched entries\n'
         '    double w[NN];\n'
         '    double w2[NN] = {ZERO};\n'
     )

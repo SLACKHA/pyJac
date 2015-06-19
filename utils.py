@@ -15,13 +15,18 @@ file_ext = dict(c = '.c', cuda = '.cu',
                 )
 
 # line endings dependent on language
-line_end = dict(c = ';\n', cuda = ';\n',
-                fortran = '\n', matlab = ';\n'
+line_end = dict(c = ';\n',
+                cuda = ';\n',
+                fortran = '\n',
+                matlab = ';\n'
                 )
 
 #exp10 functions for various languages
-exp_10_fun  = dict(c = "pow(10.0, ", cuda = 'exp10(',
-                fortran = 'exp(log(10.0) * ', matlab = 'exp(log(10.0) * ')
+exp_10_fun = dict(c = "pow(10.0, ",
+                  cuda = 'exp10(',
+                  fortran = 'exp(log(10.0) * ',
+                  matlab = 'exp(log(10.0) * '
+                  )
 
 def read_str_num(string, sep = None):
     """Returns a list of floats pulled from a string.

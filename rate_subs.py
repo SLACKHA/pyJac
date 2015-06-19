@@ -11,6 +11,7 @@ from __future__ import print_function
 # Standard libraries
 import sys
 import math
+import argparse
 
 # Local imports
 import chem_utilities as chem
@@ -137,21 +138,21 @@ def write_rxn_rates(path, lang, specs, reacs):
                    '#include "header.h"\n\n'
                    )
         if rev_reacs:
-            file.write('void eval_rxn_rates (const double, const double, '
-                       'const double*, double*, double*);\n'
-                       'void eval_spec_rates (const double*, const double*, '
-                       'const double*, double*);\n'
+            file.write('void eval_rxn_rates (const double, const double,'
+                       ' const double*, double*, double*);\n'
+                       'void eval_spec_rates (const double*, const double*,'
+                       ' const double*, double*);\n'
                        )
         else:
-            file.write('void eval_rxn_rates (const double, const double, '
-                       'const double*, double*);\n'
-                       'void eval_spec_rates (const double*, const double*, '
-                       'double*);\n'
+            file.write('void eval_rxn_rates (const double, const double,'
+                       ' const double*, double*);\n'
+                       'void eval_spec_rates (const double*, const double*,'
+                       ' double*);\n'
                        )
 
         if pdep_reacs:
-            file.write('void get_rxn_pres_mod (const double, const double, '
-                       'const double*, double*);\n'
+            file.write('void get_rxn_pres_mod (const double, const double,'
+                       ' const double*, double*);\n'
                        )
 
         file.write('\n'
@@ -167,21 +168,21 @@ def write_rxn_rates(path, lang, specs, reacs):
                    '\n'
                    )
         if rev_reacs:
-            file.write('__device__ void eval_rxn_rates (const double, '
-                       'const double, const double*, double*, double*);\n'
-                       '__device__ void eval_spec_rates (const double*, '
-                       'const double*, const double*, double*);\n'
+            file.write('__device__ void eval_rxn_rates (const double,'
+                       ' const double, const double*, double*, double*);\n'
+                       '__device__ void eval_spec_rates (const double*,'
+                       ' const double*, const double*, double*);\n'
                        )
         else:
-            file.write('__device__ void eval_rxn_rates (const double, const '
-                       'double, const double*, double*);\n'
-                       '__device__ void eval_spec_rates (const double*, const '
-                       'double*, double*);\n'
+            file.write('__device__ void eval_rxn_rates (const double,'
+                       ' const double, const double*, double*);\n'
+                       '__device__ void eval_spec_rates (const double*,'
+                       ' const double*, double*);\n'
                        )
 
         if pdep_reacs:
-            file.write('__device__ void get_rxn_pres_mod (const double, const '
-                       'double, const double*, double*);\n'
+            file.write('__device__ void get_rxn_pres_mod (const double,'
+                       ' const double, const double*, double*);\n'
                        )
 
         file.write('\n')
@@ -202,25 +203,26 @@ def write_rxn_rates(path, lang, specs, reacs):
 
     if lang in ['c', 'cuda']:
         if rev_reacs:
-            line += ('void eval_rxn_rates (const double T, const double pres, '
-                     'const double * C, double * fwd_rxn_rates, '
+            line += ('void eval_rxn_rates (const double T, const double pres,'
+                     ' const double * C, double * fwd_rxn_rates, '
                      'double * rev_rxn_rates) {\n'
                      )
         else:
-            line += ('void eval_rxn_rates (const double T, const double pres, '
-                     'const double * C, double * fwd_rxn_rates) {\n'
+            line += ('void eval_rxn_rates (const double T, const double pres,'
+                     ' const double * C, double * fwd_rxn_rates) {\n'
                      )
     elif lang == 'fortran':
         if rev_reacs:
-            line += ('subroutine eval_rxn_rates (T, pres, C, fwd_rxn_rates, '
-                     'rev_rxn_rates)\n\n'
+            line += ('subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates,'
+                     ' rev_rxn_rates)\n\n'
                      )
         else:
-            line += 'subroutine eval_rxn_rates (T, pres, C, fwd_rxn_rates)\n\n'
+            line += 'subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates)\n\n'
 
         # fortran needs type declarations
         line += ('  implicit none\n'
-                 '  double precision, intent(in) :: T, pres, C({})\n'.format(num_s)
+                 '  double precision, intent(in) :: '
+                 'T, pres, C({})\n'.format(num_s)
                  )
         if rev_reacs:
             line += ('  double precision, intent(out) :: '
@@ -261,7 +263,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                      '  rev_rxn_rates = fwd_rxn_rates;\n'
                      )
         else:
-            line += ('function fwd_rxn_rates = eval_rxn_rates (T, pres, C)\n\n'
+            line += ('function fwd_rxn_rates = eval_rxn_rates(T, pres, C)\n\n'
                      '  fwd_rxn_rates = zeros({},1);\n'.format(num_r)
                      )
     file.write(line)
@@ -875,8 +877,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
 
     # loop through third-body and pressure-dependent reactions
     for rind in pdep_reacs:
-        reac = reacs[rind]              # index in reaction list
-        pind = pdep_reacs.index(rind)   # index in list of third/pressure-dep reactions
+        # index in reaction list
+        reac = reacs[rind]
+        # index in list of third/pressure-dep reactions
+        pind = pdep_reacs.index(rind)
 
         # print reaction index
         if lang in ['c', 'cuda']:
@@ -1130,22 +1134,22 @@ def write_spec_rates(path, lang, specs, reacs):
 
     if lang in ['c', 'cuda']:
         if rev_reacs:
-            line += ('void eval_spec_rates (const double * fwd_rates, '
-                     'const double * rev_rates, const double * pres_mod, '
-                     'double * sp_rates) {\n'
+            line += ('void eval_spec_rates (const double * fwd_rates,'
+                     ' const double * rev_rates, const double * pres_mod,'
+                     ' double * sp_rates) {\n'
                      )
         else:
-            line += ('void eval_spec_rates (const double * fwd_rates, '
-                     'const double * pres_mod, double * sp_rates) {\n'
+            line += ('void eval_spec_rates (const double * fwd_rates,'
+                     ' const double * pres_mod, double * sp_rates) {\n'
                      )
     elif lang == 'fortran':
         if rev_reacs:
-            line += ('subroutine eval_spec_rates (fwd_rates, rev_rates, '
-                     'pres_mod, sp_rates)\n\n'
+            line += ('subroutine eval_spec_rates (fwd_rates, rev_rates,'
+                     ' pres_mod, sp_rates)\n\n'
                      )
         else:
-            line += ('subroutine eval_spec_rates (fwd_rates, pres_mod, '
-                     'sp_rates)\n\n'
+            line += ('subroutine eval_spec_rates (fwd_rates, pres_mod,'
+                     ' sp_rates)\n\n'
                      )
 
         # fortran needs type declarations
@@ -1166,12 +1170,12 @@ def write_spec_rates(path, lang, specs, reacs):
                  )
     elif lang == 'matlab':
         if rev_reacs:
-            line += ('function sp_rates = eval_spec_rates ( fwd_rates, '
-                     'rev_rates, pres_mod )\n\n'
+            line += ('function sp_rates = eval_spec_rates ( fwd_rates,'
+                     ' rev_rates, pres_mod )\n\n'
                      )
         else:
-            line += ('function sp_rates = eval_spec_rates ( fwd_rates, '
-                     'pres_mod )\n\n'
+            line += ('function sp_rates = eval_spec_rates ( fwd_rates,'
+                     ' pres_mod )\n\n'
                      )
         line += '  sp_rates = zeros({},1);\n'.format(len(specs))
     file.write(line)
@@ -1881,8 +1885,8 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  // local arrays holding reaction rates\n'
                    '  double fwd_rates[{}];\n'.format(len(reacs)) +
                    '  double rev_rates[{}];\n'.format(len(rev_reacs)) +
-                   '  eval_rxn_rates (y[0], pres, conc, fwd_rates, rev_rates);\n'
-                   '\n'
+                   '  eval_rxn_rates (y[0], pres, conc, '
+                   'fwd_rates, rev_rates);\n\n'
                    )
     else:
         file.write('  // local array holding reaction rates\n'
@@ -2122,7 +2126,8 @@ def write_derivs(path, lang, specs, reacs):
     return
 
 def write_mass_mole(path, lang, specs):
-    """Writes files for mass/molar concentration and density conversion utility.
+    """Writes files for mass/molar concentration and
+    density conversion utility.
 
     Parameters
     ----------
@@ -2154,7 +2159,8 @@ def write_mass_mole(path, lang, specs):
                    '\n'
                    'void mole2mass (const double*, double*);\n'
                    'void mass2mole (const double*, double*);\n'
-                   'double getDensity (const double, const double, const double*);\n'
+                   'double getDensity (const double, const double,'
+                   ' const double*);\n'
                    '\n'
                    '#ifdef __cplusplus\n'
                    '  }\n'
@@ -2188,11 +2194,14 @@ def write_mass_mole(path, lang, specs):
                    '\n'
                    )
     elif lang == 'fortran':
-        file.write('!-----------------------------------------------------------------\n'
-                   '!> Subroutine converting species mole fractions to mass fractions.\n'
+        file.write('!------------------------------------------------------'
+                   '-----------\n'
+                   '!> Subroutine converting species mole fractions to mass'
+                   ' fractions.\n'
                    '!! @param[in]  X  array of species mole fractions\n'
                    '!! @param[out] Y  array of species mass fractions\n'
-                   '!-----------------------------------------------------------------\n'
+                   '!------------------------------------------------------'
+                   '-----------\n'
                    'subroutine mole2mass (X, Y)\n'
                    '  implicit none\n'
                    '  double, dimension(:), intent(in) :: X\n'
@@ -2259,8 +2268,8 @@ def write_mass_mole(path, lang, specs):
     elif lang == 'fortran':
         file.write('!-------------------------------------------------------'
                    '----------\n'
-                   '!> Subroutine converting species mass fractions to mole '
-                   'fractions.\n'
+                   '!> Subroutine converting species mass fractions to mole'
+                   ' fractions.\n'
                    '!! @param[in]  Y  array of species mass fractions\n'
                    '!! @param[out] X  array of species mole fractions\n'
                    '!-------------------------------------------------------'
@@ -2325,8 +2334,8 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  X     array of species mole fractions\n'
                    r' * \return     rho  mixture mass density' + '\n'
                    ' */\n'
-                   'double getDensity (const double temp, const double pres, '
-                   'const double * X) {\n'
+                   'double getDensity (const double temp, const double pres,'
+                   ' const double * X) {\n'
                    '\n'
                    )
     elif lang == 'fortran':
@@ -2370,7 +2379,7 @@ def write_mass_mole(path, lang, specs):
 
     # calculate density
     if lang in ['c', 'cuda']:
-        file.write('  return pres * mw_avg / ({:.8e} * temp);'.format(chem.RU))
+        file.write('  return pres * mw_avg/({:.8e} * temp);'.format(chem.RU))
         file.write('\n')
     else:
         line = '  rho = pres * mw_avg / ({:.8e} * temp)'.format(chem.RU)
@@ -2486,7 +2495,6 @@ def create_rate_subs(lang, mech_name, therm_name = None):
 
 
 if __name__ == "__main__":
-    import argparse
 
     # command line arguments
     parser = argparse.ArgumentParser(description = 'Generates source code '

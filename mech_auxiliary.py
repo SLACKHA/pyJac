@@ -280,7 +280,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
             '{}'.format('memory_pointers.fwd_rates, '
                         'memory_pointers.rev_rates,' if have_rev_rxns else
                         'memory_pointers.rates,'
-                        )
+                        ) +
             '{} memory_pointers.dy);\n'.format(' memory_pointers.pres_mod,'
                                                if have_pdep_rxns else ''
                                                ) +

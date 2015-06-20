@@ -796,7 +796,7 @@ def read_mech_ct(filename):
                                  rxn.reactants.values(),
                                  rxn.products.keys(),
                                  rxn.products.values(),
-                                 rxn.rate.pre_exponential_factor,
+                                 rxn.rate.pre_exponential_factor * 1.e3,
                                  rxn.rate.temperature_exponent,
                                  rxn.rate.activation_energy
                                  )
@@ -808,7 +808,7 @@ def read_mech_ct(filename):
                                  rxn.reactants.values(),
                                  rxn.products.keys(),
                                  rxn.products.values(),
-                                 rxn.rate.pre_exponential_factor,
+                                 rxn.rate.pre_exponential_factor * 1.e3,
                                  rxn.rate.temperature_exponent,
                                  rxn.rate.activation_energy
                                  )
@@ -822,7 +822,7 @@ def read_mech_ct(filename):
                                  rxn.reactants.values(),
                                  rxn.products.keys(),
                                  rxn.products.values(),
-                                 rxn.high_rate.pre_exponential_factor,
+                                 rxn.high_rate.pre_exponential_factor * 1.e3,
                                  rxn.high_rate.temperature_exponent,
                                  rxn.high_rate.activation_energy
                                  )
@@ -834,7 +834,7 @@ def read_mech_ct(filename):
                 for sp in rxn.efficiencies:
                     reac.thd_body.append([sp, rxn.efficiencies[sp]])
 
-            reac.low = [rxn.low_rate.pre_exponential_factor,
+            reac.low = [rxn.low_rate.pre_exponential_factor * 1.e3,
                         rxn.low_rate.temperature_exponent,
                         rxn.low_rate.activation_energy
                         ]
@@ -852,7 +852,7 @@ def read_mech_ct(filename):
                                  rxn.reactants.values(),
                                  rxn.products.keys(),
                                  rxn.products.values(),
-                                 rxn.low_rate.pre_exponential_factor,
+                                 rxn.low_rate.pre_exponential_factor * 1.e3,
                                  rxn.low_rate.temperature_exponent,
                                  rxn.low_rate.activation_energy
                                  )
@@ -864,7 +864,7 @@ def read_mech_ct(filename):
                 for sp in rxn.efficiencies:
                     reac.thd_body.append([sp, rxn.efficiencies[sp]])
 
-            reac.high = [rxn.high_rate.pre_exponential_factor,
+            reac.high = [rxn.high_rate.pre_exponential_factor * 1.e3,
                          rxn.high_rate.temperature_exponent,
                          rxn.high_rate.activation_energy
                          ]
@@ -887,7 +887,7 @@ def read_mech_ct(filename):
             reac.plog = True
             reac.plog_par = []
             for rate in rxn.rates:
-                pars = [rate[0], rate[1].pre_exponential_factor,
+                pars = [rate[0], rate[1].pre_exponential_factor * 1.e3,
                         rate[1].temperature_exponent,
                         rate[1].activation_energy
                         ]
@@ -907,6 +907,9 @@ def read_mech_ct(filename):
             reac.cheb_plim = [rxn.Pmin, rxn.Pmax]
             reac.cheb_tlim = [rxn.Tmin, rxn.Tmax]
             reac.cheb_par = rxn.coeffs
+
+            # Get first coefficient to appropriate units:
+            reac.cheb_par += 3.0
 
         else:
             print('Error: unsupported reaction.')

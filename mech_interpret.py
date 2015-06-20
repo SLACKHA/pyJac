@@ -501,18 +501,29 @@ def read_mech(mech_filename, therm_filename):
                 elif aux == 'pch':
                     line = line.replace('/', ' ')
                     line_split = line.split()
-                    reacs[-1].cheb_plim = [float(line_split[1]),
-                                           float(line_split[2])]
+                    # Convert pressure from atm to Pa
+                    reacs[-1].cheb_plim = [float(line_split[1]) * 101325.0,
+                                           float(line_split[2]) * 101325.0]
+
+                    # Look for temperature limits on same line:
+
                 elif aux == 'tch':
                     line = line.replace('/', ' ')
                     line_split = line.split()
                     reacs[-1].cheb_tlim = [float(line_split[1]),
                                            float(line_split[2])]
+
+                    # Look for pressure limits on same line:
+
                 elif aux == 'plo':
                     line = line.replace('/', ' ')
                     line_split = line.split()
                     if reacs[-1].plog:
                         pars = [float(n) for n in line_split[1:5]]
+
+                        # Convert pressure from atm to Pa
+                        pars[0] *= 101325.0
+
                         reacs[-1].plog_par.append(np.array(pars))
                     else:
                         reacs[-1].plog = True
@@ -521,6 +532,10 @@ def read_mech(mech_filename, therm_filename):
                         reacs[-1].pdep = False
                         reacs[-1].plog_par = []
                         pars = [float(n) for n in line_split[1:5]]
+
+                        # Convert pressure from atm to Pa
+                        pars[0] *= 101325.0
+
                         reacs[-1].plog_par.append(np.array(pars))
                 else:
                     # enhanced third body efficiencies
@@ -540,7 +555,8 @@ def read_mech(mech_filename, therm_filename):
             m = reac.cheb_n_pres
             if len(reac.cheb_par) != n*m:
                 print('Error: incorrect number of CHEB coefficients in '
-                      'reaction ' + repr(idx))
+                      'reaction ' + repr(idx)
+                      )
                 sys.exit(1)
             else:
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
@@ -899,6 +915,8 @@ def read_mech_ct(filename):
         reac.dup = rxn.duplicate
 
         # No reverse reactions with explicit coefficients in Cantera.
+
+        reacs.append(reac)
 
     # Individual reactions already converted to activation temperature, so no
     # need to convert later.

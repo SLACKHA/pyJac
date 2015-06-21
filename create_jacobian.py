@@ -2259,38 +2259,9 @@ def create_jacobian(lang, mech_name, therm_name=None, skip_jacob=False):
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
     if mech_name.endswith(tuple(['.cti','.xml'])):
-        [elems, specs, reacs, units] = mech.read_mech_ct(mech_name)
+        [elems, specs, reacs] = mech.read_mech_ct(mech_name)
     else:
-        [elems, specs, reacs, units] = mech.read_mech(mech_name, therm_name)
-
-    # convert activation energy units to K (if needed)
-    if units != 'kelvins':
-        efac = 1.0
-
-        if units == 'kcal/mole':
-            efac = 4184. / chem.RU_JOUL
-        elif units == 'cal/mole':
-            efac = 4.184 / chem.RU_JOUL
-        elif units == 'joules/kmole':
-            efac = 1. / (chem.RU_JOUL * 1000.)
-        elif units == 'joules/mole':
-            efac = 1. / chem.RU_JOUL
-        elif units == 'kjoules/mole':
-            efac = 1000.0 / chem.RU_JOUL
-        elif units == 'evolts':
-            efac = 11595.
-        else:
-            # default is cal/mole
-            efac = 4.184 / chem.RU_JOUL
-
-        for rxn in reacs:
-            rxn.E *= efac
-
-        for rxn in [rxn for rxn in reacs if rxn.low]:
-            rxn.low[2] *= efac
-
-        for rxn in [rxn for rxn in reacs if rxn.high]:
-            rxn.high[2] *= efac
+        [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
     # now begin writing subroutines
 

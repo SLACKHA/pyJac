@@ -13,12 +13,16 @@ import numpy as np
 __all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',
            'ReacInfo', 'SpecInfo', 'calc_spec_smh']
 
-# universal gas constants, cgs units
-RU = 8.314510e7 # erg/(mole * K)
+# universal gas constants, SI units
+RU = 8.314510e3 # J/(kmole * K)
 RUC = 1.9858775 # cal/(mole * K)
 RU_JOUL = 8.314510e0
-# pressure of one standard atmosphere, dynes/cm^2
-PA = 1.01325e6
+
+# Avogadro's number
+AVAG = 6.0221367e23
+
+# pressure of one standard atmosphere [Pa]
+PA = 101325.0
 
 
 def get_elem_wt():
@@ -135,9 +139,12 @@ class ReacInfo:
         self.prod = products
         self.prod_nu = prod_nu
 
-        # Arrhenius coefficients
+        ## Arrhenius coefficients
+        # pre-exponential factor [m, kmol, s]
         self.A = A
+        # Temperature exponent [-]
         self.b = b
+        # Activation energy, stored as activation temperature [K]
         self.E = E
 
         # reversible reaction properties
@@ -163,14 +170,25 @@ class ReacInfo:
         self.sri = False
         self.sri_par = []
 
+        # Parameters for pressure-dependent reaction parameterized by
+        # bivariate Chebyshev polynomial in temperature and pressure.
         self.cheb = False
+        # Number of temperature values over which fit computed.
         self.cheb_n_temp = 0
+        # Number of pressure values over which fit computed.
         self.cheb_n_pres = 0
+        # Pressure limits for Chebyshev fit [Pa]
         self.cheb_plim = [0.001, 100.]
+        # Temperature limits for Chebyshev fit [K]
         self.cheb_tlim = [300., 2500.]
+        # 2D array of Chebyshev fit coefficients
         self.cheb_par = None
 
+        # Parameters for pressure-dependent reaction parameterized by
+        # logarithmically interpolating between Arrhenius rate expressions at
+        # various pressures.
         self.plog = False
+        # List of arrays with [pressure [Pa], A, b, E]
         self.plog_par = None
 
 

@@ -30,14 +30,14 @@ act_energy_units = ['kelvins', 'evolts', 'cal/mole', 'joules/kmole',
                     ]
 
 # Activation energy conversion factor
-act_energy_fact = dict('kelvins' = 1.0,
-                       'evolts' = 11595.,
-                       'cal/mole' = 4.184 / chem.RU_JOUL,
-                       'kcal/mole' = 4184. / chem.RU_JOUL,
-                       'joules/mole' = 1. / chem.RU_JOUL,
-                       'kjoules/mole' = 1000.0 / chem.RU_JOUL,
-                       'joules/kmole' = 1. / (chem.RU_JOUL * 1000.)
-                       )
+act_energy_fact = dict({'kelvins': 1.0,
+                        'evolts': 11595.,
+                        'cal/mole': 4.184 / chem.RU_JOUL,
+                        'kcal/mole': 4184. / chem.RU_JOUL,
+                        'joules/mole': 1. / chem.RU_JOUL,
+                        'kjoules/mole': 1000.0 / chem.RU_JOUL,
+                        'joules/kmole': 1. / (chem.RU_JOUL * 1000.)
+                        })
 
 # get local element atomic weight dict
 elem_wt = chem.get_elem_wt()
@@ -514,7 +514,7 @@ def read_mech(mech_filename, therm_filename):
 
                     # Convert high-pressure pre-exponential factor
                     if units_A == 'moles':
-                        par1 /= 1000.**sum(reacs[-1].reac_nu - 2.)
+                        par1 /= 1000.**(sum(reacs[-1].reac_nu) - 2.)
 
                     reacs[-1].high.append(par1)
                     reacs[-1].high.append(par2)
@@ -638,7 +638,7 @@ def read_mech(mech_filename, therm_filename):
                 # Convert units of first Chebyshev parameter
                 order = sum(reac.reac_nu)
                 if units_A == 'moles':
-                    reac.cheb_par[0][0] -= math.log10(0.001**(order - 1.))
+                    reac.cheb_par[0] += math.log10(0.001**(order - 1.))
 
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
 

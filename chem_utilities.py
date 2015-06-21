@@ -26,7 +26,7 @@ PA = 101325.0
 
 
 def get_elem_wt():
-    """Returns dict with built-in element names and atomic weights.
+    """Returns dict with built-in element names and atomic weights [kg/kmol].
 
     Attributes
     ----------
@@ -35,23 +35,23 @@ def get_elem_wt():
     Returns
     -------
     elem_wt : dict
-        Dictionary with element name keys and atomic weight values.
+        Dictionary with element name keys and atomic weight [kg/kmol] values.
     """
     elem_wt = dict([
-        ('h',   1.00797),  ('he',   4.00260), ('li',   6.93900),
-        ('be',   9.01220), ('b',  10.81100),  ('c',   12.01115),
+        ('h',    1.00797), ('he',   4.00260), ('li',   6.93900),
+        ('be',   9.01220), ('b',   10.81100), ('c',   12.01115),
         ('n',   14.00670), ('o',   15.99940), ('f',   18.99840),
         ('ne',  20.18300), ('na',  22.98980), ('mg',  24.31200),
-        ('al', 26.98150),  ('si',  28.08600), ('p',   30.97380),
-        ('s',   32.06400), ('cl', 35.45300),  ('ar',  39.94800),
+        ('al',  26.98150), ('si',  28.08600), ('p',   30.97380),
+        ('s',   32.06400), ('cl',  35.45300), ('ar',  39.94800),
         ('k',   39.10200), ('ca',  40.08000), ('sc',  44.95600),
         ('ti',  47.90000), ('v',   50.94200), ('cr',  51.99600),
-        ('mn', 54.93800),  ('fe',  55.84700), ('co',  58.93320),
-        ('ni',  58.71000), ('cu', 63.54000),  ('zn',  65.37000),
+        ('mn',  54.93800), ('fe',  55.84700), ('co',  58.93320),
+        ('ni',  58.71000), ('cu',  63.54000), ('zn',  65.37000),
         ('ga',  69.72000), ('ge',  72.59000), ('as',  74.92160),
         ('se',  78.96000), ('br',  79.90090), ('kr',  83.80000),
-        ('rb', 85.47000),  ('sr',  87.62000), ('y',   88.90500),
-        ('zr',  91.22000), ('nb', 92.90600),  ('mo',  95.94000),
+        ('rb',  85.47000), ('sr',  87.62000), ('y',   88.90500),
+        ('zr',  91.22000), ('nb',  92.90600), ('mo',  95.94000),
         ('tc',  99.00000), ('ru', 101.07000), ('rh', 102.90500),
         ('pd', 106.40000), ('ag', 107.87000), ('cd', 112.40000),
         ('in', 114.82000), ('sn', 118.69000), ('sb', 121.75000),
@@ -219,13 +219,13 @@ class SpecInfo:
 
         # elemental composition
         self.elem = []
-        # molecular weight
+        # molecular weight [kg/kmol]
         self.mw = 0.0
         # high-temp range thermodynamic coefficients
         self.hi = np.zeros(7)
         # low-temp range thermodynamic coefficients
         self.lo = np.zeros(7)
-        # temperature range for thermodynamic coefficients
+        # temperature [K] range for thermodynamic coefficients
         self.Trange = [300.0, 1000.0, 5000.0]
 
 

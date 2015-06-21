@@ -1,0 +1,20 @@
+v1 tasks:
+  ✔ check units when dividing R by molecular weight... @done(2015-06-20 19:42) @project(v1 tasks)
+  ☐ Remove separate pressure-dependence function
+  ☐ Remove separate reaction rates treatment for irreversible-only
+  ☐ Convert lists to Numpy arrays
+  ☐ Incorporate PLOG reactions into Jacobian
+  ☐ Incorporate CHEB reactions into Jacobian
+  ☐ Merge master with Nick's optimized branches
+  ☐ Test Jacobian with PLOG and CHEB reactions
+  ☐ Convert reactions with explicit reverse parameters into irreversible reactions for simplicity
+  ☐ add converter for reactions with units of molecules (rather than moles)
+  ☐ Convert all stoich coefficients to float
+v2:
+  ☐ Complete Matlab and Fortran functionality
+  ☐ Add mechanism correctness detector?
+
+＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
+Archive:
+  ✔ Add Cantera-format mechanism interpreter @done(2015-06-18 23:32) @project(v1 tasks)
+  ✔ Move thermo file opening into appropriate function, if necessary @done(2015-06-18 23:26) @project(v1 tasks)

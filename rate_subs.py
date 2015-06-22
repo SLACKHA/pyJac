@@ -155,9 +155,45 @@ def write_rxn_rates(path, lang, specs, reacs):
                        ' const double*, double*);\n'
                        )
 
-        file.write('\n'
-                   '#endif\n'
-                   )
+        if any([rxn.cheb for rxn in reacs]):
+            # Write Chebyshev polynomial functions (if needed).
+
+            # Chebyshev polynomial of the first kind
+            file.write('inline extern double cheb_t (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (2.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (4.0 * x * x * x - 3.0 * x);\n'
+                       '  } else {\n'
+                       '    return (cos((double)(i) * acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
+            # Chebyshev polynomial of the second kind
+            file.write('inline extern double cheb_u (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (2.0 * x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (4.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (8.0 * x * x * x - 4.0 * x);\n'
+                       '  } else {\n'
+                       '    return (sin((double)(i + 1)) * acos(x) / '
+                       'sin(acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
+        file.write('\n#endif\n')
         file.close()
     elif lang == 'cuda':
         file = open(path + 'rates.cuh', 'w')
@@ -185,6 +221,44 @@ def write_rxn_rates(path, lang, specs, reacs):
                        ' const double, const double*, double*);\n'
                        )
 
+        if any([rxn.cheb for rxn in reacs]):
+            # Write Chebyshev polynomial functions (if needed).
+
+            # Chebyshev polynomial of the first kind
+            file.write('__device__ inline extern double cheb_t (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (2.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (4.0 * x * x * x - 3.0 * x);\n'
+                       '  } else {\n'
+                       '    return (cos((double)(i) * acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
+            # Chebyshev polynomial of the second kind
+            file.write('__device__ inline extern double cheb_u (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (2.0 * x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (4.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (8.0 * x * x * x - 4.0 * x);\n'
+                       '  } else {\n'
+                       '    return (sin((double)(i + 1)) * acos(x) / '
+                       'sin(acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
         file.write('\n')
         file.write('#endif\n')
         file.close()
@@ -195,6 +269,9 @@ def write_rxn_rates(path, lang, specs, reacs):
     if lang in ['c', 'cuda']:
         file.write('#include <math.h>\n'
                    '#include "header.h"\n'
+                   '#include "rates.{}"\n'.format('h' if lang == 'c'
+                                                  else 'cuh'
+                                                  ) +
                    '\n'
                    )
 
@@ -321,11 +398,9 @@ def write_rxn_rates(path, lang, specs, reacs):
     for rxn in reacs:
 
         # if reversible, save forward rate constant for use
-        if rxn.rev and not rxn.rev_par and not rxn.cheb and not rxn.plog:
-            line = ('  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E) +
-                    utils.line_end[lang]
-                    )
-            file.write(line)
+        if rxn.rev and not rxn.rev_par and not (rxn.cheb or rxn.plog):
+            line = '  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E)
+            file.write(line + utils.line_end[lang])
         elif rxn.cheb:
             # Special forward rate coefficient for Chebyshev formulation
             tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
@@ -333,57 +408,39 @@ def write_rxn_rates(path, lang, specs, reacs):
             line = ('  Tred = ((2.0 / T) - ' +
                     '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
                     )
-            line += utils.line_end[lang]
-            file.write(line)
+            file.write(line + utils.line_end[lang])
+
             plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
-                            math.log10(rxn.cheb_plim[1]))
+                            math.log10(rxn.cheb_plim[1])
+                            )
             plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
-                            math.log10(rxn.cheb_plim[0]))
+                            math.log10(rxn.cheb_plim[0])
+                            )
             line = ('  Pred = (2.0 * log10(pres) - ' +
                     '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
                     )
-            line += utils.line_end[lang]
-            file.write(line)
+            file.write(line + utils.line_end[lang])
 
             line = '  kf = ' + utils.exp_10_fun[lang]
             for i in range(rxn.cheb_n_temp):
-                if i == 0:
-                    line += ''
-                elif i == 1:
-                    line += 'Tred * '
-                elif i == 2:
-                    line += '(2.0*Tred*Tred - 1.0) * '
-                elif i == 3:
-                    line += '(4.0*Tred*Tred*Tred - 3.0*Tred) * '
-                else:
-                    line += 'cos({:.1f} * acos(Tred)) * '.format(i)
 
-                line += '('
+                line += 'cheb_t({}, Tred) * ('.format(i)
 
                 for j in range(rxn.cheb_n_pres):
-                    if j != 0:
+                    if j > 0:
                         line += ' + '
 
-                    if j == 0:
-                        line += ''
-                    elif j == 1:
-                        line += 'Pred * '
-                    elif j == 2:
-                        line += '(2.0*Pred*Pred - 1.0) * '
-                    elif j == 3:
-                        line += '(4.0*Pred*Pred*Pred - 3.0*Pred) * '
-                    else:
-                        line += 'cos({:.1f} * acos(Pred)) * '.format(j)
-
-                    line += '{:.4e}'.format(rxn.cheb_par[i, j])
+                    line += ('cheb_t({}, Pred) * '.format(j) +
+                             '{:.8e}'.format(rxn.cheb_par[i, j])
+                             )
                 line += ')'
                 if i != rxn.cheb_n_temp - 1:
                     line += ' + \n'
                     file.write(line)
                     line = ' ' * 7
 
-            line += ')' + utils.line_end[lang]
-            file.write(line)
+            line += ')'
+            file.write(line + utils.line_end[lang])
         elif rxn.plog:
             # Special forward rate evaluation for Plog reacions
             vals = rxn.plog_par[0]
@@ -889,19 +946,15 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
             line = '  ! reaction ' + str(rind + 1)
         elif lang == 'matlab':
             line = '  % reaction ' + str(rind + 1)
-        line += utils.line_end[lang]
-        file.write(line)
+        file.write(line + utils.line_end[lang])
 
-        # third-body reaction
         if reac.thd:
+            # third-body reaction
 
-            if reac.pdep and not reac.pdep_sp:
-                line = '  thd = m'
-            else:
-                if lang in ['c', 'cuda']:
-                    line = '  pres_mod[{}] = m'.format(pind)
-                elif lang in ['fortran', 'matlab']:
-                    line = '  pres_mod({}) = m'.format(pind + 1)
+            if lang in ['c', 'cuda']:
+                line = '  pres_mod[{}] = m'.format(pind)
+            elif lang in ['fortran', 'matlab']:
+                line = '  pres_mod({}) = m'.format(pind + 1)
 
             for sp in reac.thd_body:
                 isp = specs.index(next((s for s in specs
@@ -916,11 +969,28 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                 elif lang in ['fortran', 'matlab']:
                     line += ' * C({})'.format(isp + 1)
 
-            line += utils.line_end[lang]
-            file.write(line)
+            file.write(line + utils.line_end[lang])
 
-        # pressure dependence
-        if reac.pdep:
+        elif reac.pdep:
+            # pressure dependence (falloff or chemically activated)
+
+            if not reac.pdep_sp:
+                line = '  thd = m'
+
+                for sp in reac.thd_body:
+                    isp = specs.index(next((s for s in specs
+                                      if s.name == sp[0]), None)
+                                      )
+                    if sp[1] > 1.0:
+                        line += ' + {}'.format(sp[1] - 1.0)
+                    elif sp[1] < 1.0:
+                        line += ' - {}'.format(1.0 - sp[1])
+                    if lang in ['c', 'cuda']:
+                        line += ' * C[{}]'.format(isp)
+                    elif lang in ['fortran', 'matlab']:
+                        line += ' * C({})'.format(isp + 1)
+
+                file.write(line + utils.line_end[lang])
 
             # low-pressure limit rate
             line = '  k0 = '
@@ -931,9 +1001,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                                        )
             else:
                 line += rxn_rate_const(reac.A, reac.b, reac.E)
-
-            line += utils.line_end[lang]
-            file.write(line)
+            file.write(line + utils.line_end[lang])
 
             # high-pressure limit rate
             line = '  kinf = '
@@ -944,14 +1012,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                                        )
             else:
                 line += rxn_rate_const(reac.A, reac.b, reac.E)
-
-            line += utils.line_end[lang]
-            file.write(line)
+            file.write(line + utils.line_end[lang])
 
             # reduced pressure
-            if reac.thd:
-                line = '  Pr = k0 * thd / kinf'
-            else:
+            if reac.pdep_sp:
                 isp = next(i for i in xrange(len(specs))
                            if specs[i].name == reac.pdep_sp
                            )
@@ -959,8 +1023,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     line = '  Pr = k0 * C[{}] / kinf'.format(isp)
                 elif lang in ['fortran', 'matlab']:
                     line = '  Pr = k0 * C({}) / kinf'.format(isp + 1)
-            line += utils.line_end[lang]
-            file.write(line)
+            else:
+                line = '  Pr = k0 * thd / kinf'
+            file.write(line + utils.line_end[lang])
 
             simple = False
             if reac.troe:
@@ -987,20 +1052,18 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     else:
                         val = abs(reac.troe_par[3])
                         line += 'exp({:.8e} / T)'.format(val)
-                line += ', 1.0e-300))' + utils.line_end[lang]
-                file.write(line)
+                line += ', 1.0e-300))'
+                file.write(line + utils.line_end[lang])
 
                 line = ('  A = log10(fmax(Pr, 1.0e-300)) - '
-                        '0.67 * logFcent - 0.4' +
-                        utils.line_end[lang]
+                        '0.67 * logFcent - 0.4'
                         )
-                file.write(line)
+                file.write(line + utils.line_end[lang])
 
                 line = ('  B = 0.806 - 1.1762 * logFcent - '
-                        '0.14 * log10(fmax(Pr, 1.0e-300))' +
-                        utils.line_end[lang]
+                        '0.14 * log10(fmax(Pr, 1.0e-300))'
                         )
-                file.write(line)
+                file.write(line + utils.line_end[lang])
 
                 line = '  pres_mod'
                 if lang in ['c', 'cuda']:
@@ -1018,10 +1081,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                 # SRI form
 
                 line = ('  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * '
-                        'log10(fmax(Pr, 1.0e-300)))' +
-                        utils.line_end[lang]
+                        'log10(fmax(Pr, 1.0e-300)))'
                         )
-                file.write(line)
+                file.write(line + utils.line_end[lang])
 
                 line = '  pres_mod'
                 if lang in ['c', 'cuda']:
@@ -1070,8 +1132,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs):
                     # chemically-activated bimolecular reaction
                     line += '/ (1.0 + Pr)'
 
-            line += utils.line_end[lang]
-            file.write(line)
+            file.write(line + utils.line_end[lang])
 
         # space in between each reaction
         file.write('\n')

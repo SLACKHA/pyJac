@@ -1484,7 +1484,8 @@ def write_chem_utils(path, lang, specs):
             '\n'
             '#include "header.h"\n'
             '\n'
-            'void eval_conc (const double, const double*, double*);\n'
+            'void eval_conc (const double, const double, '
+            'const double*, double*);\n'
             'void eval_h (const double, double*);\n'
             'void eval_u (const double, double*);\n'
             'void eval_cv (const double, double*);\n'
@@ -1501,8 +1502,8 @@ def write_chem_utils(path, lang, specs):
             '\n'
             '#include "header.h"\n'
             '\n'
-            '__device__ void eval_conc (const double, const double*, '
-            'double*);\n'
+            '__device__ void eval_conc (const double, const double, '
+            'const double*, double*);\n'
             '__device__ void eval_h (const double, double*);\n'
             '__device__ void eval_u (const double, double*);\n'
             '__device__ void eval_cv (const double, double*);\n'
@@ -1525,20 +1526,20 @@ def write_chem_utils(path, lang, specs):
     ######################
     line = pre
     if lang in ['c', 'cuda']:
-        line += ('void eval_conc (const double pres, '
+        line += ('void eval_conc (const double temp, const double pres, '
                  'const double * mass_frac, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
         line += (
             # fortran needs type declarations
-            'subroutine eval_conc (pres, mass_frac, conc)\n\n'
+            'subroutine eval_conc (temp, pres, mass_frac, conc)\n\n'
             '  implicit none\n'
-            '  double precision, intent(in) :: T, mass_frac\n'.format(num_s) +
+            '  double precision, intent(in) :: T, pres, y\n'.format(num_s) +
             '  double precision, intent(out) :: conc({})\n'.format(num_s) +
             '\n'
             )
     elif lang == 'matlab':
-        line += 'function conc = eval_conc (pres, mass_frac)\n\n'
+        line += 'function conc = eval_conc (temp, pres, mass_frac)\n\n'
     file.write(line)
 
     # calculation of density
@@ -1555,15 +1556,15 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(y[{}] / {})'.format(specs.index(sp) + 1, sp.mw)
+            line += '(mass_frac[{}] / {})'.format(specs.index(sp), sp.mw)
         elif lang in ['fortran', 'matlab']:
-            line += '(y[{}] / {})'.format(specs.index(sp) + 2, sp.mw)
+            line += '(mass_frac[{}] / {})'.format(specs.index(sp) + 1, sp.mw)
 
         isfirst = False
 
     line += ';\n'
     file.write(line)
-    line = '  rho = pres / ({:.8e} * y[0] * rho);\n\n'.format(chem.RU)
+    line = '  rho = pres / ({:.8e} * temp * rho);\n\n'.format(chem.RU)
     file.write(line)
 
     # calculation of species molar concentrations
@@ -1573,13 +1574,20 @@ def write_chem_utils(path, lang, specs):
         isp = specs.index(sp)
         line = '  conc'
         if lang in ['c', 'cuda']:
-            line += '[{}] = rho * y[{}] / '.format(isp, isp + 1)
+            line += '[{0}] = rho * mass_frac[{0}] / '.format(isp)
         elif lang in ['fortran', 'matlab']:
-            line += '({}) = rho * y({}) / '.format(isp + 1, isp + 2)
+            line += '({0}) = rho * mass_frac({0}) / '.format(isp + 1)
         line += '{}'.format(sp.mw) + utils.line_end[lang]
         file.write(line)
 
     file.write('\n')
+
+    if lang in ['c', 'cuda']:
+        file.write('} // end eval_conc\n\n')
+    elif lang == 'fortran':
+        file.write('end subroutine eval_conc\n\n')
+    elif lang == 'matlab':
+        file.write('end\n\n')
 
 
     ######################
@@ -1995,7 +2003,7 @@ def write_derivs(path, lang, specs, reacs):
                )
 
     # Simply call subroutine
-    file.write('  eval_conc (pres, &y[1], conc);\n\n')
+    file.write('  eval_conc (y[0], pres, &y[1], conc);\n\n')
 
     # evaluate reaction rates
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
@@ -2157,7 +2165,7 @@ def write_derivs(path, lang, specs, reacs):
                )
 
     # Simply call subroutine
-    file.write('  eval_conc (pres, &y[1], conc);\n\n')
+    file.write('  eval_conc (y[0], pres, &y[1], conc);\n\n')
 
     # evaluate reaction rates
     file.write('  // local array holding reaction rates\n'

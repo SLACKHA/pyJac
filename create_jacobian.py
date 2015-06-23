@@ -372,21 +372,9 @@ def write_jacobian(path, lang, specs, reacs):
         file.write('  % species molar concentrations\n'
                    '  conc = zeros({},1);\n'.format(num_s)
                    )
-    # loop through species
-    for sp in specs:
-        isp = specs.index(sp)
-        if lang in ['c', 'cuda']:
-            line = ('  conc[{}] = rho * '.format(isp) +
-                    'y[{}] / {}'.format(isp + 1, sp.mw)
-                    )
-        elif lang in ['fortran', 'matlab']:
-            line = ('  conc({}) = rho * '.format(isp + 1) +
-                    'y({}) / {}'.format(isp + 2, sp.mw)
-                    )
-        line += utils.line_end[lang]
-        file.write(line)
-    file.write('\n')
 
+    # Simply call subroutine
+    file.write('  eval_conc (T, pres, &y[1], conc);\n\n')
 
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:

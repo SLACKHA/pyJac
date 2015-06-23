@@ -1478,33 +1478,38 @@ def write_chem_utils(path, lang, specs):
     # first write header file
     if lang == 'c':
         file = open(path + 'chem_utils.h', 'w')
-        file.write('#ifndef CHEM_UTILS_HEAD\n'
-                   '#define CHEM_UTILS_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   'void eval_h (const double, double*);\n'
-                   'void eval_u (const double, double*);\n'
-                   'void eval_cv (const double, double*);\n'
-                   'void eval_cp (const double, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
+        file.write(
+            '#ifndef CHEM_UTILS_HEAD\n'
+            '#define CHEM_UTILS_HEAD\n'
+            '\n'
+            '#include "header.h"\n'
+            '\n'
+            'void eval_conc (const double, const double*, double*);\n'
+            'void eval_h (const double, double*);\n'
+            'void eval_u (const double, double*);\n'
+            'void eval_cv (const double, double*);\n'
+            'void eval_cp (const double, double*);\n'
+            '\n'
+            '#endif\n'
+            )
         file.close()
     elif lang == 'cuda':
         file = open(path + 'chem_utils.cuh', 'w')
-        file.write('#ifndef CHEM_UTILS_HEAD\n'
-                   '#define CHEM_UTILS_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   '__device__ void eval_h (const double, double*);\n'
-                   '__device__ void eval_u (const double, double*);\n'
-                   '__device__ void eval_cv (const double, double*);\n'
-                   '__device__ void eval_cp (const double, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
+        file.write(
+            '#ifndef CHEM_UTILS_HEAD\n'
+            '#define CHEM_UTILS_HEAD\n'
+            '\n'
+            '#include "header.h"\n'
+            '\n'
+            '__device__ void eval_conc (const double, const double*, '
+            'double*);\n'
+            '__device__ void eval_h (const double, double*);\n'
+            '__device__ void eval_u (const double, double*);\n'
+            '__device__ void eval_cv (const double, double*);\n'
+            '__device__ void eval_cp (const double, double*);\n'
+            '\n'
+            '#endif\n'
+            )
         file.close()
 
     filename = 'chem_utils' + utils.file_ext[lang]
@@ -1513,8 +1518,69 @@ def write_chem_utils(path, lang, specs):
     if lang in ['c', 'cuda']:
         file.write('#include "header.h"\n\n')
 
-    pre = ''
-    if lang == 'cuda': pre = '__device__ '
+    pre = '__device__' if lang == 'cuda' else ''
+
+    ######################
+    # species concentrations subroutine
+    ######################
+    line = pre
+    if lang in ['c', 'cuda']:
+        line += ('void eval_conc (const double pres, '
+                 'const double * mass_frac, double * conc) {\n\n'
+                 )
+    elif lang == 'fortran':
+        line += (
+            # fortran needs type declarations
+            'subroutine eval_conc (pres, mass_frac, conc)\n\n'
+            '  implicit none\n'
+            '  double precision, intent(in) :: T, mass_frac\n'.format(num_s) +
+            '  double precision, intent(out) :: conc({})\n'.format(num_s) +
+            '\n'
+            )
+    elif lang == 'matlab':
+        line += 'function conc = eval_conc (pres, mass_frac)\n\n'
+    file.write(line)
+
+    # calculation of density
+    file.write('  // mass-averaged density\n'
+               '  double rho;\n'
+               )
+    line = '  rho = '
+    isfirst = True
+    for sp in specs:
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '     '
+
+        if not isfirst: line += ' + '
+        if lang in ['c', 'cuda']:
+            line += '(y[{}] / {})'.format(specs.index(sp) + 1, sp.mw)
+        elif lang in ['fortran', 'matlab']:
+            line += '(y[{}] / {})'.format(specs.index(sp) + 2, sp.mw)
+
+        isfirst = False
+
+    line += ';\n'
+    file.write(line)
+    line = '  rho = pres / ({:.8e} * y[0] * rho);\n\n'.format(chem.RU)
+    file.write(line)
+
+    # calculation of species molar concentrations
+
+    # loop through species
+    for sp in specs:
+        isp = specs.index(sp)
+        line = '  conc'
+        if lang in ['c', 'cuda']:
+            line += '[{}] = rho * y[{}] / '.format(isp, isp + 1)
+        elif lang in ['fortran', 'matlab']:
+            line += '({}) = rho * y({}) / '.format(isp + 1, isp + 2)
+        line += '{}'.format(sp.mw) + utils.line_end[lang]
+        file.write(line)
+
+    file.write('\n')
+
 
     ######################
     # enthalpy subroutine
@@ -1927,18 +1993,9 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // species molar concentrations\n'
                '  double conc[{}];\n'.format(len(specs))
                )
-    # loop through species
-    for sp in specs:
-        isp = specs.index(sp)
-        line = '  conc'
-        if lang in ['c', 'cuda']:
-            line += '[{}] = rho * y[{}] / '.format(isp, isp + 1)
-        elif lang in ['fortran', 'matlab']:
-            line += '({}) = rho * y({}) / '.format(isp + 1, isp + 2)
-        line += '{}'.format(sp.mw) + utils.line_end[lang]
-        file.write(line)
 
-    file.write('\n')
+    # Simply call subroutine
+    file.write('  eval_conc (pres, &y[1], conc);\n\n')
 
     # evaluate reaction rates
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
@@ -2058,7 +2115,9 @@ def write_derivs(path, lang, specs, reacs):
     file.write('\n')
     file.write('} // end dydt\n\n')
 
+    #####################################
     # constant volume
+    #####################################
     file.write('#elif defined(CONV)\n\n')
 
     line = (pre + 'void dydt (const double t, const double rho, '
@@ -2096,13 +2155,9 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // species molar concentrations\n'
                '  double conc[{}];\n'.format(len(specs))
                )
-    # loop through species
-    for sp in specs:
-        isp = specs.index(sp)
-        line = '  conc[{}] = rho * y[{}] / {};\n'.format(isp, isp + 1, sp.mw)
-        file.write(line)
 
-    file.write('\n')
+    # Simply call subroutine
+    file.write('  eval_conc (pres, &y[1], conc);\n\n')
 
     # evaluate reaction rates
     file.write('  // local array holding reaction rates\n'

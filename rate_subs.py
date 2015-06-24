@@ -159,7 +159,7 @@ def write_rxn_rates(path, lang, specs, reacs):
             # Write Chebyshev polynomial functions (if needed).
 
             # Chebyshev polynomial of the first kind
-            file.write('inline extern double cheb_t (const int i, '
+            file.write('inline static double cheb_t (const int i, '
                        'const double x) {\n'
                        '  if (i == 0) {\n'
                        '    return (1.0);\n'
@@ -176,7 +176,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                        )
 
             # Chebyshev polynomial of the second kind
-            file.write('inline extern double cheb_u (const int i, '
+            file.write('inline static double cheb_u (const int i, '
                        'const double x) {\n'
                        '  if (i == 0) {\n'
                        '    return (1.0);\n'
@@ -225,7 +225,7 @@ def write_rxn_rates(path, lang, specs, reacs):
             # Write Chebyshev polynomial functions (if needed).
 
             # Chebyshev polynomial of the first kind
-            file.write('__device__ inline extern double cheb_t (const int i, '
+            file.write('__device__ inline static double cheb_t (const int i, '
                        'const double x) {\n'
                        '  if (i == 0) {\n'
                        '    return (1.0);\n'
@@ -242,7 +242,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                        )
 
             # Chebyshev polynomial of the second kind
-            file.write('__device__ inline extern double cheb_u (const int i, '
+            file.write('__device__ inline static double cheb_u (const int i, '
                        'const double x) {\n'
                        '  if (i == 0) {\n'
                        '    return (1.0);\n'

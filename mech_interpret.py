@@ -594,25 +594,27 @@ def read_mech(mech_filename, therm_filename):
                 elif aux == 'plo':
                     line = line.replace('/', ' ')
                     line_split = line.split()
-                    if reacs[-1].plog:
-                        pars = [float(n) for n in line_split[1:5]]
-
-                        # Convert pressure from atm to Pa
-                        pars[0] *= 101325.0
-
-                        reacs[-1].plog_par.append(np.array(pars))
-                    else:
+                    if not reacs[-1].plog:
                         reacs[-1].plog = True
                         # Don't want Plog reactions lumped in with
                         # standard falloff.
                         reacs[-1].pdep = False
                         reacs[-1].plog_par = []
-                        pars = [float(n) for n in line_split[1:5]]
+                    pars = [float(n) for n in line_split[1:5]]
 
-                        # Convert pressure from atm to Pa
-                        pars[0] *= 101325.0
+                    # Convert pressure from atm to Pa
+                    pars[0] *= 101325.0
 
-                        reacs[-1].plog_par.append(np.array(pars))
+                    # Convert given activation energy units to internal units
+                    pars[3] *= act_energy_fact[units_E]
+
+                    # Convert given pre-exponential units to internal units
+                    if units_A == 'moles':
+                        reac_ord = sum(reacs[-1].reac_nu)
+                        # Looks like elementary reaction
+                        pars[1] /= 1000.**(reac_ord - 1.)
+
+                    reacs[-1].plog_par.append(np.array(pars))
                 else:
                     # enhanced third body efficiencies
                     line = line.replace('/', ' ')

@@ -2053,13 +2053,14 @@ def write_derivs(path, lang, specs, reacs):
                )
     if rev_reacs and pdep_reacs:
         file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
-                   '&dy[1]);\n'
-                   '\n'
+                   '&dy[1]);\n\n'
                    )
     elif rev_reacs:
         file.write('  eval_spec_rates (fwd_rates, rev_rates, &dy[1]);\n\n')
+    elif pdep_reacs:
+        file.write('  eval_spec_rates (rates, pres_mod, &dy[1]);\n\n')
     else:
-        file.write('  eval_spec_rates (rates, &dy[1] );\n\n')
+        file.write('  eval_spec_rates (rates, &dy[1]);\n\n')
 
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n'

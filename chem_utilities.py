@@ -178,7 +178,7 @@ class ReacInfo:
         # Number of pressure values over which fit computed.
         self.cheb_n_pres = 0
         # Pressure limits for Chebyshev fit [Pa]
-        self.cheb_plim = [0.001, 100.]
+        self.cheb_plim = [0.001 * PA, 100. * PA]
         # Temperature limits for Chebyshev fit [K]
         self.cheb_tlim = [300., 2500.]
         # 2D array of Chebyshev fit coefficients

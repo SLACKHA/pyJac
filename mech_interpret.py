@@ -573,24 +573,30 @@ def read_mech(mech_filename, therm_filename):
                         reacs[-1].cheb_par = []
                         for par in line_split[3:]:
                             reacs[-1].cheb_par.append(float(par))
-
                 elif aux == 'pch':
                     line = line.replace('/', ' ')
                     line_split = line.split()
                     # Convert pressure from atm to Pa
-                    reacs[-1].cheb_plim = [float(line_split[1]) * 101325.0,
-                                           float(line_split[2]) * 101325.0]
+                    reacs[-1].cheb_plim = [float(line_split[1]) * chem.PA,
+                                           float(line_split[2]) * chem.PA
+                                           ]
 
                     # Look for temperature limits on same line:
-
+                    if line_split[3].lower() == 'tcheb':
+                        reacs[-1].cheb_tlim = [float(line_split[4]),
+                                               float(line_split[5])
+                                               ]
                 elif aux == 'tch':
                     line = line.replace('/', ' ')
                     line_split = line.split()
                     reacs[-1].cheb_tlim = [float(line_split[1]),
-                                           float(line_split[2])]
-
+                                           float(line_split[2])
+                                           ]
                     # Look for pressure limits on same line:
-
+                    if line_split[3].lower() == 'pcheb':
+                        reacs[-1].cheb_plim = [float(line_split[4]) * chem.PA,
+                                               float(line_split[5]) * chem.PA
+                                               ]
                 elif aux == 'plo':
                     line = line.replace('/', ' ')
                     line_split = line.split()

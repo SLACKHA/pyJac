@@ -471,7 +471,7 @@ def write_rxn_rates(path, lang, specs, reacs):
                         )
                 file.write(line + utils.line_end[lang])
 
-            vals = rxn.plog_par[0]
+            vals = rxn.plog_par[-1]
             file.write('  }} else if (pres > {:.4e}) {{\n'.format(vals[0]))
             line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
             file.write(line + utils.line_end[lang])

@@ -112,7 +112,7 @@ def get_net_rate_string(lang, rxn, rind, rev_reacs, get_array):
         jline += get_array(lang, 'fwd_rates', rind)
     return jline
 
-def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
+def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     #write the T_Pr and T_Fi terms if needed
     if rxn.pdep:
         jline = '  pres_mod_temp = '
@@ -144,7 +144,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
         jline += ') * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
         file.write(jline + utils.line_end[lang])
 
-    file.write('  j_temp = -mw_avg * (rho_inv * (')
+    file.write('  j_temp = -mw_avg * rho_inv * (')
     jline = ''
     # next, contribution from dR/dYj
     #namely the T_dy independent term
@@ -152,15 +152,20 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
         jline += get_array(lang, 'pres_mod', pind)
         jline += ' * ('
 
-    #get reac and prod nu sums
     reac_nu = 0
+    prod_nu = 0
+    if rxn.thd and not rxn.pdep:
+        reac_nu = 1
+        if rxn.rev:
+            prod_nu = 1
+
+    #get reac and prod nu sums
     for sp_name in rxn.reac:
         nu = rxn.reac_nu[rxn.reac.index(sp_name)]
         if nu == 0:
             continue
         reac_nu += nu
 
-    prod_nu = 0
     if rxn.rev:
         for sp_name in rxn.prod:
             nu = rxn.prod_nu[rxn.prod.index(sp_name)]
@@ -187,29 +192,39 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
     #find alphaij_hat
     alphaij_hat = None
     counter = {}
+    counter[1.0] = 0
     if rxn.thd_body:
         for spec, efficiency in rxn.thd_body:
             if not efficiency in counter:
                 counter[efficiency] = 0
             counter[efficiency] += 1
-        if len(counter.keys()):
-            alphaij_hat = max(counter.keys(), key=lambda x:counter[x])
+        counter[1.0] += (nspec - sum(counter.values()))
+        alphaij_hat = max(counter.keys(), key=lambda x:counter[x])
 
     #now handle third body / pdep parts if needed
     if rxn.thd and not rxn.pdep:
-        jline += ') + conc_temp * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
-        jline += ')'
+        jline += '))'
         if alphaij_hat is not None:
-            jline += ' + {} * '.format(alphaij_hat) + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
-        jline += ')'
+            if alphaij_hat == 1.0:
+                jline += ' + '
+            elif alphaij_hat == -1.0:
+                jline += ' - '
+            else:
+                jline += ' + {} * '.format(alphaij_hat) 
+            jline += get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
     elif rxn.pdep:
-        jline += ' + pres_mod_temp'
-        jline += '))'
-        if alphaij_hat is not None:
-            jline += ' + pres_mod_temp * ({} / conc_temp)'.format(alphaij_hat)
+        jline += ') + pres_mod_temp'
         jline += ')'
+        if alphaij_hat is not None:
+            if alphaij_hat == 1.0:
+                jline += ' + '
+            elif alphaij_hat == -1.0:
+                jline += ' - '
+            else:
+                jline += ' + {} * '.format(alphaij_hat) 
+            jline += '(pres_mod_temp / conc_temp)'
     else:
-        jline += '))'
+        jline += ')'
     file.write(jline + utils.line_end[lang])
 
     return alphaij_hat
@@ -232,17 +247,34 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
     if rxn.pdep and not rxn.pdep_sp:
         alphaij = next((thd[1] for thd in rxn.thd_body
                         if thd[0] == sp_j.name), None)
-        if alphaij is not None and alphaij != alphaij_hat:
+        if alphaij is None:
+            alphaij = 1.0
+        if alphaij != alphaij_hat:
             diff = alphaij - alphaij_hat
             if diff != 1:
                 if diff == -1:
-                    jline += '- pres_mod_temp'
+                    jline += ' - pres_mod_temp'
                 else:
                     jline += ' + {} * pres_mod_temp'.format(diff)
             else:
                 jline += ' + pres_mod_temp'
     elif rxn.pdep and rxn.pdep_sp and rxn.pdep_sp == sp_j.name:
         jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
+    elif rxn.thd and not rxn.pdep:
+        alphaij = next((thd[1] for thd in rxn.thd_body
+                        if thd[0] == sp_j.name), None)
+        if alphaij is None:
+            alphaij = 1.0
+        if alphaij != alphaij_hat:
+            diff = alphaij - alphaij_hat
+            if diff != 1:
+                if diff == -1:
+                    jline += ' - '
+                else:
+                    jline += ' + {} * '.format(diff)
+            else:
+                jline += ' + '
+            jline += get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
 
     if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
@@ -1871,14 +1903,13 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
             write_kc(file, lang, specs, rxn)
 
         #need to write the dr/dy parts (independent of any species)
-        alphaij_hat = write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array)
+        alphaij_hat = write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, len(specs), get_array)
 
         #write the forward / backwards rates:
         write_rates(file, lang, rxn)
 
         #now loop through each species
         for j_sp, sp_j in enumerate(specs):
-            isFirst = True
             for rxn_sp_k in set(rxn.reac + rxn.prod):
                 sp_k, k_sp = next(((s, specs.index(s)) for s in specs
                                if s.name == rxn_sp_k), None)
@@ -1896,17 +1927,14 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
                 if nu == 0:
                     continue
 
-                if isFirst:
-                    working_temp = '('
-                    
-                    working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array)
+                working_temp = '('
 
-                    working_temp += ')'
-                    mw_frac = __round_sig(sp_k.mw / sp_j.mw, 9)
-                    if mw_frac != 1.0:
-                        working_temp += ' * {:.8e}'.format(mw_frac)
+                working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array)
 
-                    isFirst = False
+                working_temp += ')'
+                mw_frac = __round_sig(sp_k.mw / sp_j.mw, 9)
+                if mw_frac != 1.0:
+                    working_temp += ' * {:.8e}'.format(mw_frac)
 
                 lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
                 jline = '  '
@@ -3820,6 +3848,7 @@ def write_jacobian(path, lang, specs, reacs):
             if lang in ['c', 'cuda']:
                 line += '\n'
             elif lang == 'fortran':
+                line += ' &\n'
                 line += ' &\n'
             elif lang == 'matlab':
                 line += ' ...\n'

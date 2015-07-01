@@ -99,17 +99,59 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
         else:
             usages[0] = 0
 
-    return variable_list, usages   
+    return variable_list, usages  
+
+def get_net_rate_string(lang, rxn, rind, rev_reacs, get_array):
+    jline = ''
+    if rxn.rev:
+        jline += '(' + get_array(lang, 'fwd_rates', rind)
+        jline += ' - ' + \
+            get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+        jline += ')'
+    else:
+        jline += get_array(lang, 'fwd_rates', rind)
+    return jline
 
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
-    file.write('  j_temp = ')
+    #write the T_Pr and T_Fi terms if needed
+    if rxn.pdep:
+        jline = '  pres_mod_temp = '
+        jline += get_array(lang, 'pres_mod', pind) + ' * ('
+        # dPr/dYj contribution
+        if rxn.low:
+            # unimolecular/recombination
+            jline += '(1.0 / (1.0 + Pr))'
+        elif rxn.high:
+            # chem-activated bimolecular
+            jline += '(-Pr / (1.0 + Pr))'
+        if rxn.troe:
+            jline += (' - Pr * log(Fcent) * 2.0 * A * (B * '
+                      '{:.6}'.format(1.0 / math.log(10.0)) +
+                      ' + A * '
+                      '{:.6}) / '.format(0.14 / math.log(10.0)) +
+                      '(B * B * B * (1.0 + A * A / (B * B)) '
+                      '* (1.0 + A * A / (B * B)))'
+                      )
+        elif rxn.sri:
+            jline += ('- Pr * X * X * '
+                      '{:.6} * '.format(2.0 / math.log(10.0)) +
+                      'log10(Pr) * '
+                      'log({:.4} * '.format(rxn.sri[0]) +
+                      'exp(-{:4} / T) + '.format(rxn.sri[1]) +
+                      'exp(-T / {:.4}))'.format(rxn.sri[2])
+                      )
+
+        jline += ') * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
+        file.write(jline + utils.line_end[lang])
+
+    file.write('  j_temp = -mw_avg * (rho_inv * (')
     jline = ''
     # next, contribution from dR/dYj
+    #namely the T_dy independent term
     if rxn.pdep or rxn.thd:
-        jline += '' + get_array(lang, 'pres_mod', pind)
+        jline += get_array(lang, 'pres_mod', pind)
         jline += ' * ('
 
-    jline += '-mw_avg * ('
     #get reac and prod nu sums
     reac_nu = 0
     for sp_name in rxn.reac:
@@ -141,73 +183,70 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
         else:
             jline += ' - {} * '.format(float(prod_nu))
         jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+  
+    #find alphaij_hat
+    alphaij_hat = None
+    counter = {}
+    if rxn.thd_body:
+        for spec, efficiency in rxn.thd_body:
+            if not efficiency in counter:
+                counter[efficiency] = 0
+            counter[efficiency] += 1
+        if len(counter.keys()):
+            alphaij_hat = max(counter.keys(), key=lambda x:counter[x])
 
-    jline += ')'
-    
-    if rxn.pdep or rxn.thd:
-        jline += ')'
-    file.write(jline + utils.line_end[lang])
-
-def write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
-    jline = ''
+    #now handle third body / pdep parts if needed
     if rxn.thd and not rxn.pdep:
-        jline = '  thd_temp = '
-        jline += '(-mw_avg * ' + get_array(lang, 'pres_mod', pind) + ' + rho'
-        jline += ') * '     
-    else:
-        beta_0minf, E_0minf, k0kinf = get_infs(rxn)
-        file.write('  pres_mod_temp = ')
-        jline += '' + get_array(lang, 'pres_mod', pind)
-        jline += ' * ('
-
-         # dPr/dYj contribution
-        if rxn.low:
-            # unimolecular/recombination
-            jline += '(1.0 / (1.0 + Pr))'
-        elif rxn.high:
-            # chem-activated bimolecular
-            jline += '(-Pr / (1.0 + Pr))'
-
-        if rxn.troe:
-            jline += (' - log(Fcent) * 2.0 * A * (B * '
-                      '{:.6}'.format(1.0 / math.log(10.0)) +
-                      ' + A * '
-                      '{:.6}) / '.format(0.14 / math.log(10.0)) +
-                      '(B * B * B * (1.0 + A * A / (B * B)) '
-                      '* (1.0 + A * A / (B * B)))'
-                      )
-        elif rxn.sri:
-            jline += (' - X * X * '
-                      '{:.6} * '.format(2.0 / math.log(10.0)) +
-                      'log10(Pr) * '
-                      'log({:.4} * '.format(rxn.sri[0]) +
-                      'exp(-{:4} / T) + '.format(rxn.sri[1]) +
-                      'exp(-T / {:.4}))'.format(rxn.sri[2])
-                      )
-
+        jline += ') + conc_temp * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
         jline += ')'
-        file.write(jline + utils.line_end[lang])
-        jline = '  thd_temp = pres_mod_temp * (-mw_avg + (rho / conc_temp)) * '
-
-    if rxn.rev:
-        jline += '(' + get_array(lang, 'fwd_rates', rind)
-        jline += ' - ' + \
-            get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+        if alphaij_hat is not None:
+            jline += ' + {} * '.format(alphaij_hat) + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
+        jline += ')'
+    elif rxn.pdep:
+        jline += ' + pres_mod_temp'
+        jline += '))'
+        if alphaij_hat is not None:
+            jline += ' + pres_mod_temp * ({} / conc_temp)'.format(alphaij_hat)
         jline += ')'
     else:
-        jline += get_array(lang, 'fwd_rates', rind)
-
+        jline += '))'
     file.write(jline + utils.line_end[lang])
 
+    return alphaij_hat
 
-def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array):
-    jline = ''
-    if rxn.pdep or rxn.thd:
-        jline += ' + '
-    jline += 'j_temp'
+def write_rates(file, lang, rxn):
+    file.write('  kf = ' + rate.rxn_rate_const(rxn.A, rxn.b, rxn.E) +
+                utils.line_end[lang])
+    if rxn.rev and not rxn.rev_par:
+        file.write('  kr = kf / Kc' + utils.line_end[lang])
+    elif rxn.rev_par:
+        file.write('  kr = ' +
+        rate.rxn_rate_const(rxn.rev_par[0],
+                                         rxn.rev_par[1],
+                                         rxn.rev_par[2]
+                                         ) +
+        utils.line_end[lang])
+                                      
+def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
+    jline = 'j_temp'
+    if rxn.pdep and not rxn.pdep_sp:
+        alphaij = next((thd[1] for thd in rxn.thd_body
+                        if thd[0] == sp_j.name), None)
+        if alphaij is not None and alphaij != alphaij_hat:
+            diff = alphaij - alphaij_hat
+            if diff != 1:
+                if diff == -1:
+                    jline += '- pres_mod_temp'
+                else:
+                    jline += ' + {} * pres_mod_temp'.format(diff)
+            else:
+                jline += ' + pres_mod_temp'
+    elif rxn.pdep and rxn.pdep_sp and rxn.pdep_sp == sp_j.name:
+        jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
+
     if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
-        jline += ' * ('
+        jline += ' * '
 
     if sp_j.name in rxn.reac:
         if not rxn.pdep and not rxn.thd:
@@ -218,11 +257,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array):
                 jline += '-'
             else:
                 jline += '{} * '.format(float(nu))
-        jline += (rate.rxn_rate_const(rxn.A, rxn.b,
-                                      rxn.E
-                                      ) +
-                  ' * rho '
-                  )
+        jline += 'kf'
         nu_temp = rxn.reac_nu[rxn.reac.index(sp_j.name)]
         if (nu_temp - 1) > 0:
             if isinstance(nu_temp - 1, float):
@@ -267,23 +302,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array):
                 jline += '{} * '.format(float(-1 * nu))
 
 
-        if not rxn.rev_par:
-            jline += ('(' +
-                      rate.rxn_rate_const(rxn.A,
-                                          rxn.b,
-                                          rxn.E
-                                          ) +
-                      ' / Kc)'
-                      )
-        else:
-            # explicit reverse coefficients
-            jline += rate.rxn_rate_const(rxn.rev_par[0],
-                                         rxn.rev_par[1],
-                                         rxn.rev_par[2]
-                                         )
-
-        jline += ' * rho'
-
+        jline += 'kr'
         temp_nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
         if (temp_nu - 1) > 0:
             if isinstance(temp_nu - 1, float):
@@ -312,55 +331,6 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array):
                 # integer, so just use multiplication
                 jline += ''.join([' * ' + get_array(lang, 'conc', isp) for i in range(temp_nu)])
     
-    if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
-        jline += ')'
-    return jline
-
-def write_pdep_dy_species(lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array):
-    jline = 'thd_temp'
-    mult = False
-    if rxn.thd_body and not rxn.pdep:
-        #check alphaij
-        alphaij = next((thd[1] for thd in rxn.thd_body
-                        if thd[0] == sp_j.name), None)
-        if alphaij is not None and alphaij != 1.0:
-            #we already baked the implicit one into there
-            jline += ' + '
-            jline += '{} * '.format(float(alphaij - 1.0))
-            # default is 1.0
-            jline += 'rho'
-            mult = True
-            
-    elif rxn.pdep and not rxn.pdep_sp:
-        #check alphaij
-        alphaij = next((thd[1] for thd in rxn.thd_body
-                        if thd[0] == sp_j.name), None)
-        if alphaij is not None and alphaij != 1.0:
-            #thd_temp needs to be multiplied still
-            jline += ' + ('
-            jline += 'pres_mod_temp * '
-            jline += '{} * '.format(float(alphaij - 1.0))
-            # default is 1.0
-            jline += '(rho / conc_temp)'
-            mult = True
-            jline += ')'
-
-    elif rxn.pdep and rxn.pdep_sp == sp_j.name:
-        # NOTE: This Y array previously seems to be a bug, I can't find a reference to it anywhere else
-        #      changing it to y
-        jline += ' + (1.0 / ' + get_array(lang, 'y', j_sp)
-        jline += ')'
-
-    if mult:
-        jline += ' * '
-        if rxn.rev:
-            jline += '(' + get_array(lang, 'fwd_rates', rind)
-            jline += ' - ' + \
-                get_array(lang, 'rev_rates', rev_reacs.index(rxn))
-            jline += ')'
-        else:
-            jline += '' + get_array(lang, 'fwd_rates', rind)
-
     return jline
 
 def __round_sig(x, sig=8):
@@ -1638,6 +1608,14 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
+    line = '  '
+    if lang == 'c':
+        line += 'Real '
+    elif lang == 'cuda':
+        line += 'register Real '
+    line += 'kf = 0.0' + utils.line_end[lang]
+    file.write(line)
+
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
@@ -1647,15 +1625,6 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
         line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if any(rxn.thd for rxn in reacs) and not (lang == 'cuda' and do_unroll):
-        line = '  '
-        if lang == 'c':
-            line += 'Real '
-        elif lang == 'cuda':
-            line += 'register Real '
-        line += 'thd_temp = 0.0' + utils.line_end[lang]
-        file.write(line)
-
     # if any reverse reactions, will need Kc
     if rev_reacs and not (lang == 'cuda' and do_unroll):
         line = '  '
@@ -1663,8 +1632,8 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
             line += 'Real '
         elif lang == 'cuda':
             line += 'register Real '
-        line += 'Kc = 0.0' + utils.line_end[lang]
-        file.write(line)
+        file.write(line + 'Kc = 0.0' + utils.line_end[lang])
+        file.write(line + 'kr = 0' + utils.line_end[lang])
 
     # pressure-dependence variables
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
@@ -1682,6 +1651,13 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
 
     if any(rxn.sri for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  Real X = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    if lang != 'cuda':
+        line = '  '
+        if lang == 'c':
+            line += 'Real '
+        line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
         file.write(line)
 
     # variables for equilibrium constant derivatives, if needed
@@ -1894,12 +1870,11 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
             #need to find Kc
             write_kc(file, lang, specs, rxn)
 
-        if rxn.pdep or rxn.thd:
-            #need to write the pdep parts (independent of any species)
-            write_pdep_dy(file, lang, rev_reacs, rxn, rind, pind, get_array)
-
         #need to write the dr/dy parts (independent of any species)
-        write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array)
+        alphaij_hat = write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array)
+
+        #write the forward / backwards rates:
+        write_rates(file, lang, rxn)
 
         #now loop through each species
         for j_sp, sp_j in enumerate(specs):
@@ -1923,14 +1898,13 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
 
                 if isFirst:
                     working_temp = '('
-
-                    #check if there is any species specific stuff we need to do
-                    if rxn.thd or rxn.pdep:
-                        working_temp += write_pdep_dy_species(lang, j_sp, sp_j, rev_reacs, rxn, rind, get_array)
                     
-                    working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, get_array)
+                    working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array)
 
-                    working_temp += ') * {:.8e}'.format(1.0 / __round_sig(sp_j.mw, 9))
+                    working_temp += ')'
+                    mw_frac = __round_sig(sp_k.mw / sp_j.mw, 9)
+                    if mw_frac != 1.0:
+                        working_temp += ' * {:.8e}'.format(mw_frac)
 
                     isFirst = False
 
@@ -1973,13 +1947,6 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
                 line += ', m'
             line += ', mw_avg, rho, dBdT, T, jac)'
             file.write(line + utils.line_end[lang])
-
-    if lang != 'cuda':
-        line = '  '
-        if lang == 'c':
-            line += 'Real '
-        line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
-        file.write(line)
 
     ###################################
     # Partial derivatives of temperature (energy equation)
@@ -2099,14 +2066,12 @@ def write_jacobian_alt(path, lang, specs, reacs, splittings=None, smm=None):
                 else:
                     #need to finish
                     if lang in ['c', 'cuda']:
-                        line += get_array(lang, 'jac', lin_index) + ' = ('
-                        line += get_array(lang, 'jac', lin_index) + ' + '
+                        line += get_array(lang, 'jac', lin_index) + ' += '
                     elif lang in ['fortran', 'matlab']:
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
-                                 ' = (' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
-                    line += get_array(lang, 'dy', k_sp + offset)
-                    line += ' * mw_avg * {}'.format(1.0 / __round_sig(sp_j.mw, 9))
-                    line += ') * {:.8e} * rho_inv'.format(sp_k.mw)
+                                 ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
+                    line += '(' + get_array(lang, 'dy', k_sp + offset)
+                    line += ' * mw_avg * {} * rho_inv)'.format(__round_sig(sp_k.mw / sp_j.mw, 9))
                     line += utils.line_end[lang]
                     file.write(line)
 

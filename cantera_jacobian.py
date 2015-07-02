@@ -3,7 +3,7 @@ import numpy as np
 from argparse import ArgumentParser
 
 def get_str(arr):
-    return '\n'.join('{}'.format(x) for x in arr) + '\n'
+    return '\n'.join('{:.15e}'.format(x) for x in arr) + '\n'
 
 def get_y_dot(gas):
     rates = gas.net_production_rates

@@ -20,15 +20,15 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '__global__ void \n'
-                   'k_eval_rxn_rates(const double T) {\n'
+                   'k_eval_rxn_rates(const double T, const double P) {\n'
                    '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                    '    double fwd_rates_local[FWD_RATES];\n'
                    '    double rev_rates_local[REV_RATES];\n'
-                   '    eval_rxn_rates(T, conc_local, fwd_rates_local, rev_rates_local);\n'
+                   '    eval_rxn_rates(T, P, conc_local, fwd_rates_local, rev_rates_local);\n'
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void \n'
-                   'k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* fwd_rates, double* rev_rates) {\n'
+                   'k_eval_rxn_rates(const int NUM, const double T, const double P, const double* conc, double* fwd_rates, double* rev_rates) {\n'
                    '    double conc_local[NSP];\n'
                    '    double fwd_rates_local[FWD_RATES];\n'
                    '    double rev_rates_local[REV_RATES];\n'
@@ -36,7 +36,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '    for (int i = 0; i < NSP; i++) {\n'
                    '        conc_local[i] = conc[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
                    '    }\n'
-                   '    eval_rxn_rates(T, conc_local, fwd_rates_local, rev_rates_local);\n'
+                   '    eval_rxn_rates(T, P, conc_local, fwd_rates_local, rev_rates_local);\n'
                    '    //copy back\n'
                    '    for (int i = 0; i < FWD_RATES; i++) {\n'
                    '        fwd_rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = fwd_rates_local[i];\n'
@@ -50,21 +50,21 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     else:
         file.write('#ifdef PROFILER\n'
                    '__global__ void \n'
-                   'k_eval_rxn_rates(const double T) {\n'
+                   'k_eval_rxn_rates(const double T, const double P) {\n'
                    '    double conc_local[NSP] = {[0 ... NSP - 1] = 1.0};\n'
                    '    double rates_local[RATES];\n'
-                   '    eval_rxn_rates(T, conc_local, rates_local);\n'
+                   '    eval_rxn_rates(T, P, conc_local, rates_local);\n'
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void \n'
-                   'k_eval_rxn_rates(const int NUM, const double T, const double* conc, double* rates) {\n'
+                   'k_eval_rxn_rates(const int NUM, const double T, const double P, const double* conc, double* rates) {\n'
                    '    double conc_local[NSP];\n'
                    '    double rates_local[RATES];\n'
                    '    //copy in\n'
                    '    for (int i = 0; i < NSP; i++) {\n'
                    '        conc_local[i] = conc[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
                    '    }\n'
-                   '    eval_rxn_rates(T, conc_local, rates_local);\n'
+                   '    eval_rxn_rates(T, P, conc_local, rates_local);\n'
                    '    //copy back\n'
                    '    for (int i = 0; i < RATES; i++) {\n'
                    '        rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = rates_local[i];\n'
@@ -236,10 +236,10 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
     file.write('    for (int i = 0; i < NUM; ++i) {\n')
     if have_rev_rxns:
         file.write(
-            '        eval_rxn_rates({}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T))
+            '        eval_rxn_rates({}, {}, conc_host, fwd_rates_host, rev_rates_host);\n'.format(T, P))
     else:
         file.write(
-            '        eval_rxn_rates({}, conc_host, rates_host);\n'.format(T))
+            '        eval_rxn_rates({}, {}, conc_host, rates_host);\n'.format(T, P))
     if have_pdep_rxns:
         file.write(
             '        get_rxn_pres_mod  ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
@@ -280,10 +280,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
-                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'.format(T) + 
+                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) + 
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
-                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}{});\n'.format(T, ', d_conc, d_fwd_rates, d_rev_rates')
+                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', d_conc, d_fwd_rates, d_rev_rates')
                    )
         file.write(
                '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n' + 
@@ -302,10 +302,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
         file.write(
             '#ifdef PROFILER\n'
             '    cuProfilerStart();\n'
-            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'.format(T) +
+            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}{});\n'.format(T, ', d_conc, d_rates')
+            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', d_conc, d_rates')
             )
         file.write(
         '    cudaErrorCheck(cudaMemcpy(rates_host_full, d_rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n')

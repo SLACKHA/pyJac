@@ -1039,7 +1039,9 @@ def write_header(path, lang):
         raise NotImplementedError
 
     with open(path + 'header.h', 'w') as file:
-        file.write('#include <stdlib.h>\n'
+        file.write('#ifndef HEAD\n'
+                   '#define HEAD\n'
+                   '#include <stdlib.h>\n'
                    '#include <math.h>\n'
                    '#include <float.h>\n'
                    '\n'
@@ -1059,5 +1061,8 @@ def write_header(path, lang):
                    '#else\n'
                    ' #define omp_get_max_threads() 1\n'
                    ' #define omp_get_num_threads() 1\n'
+                   '#endif\n'
+                   '//include the various options for the solvers\n'
+                   '#include "solver_options.h"\n'
                    '#endif\n'
                   )

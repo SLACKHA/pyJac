@@ -597,8 +597,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '    //convert to mass fractions\n'
                    '    double Yi[NSP] = {0.0};\n'
                    '    mole2mass(Xi, Yi);\n\n'
-                   '    //set initial pressure, units [dyn/cm^2]\n' +
-                   '    double P = {};\n'.format(1.01325e6 * P) + 
+                   '    //set initial pressure, units [PA]\n' +
+                   '    double P = {};\n'.format(chem.PA * P) + 
                    '    // set intial temperature, units [K]\n' +
                    '    double T0 = {};\n\n'.format(T0)
                    )
@@ -782,11 +782,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    FILE* fp = fopen ("rates_data.txt", "w");\n'
                        )
             __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
+                file, have_rev_rxns, have_pdep_rxns, '800', chem.PA, '1')
             __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '1600', '1.01325e6', '1')
+                file, have_rev_rxns, have_pdep_rxns, '1600', chem.PA, '1')
             __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e7', '10')
+                file, have_rev_rxns, have_pdep_rxns, '800', 10 * chem.PA, '10')
             file.write('    fclose(fp);\n'
                        '}\n'
                        )
@@ -891,11 +891,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 '    cudaMalloc((void**)&d_jac, padded * NN * NN * sizeof(double));\n')
 
             __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e6', '1')
+                file, have_rev_rxns, have_pdep_rxns, '800', chem.PA, '1')
             __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '1600', '1.01325e6', '1')
+                file, have_rev_rxns, have_pdep_rxns, '1600', chem.PA, '1')
             __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', '1.01325e7', '10')
+                file, have_rev_rxns, have_pdep_rxns, '800', 10 * chem.PA, '10')
             file.write('    fclose(fp);\n'
                        '    free(conc_host_full);\n'
                        '    free(y_host_full);\n'

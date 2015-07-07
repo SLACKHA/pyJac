@@ -94,7 +94,7 @@ def get_dBdT(lang, specs, rxn):
                 line += ' + {}'.format(float(nu))
             else:
                 line += ' - {}'.format(float(abs(nu)))
-            jline += ' * '
+            line += ' * '
         line += dBdT
 
     return line

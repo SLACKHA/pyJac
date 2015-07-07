@@ -455,6 +455,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         file.write('    void write_jacobian_and_rates_output(int NUM);\n')
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double*);\n')
+        file.write('    #endif\n')
 
         if lang == 'cuda':
             # close previous extern

@@ -474,11 +474,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         file.write('#include <stdio.h>\n'
                    '#include <string.h>\n'
                    '#include "mass_mole.h"\n'
-                   '#include "mechanism"\n'.format(utils.header_ext[lang]) +
+                   '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'
-                   '    #include "rates"\n'.format(utils.header_ext[lang]) +
-                   '    #include "jacob"\n'.format(utils.header_ext[lang]) +
-                   '    #include "dydt"\n'.format(utils.header_ext[lang]) +
+                   '    #include "rates{}"\n'.format(utils.header_ext[lang]) +
+                   '    #include "jacob{}"\n'.format(utils.header_ext[lang]) +
+                   '    #include "dydt{}"\n'.format(utils.header_ext[lang]) +
                    '#endif\n')
         if lang == 'cuda':
             file.write('#include <cuda.h>\n'

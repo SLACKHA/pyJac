@@ -1210,4 +1210,11 @@ def write_header(path, lang):
                    '#else\n'
                    ' #include "mechanism.h"\n'
                    '#endif\n'
+                   '// OpenMP\n'
+                   '#ifdef _OPENMP\n'
+                   ' #include <omp.h>\n'
+                   '#else\n'
+                   ' #define omp_get_max_threads() 1\n'
+                   ' #define omp_get_num_threads() 1\n'
+                   '#endif\n'
                   )

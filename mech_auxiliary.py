@@ -402,9 +402,15 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
 
 
-def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, old_spec_order, old_rxn_order, cache_optimized=False):
+def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='', 
+    old_spec_order=None, old_rxn_order=None, cache_optimized=False):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
+
+    if old_spec_order is None:
+        old_spec_order = range(len(specs))
+    if old_rxn_order is None:
+        old_rxn_order = range(len(reacs))
 
     # some information variables
     have_rev_rxns = any(reac.rev for reac in reacs)
@@ -412,10 +418,10 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
 
     # the mechanism header defines a number of useful preprocessor defines, as
     # well as defining method stubs for setting initial conditions
-    with open(path + 'mechanism.{}'.format(utils.header_ext[lang]), 'w') as file:
+    with open(path + 'mechanism{}'.format(utils.header_ext[lang]), 'w') as file:
 
-        file.write('#ifndef MECHANISM_{}\n'.format(utils.header_ext[lang]) +
-                   '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang]))
+        file.write('#ifndef MECHANISM_{}\n'.format(utils.header_ext[lang][1:]) +
+                   '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang][1:]))
 
         # convience: write species indexes
         file.write('/* Species Indexes\n')
@@ -441,17 +447,12 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
             file.write('#define PRES_MOD_RATES {}\n\n'.format(
                 len([reac for reac in reacs if reac.pdep or reac.thd])))
 
-        if lang == 'cuda':
-            file.write('#ifdef __cplusplus\n'
-                       'extern "C" {\n'
-                       '#endif\n')
-        file.write('    //Must be implemented by user on a per mechanism basis in mechanism.c\n'
+        file.write('    //Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
                '    {} set_same_initial_conditions(int NUM,{} double**, double**);\n'.format(
                     'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
                    )
         file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
         file.write('    void write_jacobian_and_rates_output(int NUM);\n')
-        file.write('#endif\n')
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double*);\n')
 
@@ -468,15 +469,15 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions, o
       reversed_specs.append(old_spec_order.index(i))
 
     # now the mechanism file
-    with open(path + 'mechanism.c{}'.format('u' if lang == 'cuda' else ''), 'w') as file:
+    with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
         file.write('#include <stdio.h>\n'
                    '#include <string.h>\n'
                    '#include "mass_mole.h"\n'
-                   '#include "mechanism.{}h"\n'.format('cu' if lang == 'cuda' else '') +
+                   '#include "mechanism"\n'.format(utils.header_ext[lang]) +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'
-                   '    #include "rates.{}h"\n'.format('cu' if lang == 'cuda' else '') +
-                   '    #include "jacob.{}h"\n'.format('cu' if lang == 'cuda' else '') +
-                   '    #include "dydt.{}h"\n'.format('cu' if lang == 'cuda' else '') +
+                   '    #include "rates"\n'.format(utils.header_ext[lang]) +
+                   '    #include "jacob"\n'.format(utils.header_ext[lang]) +
+                   '    #include "dydt"\n'.format(utils.header_ext[lang]) +
                    '#endif\n')
         if lang == 'cuda':
             file.write('#include <cuda.h>\n'

@@ -32,11 +32,12 @@ def run_comp(new, baseline):
     #next make sure all the methods in the baseline vals are in the new vals
     for state in baseline_vals:
         for method in baseline_vals[state]:
-            assert method in new_vals[state], "Method {} missing from new file"
+            assert method in new_vals[state], "Method {} missing from new file".format(method)
 
     error_dict = {}
     zerror_dict = {}
     for state in baseline_vals:
+        print
         print state
         for method in baseline_vals[state]:
             assert len(baseline_vals[state][method]) == len(new_vals[state][method]), "Different number of values for State {} and Method {}, different mechanisms?".format(state, method)
@@ -44,7 +45,7 @@ def run_comp(new, baseline):
             zerror = (-1, 0)
             
             for i in range(len(baseline_vals[state][method])):
-                if baseline_vals[state][method][i] == 0:
+                if np.abs(baseline_vals[state][method][i]) < 1e-10:
                     zero_err = np.abs(baseline_vals[state][method][i] - new_vals[state][method][i])
                     if zero_err > zerror[1]:
                         zerror = (i, zero_err)
@@ -53,7 +54,8 @@ def run_comp(new, baseline):
                                                 / baseline_vals[state][method][i])
                     if err > error[1]:
                         error = (i, err)
-            print method, "\t\t{}% @ index {}".format(error[1], error[0]), "\t\t{} @ index {}".format(zerror[1], zerror[0])
+            print method
+            print "{}% @ index {}".format(error[1], error[0]), "\t\t{} @ index {}".format(zerror[1], zerror[0])
 
 
 

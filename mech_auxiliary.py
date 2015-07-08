@@ -242,11 +242,12 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
             '        eval_rxn_rates({}, {}, conc_host, rates_host);\n'.format(T, P))
     if have_pdep_rxns:
         file.write(
-            '        get_rxn_pres_mod  ({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
+            '        get_rxn_pres_mod({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
     file.write('        eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
                '        dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
                '#ifdef RATES_TEST\n'
                '        write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
+               '        write_net_rates_of_progress(fp,{}{});\n'.format(' fwd_rates_host, rev_rates_host' if have_rev_rxns else ' rates_host', ', pres_mod_host' if have_pdep_rxns else '') +
                '#endif\n' +
                '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
                '    }\n'
@@ -378,6 +379,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
     file.write('#ifdef RATES_TEST\n'
                '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') + 
+               '    write_net_rates_of_progress(fp, {}{});\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
                '#endif\n'
                )
     file.write(
@@ -708,6 +710,44 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '    }\n'
                    '}\n\n'
                    )
+
+        line = 'void write_net_rates_of_progress(FILE* fp, '
+        if have_rev_rxns:
+            line += ' const double* fwd_rates_host'
+            line += ', const double* rev_rates_host'
+        else:
+            line += ' const double* rates'
+        if have_pdep_rxns:
+            line += ', const double* pres_mod_host'
+        file.write(line + ') {\n')
+        if have_rev_rxns:
+            file.write('    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
+            file.write('    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
+        else:
+            file.write('    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
+        if have_pdep_rxns:
+            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) + utils.line_end[lang])
+        
+        file.write('    fprintf(fp, "Net Rates of Progess\\n")' + utils.line_end[lang])
+        pdep_count = 0
+        rev_count = 0
+        for rind, reac in enumerate(reacs):
+            line = '    fprintf(fp, "%.15le\\n", '
+            if have_rev_rxns:
+                line += '(fwd_rates_host[rxn_ord[{}]]'.format(rind)
+                if reac in rev_reacs:
+                    line += ' - rev_rates_host[rev_rxn_ord[{}]]'.format(rev_count)
+                    rev_count += 1
+                line += ')'
+            else:
+                line += 'rates[rxn_ord[{}]]'
+            if have_pdep_rxns and reac in pdep_reacs:
+                line += ' * pres_mod_host[pdep_rxn_ord[{}]]'.format(pdep_count)
+                pdep_count += 1
+            line += ')'
+            file.write(line + utils.line_end[lang])
+        file.write('}\n')
+
 
         file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n' +
                    '    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang] + 

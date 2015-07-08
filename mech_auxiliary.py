@@ -448,15 +448,15 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             file.write('#define PRES_MOD_RATES {}\n\n'.format(
                 len([reac for reac in reacs if reac.pdep or reac.thd])))
 
-        file.write('    //Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
-               '    {} set_same_initial_conditions(int NUM,{} double**, double**);\n'.format(
+        file.write('//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
+                   '{} set_same_initial_conditions(int NUM,{} double**, double**);\n\n'.format(
                     'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
                    )
-        file.write('    #if defined (RATES_TEST) || defined (PROFILER)\n')
+        file.write('#if defined (RATES_TEST) || defined (PROFILER)\n')
         file.write('    void write_jacobian_and_rates_output(int NUM);\n')
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double*);\n')
-        file.write('    #endif\n')
+        file.write('#endif\n')
 
         if lang == 'cuda':
             # close previous extern

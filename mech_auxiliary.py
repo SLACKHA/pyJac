@@ -796,7 +796,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             P_list = [1, 10, 50]
             for T in T_list:
               for P in P_list:
-                __write_cuda_rate_evaluator(
+                __write_c_rate_evaluator(
                 file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
             file.write('    fclose(fp);\n'
                        '}\n'

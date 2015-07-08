@@ -56,7 +56,7 @@ def run_comp(new, baseline):
                         error = (i, err)
             print method
             print "{}% @ index {}".format(error[1], error[0]), "\t\t{} @ index {}".format(zerror[1], zerror[0])
-
+            print baseline_vals[state][method][error[0]], new_vals[state][method][error[0]]
 
 
 if __name__ == '__main__':

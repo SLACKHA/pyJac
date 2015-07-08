@@ -228,7 +228,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
 def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
     file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
-               '    get_concentrations({}, y_host, conc_host);\n'.format(P) +
+               '    eval_conc(y_host[0], {}, &y_host[1], conc_host);\n'.format(P) +
                '#ifdef RATES_TEST\n'
                '    NUM = 1;\n'
                '#endif\n'
@@ -259,7 +259,8 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
 def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
     file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
-               '    get_concentrations({}, y_host, conc_host);\n'.format(P))
+               '    eval_conc(y_host[0], {}, &y_host[1], conc_host);\n'.format(P)
+               )
     file.write('#ifdef CONV\n' + 
                '    double rho = getDensity({}, {}, Xi);\n'.format(T, P) +
                '#endif\n'
@@ -476,6 +477,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '#include "mass_mole.h"\n'
                    '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'
+                   '    #include "chem_utils{}"\n'.format(utils.header_ext[lang]) +
                    '    #include "rates{}"\n'.format(utils.header_ext[lang]) +
                    '    #include "jacob{}"\n'.format(utils.header_ext[lang]) +
                    '    #include "dydt{}"\n'.format(utils.header_ext[lang]) +
@@ -647,37 +649,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         file.write('}\n\n')
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n')
         # write utility function that finds concentrations at a given state
-        file.write('void get_concentrations(double P, const double* y_host, double* conc_host) {\n'
-                   '    double rho;\n'
-                   )
-
-        line = '    rho = '
-        isfirst = True
-        for sp in specs:
-            if len(line) > 70:
-                line += '\n'
-                file.write(line)
-                line = '         '
-            if not isfirst:
-                line += ' + '
-            line += '(y_host[{}] / {})'.format(specs.index(sp) + 1, sp.mw)
-            isfirst = False
-
-        line += ';\n'
-        file.write(line)
-        line = '    rho = P / ({:.8e} * y_host[0] * rho);\n\n'.format(chem.RU)
-        file.write(line)
-
-        # calculation of species molar concentrations
-        file.write('    // species molar concentrations\n')
-        # loop through species
-        for sp in specs:
-            isp = specs.index(sp)
-            line = '    conc_host[{}] = rho * y_host[{}] / '.format(isp, isp + 1)
-            line += '{}'.format(sp.mw) + utils.line_end[lang]
-            file.write(line)
-
-        file.write('}\n\n')
 
         line = 'void write_rates(FILE* fp, '
         if have_rev_rxns:

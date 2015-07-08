@@ -781,12 +781,12 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    //evaluate and write rates for various conditions\n'
                        '    FILE* fp = fopen ("rates_data.txt", "w");\n'
                        )
-            __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', chem.PA, '1')
-            __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '1600', chem.PA, '1')
-            __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', 10 * chem.PA, '10')
+            T_list = [800, 1600]
+            P_list = [1, 10, 50]
+            for T in T_list:
+              for P in P_list:
+                __write_cuda_rate_evaluator(
+                file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
             file.write('    fclose(fp);\n'
                        '}\n'
                        )
@@ -890,12 +890,13 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 '    double* d_jac;\n'
                 '    cudaMalloc((void**)&d_jac, padded * NN * NN * sizeof(double));\n')
 
-            __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', chem.PA, '1')
-            __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '1600', chem.PA, '1')
-            __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, '800', 10 * chem.PA, '10')
+            T_list = [800, 1600]
+            P_list = [1, 10, 50]
+            for T in T_list:
+              for P in P_list:
+                __write_cuda_rate_evaluator(
+                file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
+           
             file.write('    fclose(fp);\n'
                        '    free(conc_host_full);\n'
                        '    free(y_host_full);\n'

@@ -23,7 +23,6 @@ AVAG = 6.0221367e23
 
 # pressure of one standard atmosphere [Pa]
 PA = 101325.0
-
 class CommonEqualityMixin(object):
 
     def __eq__(self, other):
@@ -32,7 +31,6 @@ class CommonEqualityMixin(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
-
 
 def get_elem_wt():
     """Returns dict with built-in element names and atomic weights [kg/kmol].
@@ -199,8 +197,6 @@ class ReacInfo(CommonEqualityMixin):
         self.plog = False
         # List of arrays with [pressure [Pa], A, b, E]
         self.plog_par = None
-
-
 
 
 class SpecInfo(CommonEqualityMixin):

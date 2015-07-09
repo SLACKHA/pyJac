@@ -55,6 +55,13 @@ docs/_build/
 #Pycharm stuff
 .idea/
 
+#Mechanism files
+*.txt
+*.dat
+*.cti
+*.xml
+*.inp
+
 #out folder
 out/
 

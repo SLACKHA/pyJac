@@ -41,7 +41,7 @@ def rxn_rate_const(A, b, E):
         b \in \mathbb{Z} \text{ (integers) }
         \end{cases}
     
-    .. [1] TF Lu and CK Law, "Toward accommodating realistic fuel chemistry
+    .. [1] TF Lu and CK Law, "Toward accommodating doubleistic fuel chemistry
        in large-scale computations," Progress in Energy and Combustion 
        Science, vol. 35, pp. 192-215, 2009. doi:10.1016/j.pecs.2008.10.002
     
@@ -145,22 +145,61 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                    '#include "header.h"\n\n'
                    )
         if rev_reacs:
-            file.write('void eval_rxn_rates (const Real, const Real*, '
-                       'Real*, Real*);\n'
-                       'void eval_spec_rates (const Real*, const Real*, '
-                       'const Real*, Real*);\n'
+            file.write('void eval_rxn_rates (const double, const double, const double*, '
+                       'double*, double*);\n'
+                       'void eval_spec_rates (const double*, const double*, '
+                       'const double*, double*);\n'
                        )
         else:
-            file.write('void eval_rxn_rates (const Real, const Real*, '
-                       'Real*);\n'
-                       'void eval_spec_rates (const Real*, const Real*, '
-                       'Real*);\n'
+            file.write('void eval_rxn_rates (const double, const double, const double*, '
+                       'double*);\n'
+                       'void eval_spec_rates (const double*, const double*, '
+                       'double*);\n'
                        )
         
         if pdep_reacs:
-            file.write('void get_rxn_pres_mod (const Real, const Real, '
-                       'const Real*, Real*);\n'
+            file.write('void get_rxn_pres_mod (const double, const double, const double, '
+                       'const double*, double*);\n'
                        )
+
+        if any([rxn.cheb for rxn in reacs]):
+            # Write Chebyshev polynomial functions (if needed).
+
+            # Chebyshev polynomial of the first kind
+            file.write('inline static double cheb_t (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (2.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (4.0 * x * x * x - 3.0 * x);\n'
+                       '  } else {\n'
+                       '    return (cos((double)(i) * acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
+            # Chebyshev polynomial of the second kind
+            file.write('inline static double cheb_u (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (2.0 * x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (4.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (8.0 * x * x * x - 4.0 * x);\n'
+                       '  } else {\n'
+                       '    return (sin((double)(i + 1)) * acos(x) / '
+                       'sin(acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
         
         file.write('\n'
                    '#endif\n'
@@ -176,23 +215,61 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                    )
 
         if rev_reacs:
-            file.write('__device__ void eval_rxn_rates (const Real, '
-                       'const Real*, Real*, Real*);\n'
-                       '__device__ void eval_spec_rates (const Real*, '
-                       'const Real*, const Real*, Real*);\n'
+            file.write('__device__ void eval_rxn_rates (const double, '
+                       'const double*, double*, double*);\n'
+                       '__device__ void eval_spec_rates (const double*, '
+                       'const double*, const double*, double*);\n'
                        )
         else:
-            file.write('__device__ void eval_rxn_rates (const Real, const '
-                       'Real*, Real*);\n'
-                       '__device__ void eval_spec_rates (const Real*, const '
-                       'Real*, Real*);\n'
+            file.write('__device__ void eval_rxn_rates (const double, const '
+                       'double*, double*);\n'
+                       '__device__ void eval_spec_rates (const double*, const '
+                       'double*, double*);\n'
                        )
         
         if pdep_reacs:
-            file.write('__device__ void get_rxn_pres_mod (const Real, const '
-                       'Real, const Real*, Real*);\n'
+            file.write('__device__ void get_rxn_pres_mod (const double, const '
+                       'double, const double*, double*);\n'
                        )
         
+        if any([rxn.cheb for rxn in reacs]):
+            # Write Chebyshev polynomial functions (if needed).
+
+            # Chebyshev polynomial of the first kind
+            file.write('__device__ inline static double cheb_t (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (2.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (4.0 * x * x * x - 3.0 * x);\n'
+                       '  } else {\n'
+                       '    return (cos((double)(i) * acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
+            # Chebyshev polynomial of the second kind
+            file.write('__device__ inline static double cheb_u (const int i, '
+                       'const double x) {\n'
+                       '  if (i == 0) {\n'
+                       '    return (1.0);\n'
+                       '  } else if (i == 1) {\n'
+                       '    return (2.0 * x);\n'
+                       '  } else if (i == 2) {\n'
+                       '    return (4.0 * x * x - 1.0);\n'
+                       '  } else if (i == 3) {\n'
+                       '    return (8.0 * x * x * x - 4.0 * x);\n'
+                       '  } else {\n'
+                       '    return (sin((double)(i + 1)) * acos(x) / '
+                       'sin(acos(x)));\n'
+                       '  }\n'
+                       '}\n\n'
+                       )
+
         file.write('\n')
         file.write('#endif\n')
         file.close()
@@ -200,40 +277,35 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     filename = 'rxn_rates' + utils.file_ext[lang]
     file = open(path + filename, 'w')
     
-    if lang in ['c', 'cuda']:
-        file.write('#include <math.h>\n'
-                   '#include "header.h"\n'
-                   )
-        if lang == 'cuda' and CUDAParams.is_global:
-            file.write('#include "gpu_macros.cuh"\n')
-        file.write('\n')
     line = ''
     if lang == 'cuda': line = '__device__ '
-    
+
     if lang in ['c', 'cuda']:
         if rev_reacs:
-            line += ('void eval_rxn_rates (const Real T, const Real * C, '
-                     'Real * fwd_rxn_rates, Real * rev_rxn_rates) {\n'
+            line += ('void eval_rxn_rates (const double T, const double pres,'
+                     ' const double * C, double * fwd_rxn_rates, '
+                     'double * rev_rxn_rates) {\n'
                      )
         else:
-            line += ('void eval_rxn_rates (const Real T, const Real * C, '
-                     'Real * fwd_rxn_rates) {\n'
+            line += ('void eval_rxn_rates (const double T, const double pres,'
+                     ' const double * C, double * fwd_rxn_rates) {\n'
                      )
     elif lang == 'fortran':
         if rev_reacs:
-            line += ('subroutine eval_rxn_rates (T, C, fwd_rxn_rates, '
-                     'rev_rxn_rates)\n\n'
+            line += ('subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates,'
+                     ' rev_rxn_rates)\n\n'
                      )
         else:
-            line += 'subroutine eval_rxn_rates (T, C, fwd_rxn_rates)\n\n'
-        
+            line += 'subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates)\n\n'
+
         # fortran needs type declarations
         line += ('  implicit none\n'
-                 '  double precision, intent(in) :: T, C({})\n'.format(num_s)
+                 '  double precision, intent(in) :: '
+                 'T, pres, C({})\n'.format(num_s)
                  )
         if rev_reacs:
             line += ('  double precision, intent(out) :: '
-                     'fwd_rxn_rates({}), '.format(num_r) + 
+                     'fwd_rxn_rates({}), '.format(num_r) +
                      'rev_rxn_rates({})\n'.format(num_rev)
                      )
         else:
@@ -243,18 +315,34 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
         line += ('  \n'
                  '  double precision :: logT\n'
                  )
+
+        kf_flag = True
         if rev_reacs and any(rxn.rev_par != [] for rxn in rev_reacs):
-                line += '  double precision :: kf, Kc\n'
+            line += '  double precision :: kf, Kc\n'
+            kf_flag = False
+
+        if any(rxn.cheb for rxn in reacs):
+            if kf_flag:
+                line += '  double precision :: kf, Tred, Pred\n'
+                kf_flag = False
+            else:
+                line += '  double precision :: Tred, Pred\n'
+        if any(rxn.plog for rxn in reacs):
+            if kf_flag:
+                line += '  double precision :: kf, kf2\n'
+                kf_flag = False
+            else:
+                line += '  double precision :: kf2\n'
         line += '\n'
     elif lang == 'matlab':
         if rev_reacs:
             line += ('function [fwd_rxn_rates, rev_rxn_rates] = '
-                     'eval_rxn_rates (T, C)\n\n'
-                     '  fwd_rxn_rates = zeros({},1);\n'.format(num_r) + 
+                     'eval_rxn_rates (T, pres, C)\n\n'
+                     '  fwd_rxn_rates = zeros({},1);\n'.format(num_r) +
                      '  rev_rxn_rates = fwd_rxn_rates;\n'
                      )
         else:
-            line += ('function fwd_rxn_rates = eval_rxn_rates (T, C)\n\n'
+            line += ('function fwd_rxn_rates = eval_rxn_rates(T, pres, C)\n\n'
                      '  fwd_rxn_rates = zeros({},1);\n'.format(num_r)
                      )
     file.write(line)
@@ -267,9 +355,9 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     
     pre = '  '
     if lang == 'c':
-        pre += 'Real '
+        pre += 'double '
     elif lang == 'cuda':
-        pre += 'register Real '
+        pre += 'register double '
     line = (pre + 'logT = log(T)' + 
             utils.line_end[lang]
             )
@@ -278,14 +366,39 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     
     if rev_reacs and any(rxn.rev_par == [] for rxn in rev_reacs):
         if lang == 'c':
-            file.write('  Real kf;\n'
-                       '  Real Kc;\n'
+            file.write('  double kf;\n'
+                       '  double Kc;\n'
                        )
         elif lang == 'cuda':
-            file.write('  register Real kf;\n'
-                       '  register Real Kc;\n'
+            file.write('  register double kf;\n'
+                       '  register double Kc;\n'
                        )
-    
+
+    if any(rxn.cheb for rxn in reacs):
+        # Other variables needed for Chebyshev
+        if lang == 'c':
+            if kf_flag:
+                file.write('  double kf;\n')
+                kf_flag = False
+            file.write('  double Tred;\n'
+                       '  double Pred;\n')
+        elif lang == 'cuda':
+            if kf_flag:
+                file.write('  register double kf;\n')
+                kf_flag = False
+            file.write('  register double Tred;\n'
+                       '  register double Pred;\n')
+    if any(rxn.plog for rxn in reacs):
+        # Variables needed for Plog
+        if lang == 'c':
+            if kf_flag:
+                file.write('  double kf;\n')
+            file.write('  double kf2;\n')
+        if lang == 'cuda':
+            if kf_flag:
+                file.write('  register double kf;\n')
+            file.write('  register double kf2;\n')
+
     file.write('\n')
 
     def __round_sig(x, sig=8):
@@ -311,11 +424,86 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             smm.load_into_shared(file, the_vars, usages)
         
         # if reversible, save forward rate constant for use
-        if rxn.rev and not rxn.rev_par:
+        if rxn.rev and not rxn.rev_par and not (rxn.cheb or rxn.plog):
             line = ('  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E) + 
                     utils.line_end[lang]
                     )
             file.write(line)
+        elif rxn.cheb:
+            # Special forward rate coefficient for Chebyshev formulation
+            tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
+            tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
+            line = ('  Tred = ((2.0 / T) - ' +
+                    '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
+                    )
+            file.write(line + utils.line_end[lang])
+
+            plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
+                            math.log10(rxn.cheb_plim[1])
+                            )
+            plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
+                            math.log10(rxn.cheb_plim[0])
+                            )
+            line = ('  Pred = (2.0 * log10(pres) - ' +
+                    '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
+                    )
+            file.write(line + utils.line_end[lang])
+
+            line = '  kf = ' + utils.exp_10_fun[lang]
+            for i in range(rxn.cheb_n_temp):
+
+                line += 'cheb_t({}, Tred) * ('.format(i)
+
+                for j in range(rxn.cheb_n_pres):
+                    if j > 0:
+                        line += ' + '
+
+                    line += ('cheb_t({}, Pred) * '.format(j) +
+                             '{:.8e}'.format(rxn.cheb_par[i, j])
+                             )
+                line += ')'
+                if i != rxn.cheb_n_temp - 1:
+                    line += ' + \n'
+                    file.write(line)
+                    line = ' ' * 7
+
+            line += ')'
+            file.write(line + utils.line_end[lang])
+        elif rxn.plog:
+            # Special forward rate evaluation for Plog reacions
+            vals = rxn.plog_par[0]
+            file.write('  if (pres <= {:.4e}) {{\n'.format(vals[0]))
+            line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
+            file.write(line + utils.line_end[lang])
+
+            for idx, vals in enumerate(rxn.plog_par[:-1]):
+                vals2 = rxn.plog_par[idx + 1]
+
+                line = ('  }} else if ((pres > {:.4e}) '.format(vals[0]) +
+                        '&& (pres <= {:.4e})) {{\n'.format(vals2[0]))
+                file.write(line)
+
+                line = ('    kf = log(' +
+                        rxn_rate_const(vals[1], vals[2], vals[3]) + ')'
+                        )
+                file.write(line + utils.line_end[lang])
+                line = ('    kf2 = log(' +
+                        rxn_rate_const(vals2[1], vals2[2], vals2[3]) + ')'
+                        )
+                file.write(line + utils.line_end[lang])
+
+                pres_log_diff = math.log(vals2[0]) - math.log(vals[0])
+                line = ('    kf = exp(kf + (kf2 - kf) * (log(pres) - ' +
+                        '{:.8e}) / '.format(math.log(vals[0])) +
+                        '{:.8e})'.format(pres_log_diff)
+                        )
+                file.write(line + utils.line_end[lang])
+
+            vals = rxn.plog_par[-1]
+            file.write('  }} else if (pres > {:.4e}) {{\n'.format(vals[0]))
+            line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
+            file.write(line + utils.line_end[lang])
+            file.write('  }\n')
         
         line = '  ' + get_array(lang, 'fwd_rxn_rates', reacs.index(rxn)) + ' = '
         
@@ -324,7 +512,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             isp = next(i for i in xrange(len(specs)) if specs[i].name == sp)
             nu = rxn.reac_nu[rxn.reac.index(sp)]
             
-            # check if stoichiometric coefficient is real or integer
+            # check if stoichiometric coefficient is double or integer
             if isinstance(nu, float):
                 line += 'pow(' + get_array(lang, 'C', isp) + ', {}) *'.format(nu)
             else:
@@ -332,12 +520,12 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 for i in range(nu):
                     line += '' + get_array(lang, 'C', isp) + ' * '
         
-        # Rate constant: print if not reversible, or reversible but 
+        # Rate constant: print if not reversible, or reversible but
         # with explicit reverse parameters.
-        if not rxn.rev or rxn.rev_par:
-            line += rxn_rate_const(rxn.A, rxn.b, rxn.E)
-        else:
+        if (rxn.rev and not rxn.rev_par) or rxn.plog or rxn.cheb:
             line += 'kf'
+        else:
+            line += rxn_rate_const(rxn.A, rxn.b, rxn.E)
         
         line += utils.line_end[lang]
         file.write(line)
@@ -519,7 +707,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                            if specs[i].name == sp)
                 nu = rxn.prod_nu[rxn.prod.index(sp)]
             
-                # check if stoichiometric coefficient is real or integer
+                # check if stoichiometric coefficient is double or integer
                 if isinstance(nu, float):
                     line += 'pow(' + get_array(lang, 'C', isp) + ', {}) * '.format(nu)
                 else:
@@ -628,8 +816,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     if lang == 'cuda': line = '__device__ '
     
     if lang in ['c', 'cuda']:
-        line += ('void get_rxn_pres_mod (const Real T, const Real pres, '
-                 'const Real * C, Real * pres_mod) {\n'
+        line += ('void get_rxn_pres_mod (const double T, const double pres, '
+                 'const double * C, double * pres_mod) {\n'
                  )
     elif lang == 'fortran':
         line += 'subroutine get_rxn_pres_mod ( T, pres, C, pres_mod )\n\n'
@@ -658,12 +846,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     if thd_flag:
         if lang == 'c':
             file.write('  // third body variable declaration\n'
-                       '  Real thd;\n'
+                       '  double thd;\n'
                        '\n'
                        )
         elif lang == 'cuda':
             file.write('  // third body variable declaration\n'
-                       '  register Real thd;\n'
+                       '  register double thd;\n'
                        '\n'
                        )
         elif lang == 'fortran':
@@ -675,45 +863,45 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     if pdep_flag:
         if lang == 'c':
             file.write('  // pressure dependence variable declarations\n'
-                       '  Real k0;\n'
-                       '  Real kinf;\n'
-                       '  Real Pr;\n'
+                       '  double k0;\n'
+                       '  double kinf;\n'
+                       '  double Pr;\n'
                        '\n'
                        )
             if troe_flag:
                 # troe variables
                 file.write('  // troe variable declarations\n'
-                           '  Real logFcent;\n'
-                           '  Real A;\n'
-                           '  Real B;\n'
+                           '  double logFcent;\n'
+                           '  double A;\n'
+                           '  double B;\n'
                            '\n'
                            )
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                file.write('  Real x;\n'
+                file.write('  double x;\n'
                            '\n'
                            )
         elif lang == 'cuda':
             file.write('  // pressure dependence variable declarations\n')
-#            if not thd_flag: file.write('  register Real thd;\n')
-            file.write('  register Real k0;\n'
-                       '  register Real kinf;\n'
-                       '  register Real Pr;\n'
+#            if not thd_flag: file.write('  register double thd;\n')
+            file.write('  register double k0;\n'
+                       '  register double kinf;\n'
+                       '  register double Pr;\n'
                        '\n'
                        )
             if troe_flag:
                 # troe variables
                 file.write('  // troe variable declarations\n'
-                           '  register Real logFcent;\n'
-                           '  register Real A;\n'
-                           '  register Real B;\n'
+                           '  register double logFcent;\n'
+                           '  register double A;\n'
+                           '  register double B;\n'
                            '\n'
                            )
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                file.write('  register Real x;\n'
+                file.write('  register double x;\n'
                            '\n')
         elif lang == 'fortran':
             file.write('  ! pressure dependence variable declarations\n'
@@ -733,12 +921,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                            '\n')
     
     if lang == 'c':
-        file.write('  Real logT = log(T);\n'
-                   '  Real m = pres / ({:.8e} * T);\n'.format(chem.RU)
+        file.write('  double logT = log(T);\n'
+                   '  double m = pres / ({:.8e} * T);\n'.format(chem.RU)
                    )
     elif lang == 'cuda':
-        file.write('  register Real logT = log(T);\n'
-                   '  register Real m = pres / ('
+        file.write('  register double logT = log(T);\n'
+                   '  register double m = pres / ('
                    '{:.8e} * T);\n'.format(chem.RU)
                    )
     elif lang == 'fortran':
@@ -1030,13 +1218,13 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     
     if lang in ['c', 'cuda']:
         if rev_reacs:
-            line += ('void eval_spec_rates (const Real * fwd_rates, '
-                     'const Real * rev_rates, const Real * pres_mod, '
-                     'Real * sp_rates) {\n'
+            line += ('void eval_spec_rates (const double * fwd_rates, '
+                     'const double * rev_rates, const double * pres_mod, '
+                     'double * sp_rates) {\n'
                      )
         else:
-            line += ('void eval_spec_rates (const Real * fwd_rates, '
-                     'const Real * pres_mod, Real * sp_rates) {\n'
+            line += ('void eval_spec_rates (const double * fwd_rates, '
+                     'const double * pres_mod, double * sp_rates) {\n'
                      )
     elif lang == 'fortran':
         if rev_reacs:
@@ -1306,10 +1494,12 @@ def write_chem_utils(path, lang, specs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void eval_h (const Real, Real*);\n'
-                   'void eval_u (const Real, Real*);\n'
-                   'void eval_cv (const Real, Real*);\n'
-                   'void eval_cp (const Real, Real*);\n'
+                   'double eval_conc (const double, const double, '
+                   'const double*, double*);\n'
+                   'void eval_h (const double, double*);\n'
+                   'void eval_u (const double, double*);\n'
+                   'void eval_cv (const double, double*);\n'
+                   'void eval_cp (const double, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1321,10 +1511,12 @@ def write_chem_utils(path, lang, specs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ void eval_h (const Real, Real*);\n'
-                   '__device__ void eval_u (const Real, Real*);\n'
-                   '__device__ void eval_cv (const Real, Real*);\n'
-                   '__device__ void eval_cp (const Real, Real*);\n'
+                   '__device__ double eval_conc (const double, const double, '
+                   'const double*, double*);\n'
+                   '__device__ void eval_h (const double, double*);\n'
+                   '__device__ void eval_u (const double, double*);\n'
+                   '__device__ void eval_cv (const double, double*);\n'
+                   '__device__ void eval_cp (const double, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1341,13 +1533,82 @@ def write_chem_utils(path, lang, specs):
     
     pre = ''
     if lang == 'cuda': pre = '__device__ '
+
+     ######################
+    # species concentrations subroutine
+    ######################
+    line = pre
+    if lang in ['c', 'cuda']:
+        line += ('double eval_conc (const double temp, const double pres, '
+                 'const double * mass_frac, double * conc) {\n\n'
+                 )
+    elif lang == 'fortran':
+        line += (
+            # fortran needs type declarations
+            'subroutine eval_conc (temp, pres, mass_frac, conc)\n\n'
+            '  implicit none\n'
+            '  double precision, intent(in) :: T, pres, y\n'.format(num_s) +
+            '  double precision, intent(out) :: conc({})\n'.format(num_s) +
+            '\n'
+            )
+    elif lang == 'matlab':
+        line += 'function conc = eval_conc (temp, pres, mass_frac)\n\n'
+    file.write(line)
+
+    # calculation of density
+    file.write('  // mass-averaged density\n'
+               '  double rho;\n'
+               )
+    line = '  rho = '
+    isfirst = True
+    for sp in specs:
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '     '
+
+        if not isfirst: line += ' + '
+        if lang in ['c', 'cuda']:
+            line += '(mass_frac[{}] / {})'.format(specs.index(sp), sp.mw)
+        elif lang in ['fortran', 'matlab']:
+            line += '(mass_frac[{}] / {})'.format(specs.index(sp) + 1, sp.mw)
+
+        isfirst = False
+
+    line += ';\n'
+    file.write(line)
+    line = '  rho = pres / ({:.8e} * temp * rho);\n\n'.format(chem.RU)
+    file.write(line)
+
+    # calculation of species molar concentrations
+
+    # loop through species
+    for sp in specs:
+        isp = specs.index(sp)
+        line = '  conc'
+        if lang in ['c', 'cuda']:
+            line += '[{0}] = rho * mass_frac[{0}] / '.format(isp)
+        elif lang in ['fortran', 'matlab']:
+            line += '({0}) = rho * mass_frac({0}) / '.format(isp + 1)
+        line += '{}'.format(sp.mw) + utils.line_end[lang]
+        file.write(line)
+
+    file.write('  return rho;\n')
+    file.write('\n')
+
+    if lang in ['c', 'cuda']:
+        file.write('} // end eval_conc\n\n')
+    elif lang == 'fortran':
+        file.write('end subroutine eval_conc\n\n')
+    elif lang == 'matlab':
+        file.write('end\n\n')
     
     ######################
     # enthalpy subroutine
     ######################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_h (const Real T, Real * h) {\n\n'
+        line += 'void eval_h (const double T, double * h) {\n\n'
     elif lang == 'fortran':
         line += ('subroutine eval_h (T, h)\n\n'
                  # fortran needs type declarations
@@ -1419,7 +1680,7 @@ def write_chem_utils(path, lang, specs):
     #################################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_u (const Real T, Real * u) {\n\n'
+        line += 'void eval_u (const double T, double * u) {\n\n'
     elif lang == 'fortran':
         line += ('subroutine eval_u (T, u)\n\n'
                  # fortran needs type declarations
@@ -1489,7 +1750,7 @@ def write_chem_utils(path, lang, specs):
     # cv subroutine
     ##################################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cv (const Real T, Real * cv) {\n\n'
+        line = pre + 'void eval_cv (const double T, double * cv) {\n\n'
     elif lang == 'fortran':
         line = ('subroutine eval_cv (T, cv)\n\n'
                 # fortran needs type declarations
@@ -1558,7 +1819,7 @@ def write_chem_utils(path, lang, specs):
     # cp subroutine 
     ###############################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cp (const Real T, Real * cp) {\n\n'
+        line = pre + 'void eval_cp (const double T, double * cp) {\n\n'
     elif lang == 'fortran':
         line = ('subroutine eval_cp (T, cp)\n\n'
                 # fortran needs type declarations
@@ -1655,8 +1916,8 @@ def write_derivs(path, lang, specs, reacs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void dydt (const Real, const Real, '
-                   'const Real*, Real*);\n'
+                   'void dydt (const double, const double, '
+                   'const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1668,8 +1929,8 @@ def write_derivs(path, lang, specs, reacs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ void dydt (const Real, const Real, '
-                   'const Real*, Real*);\n'
+                   '__device__ void dydt (const double, const double, '
+                   'const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1702,62 +1963,33 @@ def write_derivs(path, lang, specs, reacs):
     # constant pressure
     file.write('#if defined(CONP)\n\n')
     
-    line = (pre + 'void dydt (const Real t, const Real pres, '
-            'const Real * y, Real * dy) {\n\n'
+    line = (pre + 'void dydt (const double t, const double pres, '
+            'const double * y, double * dy) {\n\n'
             )
-    file.write(line)
-    
-    # calculation of density
-    file.write('  // mass-averaged density\n'
-               '  Real rho;\n'
-               )
-    line = '  rho = '
-    isfirst = True
-    for sp in specs:
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '     '
-        
-        if not isfirst: line += ' + '
-        line += '(' + utils.get_array(lang, 'y', specs.index(sp) + 1) + ' / {})'.format(sp.mw)
-        
-        isfirst = False
-    
-    line += ';\n'
-    file.write(line)
-    line = '  rho = pres / ({:.8e} * '.format(chem.RU) + utils.get_array(lang, 'y', 0) + ' * rho);\n\n'
     file.write(line)
     
     # calculation of species molar concentrations
     file.write('  // species molar concentrations\n')
     if lang != 'cuda' or not CUDAParams.is_global():
         file.write(
-               '  Real conc[{}];\n'.format(len(specs))
+               '  double conc[{}];\n'.format(len(specs))
                )
-    # loop through species
-    for sp in specs:
-        isp = specs.index(sp)
-        line = '  {}'.format(modifier) + utils.get_array(lang, 'conc', isp) + ' = rho * ' + utils.get_array(lang, 'y', isp + 1) + ' / '
-        line += '{}'.format(sp.mw) + utils.line_end[lang]
-        file.write(line)
-    
-    file.write('\n')
+
+    # Simply call subroutine
+    file.write('  double rho = eval_conc (y[0], pres, &y[1], conc);\n\n')
     
     # evaluate reaction rates
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
     if rev_reacs:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  // local arrays holding reaction rates\n'
-                       '  Real fwd_rates[{}];\n'.format(len(reacs)) + 
-                       '  Real rev_rates[{}];\n'.format(len(rev_reacs)))
+        file.write('  // local arrays holding reaction rates\n'
+                   '  double fwd_rates[{}];\n'.format(len(reacs)) + 
+                   '  double rev_rates[{}];\n'.format(len(rev_reacs)))
 
         file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', {0}conc, {0}fwd_rates, {0}rev_rates);\n'.format(modifier) + 
                    '\n')
     else:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  // local array holding reaction rates\n'
-                   '  Real rates[{}];\n'.format(len(reacs)))
+        file.write('  // local array holding reaction rates\n'
+               '  double rates[{}];\n'.format(len(reacs)))
 
         file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', {0}conc, {0}rates);\n'.format(modifier) + 
                    '\n')
@@ -1772,8 +2004,7 @@ def write_derivs(path, lang, specs, reacs):
     if pdep_reacs:
         if lang in ['c', 'cuda']:
             file.write('  // get pressure modifications to reaction rates\n')
-            if lang != 'cuda' or not CUDAParams.is_global():
-                file.write('  Real pres_mod[{}];\n'.format(num_pdep))
+            file.write('  double pres_mod[{}];\n'.format(num_pdep))
                 
             file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
         elif lang == 'fortran':
@@ -1794,36 +2025,24 @@ def write_derivs(path, lang, specs, reacs):
                'concentration\n'
                )
     if rev_reacs and pdep_reacs:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
-                       '&dy[1]);\n'
-                       '\n'
-                       )
-        else:
-            file.write('  eval_spec_rates ({0}fwd_rates, {0}rev_rates, {0}pres_mod, dy);\n'.format(modifier) + 
-                       '\n'
-                       )
+        file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
+                   '&dy[1]);\n'
+                   '\n'
+                   )
     elif rev_reacs:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  eval_spec_rates (fwd_rates, rev_rates, &dy[1]);\n\n')
-        else:
-            file.write('  eval_spec_rates ({0}fwd_rates, {0}rev_rates, dy);\n\n'.format(modifier))
+        file.write('  eval_spec_rates (fwd_rates, rev_rates, &dy[1]);\n\n')
     else:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  eval_spec_rates (rates, &dy[1] );\n\n')
-        else:
-            file.write('  eval_spec_rates ({0}rates, dy);\n\n'.format(modifier))
+        file.write('  eval_spec_rates (rates, &dy[1] );\n\n')
     
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # evaluate specific heat
-        file.write('  // local array holding constant pressure specific heat\n'
-                   '  Real cp[{}];\n'.format(len(specs)))
-    file.write('  eval_cp (' + utils.get_array(lang, 'y', 0) + ', {0}cp);\n'.format(modifier) +
+    # evaluate specific heat
+    file.write('  // local array holding constant pressure specific heat\n'
+               '  double cp[{}];\n'.format(len(specs)) +
+               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', {0}cp);\n'.format(modifier) +
                '\n'
                )
     
     file.write('  // constant pressure mass-average specific heat\n')
-    line = '  Real cp_avg = '
+    line = '  double cp_avg = '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1834,7 +2053,8 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '({}'.format(modifier) + utils.get_array(lang, 'cp', isp) + ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
+        line += '({}'.format(modifier) + utils.get_array(lang, 'cp', isp) + \
+          ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
         
         isfirst = False
     
@@ -1844,7 +2064,7 @@ def write_derivs(path, lang, specs, reacs):
     if lang != 'cuda' or not CUDAParams.is_global():
         # evaluate enthalpy
         file.write('  // local array for species enthalpies\n'
-                   '  Real h[{}];\n'.format(len(specs)))
+                   '  double h[{}];\n'.format(len(specs)))
     file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', {}h);\n'.format(modifier))
     
     # energy equation
@@ -1860,7 +2080,8 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * {}'.format(modifier) + utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * {}'.format(modifier) + \
+           utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
         
         isfirst = False
     
@@ -1870,7 +2091,8 @@ def write_derivs(path, lang, specs, reacs):
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
     for sp in specs:
-        line = '  ' + utils.get_array(lang, 'dy', specs.index(sp) + 1) + ' *= ({} / rho);\n'.format(sp.mw)
+        line = '  ' + utils.get_array(lang, 'dy', specs.index(sp) + 1) + \
+         ' *= ({} / rho);\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')
@@ -1879,18 +2101,18 @@ def write_derivs(path, lang, specs, reacs):
     # constant volume
     file.write('#elif defined(CONV)\n\n')
 
-    line = (pre + 'void dydt (const Real t, const Real rho, '
-            'const Real * y, Real * dy) {\n'
+    line = (pre + 'void dydt (const double t, const double rho, '
+            'const double * y, double * dy) {\n'
             '\n'
             )
     file.write(line)
     
     # just use y[0] for temperature
-    #file.write('  Real T = y[0];\n\n')
+    #file.write('  double T = y[0];\n\n')
     
     # calculation of pressure
     file.write('  // pressure\n'
-               '  Real pres;\n'
+               '  double pres;\n'
                )
     line = '  pres = '
     isfirst = True
@@ -1913,49 +2135,41 @@ def write_derivs(path, lang, specs, reacs):
     if lang != 'cuda' or not CUDAParams.is_global(): 
         # calculation of species molar concentrations
         file.write('  // species molar concentrations\n'
-                   '  Real conc[{}];\n'.format(len(specs))
+                   '  double conc[{}];\n'.format(len(specs))
                    )
     # loop through species
     for sp in specs:
         isp = specs.index(sp)
-        line = '  {}'.format(modifier) + utils.get_array(lang, 'conc', isp) + ' = rho * ' + utils.get_array(lang, 'y', isp + 1) + ' / {};\n'.format(sp.mw)
+        line = '  {}'.format(modifier) + utils.get_array(lang, 'conc', isp) +\
+         ' = rho * ' + utils.get_array(lang, 'y', isp + 1) + ' / {};\n'.format(sp.mw)
         file.write(line)
     
     file.write('\n')
 
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # evaluate reaction rates
-        file.write('  // local array holding reaction rates\n'
-                   '  Real rates[{}];\n'.format(len(reacs)))
-    file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}rates);\n'.format(modifier) + 
+    # evaluate reaction rates
+    file.write('  // local array holding reaction rates\n'
+               '  double rates[{}];\n'.format(len(reacs))
+               '  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', pres, conc, rates);\n'
                '\n'
                )
-    #NOTE: Pressure mod was missing... I don't think that's right?
-    if lang != 'cuda' or not CUDAParams.is_global():
-        file.write('  // get pressure modifications to reaction rates\n'
-                   '  Real pres_mod[{}];\n'.format(num_pdep))
-    file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}pres_mod);\n'.format(modifier))
+
+    file.write('  // get pressure modifications to reaction rates\n'
+               '  double pres_mod[{}];\n'.format(num_pdep))
+    file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, conc, pres_mod);\n')
     # species rate of change of molar concentration
     file.write('  // evaluate rate of change of species molar '
-               'concentration\n')
-    if lang != 'cuda' or not CUDAParams.is_global():
-        file.write('  eval_spec_rates (rates, &dy[1]);\n'
+               'concentration\n'
+               '  eval_spec_rates (rates, &dy[1]);\n'
                    '\n'
-                  )
-    else:
-        file.write('  eval_spec_rates ({0}rates, dy);\n'.format(modifier) + 
-                   '\n'
-                  )
+              )
     
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # evaluate specific heat
-        file.write('  // local array holding constant volume specific heat\n'
-                   '  Real cv[{}];\n'.format(len(specs))
-                   )
-    file.write('  eval_cv(' + utils.get_array(lang, 'y', 0) + ', {0}cv);\n\n'.format(modifier))
+    # evaluate specific heat
+    file.write('  // local array holding constant volume specific heat\n'
+               '  double cv[{}];\n'.format(len(specs))
+               '  eval_cv(' + utils.get_array(lang, 'y', 0) + ', cv);\n\n')
     
     file.write('  // constant volume mass-average specific heat\n')
-    line = '  Real cv_avg = '
+    line = '  double cv_avg = '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1966,19 +2180,17 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '({0}'.format(modifier) + utils.get_array(lang, 'cv', isp) + ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
+        line += utils.get_array(lang, 'cv', isp) + ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
         
         isfirst = False
     
     line += ';\n\n'
     file.write(line)
     
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # evaluate internal energy
-        file.write('  // local array for species internal energies\n'
-                   '  Real u[{}];\n'.format(len(specs))
-                   )
-    file.write('  eval_u(' + utils.get_array(lang, 'y', 0) + ', {0}u);\n'.format(modifier))
+    # evaluate internal energy
+    file.write('  // local array for species internal energies\n'
+               '  double u[{}];\n'.format(len(specs))
+               '  eval_u(' + utils.get_array(lang, 'y', 0) + ', u);\n')
     
     # energy equation
     file.write('  // rate of change of temperature\n')
@@ -1993,7 +2205,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
         
         isp = specs.index(sp)
-        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * {0}'.format(modifier) + utils.get_array(lang, 'u', isp) + ' * {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' + utils.get_array(lang, 'u', isp) + ' * {})'.format(sp.mw)
         
         isfirst = False
     
@@ -2046,9 +2258,9 @@ def write_mass_mole(path, lang, specs):
                    '  extern "C" {\n'
                    '#endif\n'
                    '\n'
-                   'void mole2mass (const Real*, Real*);\n'
-                   'void mass2mole (const Real*, Real*);\n'
-                   'Real getDensity (const Real, const Real, const Real*);\n'
+                   'void mole2mass (const double*, double*);\n'
+                   'void mass2mole (const double*, double*);\n'
+                   'double getDensity (const double, const double, const double*);\n'
                    '\n'
                    '#ifdef __cplusplus\n'
                    '  }\n'
@@ -2078,7 +2290,7 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  X  array of species mole fractions\n'
                    ' * \param[out] Y  array of species mass fractions\n'
                    ' */\n'
-                   'void mole2mass (const Real * X, Real * Y) {\n'
+                   'void mole2mass (const double * X, double * Y) {\n'
                    '\n'
                    )
     elif lang == 'fortran':
@@ -2098,7 +2310,7 @@ def write_mass_mole(path, lang, specs):
     # calculate molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n'
-                   '  Real mw_avg = 0.0;\n'
+                   '  double mw_avg = 0.0;\n'
                    )
         for sp in specs:
             file.write('  mw_avg += X[{}] * '.format(specs.index(sp)) + 
@@ -2147,7 +2359,7 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  Y  array of species mass fractions\n'
                    ' * \param[out] X  array of species mole fractions\n'
                    ' */\n'
-                   'void mass2mole (const Real * Y, Real * X) {\n'
+                   'void mass2mole (const double * Y, double * X) {\n'
                    '\n'
                    )
     elif lang == 'fortran':
@@ -2170,7 +2382,7 @@ def write_mass_mole(path, lang, specs):
     # calculate average molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n')
-        file.write('  Real mw_avg = 0.0;\n')
+        file.write('  double mw_avg = 0.0;\n')
         for sp in specs:
             file.write('  mw_avg += Y[{}] / '.format(specs.index(sp)) + 
                        '{};\n'.format(sp.mw)
@@ -2219,8 +2431,8 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  X     array of species mole fractions\n'
                    r' * \return     rho  mixture mass density' + '\n'
                    ' */\n'
-                   'Real getDensity (const Real temp, const Real pres, '
-                   'const Real * X) {\n'
+                   'double getDensity (const double temp, const double pres, '
+                   'const double * X) {\n'
                    '\n'
                    )
     elif lang == 'fortran':
@@ -2244,7 +2456,7 @@ def write_mass_mole(path, lang, specs):
     # get molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n'
-                   '  Real mw_avg = 0.0;\n'
+                   '  double mw_avg = 0.0;\n'
                    )
         for sp in specs:
             file.write('  mw_avg += X[{}] * '.format(specs.index(sp)) + 

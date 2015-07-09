@@ -1,66 +1,63 @@
 #! /usr/bin/env python2.7
 #ratescomp.py
 import pickle
-import math
+import numpy as np
+
+def parse_file(file):
+    value_dict = {}
+    lines = [line.strip() for line in file.readlines()]
+    for line in lines:
+        if "k" in line.lower() and "atm" in line.lower():
+            state = line
+            value_dict[line] = {}
+        else:
+            try:
+                val = float(line)
+                value_dict[state][method].append(val)
+            except:
+                method = line
+                value_dict[state][method] = []
+    return value_dict
 
 def run_comp(new, baseline):
     with open(new) as file:
-        new_lines = [line.strip() for line in file.readlines()]
+        new_vals = parse_file(file)
     with open(baseline) as file:
-        baseline_lines = [line.strip() for line in file.readlines()]
-    #first make sure they're the same length
-    assert len(new_lines) == len(baseline_lines), "Input does not match, are you using the same mechanism?"
+        baseline_vals = parse_file(file)
 
-    #load the old order
+    #first make sure we have all the same states
+    for state in baseline_vals:
+        assert state in new_vals, "State {} missing from new file".format(state)
 
-    with open('out/optimized.pickle', 'rb') as file:
-        dummy = pickle.load(file)
-        specs = pickle.load(file)
-        dummy = pickle.load(file)
-        dummy = pickle.load(file)
-        dummy = pickle.load(file)
-        dummy = pickle.load(file)
-        spec_ordering = pickle.load(file)
-        num_specs = len(specs)
+    #next make sure all the methods in the baseline vals are in the new vals
+    for state in baseline_vals:
+        for method in baseline_vals[state]:
+            assert method in new_vals[state], "Method {} missing from new file".format(method)
 
-    state = None
     error_dict = {}
-    method = None
-    start = 0
-    for i in range(len(new_lines)):
-        if "k" in new_lines[i].lower() and "atm" in new_lines[i].lower():
-            state = new_lines[i]
-            assert new_lines[i] == baseline_lines[i], "State strings do not match!"
-            error_dict[state] = {}
-        else:
-            try:
-                n_val = float(new_lines[i])
-                b_val = float(baseline_lines[i])
-                if b_val == 0:
-                    err = abs(n_val - b_val)
-                else:
-                    err = 100.0 * abs(n_val - b_val) / b_val
-                if err > error_dict[state][method][0]:
-                    error_dict[state][method] = (err, i - start)
-            except Exception, e:
-                method = new_lines[i]
-                error_dict[state][method] = (0.0, -1)
-                assert new_lines[i] == baseline_lines[i], "Method strings do not match! {} != {}".format(new_lines[i], baseline_lines[i])
-                start = i
-    for state in error_dict:
+    zerror_dict = {}
+    for state in baseline_vals:
+        print
         print state
-        for method in error_dict[state]:
-            err = error_dict[state][method][0]
-            ind = error_dict[state][method][1]
-            if "Jacob" in method:
-                #find out if the ind is a multiple of the # of species
-                j_index = ind % num_specs
-                i_index = int(math.floor(ind / num_specs))
-                i_index = 0 if i_index == 0 else spec_ordering.index(i_index - 1) + 1
-                j_index = 0 if j_index == 0 else spec_ordering.index(j_index - 1) + 1
-                print method, "{}%".format(err), "index: {}".format(ind), "new index: {}".format(i_index * num_specs + j_index)
-            else:
-                print method, "{}%".format(err), "index: {}".format(ind)
+        for method in baseline_vals[state]:
+            assert len(baseline_vals[state][method]) == len(new_vals[state][method]), "Different number of values for State {} and Method {}, different mechanisms?".format(state, method)
+            error = (-1, 0)
+            zerror = (-1, 0)
+            
+            for i in range(len(baseline_vals[state][method])):
+                if np.abs(baseline_vals[state][method][i]) < 1e-10:
+                    zero_err = np.abs(baseline_vals[state][method][i] - new_vals[state][method][i])
+                    if zero_err > zerror[1]:
+                        zerror = (i, zero_err)
+                else:
+                    err = 100.0 * np.abs((baseline_vals[state][method][i] - new_vals[state][method][i])
+                                                / baseline_vals[state][method][i])
+                    if err > error[1]:
+                        error = (i, err)
+            print method
+            print "{}% @ index {}".format(error[1], error[0]), "\t\t{} @ index {}".format(zerror[1], zerror[0])
+            print baseline_vals[state][method][error[0]], new_vals[state][method][error[0]]
+
 
 if __name__ == '__main__':
     from argparse import ArgumentParser

@@ -3,7 +3,7 @@ import numpy as np
 from argparse import ArgumentParser
 
 def get_str(arr):
-    return '\n'.join('{}'.format(x) for x in arr) + '\n'
+    return '\n'.join('{:.15e}'.format(x) for x in arr) + '\n'
 
 def get_y_dot(gas):
     rates = gas.net_production_rates
@@ -47,8 +47,7 @@ def eval_jacobian(gas, T, P, conp):
     srur = np.sqrt(np.finfo(float).eps)
     the_sum = np.sum(np.power(dY * ewt, 2))
     fac = np.sqrt(the_sum / (float)(gas.n_species + 1))
-    r0 = 1000.0 * RTOL * np.finfo(float).eps * (float)(gas.n_species + 1)* fac
-
+    r0 = 1000.0 * RTOL * np.finfo(float).eps * float(gas.n_species + 1) * fac
     jac = np.zeros((gas.n_species + 1, gas.n_species + 1))
 
     for j in range(gas.n_species + 1):

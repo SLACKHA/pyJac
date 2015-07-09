@@ -590,7 +590,7 @@ def write_rxn_params_dt(file, rxn, rev=False):
 def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
     if lang == 'cuda':
         if len(rev_reacs):
-            file.write('  Real dBdT[{}]'.format(len(specs)) + utils.line_end[lang])
+            file.write('  double dBdT[{}]'.format(len(specs)) + utils.line_end[lang])
         template = 'dBdT[{}]'
     else:
         template = 'dBdT_{}'
@@ -616,7 +616,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
                 dBdT = template.format(sp_ind + 1)
             # declare dBdT
             if lang != 'cuda':
-                file.write('  Real ' + dBdT + utils.line_end[lang])
+                file.write('  double ' + dBdT + utils.line_end[lang])
 
             # dB/dT evaluation (with temperature conditional)
             line = '  if (T <= {:})'.format(specs[sp_ind].Trange[1])
@@ -1130,12 +1130,12 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
                    '\n'
                    '__device__ void eval_jacob_{} ('.format(number)
                   )
-        file.write('const Real, const Real*')
+        file.write('const double, const double*')
         for rate in rate_list:
-            file.write(', const Real*')
+            file.write(', const double*')
         if this_thd:
-            file.write(', const Real')
-        file.write(', const Real, const Real, const Real*, const Real, Real*'
+            file.write(', const double')
+        file.write(', const double, const double, const double*, const double, double*'
                    ');\n'
                    '\n'
                    '#endif\n'
@@ -1148,13 +1148,13 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
 
     line = '__device__ '
 
-    line += ('void eval_jacob_{} (const Real pres, '.format(number) + 
-            'const Real * conc')
+    line += ('void eval_jacob_{} (const double pres, '.format(number) + 
+            'const double * conc')
     for rate in rate_list:
-        line += ', const Real* ' + rate
+        line += ', const double* ' + rate
     if this_thd:
-        line += ', const Real m'
-    line += ', const Real mw_avg, const Real rho, const Real* dBdT, const Real T, Real* jac) {'
+        line += ', const double m'
+    line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac) {'
     file.write(line + '\n')
 
     if not no_shared:
@@ -1163,9 +1163,9 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
     if this_pdep and this_thd:
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += ('conc_temp' +
                  utils.line_end[lang]
                  )
@@ -1175,9 +1175,9 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
     # log(T)
     line = '  '
     if lang == 'c':
-        line += 'Real '
+        line += 'double '
     elif lang == 'cuda':
-        line += 'register Real '
+        line += 'register double '
     line += ('logT = log(T)' +
              utils.line_end[lang]
              )
@@ -1185,27 +1185,27 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
 
     line = '  '
     if lang == 'c':
-        line += 'Real '
+        line += 'double '
     elif lang == 'cuda':
-        line += 'register Real '
+        line += 'register double '
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
     if this_pdep:
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
     if this_thd:
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += 'thd_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
@@ -1213,9 +1213,9 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
     if this_rev:
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += 'Kc = 0.0' + utils.line_end[lang]
         file.write(line)
 
@@ -1223,18 +1223,18 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
     if this_pdep:
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += 'Pr = 0.0' + utils.line_end[lang]
         file.write(line)
 
     if this_troe:
-        line = ''.join(['  Real {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
+        line = ''.join(['  double {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
         file.write(line)
 
     if this_sri:
-        line = '  Real X = 0.0' + utils.line_end[lang]
+        line = '  double X = 0.0' + utils.line_end[lang]
         file.write(line)
 
     return file
@@ -1249,7 +1249,7 @@ def write_dy_intros(path, number):
                    '\n'
                    '__device__ void eval_jacob_{} ('.format(number)
                   )
-        file.write('const Real, const Real, const Real, const Real*, const Real*, const Real*, Real*);\n'
+        file.write('const double, const double, const double, const double*, const double*, const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1260,9 +1260,9 @@ def write_dy_intros(path, number):
 
     line = '__device__ '
 
-    line += ('void eval_jacob_{} (const Real mw_avg, const Real rho, const Real cp_avg, const Real* dy, const Real* h, const Real* cp, Real* jac) '.format(number))
+    line += ('void eval_jacob_{} (const double mw_avg, const double rho, const double cp_avg, const double* dy, const double* h, const double* cp, double* jac) '.format(number))
     line += '{\n'
-    line += '  register Real rho_inv = 1.0 / rho;'
+    line += '  register double rho_inv = 1.0 / rho;'
     file.write(line + utils.line_end['cuda'])
     return file
 
@@ -1306,8 +1306,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void eval_jacob (const Real, const Real, Real*, '
-                   'Real*);\n'
+                   'void eval_jacob (const double, const double, double*, '
+                   'double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1319,8 +1319,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ void eval_jacob (const Real, const Real, '
-                   'Real*, Real*);\n'
+                   '__device__ void eval_jacob (const double, const double, '
+                   'double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1361,36 +1361,15 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '\n'
                    )
 
-        if CUDAParams.is_global():
-            file.write('extern __device__ double* conc;\n')
-            if len(rev_reacs):
-                file.write('extern __device__ Real* fwd_rates;\n'
-                           'extern __device__ Real* rev_rates;\n'
-                           )
-            else:
-                file.write('extern __device__ Real* rates;\n')
-            if len(pdep_reacs):
-                file.write('extern __device__ Real* pres_mod;\n')
-            file.write('extern __device__ Real* dy;\n')
-            file.write('#ifdef CONP\n'
-                       'extern __device__ Real* h;\n'
-                       'extern __device__ Real* cp;\n'
-                       '#else\n'
-                       'extern __device__ Real* u;\n'
-                       'extern __device__ Real* cv;\n'
-                       '#endif\n')
-
     line = ''
     if lang == 'cuda':
         line = '__device__ '
 
     offset = 0
-    if lang == 'cuda' and CUDAParams.is_global():
-        offset = 1
 
     if lang in ['c', 'cuda']:
-        line += ('void eval_jacob (const Real t, const Real pres, '
-                 'Real * y, Real * jac) {\n\n')
+        line += ('void eval_jacob (const double t, const double pres, '
+                 'double * y, double * jac) {\n\n')
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
 
@@ -1421,7 +1400,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # get temperature
     if lang in ['c', 'cuda']:
-        line = '  Real T = ' + get_array(lang, 'y', 0)
+        line = '  double T = ' + get_array(lang, 'y', 0)
     elif lang in ['fortran', 'matlab']:
         line = '  T = ' + get_array(lang, 'y', 0)
     line += utils.line_end[lang]
@@ -1432,7 +1411,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # calculation of average molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n'
-                   '  Real mw_avg;\n'
+                   '  double mw_avg;\n'
                    )
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n')
@@ -1464,7 +1443,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     if lang in ['c', 'cuda']:
         file.write('  // mass-averaged density\n'
-                   '  Real rho;\n'
+                   '  double rho;\n'
                    )
     elif lang == 'fortran':
         file.write('  ! mass-averaged density\n')
@@ -1478,27 +1457,16 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # evaluate species molar concentrations
     if lang in ['c', 'cuda']:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  // species molar concentrations\n'
-                       '  Real conc[{}];\n'.format(num_s)
-                       )
+        file.write('  // species molar concentrations\n'
+                   '  double conc[{}];\n'.format(num_s)
+                   )
     elif lang == 'fortran':
         file.write('  ! species molar concentrations\n')
     elif lang == 'matlab':
         file.write('  % species molar concentrations\n'
                    '  conc = zeros({},1);\n'.format(num_s)
                    )
-    # loop through species
-    for sp in specs:
-        isp = specs.index(sp)
-        line = ('  ' + get_array(lang, 'conc', isp) +
-                ' = rho * ' +
-                '' + get_array(lang, 'y', isp + 1) +
-                ' / {}'.format(sp.mw)
-                )
-        line += utils.line_end[lang]
-        file.write(line)
-    file.write('\n')
+    file.write('  double rho = eval_conc (y[0], pres, &y[1], conc);\n\n')
 
     rate_list = ['fwd_rates']
     if len(rev_reacs):
@@ -1510,11 +1478,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang in ['c', 'cuda']:
         if lang != 'cuda' or not CUDAParams.is_global():
             file.write('  // evaluate reaction rates\n'
-                       '  Real fwd_rates[{}];\n'.format(num_r)
+                       '  double fwd_rates[{}];\n'.format(num_r)
                        )
         if rev_reacs:
             if lang != 'cuda' or not CUDAParams.is_global():
-                file.write('  Real rev_rates[{}];\n'.format(num_rev))
+                file.write('  double rev_rates[{}];\n'.format(num_rev))
             file.write('  eval_rxn_rates (T, conc, fwd_rates, '
                        'rev_rates);\n'
                        )
@@ -1542,7 +1510,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang in ['c', 'cuda']:
         file.write('  // get pressure modifications to reaction rates\n')
         if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  Real pres_mod[{}];\n'.format(num_pdep))
+            file.write('  double pres_mod[{}];\n'.format(num_pdep))
         file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
     elif lang == 'fortran':
         file.write('  ! get and evaluate pressure modifications to '
@@ -1562,7 +1530,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write('  // evaluate rate of change of species molar '
                    'concentration\n')
         if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  Real dy[{}];\n'.format(num_s))
+            file.write('  double dy[{}];\n'.format(num_s))
         if rev_reacs:
             file.write('  eval_spec_rates (fwd_rates, rev_rates, '
                        'pres_mod, dy);\n'
@@ -1601,9 +1569,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if any(rxn.pdep and rxn.thd for rxn in reacs):
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += ('m = pres / ({:4e} * T)'.format(chem.RU) +
                  utils.line_end[lang]
                  )
@@ -1612,9 +1580,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         if not (lang == 'cuda' and do_unroll):
             line = '  '
             if lang == 'c':
-                line += 'Real '
+                line += 'double '
             elif lang == 'cuda':
-                line += 'register Real '
+                line += 'register double '
             line += ('conc_temp' +
                      utils.line_end[lang]
                      )
@@ -1624,9 +1592,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # log(T)
     line = '  '
     if lang == 'c':
-        line += 'Real '
+        line += 'double '
     elif lang == 'cuda':
-        line += 'register Real '
+        line += 'register double '
     line += ('logT = log(T)' +
              utils.line_end[lang]
              )
@@ -1634,26 +1602,26 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     line = '  '
     if lang == 'c':
-        line += 'Real '
+        line += 'double '
     elif lang == 'cuda':
-        line += 'register Real '
+        line += 'register double '
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
     line = '  '
     if lang == 'c':
-        line += 'Real '
+        line += 'double '
     elif lang == 'cuda':
-        line += 'register Real '
+        line += 'register double '
     line += 'kf = 0.0' + utils.line_end[lang]
     file.write(line)
 
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
@@ -1661,9 +1629,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if rev_reacs and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         file.write(line + 'Kc = 0.0' + utils.line_end[lang])
         file.write(line + 'kr = 0' + utils.line_end[lang])
 
@@ -1671,24 +1639,24 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         elif lang == 'cuda':
-            line += 'register Real '
+            line += 'register double '
         line += 'Pr = 0.0' + utils.line_end[lang]
         file.write(line)
 
     if any(rxn.troe for rxn in reacs) and not (lang == 'cuda' and do_unroll):
-        line = ''.join(['  Real {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
+        line = ''.join(['  double {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
         file.write(line)
 
     if any(rxn.sri for rxn in reacs) and not (lang == 'cuda' and do_unroll):
-        line = '  Real X = 0.0' + utils.line_end[lang]
+        line = '  double X = 0.0' + utils.line_end[lang]
         file.write(line)
 
     if lang != 'cuda':
         line = '  '
         if lang == 'c':
-            line += 'Real '
+            line += 'double '
         line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
         file.write(line)
 
@@ -1984,7 +1952,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang in ['c', 'cuda']:
         file.write('  // species enthalpies\n')
         if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  Real h[{}];\n'.format(num_s))
+            file.write('  double h[{}];\n'.format(num_s))
         file.write('  eval_h(T, h);\n')
     elif lang == 'fortran':
         file.write('  ! species enthalpies\n'
@@ -2000,7 +1968,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang in ['c', 'cuda']:
         file.write('  // species specific heats\n')
         if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  Real cp[{}];\n'.format(num_s))
+            file.write('  double cp[{}];\n'.format(num_s))
         file.write('  eval_cp(T, cp);\n')
     elif lang == 'fortran':
         file.write('  ! species specific heats\n'
@@ -2015,11 +1983,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # average specific heat
     if lang == 'c':
         file.write('  // average specific heat\n'
-                   '  Real cp_avg;\n'
+                   '  double cp_avg;\n'
                    )
     elif lang == 'cuda':
         file.write('  // average specific heat\n'
-                   '  register Real cp_avg;\n'
+                   '  register double cp_avg;\n'
                    )
     elif lang == 'fortran':
         file.write('  ! average specific heat\n')
@@ -2066,9 +2034,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     line = '  '
     if lang == 'c':
-        line += 'Real '
+        line += 'double '
     elif lang == 'cuda':
-        line += 'register Real '
+        line += 'register double '
     line += 'working_temp = 0.0' + utils.line_end[lang]
     file.write(line)
                
@@ -2226,7 +2194,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
             '\n'
             '#include "header.h"\n'
             '\n'
-            'void sparse_multiplier (const Real *, const Real *, Real*);\n'
+            'void sparse_multiplier (const double *, const double *, double*);\n'
             '\n'
             '#ifdef COMPILE_TESTING_METHODS\n'
             '  int test_sparse_multiplier();\n'
@@ -2244,7 +2212,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
             '\n'
             '#include "header.h"\n'
             '\n'
-            '__device__ void sparse_multiplier (const Real *, const Real *, Real*);\n'
+            '__device__ void sparse_multiplier (const double *, const double *, double*);\n'
             '#ifdef COMPILE_TESTING_METHODS\n'
             '  __device__ int test_sparse_multiplier();\n'
             '#endif\n'
@@ -2265,7 +2233,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
         file.write('__device__\n')
 
     file.write(
-        "void sparse_multiplier(const Real * A, const Real * Vm, Real* w) {\n")
+        "void sparse_multiplier(const double * A, const double * Vm, double* w) {\n")
 
     if lang == 'cuda':
         """optimize for cache reusing"""

@@ -3,20 +3,14 @@
 import os
 from math import floor
 
-class CudaMemStrats:
-    Global, Local = range(2)
-
 class JacRatesCacheStrat:
     Include, Exclude = range(2)
 
-MemoryStrategy = CudaMemStrats.Local
 JacRateStrat = JacRatesCacheStrat.Include
 ResetOnJacUnroll = True
 
 Jacob_Unroll = 20
 
-def is_global():
-    return MemoryStrategy == CudaMemStrats.Global
 
 def get_L1_size(L1_Preferred):
     if L1_Preferred:

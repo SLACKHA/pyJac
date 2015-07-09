@@ -1417,29 +1417,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write('  ! average molecular weight\n')
     elif lang == 'matlab':
         file.write('  % average molecular weight\n')
-    line = '  mw_avg = '
-    isfirst = True
-    for sp in specs:
-        if len(line) > 70:
-            if lang in ['c', 'cuda']:
-                line += '\n'
-            elif lang == 'fortran':
-                line += ' &\n'
-            elif lang == 'matlab':
-                line += ' ...\n'
-            file.write(line)
-            line = '     '
-
-        if not isfirst:
-            line += ' + '
-        line += '(' + get_array(lang, 'y', specs.index(sp) + 1) + \
-            ' / {:})'.format(sp.mw)
-        isfirst = False
-
-    line += utils.line_end[lang]
-    file.write(line)
-    line = '  mw_avg = 1.0 / mw_avg' + utils.line_end[lang]
-    file.write(line)
 
     if lang in ['c', 'cuda']:
         file.write('  // mass-averaged density\n'
@@ -1449,24 +1426,19 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write('  ! mass-averaged density\n')
     elif lang == 'matlab':
         file.write('  % mass-averaged density\n')
-    line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(chem.RU)
-    line += utils.line_end[lang]
-    file.write(line)
-
-    file.write('\n')
 
     # evaluate species molar concentrations
     if lang in ['c', 'cuda']:
-        file.write('  // species molar concentrations\n'
-                   '  double conc[{}];\n'.format(num_s)
-                   )
+            file.write('  // species molar concentrations\n'
+                       '  double conc[{}];\n'.format(num_s)
+                       )
     elif lang == 'fortran':
         file.write('  ! species molar concentrations\n')
     elif lang == 'matlab':
         file.write('  % species molar concentrations\n'
                    '  conc = zeros({},1);\n'.format(num_s)
                    )
-    file.write('  double rho = eval_conc (y[0], pres, &y[1], conc);\n\n')
+    file.write('  eval_conc (y[0], pres, &y[1], mw_avg, rho, conc);\n\n')
 
     rate_list = ['fwd_rates']
     if len(rev_reacs):
@@ -1476,14 +1448,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     rate_list.append('dy')
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  // evaluate reaction rates\n'
-                       '  double fwd_rates[{}];\n'.format(num_r)
-                       )
+        file.write('  // evaluate reaction rates\n'
+                   '  double fwd_rates[{}];\n'.format(num_r)
+                   )
         if rev_reacs:
-            if lang != 'cuda' or not CUDAParams.is_global():
-                file.write('  double rev_rates[{}];\n'.format(num_rev))
-            file.write('  eval_rxn_rates (T, conc, fwd_rates, '
+            file.write('  double rev_rates[{}];\n'.format(num_rev) +
+                       '  eval_rxn_rates (T, conc, fwd_rates, '
                        'rev_rates);\n'
                        )
         else:
@@ -1508,10 +1478,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # evaluate third-body and pressure-dependence reaction modifications
     if lang in ['c', 'cuda']:
-        file.write('  // get pressure modifications to reaction rates\n')
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  double pres_mod[{}];\n'.format(num_pdep))
-        file.write('  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
+        file.write('  // get pressure modifications to reaction rates\n'
+                   '  double pres_mod[{}];\n'.format(num_pdep) +
+                   '  get_rxn_pres_mod (T, pres, conc, pres_mod);\n')
     elif lang == 'fortran':
         file.write('  ! get and evaluate pressure modifications to '
                    'reaction rates\n'
@@ -1529,8 +1498,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang in ['c', 'cuda']:
         file.write('  // evaluate rate of change of species molar '
                    'concentration\n')
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  double dy[{}];\n'.format(num_s))
+        file.write('  double dy[{}];\n'.format(num_s))
         if rev_reacs:
             file.write('  eval_spec_rates (fwd_rates, rev_rates, '
                        'pres_mod, dy);\n'
@@ -1950,10 +1918,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # evaluate enthalpy
     if lang in ['c', 'cuda']:
-        file.write('  // species enthalpies\n')
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  double h[{}];\n'.format(num_s))
-        file.write('  eval_h(T, h);\n')
+        file.write('  // species enthalpies\n'
+                   '  double h[{}];\n'.format(num_s) + 
+                   '  eval_h(T, h);\n')
     elif lang == 'fortran':
         file.write('  ! species enthalpies\n'
                    '  call eval_h(T, h)\n'
@@ -1966,10 +1933,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # evaluate specific heat
     if lang in ['c', 'cuda']:
-        file.write('  // species specific heats\n')
-        if lang != 'cuda' or not CUDAParams.is_global():
-            file.write('  double cp[{}];\n'.format(num_s))
-        file.write('  eval_cp(T, cp);\n')
+        file.write('  // species specific heats\n' 
+                   '  double cp[{}];\n'.format(num_s) +
+                   '  eval_cp(T, cp);\n')
     elif lang == 'fortran':
         file.write('  ! species specific heats\n'
                    '  call eval_cp(T, cp)\n'

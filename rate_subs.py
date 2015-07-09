@@ -1495,7 +1495,7 @@ def write_chem_utils(path, lang, specs):
                    '#include "header.h"\n'
                    '\n'
                    'double eval_conc (const double, const double, '
-                   'const double*, double*);\n'
+                   'const double*, double&, double&, double*);\n'
                    'void eval_h (const double, double*);\n'
                    'void eval_u (const double, double*);\n'
                    'void eval_cv (const double, double*);\n'
@@ -1512,7 +1512,7 @@ def write_chem_utils(path, lang, specs):
                    '#include "header.h"\n'
                    '\n'
                    '__device__ double eval_conc (const double, const double, '
-                   'const double*, double*);\n'
+                   'const double*, double&, double&, double*);\n'
                    '__device__ void eval_h (const double, double*);\n'
                    '__device__ void eval_u (const double, double*);\n'
                    '__device__ void eval_cv (const double, double*);\n'
@@ -1540,7 +1540,7 @@ def write_chem_utils(path, lang, specs):
     line = pre
     if lang in ['c', 'cuda']:
         line += ('double eval_conc (const double temp, const double pres, '
-                 'const double * mass_frac, double * conc) {\n\n'
+                 'const double * mass_frac, double& mw_avg, double& rho, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
         line += (
@@ -1555,11 +1555,8 @@ def write_chem_utils(path, lang, specs):
         line += 'function conc = eval_conc (temp, pres, mass_frac)\n\n'
     file.write(line)
 
-    # calculation of density
-    file.write('  // mass-averaged density\n'
-               '  double rho;\n'
-               )
-    line = '  rho = '
+    # calculation of mw avg
+    line = '  mw_avg = '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1569,16 +1566,22 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(mass_frac[{}] / {})'.format(specs.index(sp), sp.mw)
+            line += '(mass_frac[{}] * {})'.format(specs.index(sp), 1.0 / sp.mw)
         elif lang in ['fortran', 'matlab']:
-            line += '(mass_frac[{}] / {})'.format(specs.index(sp) + 1, sp.mw)
+            line += '(mass_frac[{}] * {})'.format(specs.index(sp) + 1, 1.0 / sp.mw)
 
         isfirst = False
 
     line += ';\n'
     file.write(line)
-    line = '  rho = pres / ({:.8e} * temp * rho);\n\n'.format(chem.RU)
-    file.write(line)
+    file.write('  mw_avg = 1.0 / mw_avg;\n')
+
+    # calculation of density
+    file.write('  // mass-averaged density\n'
+               '  double rho;\n'
+               )
+    line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(chem.RU)
+    file.write(line + utils.line_end[lang])
 
     # calculation of species molar concentrations
 
@@ -1587,10 +1590,10 @@ def write_chem_utils(path, lang, specs):
         isp = specs.index(sp)
         line = '  conc'
         if lang in ['c', 'cuda']:
-            line += '[{0}] = rho * mass_frac[{0}] / '.format(isp)
+            line += '[{0}] = rho * mass_frac[{0}] * '.format(isp)
         elif lang in ['fortran', 'matlab']:
-            line += '({0}) = rho * mass_frac({0}) / '.format(isp + 1)
-        line += '{}'.format(sp.mw) + utils.line_end[lang]
+            line += '({0}) = rho * mass_frac({0}) * '.format(isp + 1)
+        line += '{}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
 
     file.write('  return rho;\n')
@@ -1954,11 +1957,6 @@ def write_derivs(path, lang, specs, reacs):
                    '#include "gpu_memory.cuh"\n'
                    )
     file.write('\n')
-
-    modifier = ''
-    if lang == 'cuda' and CUDAParams.is_global():
-        file.write('extern __constant__ gpuMemory memory_pointers;\n')
-        modifier = 'memory_pointers.'
     
     # constant pressure
     file.write('#if defined(CONP)\n\n')
@@ -1969,14 +1967,14 @@ def write_derivs(path, lang, specs, reacs):
     file.write(line)
     
     # calculation of species molar concentrations
-    file.write('  // species molar concentrations\n')
-    if lang != 'cuda' or not CUDAParams.is_global():
-        file.write(
+    file.write('  // species molar concentrations\n'
                '  double conc[{}];\n'.format(len(specs))
-               )
+              )
+    file.write('  double mw_avg;\n')
+    file.write('  double rho;\n')
 
     # Simply call subroutine
-    file.write('  double rho = eval_conc (y[0], pres, &y[1], conc);\n\n')
+    file.write('  eval_conc (y[0], pres, &y[1], mw_avg, rho, conc);\n\n')
     
     # evaluate reaction rates
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
@@ -2148,7 +2146,7 @@ def write_derivs(path, lang, specs, reacs):
 
     # evaluate reaction rates
     file.write('  // local array holding reaction rates\n'
-               '  double rates[{}];\n'.format(len(reacs))
+               '  double rates[{}];\n'.format(len(reacs)) +
                '  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', pres, conc, rates);\n'
                '\n'
                )
@@ -2165,7 +2163,7 @@ def write_derivs(path, lang, specs, reacs):
     
     # evaluate specific heat
     file.write('  // local array holding constant volume specific heat\n'
-               '  double cv[{}];\n'.format(len(specs))
+               '  double cv[{}];\n'.format(len(specs)) +
                '  eval_cv(' + utils.get_array(lang, 'y', 0) + ', cv);\n\n')
     
     file.write('  // constant volume mass-average specific heat\n')
@@ -2189,7 +2187,7 @@ def write_derivs(path, lang, specs, reacs):
     
     # evaluate internal energy
     file.write('  // local array for species internal energies\n'
-               '  double u[{}];\n'.format(len(specs))
+               '  double u[{}];\n'.format(len(specs)) +
                '  eval_u(' + utils.get_array(lang, 'y', 0) + ', u);\n')
     
     # energy equation

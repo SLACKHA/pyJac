@@ -1438,7 +1438,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write('  % species molar concentrations\n'
                    '  conc = zeros({},1);\n'.format(num_s)
                    )
-    file.write('  eval_conc (y[0], pres, &y[1], mw_avg, rho, conc);\n\n')
+    file.write('  eval_conc (y[0], pres, &y[1], &mw_avg, &rho, conc);\n\n')
 
     rate_list = ['fwd_rates']
     if len(rev_reacs):
@@ -1453,27 +1453,27 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    )
         if rev_reacs:
             file.write('  double rev_rates[{}];\n'.format(num_rev) +
-                       '  eval_rxn_rates (T, conc, fwd_rates, '
+                       '  eval_rxn_rates (T, pres, conc, fwd_rates, '
                        'rev_rates);\n'
                        )
         else:
-            file.write('  eval_rxn_rates (T, conc, fwd_rates);\n')
+            file.write('  eval_rxn_rates (T, pres, conc, fwd_rates);\n')
     elif lang == 'fortran':
         file.write('  ! evaluate reaction rates\n')
         if rev_reacs:
-            file.write('  call eval_rxn_rates (T, conc, fwd_rates, '
+            file.write('  call eval_rxn_rates (T, pres, conc, fwd_rates, '
                        'rev_rates)\n'
                        )
         else:
-            file.write('  eval_rxn_rates (T, conc, fwd_rates)\n')
+            file.write('  eval_rxn_rates (T, pres, conc, fwd_rates)\n')
     elif lang == 'matlab':
         file.write('  % evaluate reaction rates\n')
         if rev_reacs:
             file.write('  [fwd_rates, rev_rates] = eval_rxn_rates '
-                       '(T, conc);\n'
+                       '(T, pres, conc);\n'
                        )
         else:
-            file.write('  fwd_rates = eval_rxn_rates (T, conc);\n')
+            file.write('  fwd_rates = eval_rxn_rates (T, pres, conc);\n')
     file.write('\n')
 
     # evaluate third-body and pressure-dependence reaction modifications
@@ -1534,7 +1534,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write('\n')
 
     # third-body variable needed for reactions
-    if any(rxn.pdep and rxn.thd for rxn in reacs):
+    if any((rxn.pdep and not rxn.pdep_sp) or rxn.thd for rxn in reacs):
         line = '  '
         if lang == 'c':
             line += 'double '

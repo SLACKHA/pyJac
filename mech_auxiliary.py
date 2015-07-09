@@ -228,7 +228,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
 def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
     file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
-               '    eval_conc(y_host[0], {}, &y_host[1], conc_host);\n'.format(P) +
+               '    eval_conc(y_host[0], {}, &y_host[1], &mw_avg, &rho, conc_host);\n'.format(P) +
                '#ifdef RATES_TEST\n'
                '    NUM = 1;\n'
                '#endif\n'
@@ -260,7 +260,7 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
 def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
     file.write('    fprintf(fp, "{}K, {} atm\\n");\n'.format(T, Pretty_P) +
                '    y_host[0] = {};\n'.format(T) +
-               '    eval_conc(y_host[0], {}, &y_host[1], conc_host);\n'.format(P)
+               '    eval_conc(y_host[0], {}, &y_host[1], &mw_avg, &rho, conc_host);\n'.format(P)
                )
     file.write('#ifdef CONV\n' + 
                '    double rho = getDensity({}, {}, Xi);\n'.format(T, P) +
@@ -792,6 +792,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    //evaluate and write rates for various conditions\n'
                        '    FILE* fp = fopen ("rates_data.txt", "w");\n'
                        )
+
+            file.write('    double rho;\n'
+                       '    double mw_avg;\n')
             T_list = [800, 1600]
             P_list = [1, 10, 50]
             for T in T_list:
@@ -901,6 +904,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 '    double* d_jac;\n'
                 '    cudaMalloc((void**)&d_jac, padded * NN * NN * sizeof(double));\n')
 
+            file.write('    double rho;\n'
+                       '    double mw_avg;\n')
             T_list = [800, 1600]
             P_list = [1, 10, 50]
             for T in T_list:

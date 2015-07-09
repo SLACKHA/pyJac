@@ -158,7 +158,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                        )
         
         if pdep_reacs:
-            file.write('void get_rxn_pres_mod (const double, const double, const double, '
+            file.write('void get_rxn_pres_mod (const double, const double, '
                        'const double*, double*);\n'
                        )
 
@@ -1492,8 +1492,8 @@ def write_chem_utils(path, lang, specs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'double eval_conc (const double, const double, '
-                   'const double*, double&, double&, double*);\n'
+                   'void eval_conc (const double, const double, '
+                   'const double*, double*, double*, double*);\n'
                    'void eval_h (const double, double*);\n'
                    'void eval_u (const double, double*);\n'
                    'void eval_cv (const double, double*);\n'
@@ -1509,8 +1509,8 @@ def write_chem_utils(path, lang, specs):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   '__device__ double eval_conc (const double, const double, '
-                   'const double*, double&, double&, double*);\n'
+                   '__device__ void eval_conc (const double, const double, '
+                   'const double*, double*, double*, double*);\n'
                    '__device__ void eval_h (const double, double*);\n'
                    '__device__ void eval_u (const double, double*);\n'
                    '__device__ void eval_cv (const double, double*);\n'
@@ -1537,8 +1537,8 @@ def write_chem_utils(path, lang, specs):
     ######################
     line = pre
     if lang in ['c', 'cuda']:
-        line += ('double eval_conc (const double temp, const double pres, '
-                 'const double * mass_frac, double& mw_avg, double& rho, double * conc) {\n\n'
+        line += ('void eval_conc (const double T, const double pres, '
+                 'const double * mass_frac, double * mw_avg, double * rho, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
         line += (
@@ -1554,7 +1554,7 @@ def write_chem_utils(path, lang, specs):
     file.write(line)
 
     # calculation of mw avg
-    line = '  mw_avg = '
+    line = '  *mw_avg = '
     isfirst = True
     for sp in specs:
         if len(line) > 70:
@@ -1572,13 +1572,11 @@ def write_chem_utils(path, lang, specs):
 
     line += ';\n'
     file.write(line)
-    file.write('  mw_avg = 1.0 / mw_avg;\n')
+    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
 
     # calculation of density
-    file.write('  // mass-averaged density\n'
-               '  double rho;\n'
-               )
-    line = '  rho = pres * mw_avg / ({:.8e} * T)'.format(chem.RU)
+    file.write('  // mass-averaged density\n')
+    line = '  *rho = pres * (*mw_avg) / ({:.8e} * T)'.format(chem.RU)
     file.write(line + utils.line_end[lang])
 
     # calculation of species molar concentrations
@@ -1588,13 +1586,12 @@ def write_chem_utils(path, lang, specs):
         isp = specs.index(sp)
         line = '  conc'
         if lang in ['c', 'cuda']:
-            line += '[{0}] = rho * mass_frac[{0}] * '.format(isp)
+            line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
         elif lang in ['fortran', 'matlab']:
-            line += '({0}) = rho * mass_frac({0}) * '.format(isp + 1)
+            line += '({0}) = (*rho) * mass_frac({0}) * '.format(isp + 1)
         line += '{}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
 
-    file.write('  return rho;\n')
     file.write('\n')
 
     if lang in ['c', 'cuda']:
@@ -1972,7 +1969,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  double rho;\n')
 
     # Simply call subroutine
-    file.write('  eval_conc (y[0], pres, &y[1], mw_avg, rho, conc);\n\n')
+    file.write('  eval_conc (y[0], pres, &y[1], &mw_avg, &rho, conc);\n\n')
     
     # evaluate reaction rates
     rev_reacs = [rxn for rxn in reacs if rxn.rev]
@@ -1981,13 +1978,13 @@ def write_derivs(path, lang, specs, reacs):
                    '  double fwd_rates[{}];\n'.format(len(reacs)) + 
                    '  double rev_rates[{}];\n'.format(len(rev_reacs)))
 
-        file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', {0}conc, {0}fwd_rates, {0}rev_rates);\n'
+        file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', pres, conc, fwd_rates, rev_rates);\n'
                    '\n')
     else:
         file.write('  // local array holding reaction rates\n'
                '  double rates[{}];\n'.format(len(reacs)))
 
-        file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', {0}conc, {0}rates);\n'
+        file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', pres, conc, rates);\n'
                    '\n')
         
     # reaction pressure dependence
@@ -2002,7 +1999,7 @@ def write_derivs(path, lang, specs, reacs):
             file.write('  // get pressure modifications to reaction rates\n')
             file.write('  double pres_mod[{}];\n'.format(num_pdep))
                 
-            file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, {0}conc, {0}pres_mod);\n')
+            file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) + ', pres, conc, pres_mod);\n')
         elif lang == 'fortran':
             file.write('  ! get and evaluate pressure modifications to '
                        'reaction rates\n'
@@ -2033,7 +2030,7 @@ def write_derivs(path, lang, specs, reacs):
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n'
                '  double cp[{}];\n'.format(len(specs)) +
-               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', {0}cp);\n'
+               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp);\n'
                '\n'
                )
     

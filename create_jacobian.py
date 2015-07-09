@@ -308,7 +308,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu_temp = rxn.reac_nu[rxn.reac.index(sp_reac)]
-            isp = next(i for i in xrange(len(specs))
+            isp = next(i for i in range(len(specs))
                        if specs[i].name == sp_reac)
             if isinstance(nu_temp, float):
                 jline += ' * pow(conc' + \
@@ -353,7 +353,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             temp_nu = rxn.prod_nu[rxn.prod.index(sp_prod)]
-            isp = next(i for i in xrange(len(specs))
+            isp = next(i for i in range(len(specs))
                        if specs[i].name == sp_prod)
             if isinstance(temp_nu, float):
                 jline += ' * pow(' + \

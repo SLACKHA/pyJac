@@ -2341,9 +2341,6 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     # write mechanism initializers and testing methods
     aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, old_spec_order, old_rxn_order, optimize_cache)
 
-    if skip_jacob:
-        return
-
     # write Jacobian subroutine
     sparse_indicies = write_jacobian(build_path, lang, specs, reacs, splittings, smm)
 

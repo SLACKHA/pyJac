@@ -16,6 +16,9 @@ file_ext = dict(c = '.c', cuda = '.cu',
                 fortran = '.f90', matlab = '.m'
                 )
 
+# header extensions based on language
+header_ext = dict(c = '.h', cuda = '.cuh')
+
 # line endings dependent on language
 line_end = dict(c = ';\n', cuda = ';\n',
                 fortran = '\n', matlab = ';\n'

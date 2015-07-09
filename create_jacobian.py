@@ -4251,52 +4251,15 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         sys.exit(2)
 
     # create output directory if none exists
-    build_path = os.path.join(os.getcwd(), 'out/')
+    build_path = './out/'
     utils.create_dir(build_path)
 
-    # interpret reaction mechanism file
-    [elems, specs, reacs, units] = mech.read_mech(mech_name)
-
-    # interpret thermodynamic database file (if it exists & needed)
-    therm_flag = True
-    if therm_name:
-        # check for any species missing molecular weight
-        for sp in specs:
-            if not sp.mw:
-                therm_flag = False
-                break
-        if not therm_flag:
-            # need to read thermo file
-            file = open(therm_name, 'r')
-            mech.read_thermo(file, elems, specs)
-            file.close()
-
-    # convert activation energy units to K (if needed)
-    if 'kelvin' not in units:
-        efac = 1.0
-
-        if 'kcal/mole' in units:
-            efac = 4184.0 / chem.RU_JOUL
-        elif 'cal/mole' in units:
-            efac = 4.184 / chem.RU_JOUL
-        elif 'kjoule' in units:
-            efac = 1000.0 / chem.RU_JOUL
-        elif 'joules' in units:
-            efac = 1.00 / chem.RU_JOUL
-        elif 'evolt' in units:
-            efac = 11595.
-        else:
-            # default is cal/mole
-            efac = 4.184 / chem.RU_JOUL
-
-        for rxn in reacs:
-            rxn.E *= efac
-
-        for rxn in [rxn for rxn in reacs if rxn.low]:
-            rxn.low[2] *= efac
-
-        for rxn in [rxn for rxn in reacs if rxn.high]:
-            rxn.high[2] *= efac
+    # Interpret reaction mechanism file, depending on Cantera or
+    # Chemkin format.
+    if mech_name.endswith(tuple(['.cti','.xml'])):
+        [elems, specs, reacs] = mech.read_mech_ct(mech_name)
+    else:
+        [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
     if optimize_cache:
         splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
@@ -4322,35 +4285,43 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     if lang == 'cuda' and not no_shared:
         smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
 
-    # now begin writing subroutines
-    
+    ## now begin writing subroutines
+
     # print reaction rate subroutine
     rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_rate_order, smm)
-    
+
     # if third-body/pressure-dependent reactions, 
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
         rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_rate_order, smm)
-    
+
     # write species rates subroutine
     rate.write_spec_rates(build_path, lang, specs, reacs, spec_rate_order, smm)
-    
+
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs)
-    
+
     # write derivative subroutines
     rate.write_derivs(build_path, lang, specs, reacs)
-    
+
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)
 
+    # write header file
+    aux.write_header(build_path, lang)
+
     # write mechanism initializers and testing methods
     aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, old_spec_order, old_rxn_order, optimize_cache)
+
+    if skip_jacob:
+        return
 
     # write Jacobian subroutine
     sparse_indicies = write_jacobian_alt(build_path, lang, specs, reacs, splittings, smm)
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
+
+    return None
 
 
 if __name__ == "__main__":

@@ -733,7 +733,7 @@ def read_thermo(filename, elems, specs):
 
             # now need to determine if this species is in mechanism
             if next((sp for sp in specs if sp.name == spec), None):
-                sp_ind = next(i for i in xrange(len(specs))
+                sp_ind = next(i for i in range(len(specs))
                               if specs[i].name == spec
                               )
             else:

@@ -45,7 +45,7 @@ def run_comp(new, baseline):
             zerror = (-1, 0)
             
             for i in range(len(baseline_vals[state][method])):
-                if np.abs(baseline_vals[state][method][i]) < 1e-10:
+                if np.abs(baseline_vals[state][method][i]) == 0 or np.abs(new_vals[state][method][i]) == 0:
                     zero_err = np.abs(baseline_vals[state][method][i] - new_vals[state][method][i])
                     if zero_err > zerror[1]:
                         zerror = (i, zero_err)

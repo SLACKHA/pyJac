@@ -48,7 +48,6 @@ def eval_jacobian(gas, T, P, conp):
     the_sum = np.sum(np.power(dY * ewt, 2))
     fac = np.sqrt(the_sum / (float)(gas.n_species + 1))
     r0 = 1000.0 * RTOL * np.finfo(float).eps * float(gas.n_species + 1) * fac
-
     jac = np.zeros((gas.n_species + 1, gas.n_species + 1))
 
     for j in range(gas.n_species + 1):

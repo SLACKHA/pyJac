@@ -1864,7 +1864,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 working_temp += ')'
                 mw_frac = utils.round_sig(sp_k.mw / sp_j.mw, 9)
                 if mw_frac != 1.0:
-                    working_temp += ' * {:.8e}'.format(mw_frac)
+                    working_temp += ' * {:.8e}'.format(mw_frac * float(nu))
 
                 lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
                 jline = '  '
@@ -1880,7 +1880,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 if not touched[lin_index]:
                     touched[lin_index] = True
 
-                jline += '' if nu == 1 else ('-' if nu == -1 else '{} * '.format(float(nu)))
                 jline += working_temp
                 jline += utils.line_end[lang]
 

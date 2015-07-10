@@ -59,7 +59,8 @@ def eval_jacobian(gas, T, P, conp):
 
         for k in range(FD_ORD):
             Y[j] = yj_orig + x_coeffs[k] * r
-            gas.TPY = Y[0], P, Y[1:]
+            gas.set_unnormalized_mass_fractions(Y[1:])
+            gas.TP = Y[0], P
             dy = get_y_dot(gas)
             jac[:, j] += y_coeffs[k] * dy
 

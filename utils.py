@@ -32,6 +32,12 @@ exp_10_fun  = dict(c = "pow(10.0, ", cuda = 'exp10(',
 array_chars = dict(c = "[{}]", cuda = "[{}]",
                 fortran = "({})", matlab = "({})")
 
+def round_sig(x, sig=8):
+    from math import log10, floor
+    if x == 0:
+        return 0
+    return round(x, sig-int(floor(log10(abs(x))))-1)
+
 def read_str_num(string, sep = None):
     """Returns a list of floats pulled from a string.
     

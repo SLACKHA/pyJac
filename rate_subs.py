@@ -728,6 +728,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             line += utils.line_end[lang]
             file.write(line)
 
+            file.write('\n')
+
         if lang == 'cuda' and smm is not None:
             #figure out which to mark for removal
             indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
@@ -954,10 +956,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             line = '  % reaction ' + str(rind + 1)
         line += utils.line_end[lang]
         file.write(line)
-        
-        # third-body reaction
-        if reac.thd:
 
+        if reac.thd_body:
             if lang == 'cuda' and smm is not None:
                 the_vars = []
                 indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
@@ -974,11 +974,11 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                             break
                     usages.append(temp - i_rxn - 1)
                 smm.load_into_shared(file, the_vars, usages)
+        
+        # third-body reaction
+        if reac.thd:
             
-            if reac.pdep and not reac.pdep_sp:
-                line = '  thd = m'
-            else:
-                line = '  ' + get_array(lang, 'pres_mod', pind) + ' = m'
+            line = '  ' + get_array(lang, 'pres_mod', pind) + ' = m'
             
             for sp in reac.thd_body:
                 isp = specs.index(next((s for s in specs 
@@ -995,7 +995,20 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         
         # pressure dependence
         if reac.pdep:
-            
+            if not reac.pdep_sp:
+                line = '  thd = m'
+                for sp in reac.thd_body:
+                    isp = specs.index(next((s for s in specs 
+                                      if s.name == sp[0]), None)
+                                      )
+                    if sp[1] > 1.0:
+                        line += ' + {}'.format(sp[1] - 1.0)
+                    elif sp[1] < 1.0:
+                        line += ' - {}'.format(1.0 - sp[1])
+                    line += ' * ' + get_array(lang, 'C', isp)
+
+            file.write(line + utils.line_end[lang])
+
             # low-pressure limit rate
             line = '  k0 = '
             if reac.low:
@@ -1023,13 +1036,13 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             file.write(line)
             
             # reduced pressure
-            if reac.thd or not reac.pdep_sp:
-                line = '  Pr = k0 * thd / kinf'
-            else:
+            if reac.pdep_sp:
                 isp = next(i for i in range(len(specs))
                            if specs[i].name == reac.pdep_sp
                            )
                 line = '  Pr = k0 * ' + get_array(lang, 'C', isp) + ' / kinf'
+            else:
+                line = '  Pr = k0 * thd / kinf'
             line += utils.line_end[lang]
             file.write(line)
             
@@ -1564,9 +1577,9 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(mass_frac[{}] * {})'.format(specs.index(sp), 1.0 / sp.mw)
+            line += '(mass_frac[{}] * {})'.format(specs.index(sp), utils.round_sig(1.0 / sp.mw, 9))
         elif lang in ['fortran', 'matlab']:
-            line += '(mass_frac[{}] * {})'.format(specs.index(sp) + 1, 1.0 / sp.mw)
+            line += '(mass_frac[{}] * {})'.format(specs.index(sp) + 1, utils.round_sig(1.0 / sp.mw, 9))
 
         isfirst = False
 

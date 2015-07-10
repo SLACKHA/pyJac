@@ -365,12 +365,6 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
     
     return jline
 
-def __round_sig(x, sig=8):
-    from math import log10, floor
-    if x == 0:
-        return 0
-    return round(x, sig-int(floor(log10(abs(x))))-1)
-
 def write_kc(file, lang, specs, rxn):
     sum_nu = 0
     coeffs = {}
@@ -384,14 +378,14 @@ def write_kc(file, lang, specs, rxn):
 
         sum_nu += nu
 
-        lo_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
+        lo_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
                     spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1] / 2.0,
                     spec.lo[2] / 6.0, spec.lo[3] / 12.0, spec.lo[4] / 20.0,
                     spec.lo[5]]
                 ]
         lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-        hi_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
+        hi_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
                     spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1] / 2.0,
                     spec.hi[2] / 6.0, spec.hi[3] / 12.0, spec.hi[4] / 20.0,
                     spec.hi[5]]
@@ -1868,7 +1862,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array)
 
                 working_temp += ')'
-                mw_frac = __round_sig(sp_k.mw / sp_j.mw, 9)
+                mw_frac = utils.round_sig(sp_k.mw / sp_j.mw, 9)
                 if mw_frac != 1.0:
                     working_temp += ' * {:.8e}'.format(mw_frac)
 
@@ -2033,7 +2027,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
                     line += '(' + get_array(lang, 'dy', k_sp + offset)
-                    line += ' * mw_avg * {} * rho_inv)'.format(__round_sig(sp_k.mw / sp_j.mw, 9))
+                    line += ' * mw_avg * {} * rho_inv)'.format(utils.round_sig(sp_k.mw / sp_j.mw, 9))
                     line += utils.line_end[lang]
                     file.write(line)
 

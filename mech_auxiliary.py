@@ -725,8 +725,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             file.write('    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
         else:
             file.write('    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
-        if have_pdep_rxns:
-            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) + utils.line_end[lang])
         
         file.write('    fprintf(fp, "Net Rates of Progess\\n")' + utils.line_end[lang])
         pdep_count = 0
@@ -742,7 +740,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             else:
                 line += 'rates[rxn_ord[{}]]'
             if have_pdep_rxns and reac in pdep_reacs:
-                line += ' * pres_mod_host[pdep_rxn_ord[{}]]'.format(pdep_count)
+                line += ' * pres_mod_host[{}]'.format(pdep_count)
                 pdep_count += 1
             line += ')'
             file.write(line + utils.line_end[lang])

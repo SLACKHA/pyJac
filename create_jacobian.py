@@ -19,7 +19,7 @@ import rate_subs as rate
 import utils
 import mech_auxiliary as aux
 import CUDAParams
-import cache_optimizer_alt as cache
+import cache_optimizer as cache
 import shared_memory as shared
 
 def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):

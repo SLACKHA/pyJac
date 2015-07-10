@@ -227,6 +227,8 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         jline += ')'
     file.write(jline + utils.line_end[lang])
 
+    if rxn.pdep and not rxn.thd and not rxn.pdep_sp:
+        file.write('  pres_mod_temp /= conc_temp' + utils.line_end[lang])
     return alphaij_hat
 
 def write_rates(file, lang, rxn):

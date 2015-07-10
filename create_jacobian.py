@@ -1857,14 +1857,20 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 if nu == 0:
                     continue
 
-                working_temp = '('
+                working_temp = ''
+                mw_frac = utils.round_sig(sp_k.mw / sp_j.mw, 9) * float(nu)
+                if mw_frac == -1.0:
+                    working_temp += ' -'
+                elif mw_frac != 1.0:
+                    working_temp += ' {:.8e} * '.format(mw_frac)
+                else:
+                    working_temp += ' '
+
+                working_temp += '('
 
                 working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array)
 
                 working_temp += ')'
-                mw_frac = utils.round_sig(sp_k.mw / sp_j.mw, 9)
-                if mw_frac != 1.0:
-                    working_temp += ' * {:.8e}'.format(mw_frac * float(nu))
 
                 lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)
                 jline = '  '

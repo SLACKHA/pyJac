@@ -281,6 +281,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     if lang == 'cuda': line = '__device__ '
 
     if lang in ['c', 'cuda']:
+        file.write('#include "rates' + utils.header_ext[lang] + '"\n')
         if rev_reacs:
             line += ('void eval_rxn_rates (const double T, const double pres,'
                      ' const double * C, double * fwd_rxn_rates, '

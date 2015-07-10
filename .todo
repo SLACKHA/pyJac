@@ -14,7 +14,7 @@ v2:
 
 ＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿＿
 Archive:
-  ✔ Merge master with Nick's optimized branches
+  ✔ Merge master with Nick's optimized branches @done(2015-07-10 17:24) @project(v1 tasks)
   ✔ check units when dividing R by molecular weight... @done(2015-06-20 19:42) @project(v1 tasks)
   ✔ Incorporate PLOG reactions into Jacobian @done(2015-06-21 18:05) @project(v1 tasks)
   ✔ Incorporate CHEB reactions into Jacobian @done(2015-06-21 18:05) @project(v1 tasks)

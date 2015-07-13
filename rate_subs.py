@@ -528,14 +528,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                         sys.exit()
 
                     # put together all our coeffs
-                    lo_array = [utils.round_sig_sig(nu, 3)] + [utils.round_sig_sig(x, 9) for x in [
+                    lo_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                                             sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
                                                                ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [utils.round_sig_sig(nu, 3)] + [utils.round_sig_sig(x, 9) for x in [
+                    hi_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                                             sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]
@@ -566,14 +566,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                               )
                         sys.exit()
 
-                    lo_array = [utils.round_sig_sig(-nu, 3)] + [utils.round_sig_sig(x, 9) for x in [
+                    lo_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                                             sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
                                                                 ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [utils.round_sig_sig(-nu, 3)] + [utils.round_sig_sig(x, 9) for x in [
+                    hi_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                                             sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]

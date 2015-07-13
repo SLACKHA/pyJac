@@ -1019,6 +1019,242 @@ def write_dcp_dt(file, lang, specs, sparse_indicies):
 
         first = False
 
+def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx=None):
+    """Write contribution from temperature derivative of reaction rate for
+    elementary reaction.
+
+    """
+
+    jline = get_array(lang, 'fwd_rates', rind)
+    jline += ' * ('
+
+    jline += get_rxn_params_dt(rxn, rev=False)
+
+    # loop over reactants
+    jline = ''
+    nu = sum(rxn.reac_nu)
+    jline += '{})'.format(float(nu))
+
+    # contribution from temperature derivative of reaction rates
+    if rxn.rev:
+        # reversible reaction
+
+        jline += ' - ' + \
+            get_array(lang, 'rev_rates', rev_idx) + \
+            ' * ('
+
+        if rxn.rev_par:
+            jline += get_rxn_params_dt(rxn, rev=True)
+
+            # product nu sum
+            nu = sum(rxn.prod_nu)
+            jline += '{})'.format(float(nu))
+        else:
+            jline += get_rxn_params_dt(rxn, rev=False)
+
+            # product nu sum
+            nu = sum(rxn.prod_nu)
+            jline += '{} - T * ('.format(float(nu))
+
+            # product nu sum
+            jline += get_db_dt(lang, specs, rxn)
+            jline += ')'
+    else:
+        jline += ')'
+
+    # print line for reaction
+    return jline + ') * rho_inv' + utils.line_end[lang]
+
+def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx):
+    # Chebyshev reaction
+
+    # Reduced temperature and pressure needed many times.
+    tlim_inv_sum = 1. / rxn.cheb_tlim[0] + 1. / rxn.cheb_tlim[1]
+    tlim_inv_sub = 1. / rxn.cheb_tlim[1] - 1. / rxn.cheb_tlim[0]
+    file.write('  Tred = ((2.0 / T) - ' +
+               '{:.8e}) / '.format(tlim_inv_sum) +
+               '{:.8e}'.format(tlim_inv_sub) +
+               utils.line_end[lang]
+               )
+
+    plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
+                    math.log10(rxn.cheb_plim[1]))
+    plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
+                    math.log10(rxn.cheb_plim[0]))
+    file.write('  Pred = (2.0 * log10(pres) - ' +
+               '{:.8e}) / '.format(plim_log_sum) +
+               '{:.8e}'.format(plim_log_sub) +
+               utils.line_end[lang]
+               )
+
+    jline += '(1.0 + {:.8e} * ('.format(math.log(10.))
+
+    for i in range(rxn.cheb_n_temp):
+        for j in range(rxn.cheb_n_pres):
+
+            if i == 0 and j == 0:
+                continue
+
+            jline += '{:.8e} * ('.format(rxn.cheb_par[i, j])
+
+            if i != 0:
+                jline += (
+                    '{:.1f} * '.format(i) +
+                    'cheb_u({}, Tred) * '.format(i - 1) +
+                    'cheb_t({}, Pred) * '.format(j) +
+                    '({:.8e} / T)'.format(-2. / tlim_inv_sub)
+                    )
+                if j != 0:
+                    jline += ' + '
+
+            if j != 0:
+                jline += (
+                    '{:.1f} * '.format(j) +
+                    'cheb_t({}, Tred) * '.format(i) +
+                    'cheb_u({}, Pred) * '.format(j - 1) +
+                    '{:.8e}'.format(2. / (math.log(10.) *
+                                    plim_log_sub)
+                                    )
+                    )
+
+
+            jline += ')'
+
+            if j < rxn.cheb_n_pres - 1:
+                jline += ' + '
+
+        if i < rxn.cheb_n_temp - 1:
+            jline += ' + \n'
+            file.write(jline)
+            jline = ' ' * len_line_beg
+
+    jline += '))'
+
+    jline += ' * (fwd_rxn_rates'
+    if lang in ['c', 'cuda']:
+        jline += '[{}]'.format(rind)
+    elif lang in ['fortran', 'matlab']:
+        jline += '({})'.format(rind + 1)
+
+    if rxn.rev:
+        # reverse reaction rate also
+        jline += ' - rev_rxn_rates'
+        if lang in ['c', 'cuda']:
+            jline += '[{}]'.format(rev_idx)
+        elif lang in ['fortran', 'matlab']:
+            jline += '({})'.format(rev_idx + 1)
+
+    jline += ') - fwd_rxn_rates'
+    if lang in ['c', 'cuda']:
+        jline += '[{}]'.format(rind)
+    elif lang in ['fortran', 'matlab']:
+        jline += '({})'.format(rind + 1)
+    jline += ' * {}'.format(sum(rxn.reac_nu))
+
+    if rxn.rev:
+        jline += ' + rev_rxn_rates'
+        if lang in ['c', 'cuda']:
+            jline += '[{}]'.format(rev_idx)
+        elif lang in ['fortran', 'matlab']:
+            jline += '({})'.format(rev_idx + 1)
+        jline += ' * (T * ' + get_dBdT(lang, specs, rxn)
+
+        jline += ' + {})'.format(sum(rxn.prod_nu))
+
+    jline += '))'
+    # print line for reaction
+    file.write(jline + utils.line_end[lang])
+
+def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx):
+    # Plog reactions have conditional contribution,
+    # depends on pressure range
+
+    (p1, A_p1, b_p1, E_p1) = rxn.plog_par[0]
+    file.write('  if (pres <= {:.4e}) {{\n'.format(p1))
+
+    # For pressure below the first pressure given, use standard
+    # Arrhenius expression.
+
+    # Make copy, but with specific pressure Arrhenius coefficients
+    rxn_p = chem.ReacInfo(rxn.rev, rxn.reac, rxn.reac_nu,
+                          rxn.prod, rxn.prod_nu,
+                          A_p1, b_p1, E_p1
+                          )
+
+    file.write(jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx))
+
+    for idx, vals in enumerate(rxn.plog_par[:-1]):
+        (p1, A_p1, b_p1, E_p1) = vals
+        (p2, A_p2, b_p2, E_p2) = rxn.plog_par[idx + 1]
+
+        file.write('  }} else if ((pres > {:.4e}) '.format(p1) +
+                   '&& (pres <= {:.4e})) {{\n'.format(p2)
+                   )
+
+        jline_p = (jline + '({:.8e} + '.format(1. + b_p1) +
+                   '{:.8e} / T + '.format(E_p1) +
+                   '({:.8e} + '.format(b_p2 - b_p1) +
+                   '{:.8e} / T) * '.format(E_p2 - E_p1) +
+                   '(log(pres) - {:.8e}) /'.format(math.log(p1)) +
+                   ' {:.8e}'.format(math.log(p2) - math.log(p1)) +
+                   ' + ({:.8e}'.format(math.log(A_p2 / A_p1)) +
+                   ' + {:.8e} * logT'.format(b_p2 - b_p1) +
+                   ' + {:.8e} / T) / '.format(E_p2 - E_p1) +
+                   '{:.8e})'.format(math.log(p2) - math.log(p1))
+                   )
+
+        jline_p += ' * (fwd_rxn_rates'
+        if lang in ['c', 'cuda']:
+            jline_p += '[{}]'.format(rind)
+        elif lang in ['fortran', 'matlab']:
+            jline_p += '({})'.format(rind + 1)
+
+        if rxn.rev:
+            # reverse reaction rate also
+            jline_p += ' - rev_rxn_rates'
+            if lang in ['c', 'cuda']:
+                jline_p += '[{}]'.format(rev_idx)
+            elif lang in ['fortran', 'matlab']:
+                jline_p += '({})'.format(rev_idx + 1)
+
+        jline_p += ') - fwd_rxn_rates'
+        if lang in ['c', 'cuda']:
+            jline_p += '[{}]'.format(rind)
+        elif lang in ['fortran', 'matlab']:
+            jline_p += '({})'.format(rind + 1)
+        jline_p += ' * {}'.format(sum(rxn.reac_nu))
+
+        if rxn.rev:
+            jline_p += ' + rev_rxn_rates'
+            if lang in ['c', 'cuda']:
+                jline_p += '[{}]'.format(rev_idx)
+            elif lang in ['fortran', 'matlab']:
+                jline_p += '({})'.format(rev_idx + 1)
+            jline_p += ' * (T * ' + get_dBdT(lang, specs, rxn)
+
+            jline_p += ' + {})'.format(sum(rxn.prod_nu))
+
+        jline_p += '))'
+        # print line for reaction
+        file.write('  ' + jline_p + utils.line_end[lang])
+
+    (pn, A_pn, b_pn, E_pn) = rxn.plog_par[-1]
+    file.write('  }} else if (pres > {:.4e}) {{\n'.format(pn))
+
+    # For pressure above the final pressure given, use standard
+    # Arrhenius expression.
+
+    # Make copy, but with specific pressure Arrhenius coefficients
+    rxn_p = chem.ReacInfo(rxn.rev, rxn.reac, rxn.reac_nu,
+                          rxn.prod, rxn.prod_nu,
+                          A_pn, b_pn, E_pn
+                          )
+
+    file.write(jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx))
+
+    file.write('  }\n')
+
+
 def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array):
     for k_sp, sp_k in enumerate(specs):
         line = '  '
@@ -1111,7 +1347,8 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     line += utils.line_end[lang]
     file.write(line)
 
-def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, no_shared):
+
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, this_cheb, no_shared):
     """
     Writes the header and definitions for of any of the various sub-functions for CUDA
 
@@ -1231,6 +1468,10 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
 
     if this_sri:
         line = '  double X = 0.0' + utils.line_end[lang]
+        file.write(line)
+
+    if this_cheb:
+        line = '  double Tred, Pred' + utils.line_end[lang]
         file.write(line)
 
     return file
@@ -1617,6 +1858,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         line = '  double X = 0.0' + utils.line_end[lang]
         file.write(line)
 
+    if any(rxn.cheb for rxn in reacs) and not (lang == 'cuda' and do_unroll):
+        file.write('  double Tred, Pred' + utils.line_end[lang])
+
     if lang != 'cuda':
         line = '  '
         if lang == 'c':
@@ -1662,6 +1906,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             thd = False
             troe = False
             sri = False
+            cheb = False
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
@@ -1673,9 +1918,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     troe = True
                 if reacs[ind_next].sri:
                     sri = True
+                if reacs[ind_next].cheb:
+                    cheb = True
             batch_has_thd = thd
             #write the specific evaluator for this reaction
-            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri, smm is None)
+            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri, cheb, smm is None)
 
         if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
@@ -1688,7 +1935,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         write_dt_comment(file, lang, rind)
 
-        #first we need any pres mod terms
+        #next we need any pres mod terms
         jline = ''
         pind = None
         if rxn.pdep:
@@ -1701,94 +1948,49 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             elif rxn.sri:
                 write_sri(file, lang)
             
-            write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind, get_array)
+            jline = get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array)
 
-        else:
-            # not pressure dependent
-
+        elif rxn.thd_body:
             # third body reaction
-            if rxn.thd_body:
-                pind = pdep_reacs.index(rind)
+            pind = pdep_reacs.index(rind)
 
-                #going to need conc_temp
-                #write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array)
+            jline = '  j_temp = ((-' + get_array(lang, 'pres_mod', pind)
+            jline += ' * '
 
-                jline = '  j_temp = ((-' + get_array(lang, 'pres_mod', pind)
-                jline += ' * '
-
-                if rxn.rev:
-                    # forward and reverse reaction rates
-                    jline += '(' + get_array(lang, 'fwd_rates', rind)
-                    jline += ' - ' + \
-                        get_array(lang, 'rev_rates', rev_reacs.index(rxn))
-                    jline += ')'
-                else:
-                    # forward reaction rate only
-                    jline += '' + get_array(lang, 'fwd_rates', rind)
-
-                jline += ' / T) + (' + get_array(lang, 'pres_mod', pind)
-
+            if rxn.rev:
+                # forward and reverse reaction rates
+                jline += '(' + get_array(lang, 'fwd_rates', rind)
+                jline += ' - ' + \
+                    get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+                jline += ')'
             else:
-                if lang in ['c', 'cuda', 'matlab']:
-                    jline += '  j_temp = ((1.0'
-                elif lang in ['fortran']:
-                    jline += '  j_temp = ((1.0_wp'
+                # forward reaction rate only
+                jline += get_array(lang, 'fwd_rates', rind)
 
-            file.write(jline)
+            jline += ' / T) + (' + get_array(lang, 'pres_mod', pind)
 
-        jline = ' / T) * ('
-
-        # contribution from temperature derivative of forward reaction rate
-        jline += '' + get_array(lang, 'fwd_rates', rind)
-        jline += ' * ('
-        file.write(jline)
-
-        write_rxn_params_dt(file, rxn, rev=False)
-
-        # loop over reactants
-        jline = ''
-        nu = 0
-        for sp in rxn.reac:
-            nu += rxn.reac_nu[rxn.reac.index(sp)]
-        jline += '{})'.format(float(nu))
-
-        # contribution from temperature derivative of reaction rates
-        if rxn.rev:
-            # reversible reaction
-
-            jline += ' - ' + \
-                get_array(lang, 'rev_rates', rev_reacs.index(rxn)) + \
-                ' * ('
-
-            file.write(jline)
-            jline = ''
-
-            if rxn.rev_par:
-                write_rxn_params_dt(file, rxn, rev=True)
-
-                nu = 0
-                # loop over products
-                for sp in rxn.prod:
-                    nu += rxn.prod_nu[rxn.prod.index(sp)]
-                jline += '{})'.format(float(nu))
-                file.write(jline)
-            else:
-                write_rxn_params_dt(file, rxn, rev=False)
-
-                nu = 0
-                # loop over products
-                for sp in rxn.prod:
-                    nu += rxn.prod_nu[rxn.prod.index(sp)]
-                jline += '{} - T * ('.format(float(nu))
-                file.write(jline)
-                jline = ''
-                write_db_dt(file, lang, specs, rxn)
-                file.write(')')
         else:
-            jline += ')'
+            if lang in ['c', 'cuda', 'matlab']:
+                jline += '  j_temp = ((1.0'
+            elif lang in ['fortran']:
+                jline += '  j_temp = ((1.0_wp'
 
-        # print line for reaction
-        file.write(jline + ') / rho' + utils.line_end[lang])
+        jline += ' / T) * ('
+
+        if rxn.plog:
+
+            write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, 
+                rev_reacs.index(rxn) if rxn.rev else None)
+
+        elif rxn.cheb:
+            write_cheb_rxn_dt(file, lang, jline, rxn, rind,
+                rev_reacs.index(rxn) if rxn.rev else None)
+
+        else:
+            jline += get_elementary_rxn_dt(lang, specs, rxn_p, rind, 
+                rev_reacs.index(rxn) if rxn.rev else None)
+            file.write(jline)
+
 
         for rxn_sp in set(rxn.reac + rxn.prod):
             sp_k, k_sp = next(((s, specs.index(s)) for s in specs

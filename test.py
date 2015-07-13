@@ -22,6 +22,9 @@ except ImportError:
     print('Error: Cantera must be installed.')
     raise
 
+# Local imports
+import utils
+
 # Compiler based on language
 cmd_compile = dict(c = 'gcc',
                    cuda = 'nvcc',

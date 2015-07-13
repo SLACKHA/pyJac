@@ -15,6 +15,7 @@ elif sys.version_info.major == 2:
 
 # Related modules
 import numpy as np
+
 try:
     import cantera as ct
     from cantera import ck2cti
@@ -26,13 +27,13 @@ except ImportError:
 import utils
 
 # Compiler based on language
-cmd_compile = dict(c = 'gcc',
-                   cuda = 'nvcc',
-                   fortran = 'gfortran'
+cmd_compile = dict(c='gcc',
+                   cuda='nvcc',
+                   fortran='gfortran'
                    )
 
 # Source code extension based on language
-src_ext = dict(c = '.c', cuda = '.cu', fortran = '.f90', matlab = '.m')
+src_ext = dict(c='.c', cuda='.cu', fortran='.f90', matlab='.m')
 
 
 class ReactorConstPres(object):
@@ -263,7 +264,7 @@ def eval_jacobian(dydt, order):
           )
 
     jacob = np.zeros(len(y) ** 2)
-    for j, y_j  in enumerate(y):
+    for j, y_j in enumerate(y):
         y_temp = np.copy(y)
         r = max(sqrt_rnd * abs(y_j), r0 / err_wt[j])
 
@@ -292,7 +293,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
-    if not mech_filename.endswith(tuple(['.cti','.xml'])):
+    if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
 
@@ -375,24 +376,24 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         data = np.genfromtxt(os.path.join(test_dir, 'output.txt'))
 
         num = int(data[0])
-        test_conc = data[1 : num + 1]
-        data = data[num + 1 :]
+        test_conc = data[1: num + 1]
+        data = data[num + 1:]
         err = np.linalg.norm((test_conc - gas.concentrations) /
                              gas.concentrations, 2
                              ) * 100.
         print('L2 norm error in concentration: {:.2e} %'.format(err))
 
         num = int(data[0])
-        test_fwd_rates = data[1 : num + 1]
-        data = data[num + 1 :]
+        test_fwd_rates = data[1: num + 1]
+        data = data[num + 1:]
 
         num = int(data[0])
-        test_rev_rates = data[1 : num + 1]
-        data = data[num + 1 :]
+        test_rev_rates = data[1: num + 1]
+        data = data[num + 1:]
 
         num = int(data[0])
-        test_pres_mod = data[1 : num + 1]
-        data = data[num + 1 :]
+        test_pres_mod = data[1: num + 1]
+        data = data[num + 1:]
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
@@ -411,23 +412,23 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
 
         # Species production rates
         num = int(data[0])
-        test_spec_rates = data[1 : num + 1]
-        data = data[num + 1 :]
+        test_spec_rates = data[1: num + 1]
+        data = data[num + 1:]
         err = np.linalg.norm(test_spec_rates - gas.net_production_rates, 2)
         print('L2 norm relative error in species rates: {:.2e}'.format(err))
         err *= 100. / max(gas.net_production_rates)
         print('Percentage of maximum: {:.2e} %'.format(err))
 
         num = int(data[0])
-        test_dydt = data[1 : num + 1]
-        data = data[num + 1 :]
+        test_dydt = data[1: num + 1]
+        data = data[num + 1:]
         err = np.linalg.norm(test_dydt - ode(), 2)
         print('L2 norm relative error in dydt: {:.2e}'.format(err))
         err *= 100. / max(ode())
         print('Percentage of maximum: {:.2e} %'.format(err))
 
         num = int(data[0])
-        test_jacob = data[1 : num + 1]
+        test_jacob = data[1: num + 1]
 
         # Calculate "true" Jacobian numerically
         jacob = eval_jacobian(ode, 6)

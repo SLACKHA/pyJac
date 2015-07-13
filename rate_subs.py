@@ -2044,7 +2044,6 @@ def write_derivs(path, lang, specs, reacs):
 
     line += ';\n'
     file.write(line)
-<<<<<<< HEAD
     file.write('  pres = rho * {:.8e} * '.format(chem.RU) +
                utils.get_array(lang, 'y', 0) + ' * pres;\n\n'
                )

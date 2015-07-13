@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 # Standard libraries
+import math
 import os
 import sys
 import subprocess
@@ -24,6 +25,7 @@ except ImportError:
 
 # Local imports
 import utils
+from create_jacobian import create_jacobian
 
 # Compiler based on language
 cmd_compile = dict(c = 'gcc',
@@ -255,11 +257,11 @@ def eval_jacobian(dydt, order):
                              3. / 4., -3. / 20., 1. / 60.
                              ])
 
-    sqrt_rnd = sqrt(np.finfo(float).eps)
+    sqrt_rnd = math.sqrt(np.finfo(float).eps)
     err_wt = abs(y) * rel_tol + abs_tol
 
     r0 = (1000. * rel_tol * np.finfo(float).eps * len(y) *
-          sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
+          math.sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
           )
 
     jacob = np.zeros(len(y) ** 2)
@@ -289,6 +291,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
     except subprocess.CalledProcessError:
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
+
+    # Create Jacobian and supporting source code files
+    create_jacobian(lang, mech_filename,
+                    therm_name=thermo_filename, optimize_cache=False
+                    )
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.

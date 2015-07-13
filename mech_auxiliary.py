@@ -262,16 +262,16 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '    y_host[0] = {};\n'.format(T) +
                '    eval_conc(y_host[0], {}, &y_host[1], &mw_avg, &rho, conc_host);\n'.format(P)
                )
-    file.write('#ifdef CONV\n' + 
+    file.write('#ifdef CONV\n' +
                '    double rho = getDensity({}, {}, Xi);\n'.format(T, P) +
                '#endif\n'
                '    for (int i = 0; i < padded; ++i) {\n'
                '        for (int j = 0; j < NSP; ++j) {\n'
                '            conc_host_full[i + j * padded] = conc_host[j];\n'
-               '        }\n' + 
-               '        y_host_full[i] = {};\n'.format(T) + 
-               '#ifdef CONP\n' + 
-               '        pres_host_full[i] = {};\n'.format(P) + 
+               '        }\n' +
+               '        y_host_full[i] = {};\n'.format(T) +
+               '#ifdef CONP\n' +
+               '        pres_host_full[i] = {};\n'.format(P) +
                '#elif CONV\n'
                '        rho_host_full[i] = rho;\n'
                '#endif\n'
@@ -282,13 +282,13 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
-                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) + 
+                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
                    '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', d_conc, d_fwd_rates, d_rev_rates')
                    )
         file.write(
-               '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n' + 
+               '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n' +
                '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, d_rev_rates, padded * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
                )
         file.write('    for (int j = 0; j < FWD_RATES; ++j) {\n'
@@ -351,7 +351,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format('d_rates' + (', d_pres_mod' if have_pdep_rxns else '') + 
+            '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format('d_rates' + (', d_pres_mod' if have_pdep_rxns else '') +
                 ', d_spec_rates')
             )
     file.write(
@@ -364,7 +364,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
     file.write('#ifdef PROFILER\n'
                 '    cuProfilerStart();\n'
-                '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) + 
+                '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
                 '    cuProfilerStop();\n'
                 '#elif RATES_TEST\n'
                 '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n' +
@@ -378,7 +378,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '#endif\n'
                )
     file.write('#ifdef RATES_TEST\n'
-               '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') + 
+               '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
                '    write_net_rates_of_progress(fp, {}{});\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
                '#endif\n'
                )
@@ -392,11 +392,11 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
     file.write(
                '#ifdef PROFILER\n'
                '    cuProfilerStart();\n'
-               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) + 
+               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
                '    cuProfilerStop();\n'
                '#elif RATES_TEST\n'
-               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, 0, {}{});\n'.format(P, ', d_y, d_jac') + 
-               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n' + 
+               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, 0, {}{});\n'.format(P, ', d_y, d_jac') +
+               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n' +
                '    for (int j = 0; j < NN * NN; ++j) {\n'
                '        jacob_host[j] = jacob_host_full[j * padded];\n'
                '    }\n'
@@ -405,7 +405,7 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                )
 
 
-def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='', 
+def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='',
     old_spec_order=None, old_rxn_order=None, cache_optimized=False):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
@@ -602,7 +602,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '    double Yi[NSP] = {0.0};\n'
                    '    mole2mass(Xi, Yi);\n\n'
                    '    //set initial pressure, units [PA]\n' +
-                   '    double P = {};\n'.format(chem.PA * P) + 
+                   '    double P = {};\n'.format(chem.PA * P) +
                    '    // set intial temperature, units [K]\n' +
                    '    double T0 = {};\n\n'.format(T0)
                    )
@@ -725,7 +725,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             file.write('    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
         else:
             file.write('    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
-        
+
         file.write('    fprintf(fp, "Net Rates of Progess\\n")' + utils.line_end[lang])
         pdep_count = 0
         rev_count = 0
@@ -748,7 +748,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
 
         file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n' +
-                   '    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang] + 
+                   '    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang] +
                    '    fprintf(fp, "Jacob\\n");\n'
                    '    for (int i = 0; i < NN; ++i) {\n'
                    '        for (int j = 0; j < NN; ++j) {\n'
@@ -910,7 +910,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
               for P in P_list:
                 __write_cuda_rate_evaluator(
                 file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
-           
+
             file.write('    fclose(fp);\n'
                        '    free(conc_host_full);\n'
                        '    free(y_host_full);\n'
@@ -1077,7 +1077,5 @@ def write_header(path, lang):
                    ' #define omp_get_max_threads() 1\n'
                    ' #define omp_get_num_threads() 1\n'
                    '#endif\n'
-                   '//include the various options for the solvers\n'
-                   '#include "solver_options.h"\n'
                    '#endif\n'
                   )

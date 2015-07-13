@@ -1489,7 +1489,8 @@ def write_chem_utils(path, lang, specs):
     line = pre
     if lang in ['c', 'cuda']:
         line += ('void eval_conc (const double T, const double pres, '
-                 'const double * mass_frac, double * mw_avg, double * rho, double * conc) {\n\n'
+                 'const double * mass_frac, double * mw_avg, '
+                 'double * rho, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
         line += (
@@ -1515,9 +1516,13 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += '(mass_frac[{}] * {})'.format(specs.index(sp), utils.round_sig(1.0 / sp.mw, 9))
+            line += ('(mass_frac[{}] * {})'.format(specs.index(sp),
+                     utils.round_sig(1.0 / sp.mw, 9))
+                     )
         elif lang in ['fortran', 'matlab']:
-            line += '(mass_frac[{}] * {})'.format(specs.index(sp) + 1, utils.round_sig(1.0 / sp.mw, 9))
+            line += ('(mass_frac[{}] * {})'.format(specs.index(sp) + 1,
+                     utils.round_sig(1.0 / sp.mw, 9))
+                     )
 
         isfirst = False
 

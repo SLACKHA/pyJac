@@ -558,7 +558,7 @@ def write_dt_y_comment(file, lang, sp):
     line += 'partial of T wrt Y_{}'.format(sp.name) + '\n'
     file.write(line)
 
-def write_rxn_params_dt(file, rxn, rev=False):
+def get_rxn_params_dt(rxn, rev=False):
     jline = ''
     if rev:
         if (abs(rxn.rev_par[1]) > 1.0e-90
@@ -581,7 +581,7 @@ def write_rxn_params_dt(file, rxn, rev=False):
             jline += '({:.8e} / T)'.format(rxn.E)
         jline += '{}1.0 - '.format(' + ' if (abs(rxn.b)
                                              > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
-    file.write(jline)
+    return jline
 
 def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
     if lang == 'cuda':
@@ -658,7 +658,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
             elif lang == 'matlab':
                 file.write('  end\n\n')
 
-def write_db_dt(file, lang, specs, rxn):
+def get_db_dt(lang, specs, rxn):
     if lang == 'cuda':
         template = 'dBdT[{}]'
     else:
@@ -739,7 +739,7 @@ def write_db_dt(file, lang, specs, rxn):
 
     jline += '))'
 
-    file.write(jline)
+    return jline
 
 def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp=None):
     # print lines for necessary pressure-dependent variables
@@ -850,7 +850,7 @@ def write_sri(file, lang):
                             )
     file.write(line)
 
-def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind, get_array):
+def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
     beta_0minf, E_0minf, k0kinf = get_infs(rxn)
     jline = '  j_temp = (' + get_array(lang, 'pres_mod', pind)
     jline += ' * ((' + ('-Pr' if rxn.high else '') #high -> chem-activated bimolecular rxn
@@ -880,7 +880,7 @@ def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind, get_array):
 
     jline += ' + (' + get_array(lang, 'pres_mod', pind)
 
-    file.write(jline)
+    return jline
 
 def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     jline = (' + X * ((('

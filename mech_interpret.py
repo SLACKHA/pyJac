@@ -8,6 +8,7 @@ from __future__ import division
 import sys
 import math
 import numpy as np
+import re
 
 # Local imports
 import chem_utilities as chem
@@ -93,7 +94,7 @@ def read_mech(mech_filename, therm_filename):
         if not line: break
 
         # skip blank or commented lines
-        if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+        if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
         # don't convert to lowercase, since thermo
         # needs to match (for Chemkin)
@@ -693,7 +694,7 @@ def read_thermo(filename, elems, specs):
             line = file.readline()
 
             # skip blank or commented lines
-            if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
             # skip 'thermo' at beginning
             if line[0:6].lower() == 'thermo': break
@@ -719,8 +720,9 @@ def read_thermo(filename, elems, specs):
 
             # break if end of file
             if line is None or line[0:3].lower() == 'end': break
+
             # skip blank/commented line
-            if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
             # species name, columns 0:18
             spec = line[0:18].strip()

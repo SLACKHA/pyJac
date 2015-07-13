@@ -23,7 +23,14 @@ AVAG = 6.0221367e23
 
 # pressure of one standard atmosphere [Pa]
 PA = 101325.0
+class CommonEqualityMixin(object):
 
+    def __eq__(self, other):
+        return (isinstance(other, self.__class__)
+            and self.__dict__ == other.__dict__)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 def get_elem_wt():
     """Returns dict with built-in element names and atomic weights [kg/kmol].
@@ -76,7 +83,7 @@ def get_elem_wt():
     return elem_wt
 
 
-class ReacInfo:
+class ReacInfo(CommonEqualityMixin):
     """Reaction class.
 
     Contains all information about a single reaction.
@@ -192,7 +199,7 @@ class ReacInfo:
         self.plog_par = None
 
 
-class SpecInfo:
+class SpecInfo(CommonEqualityMixin):
     """Species class.
 
     Contains all information about a single species.

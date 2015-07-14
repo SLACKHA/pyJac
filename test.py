@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 import subprocess
+from argparse import ArgumentParser
 
 # More Python 2 compatibility
 if sys.version_info.major == 3:
@@ -25,6 +26,7 @@ except ImportError:
 
 # Local imports
 import utils
+import create_jacobian
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -32,11 +34,9 @@ cmd_compile = dict(c='gcc',
                    fortran='gfortran'
                    )
 
-# Source code extension based on language
-src_ext = dict(c='.c', cuda='.cu', fortran='.f90', matlab='.m')
-
 
 class ReactorConstPres(object):
+
     def __init__(self, gas):
         # Parameters of the ODE system and auxiliary data are stored in the
         # ReactorConstPres object.
@@ -63,6 +63,7 @@ class ReactorConstPres(object):
 
 
 class ReactorConstVol(object):
+
     def __init__(self, gas):
         # Parameters of the ODE system and auxiliary data are stored in the
         # ReactorConstVol object.
@@ -114,93 +115,261 @@ def convert_mech(mech_filename, therm_filename=None):
     return mech_filename
 
 
-def write_c_test(build_dir):
-    with open(build_dir + os.path.sep + 'test.c', 'w') as f:
+def __write_header_include(file, lang):
+    file.write(
+        '#include <stdlib.h>\n'
+        '#include <stdio.h>\n'
+        '\n'
+    )
+
+    file_list = ['header', 'mechanism', 'chem_utils', 'rates', 'dydt', 'jacob']
+    file.write('\n'.join(['#include "{}"'.format(the_file)
+                          for the_file in file_list]) + '\n')
+
+    if lang == 'cuda':
+        file.write('#include <cuda.h>\n'
+                   '#include <cuda_runtime.h>\n'
+                   '#include <helper_cuda.h>\n'
+                   '#include "launch_bounds.cuh"\n'
+                   '#include "gpu_macros.cuh"\n'
+                   '#include "gpu_memory.cuh"\n\n')
+
+
+def __write_output_methods(file):
+    file.write(
+        'void write_conc (FILE* fp, const double* conc) {\n'
+        '  fprintf(fp, "%d\\n", NSP);\n'
+        '  for(int i = 0; i < NSP; ++i) {\n'
+        '    fprintf(fp, "%.15e\\n", conc[i]);\n'
+        '  }\n'
+        '}\n'
+        '\n'
+        'void write_rates (FILE* fp, const double* fwd_rates, '
+        'const double* rev_rates,\n'
+        '                  const double* pres_mod, '
+        'const double* sp_rates, const double* dy) {\n'
+        '\n'
+        '  fprintf(fp, "%d\\n", FWD_RATES);\n'
+        '  for(int i = 0; i < FWD_RATES; ++i) {\n'
+        '      fprintf(fp, "%.15e\\n", fwd_rates[i]);\n'
+        '  }\n'
+        '\n'
+        '  fprintf(fp, "%d\\n", REV_RATES);\n'
+        '  for(int i = 0; i < REV_RATES; ++i) {\n'
+        '      fprintf(fp, "%.15e\\n", rev_rates[i]);\n'
+        '  }\n'
+        '\n'
+        '  fprintf(fp, "%d\\n", PRES_MOD_RATES);\n'
+        '  for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
+        '      fprintf(fp, "%.15e\\n", pres_mod[i]);\n'
+        '  }\n'
+        '\n'
+        '  fprintf(fp, "%d\\n", NSP);\n'
+        '  for(int i = 0; i < NSP; i++) {\n'
+        '       fprintf(fp, "%.15e\\n", sp_rates[i]);\n'
+        '  }\n'
+        '\n'
+        '  fprintf(fp, "%d\\n", NN);\n'
+        '  for(int i = 0; i < NN; i++) {\n'
+        '      fprintf(fp, "%.15e\\n", dy[i]);\n'
+        '  }\n'
+        '\n'
+        '  return;\n'
+        '}\n'
+        '\n'
+        '\n'
+        'void write_jacob (FILE* fp, const double* jacob) {\n'
+        '\n'
+        '  fprintf(fp, "%d\\n", NN * NN);\n'
+        '  for (int i = 0; i < NN * NN; ++i) {\n'
+        '      fprintf(fp, "%.15e\\n", jacob[i]);\n'
+        '  }\n'
+        '\n'
+        '  return;\n'
+        '}\n'
+        '\n'
+        '\n'
+    )
+
+
+def __write_condition_reader(file):
+    file.write(
+        '  int buff_size = 1024;\n'
+        '  char buffer [buff_size];\n'
+        '  char* ptr, *eptr;\n'
+        '  double data[NN + 1];\n'
+        '  for (int i = 0; i < NN + 1; ++i) {\n'
+        '    if (fgets (buffer, buff_size, fp) != NULL) {\n'
+        '      data[i] = strtod(buffer, NULL);\n'
+        '    }\n'
+        '  }\n'
+        '  fclose (fp);\n'
+        '\n'
+        '  y[0] = data[0];\n'
+        '  pres = data[1];\n'
+        '  for (int i = 0; i < NSP; ++i) {\n'
+        '    y[i + 1] = data[i + 2];\n'
+        '  }\n')
+
+
+def __write_kernels(file):
+    file.write(
+        '  __global__\n'
+        'void k_eval_conc(const double* y, double pres, double* conc) {\n'
+        '   double rho, mw_avg;\n'
+        '   eval_conc(y[0], pres, &y[1], &mw_avg, &rho, conc);\n'
+        '}\n\n'
+    )
+    file.write(
+        '  __global__\n'
+        'void k_eval_rxn_rates(const double* y, double pres, '
+        'const double* conc, double* fwd_rates,'
+        ' double* rev_rates) {\n'
+        '   eval_rxn_rates(y[0], pres, conc, fwd_rates, rev_rates);\n'
+        '}\n\n'
+    )
+    file.write(
+        '  __global__\n'
+        'void k_get_rxn_pres_mod(const double* y, double pres,'
+        ' const double* conc, double* pres_mod) {\n'
+        '   get_rxn_pres_mod(y[0], pres, conc, pres_mod);\n'
+        '}\n\n'
+    )
+    file.write(
+        '  __global__\n'
+        'void k_eval_spec_rates(const double* fwd_rates,'
+        ' const double* rev_rates, const double* pres_mod'
+        ', double* sp_rates) {\n'
+        '   eval_spec_rates(fwd_rates, rev_rates, pres_mod, sp_rates);\n'
+        '}\n\n'
+    )
+    file.write(
+        '  __global__\n'
+        'void k_eval_dy_dt(double pres, const double* y, double* dy) {\n'
+        '   dydt(0, pres, y, dy);\n'
+        '}\n\n'
+    )
+    file.write(
+        '  __global__\n'
+        'void k_eval_jacob(double pres, const double* y, double* jacob) {\n'
+        '   eval_jacob(0, pres, y, jacob);\n'
+        '}\n\n'
+    )
+
+
+def write_cuda_test(build_dir):
+    with open(build_dir + os.path.sep + 'test.cu', 'w') as f:
+        __write_header_include(f, 'cuda')
         f.write(
-            '#include <stdlib.h>\n'
-            '#include <stdio.h>\n'
+            '#ifndef SHARED_SIZE\n'
+            '  #define SHARED_SIZE (0)\n'
+            '#endif\n\n'
+        )
+        __write_output_methods(f)
+        __write_kernels(f)
+        f.write('int main (void) {\n'
+                '\n'
+                '  FILE* fp = fopen ("test/input.txt", "r");\n'
+                '  double y[NN], pres;\n'
+                '\n'
+                )
+
+        __write_condition_reader(f)
+
+        f.write(
+            '  double conc[NSP];\n'
+            '  double fwd_rates[FWD_RATES];\n'
+            '  double rev_rates[REV_RATES];\n'
+            '  double pres_mod[PRES_MOD_RATES];\n'
+            '  double sp_rates[NSP];\n'
+            '  double dy[NN];\n'
+            '  double jacob[NN * NN];\n'
             '\n'
-            '#include "header.h"\n'
-            '#include "mechanism.h"\n'
-            '#include "chem_utils.h"\n'
-            '#include "rates.h"\n'
-            '#include "dydt.h"\n'
-            '#include "jacob.h"\n'
+            '  cudaErrorCheck(cudaSetDevice(0));\n'
+            '  cudaErrorCheck(cudaDeviceSetCacheConfig('
+            'cudaFuncCachePreferL1));\n'
+            '  double *d_y, *d_conc, *d_fwd_rates, *d_rev_rates,'
+            ' *d_pres_mod_rates, *d_dy, *d_spec_rates, *d_jacob;\n'
+            '  //initialize cuda variables\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_y, NN * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_conc,'
+            ' NSP * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_fwd_rates,'
+            ' FWD_RATES * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_rev_rates,'
+            ' REV_RATES * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_pres_mod_rates,'
+            ' PRES_MOD_RATES * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_dy,'
+            ' NN * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_spec_rates,'
+            ' NSP * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)d_jacob,'
+            ' NN * NN * sizeof(double)));\n'
+            '  //copy mass fractions\n'
+            '  cudaErrorCheck(cudaMemcpy(y, d_y, NN * sizeof(double),'
+            ' cudaMemcpyHostToDevice));\n'
+            '  k_eval_conc(d_y, pres, d_conc);\n'
+            '  k_eval_rxn_rates(d_y, pres, d_conc,'
+            ' d_fwd_rates, d_rev_rates);\n'
+            '  k_get_rxn_pres_mod(d_y, pres, d_conc,'
+            ' d_pres_mod_rates);\n'
+            '  k_eval_spec_rates(d_fwd_rates, d_rev_rates,'
+            ' d_pres_mod_rates, d_spec_rates);\n'
+            '  k_eval_dy_dt(pres, d_y, d_dy);\n'
+            '  k_eval_jacob(pres, d_y, d_jacob);\n'
+            '  //copy back\n'
+            '  cudaErrorCheck(cudaMemcpy(conc, d_conc,'
+            ' NSP * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  cudaErrorCheck(cudaMemcpy(fwd_rates, d_fwd_rates,'
+            ' FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  cudaErrorCheck(cudaMemcpy(rev_rates, d_rev_rates,'
+            ' REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  cudaErrorCheck(cudaMemcpy(pres_mod, d_pres_mod_rates,'
+            ' PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  cudaErrorCheck(cudaMemcpy(dy, d_dy,'
+            ' NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  cudaErrorCheck(cudaMemcpy(spec_rates, d_spec_rates,'
+            ' NSP * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  cudaErrorCheck(cudaMemcpy(jacob, d_jacob,'
+            ' NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '  //write\n'
+            '  write_conc (fp, conc);\n'
+            '  write_rates (fp, fwd_rates, rev_rates, '
+            'pres_mod, sp_rates, dy);\n'
+            '  write_jacob (fp, jacob);\n'
             '\n'
-            'void write_conc (FILE* fp, const double* conc) {\n'
-            '  fprintf(fp, "%d\\n", NSP);\n'
-            '  for(int i = 0; i < NSP; ++i) {\n'
-            '    fprintf(fp, "%.15e\\n", conc[i]);\n'
-            '  }\n'
-            '}\n'
-            '\n'
-            'void write_rates (FILE* fp, const double* fwd_rates, '
-            'const double* rev_rates,\n'
-            '                  const double* pres_mod, '
-            'const double* sp_rates, const double* dy) {\n'
-            '\n'
-            '  fprintf(fp, "%d\\n", FWD_RATES);\n'
-            '  for(int i = 0; i < FWD_RATES; ++i) {\n'
-            '      fprintf(fp, "%.15e\\n", fwd_rates[i]);\n'
-            '  }\n'
-            '\n'
-            '  fprintf(fp, "%d\\n", REV_RATES);\n'
-            '  for(int i = 0; i < REV_RATES; ++i) {\n'
-            '      fprintf(fp, "%.15e\\n", rev_rates[i]);\n'
-            '  }\n'
-            '\n'
-            '  fprintf(fp, "%d\\n", PRES_MOD_RATES);\n'
-            '  for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
-            '      fprintf(fp, "%.15e\\n", pres_mod[i]);\n'
-            '  }\n'
-            '\n'
-            '  fprintf(fp, "%d\\n", NSP);\n'
-            '  for(int i = 0; i < NSP; i++) {\n'
-            '       fprintf(fp, "%.15e\\n", sp_rates[i]);\n'
-            '  }\n'
-            '\n'
-            '  fprintf(fp, "%d\\n", NN);\n'
-            '  for(int i = 0; i < NN; i++) {\n'
-            '      fprintf(fp, "%.15e\\n", dy[i]);\n'
-            '  }\n'
-            '\n'
-            '  return;\n'
-            '}\n'
-            '\n'
-            '\n'
-            'void write_jacob (FILE* fp, const double* jacob) {\n'
-            '\n'
-            '  fprintf(fp, "%d\\n", NN * NN);\n'
-            '  for (int i = 0; i < NN * NN; ++i) {\n'
-            '      fprintf(fp, "%.15e\\n", jacob[i]);\n'
-            '  }\n'
-            '\n'
-            '  return;\n'
-            '}\n'
-            '\n'
-            '\n'
-            'int main (void) {\n'
-            '\n'
-            '  FILE* fp = fopen ("test/input.txt", "r");\n'
-            '  double y[NN], pres;\n'
-            '\n'
-            '  int buff_size = 1024;\n'
-            '  char buffer [buff_size];\n'
-            '  char* ptr, *eptr;\n'
-            '  double data[NN + 1];\n'
-            '  for (int i = 0; i < NN + 1; ++i) {\n'
-            '    if (fgets (buffer, buff_size, fp) != NULL) {\n'
-            '      data[i] = strtod(buffer, NULL);\n'
-            '    }\n'
-            '  }\n'
             '  fclose (fp);\n'
             '\n'
-            '  y[0] = data[0];\n'
-            '  pres = data[1];\n'
-            '  for (int i = 0; i < NSP; ++i) {\n'
-            '    y[i + 1] = data[i + 2];\n'
-            '  }\n'
-            '\n'
+            '  //finally free cuda variables\n'
+            '  cudaErrorCheck(cudaFree(d_y));\n'
+            '  cudaErrorCheck(cudaFree(d_conc));\n'
+            '  cudaErrorCheck(cudaFree(d_fwd_rates));\n'
+            '  cudaErrorCheck(cudaFree(d_rev_rates));\n'
+            '  cudaErrorCheck(cudaFree(d_pres_mod_rates));\n'
+            '  cudaErrorCheck(cudaFree(d_dy));\n'
+            '  cudaErrorCheck(cudaFree(d_spec_rates));\n'
+            '  cudaErrorCheck(cudaFree(d_jacob));\n'
+            '  return 0;\n'
+            '}\n'
+
+        )
+
+
+def write_c_test(build_dir):
+    with open(build_dir + os.path.sep + 'test.c', 'w') as f:
+        __write_header_include(f, 'c')
+        __write_output_methods(f)
+        f.write('int main (void) {\n'
+                '\n'
+                '  FILE* fp = fopen ("test/input.txt", "r");\n'
+                '  double y[NN], pres;\n'
+                '\n'
+                )
+
+        __write_condition_reader(f)
+
+        f.write(
             '  double mw_avg;\n'
             '  double rho;\n'
             '  double conc[NSP];\n'
@@ -297,6 +466,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
 
+    # generate jacobian
+    create_jacobian.create_jacobian(
+        lang, mech_filename, therm_filename,
+        optimize_cache=False, build_path=build_dir)
+
     # Write test driver
     if lang == 'c':
         write_c_test(build_dir)
@@ -310,13 +484,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
 
     for f in files:
         args = [cmd_compile[lang], '-I.' + os.path.sep + build_dir,
-                '-c', os.path.join(build_dir, f + src_ext[lang]),
+                '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
                 '-o', os.path.join(test_dir, f + '.o')
                 ]
         try:
             subprocess.check_call(args)
         except subprocess.CalledProcessError:
-            print('Error: compilation failed for ' + f + src_ext[lang])
+            print('Error: compilation failed for ' + f + utils.file_ext[lang])
             sys.exit(1)
 
     # Link into executable
@@ -342,12 +516,15 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
                 isinstance(rxn, ct.ChemicallyActivatedReaction)
                 ]
     # Index of element in idx_pmod that corresponds to reversible reaction
-    idx_pmod_rev = [i for i, idx in enumerate(idx_pmod) if gas.reaction(idx).reversible]
-    # Index of reversible reaction that also has pressure dependent modification
+    idx_pmod_rev = [
+        i for i, idx in enumerate(idx_pmod) if gas.reaction(idx).reversible]
+    # Index of reversible reaction that also has pressure dependent
+    # modification
     idx_rev_pmod = [i for i, idx in enumerate(idx_rev) if
                     isinstance(gas.reaction(idx), ct.ThreeBodyReaction) or
                     isinstance(gas.reaction(idx), ct.FalloffReaction) or
-                    isinstance(gas.reaction(idx), ct.ChemicallyActivatedReaction)
+                    isinstance(
+                        gas.reaction(idx), ct.ChemicallyActivatedReaction)
                     ]
 
     num_trials = 10
@@ -441,3 +618,30 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
     for f in os.listdir(test_dir):
         os.remove(os.path.join(test_dir, f))
     os.rmdir(test_dir)
+
+if __name__ == '__main__':
+    parser = ArgumentParser(
+        description='Tests create_jacobian versus a finite difference'
+        ' Cantera jacobian\n')
+    parser.add_argument('-l', '--lang',
+                        type=str,
+                        choices=utils.langs,
+                        required=True,
+                        help='Programming language for output '
+                             'source files.')
+    parser.add_argument('-b', '--build_dir',
+                        type=str,
+                        default='.' + os.path.sep + 'out' + os.path.sep,
+                        help='The directory the jacob/rates/tester'
+                        ' files will be generated and built in.')
+    parser.add_argument('-i', '--input',
+                        type=str,
+                        required=True,
+                        help='Input mechanism filename (e.g., mech.dat).')
+    parser.add_argument('-t', '--thermo',
+                        type=str,
+                        default=None,
+                        help='Thermodynamic database filename (e.g., '
+                             'therm.dat), or nothing if in mechanism.')
+    args = parser.parse_args()
+    test(args.lang, args.build_dir, args.input, args.thermo)

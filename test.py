@@ -614,27 +614,42 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         num = int(data[0])
         test_spec_rates = data[1: num + 1]
         data = data[num + 1:]
-        err = np.linalg.norm(test_spec_rates - gas.net_production_rates, 2)
-        err *= 100. / max(gas.net_production_rates)
-        print('Percentage of maximum: {:.2e} %'.format(err))
+        non_zero = np.where(test_spec_rates != 0.)
+        zero = np.where(test_spec_rates == 0.)
+        err = np.linalg.norm(
+            (test_spec_rates[non_zero] - gas.net_production_rates[non_zero]) /
+            gas.net_production_rates[non_zero], 2) * 100.
+        print('L2 norm relative error of non-zero net production rates: '
+            '{:.2e} %'.format(err))
+        err = np.linalg.norm(
+            test_spec_rates[zero] - gas.net_production_rates[zero], 2)
+        print(
+            'L2 norm difference of "zero" net production rates: {:.2e}'
+            .format(err))
 
         num = int(data[0])
         test_dydt = data[1: num + 1]
         data = data[num + 1:]
-        err = np.linalg.norm(test_dydt - ode(), 2)
-        print('L2 norm relative error in dydt: {:.2e}'.format(err))
-        err *= 100. / max(ode())
-        print('Percentage of maximum: {:.2e} %'.format(err))
+        non_zero = np.where(test_dydt != 0.)
+        zero = np.where(test_dydt == 0.)
+        err = np.linalg.norm((test_dydt[non_zero] - ode()[non_zero]) /
+                             ode()[non_zero], 2) * 100.
+        print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
+        err = np.linalg.norm(test_dydt[zero] - ode()[zero], 2)
+        print('L2 norm difference of "zero" dydt {:.2e}'.format(err))
 
         num = int(data[0])
         test_jacob = data[1: num + 1]
-
+        non_zero = np.where(test_jacob != 0.)
+        zero = np.where(test_jacob == 0.)
         # Calculate "true" Jacobian numerically
         jacob = eval_jacobian(ode, 6)
-        err = np.linalg.norm(test_jacob - jacob, 2)
-        print('L2 norm relative error in Jacobian: {:.2e}'.format(err))
-        err *= 100. / max(jacob)
-        print('Percentage of maximum: {:.2e} %'.format(err))
+        err = np.linalg.norm((test_jacob[non_zero] - jacob[non_zero]) /
+                             jacob[non_zero], 2) * 100.
+        print('L2 norm relative error of non-zero Jacobian: {:.2e} %'
+              .format(err))
+        err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
+        print('L2 norm difference of "zero" Jacobian {:.2e}'.format(err))
         print()
 
     # Cleanup all files in test directory.

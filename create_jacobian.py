@@ -318,8 +318,8 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
             isp = next(i for i in range(len(specs))
                        if specs[i].name == sp_reac)
             if isinstance(nu_temp, float):
-                jline += ' * pow(conc' + \
-                         get_array(lang, isp)
+                jline += ' * pow(' + \
+                         get_array(lang, 'conc', isp)
                 jline += ', ' + str(nu_temp) + ')'
             else:
                 # integer, so just use multiplication

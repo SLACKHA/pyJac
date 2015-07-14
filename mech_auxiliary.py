@@ -1131,7 +1131,5 @@ def write_header(path, lang):
                    ' #define omp_get_max_threads() 1\n'
                    ' #define omp_get_num_threads() 1\n'
                    '#endif\n'
-                   '//include the various options for the solvers\n'
-                   '#include "solver_options.h"\n'
                    '#endif\n'
                    )

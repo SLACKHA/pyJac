@@ -2,8 +2,10 @@ import cantera as ct
 import numpy as np
 from argparse import ArgumentParser
 
+
 def get_str(arr):
     return '\n'.join('{:.15e}'.format(x) for x in arr) + '\n'
+
 
 def get_y_dot(gas):
     rates = gas.net_production_rates
@@ -14,20 +16,21 @@ def get_y_dot(gas):
     vals[1:] = rates
     return vals
 
+
 def eval_jacobian(gas, T, P, conp):
     ATOL = 1e-15
     RTOL = 1e-9
 
     FD_ORD = 6
     x_coeffs = np.zeros(FD_ORD)
-    #6th order central difference
+    # 6th order central difference
     x_coeffs[0] = -3.0
     x_coeffs[1] = -2.0
     x_coeffs[2] = -1.0
     x_coeffs[3] = 1.0
     x_coeffs[4] = 2.0
     x_coeffs[5] = 3.0
-    
+
     y_coeffs = np.zeros(FD_ORD)
     y_coeffs[0] = -1.0 / 60.0
     y_coeffs[1] = 3.0 / 20.0
@@ -68,6 +71,7 @@ def eval_jacobian(gas, T, P, conp):
 
     return jac
 
+
 def jacob_gen(mechanism, conp=True):
     gas = ct.Solution(mechanism)
 
@@ -94,13 +98,12 @@ def jacob_gen(mechanism, conp=True):
                     file.write(get_str(jac[:, i]))
 
 
-
 if __name__ == '__main__':
     parser = ArgumentParser(description='Generates baseline data for checking jacobian output')
     parser.add_argument('-m', '--mech',
-        type=str,
-        required=True,
-        help='The cantera formatted mechanism')
+                        type=str,
+                        required=True,
+                        help='The cantera formatted mechanism')
 
     args = parser.parse_args()
     jacob_gen(args.mech)

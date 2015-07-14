@@ -21,6 +21,7 @@ import cache_optimizer as cache
 import mech_auxiliary as aux
 import shared_memory as shared
 
+
 def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).
 
@@ -188,7 +189,6 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                        '}\n\n'
                        )
 
-
         file.write('\n'
                    '#endif\n'
                    )
@@ -314,7 +314,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     if lang == 'cuda' and smm is not None:
         smm.reset()
         get_array = smm.get_array
-        smm.write_init(file, indent = 2)
+        smm.write_init(file, indent=2)
 
     pre = '  '
     if lang == 'c':
@@ -367,24 +367,19 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
     file.write('\n')
 
-    def __round_sig(x, sig=8):
-        from math import log10, floor
-        if x == 0:
-            return 0
-        return round(x, sig-int(floor(log10(abs(x))))-1)
-
     for i_rxn in ordering:
         rxn = reacs[i_rxn]
 
         if lang == 'cuda' and smm is not None:
             indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
-                         for s in set(rxn.reac + rxn.prod)]
+                       for s in set(rxn.reac + rxn.prod)]
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-            #estimate usages as the number of consequitive reactions
+            # estimate usages as the number of consequitive reactions
             usages = []
             for sp_i in indexes:
                 temp = i_rxn + 1
-                while temp < len(ordering) and specs[sp_i].name in set(reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
+                while temp < len(ordering) and specs[sp_i].name in set(
+                                reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
                     temp += 1
                 usages.append(temp - i_rxn - 1)
             smm.load_into_shared(file, the_vars, usages)
@@ -500,8 +495,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
             if not rxn.rev_par:
 
-                #line = '  Kc = 0.0' + utils.line_end[lang]
-                #file.write(line)
+                # line = '  Kc = 0.0' + utils.line_end[lang]
+                # file.write(line)
 
                 # sum of stoichiometric coefficients
                 sum_nu = 0
@@ -528,29 +523,30 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                                sp.name == prod_sp), None)
                     if not sp:
                         print('Error: species ' + prod_sp + ' in reaction '
-                              '{} not found.\n'.format(reacs.index(rxn))
+                                                            '{} not found.\n'.format(reacs.index(rxn))
                               )
                         sys.exit()
 
-                    #put together all our coeffs
-                    lo_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
-                                sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
-                                sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
-                                sp.lo[5]]
-                            ]
+                    # put together all our coeffs
+                    lo_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
+                        sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
+                                            sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                        sp.lo[5]]
+                                                               ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [__round_sig(nu, 3)] + [__round_sig(x, 9) for x in [
-                                sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
-                                sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
-                                sp.hi[5]]
-                            ]
+                    hi_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
+                        sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
+                                            sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                        sp.hi[5]]
+                                                               ]
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
-                        coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
-                                                [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+                        coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(
+                            lo_array))], \
+                                               [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
 
                 # now loop through reactants
                 for isp, reac_sp in enumerate(rxn.reac):
@@ -566,28 +562,29 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                               None)
                     if not sp:
                         print('Error: species ' + reac_sp + ' in reaction '
-                              '{} not found.\n'.format(reacs.index(rxn))
+                                                            '{} not found.\n'.format(reacs.index(rxn))
                               )
                         sys.exit()
 
-                    lo_array = [__round_sig(-nu, 3)] + [__round_sig(x, 9) for x in [
-                                sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
-                                sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
-                                sp.lo[5]]
-                            ]
+                    lo_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
+                        sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
+                                            sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                        sp.lo[5]]
+                                                                ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [__round_sig(-nu, 3)] + [__round_sig(x, 9) for x in [
-                                sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
-                                sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
-                                sp.hi[5]]
-                            ]
+                    hi_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
+                        sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
+                                            sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                        sp.hi[5]]
+                                                                ]
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
-                        coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
-                                                [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+                        coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(
+                            lo_array))], \
+                                               [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
 
                 isFirst = True
                 for T_mid in coeffs:
@@ -655,7 +652,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     isFirst = False
 
                 line = ('  Kc = '
-                        '{:.8e}'.format((chem.PA / chem.RU)**sum_nu) +
+                        '{:.8e}'.format((chem.PA / chem.RU) ** sum_nu) +
                         ' * exp(Kc)' +
                         utils.line_end[lang]
                         )
@@ -693,17 +690,18 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             file.write('\n')
 
         if lang == 'cuda' and smm is not None:
-            #figure out which to mark for removal
+            # figure out which to mark for removal
             indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
-                         for s in set(rxn.reac + rxn.prod)]
+                       for s in set(rxn.reac + rxn.prod)]
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
             mark = []
-            #mark em if they're absent from the next two (or more) rxns
+            # mark em if they're absent from the next two (or more) rxns
             for i, sp_i in enumerate(indexes):
                 temp = i_rxn
-                while temp < len(ordering) and specs[sp_i].name not in set(reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
+                while temp < len(ordering) and specs[sp_i].name not in set(
+                                reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
                     temp += 1
-                    if temp - i_rxn - 1> 2:
+                    if temp - i_rxn - 1 > 2:
                         mark.append(the_vars[i])
                         break
             smm.mark_for_eviction(mark)
@@ -751,8 +749,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         file.write('#include <math.h>\n'
                    '#include "header.h"\n'
                    )
-        if lang == 'cuda' and CUDAParams.is_global():
-            file.write('#include "gpu_macros.cuh"\n')
         file.write('\n')
 
     # list of reactions with third-body or pressure-dependence
@@ -802,7 +798,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     if lang == 'cuda' and smm is not None:
         smm.reset()
         get_array = smm.get_array
-        smm.write_init(file, indent = 2)
+        smm.write_init(file, indent=2)
 
     # declarations for third-body variables
     if thd_flag:
@@ -846,7 +842,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                            )
         elif lang == 'cuda':
             file.write('  // pressure dependence variable declarations\n')
-#            if not thd_flag: file.write('  register double thd;\n')
+            #            if not thd_flag: file.write('  register double thd;\n')
             file.write('  register double k0;\n'
                        '  register double kinf;\n'
                        '  register double Pr;\n'
@@ -904,8 +900,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
 
     # loop through third-body and pressure-dependent reactions
     for i_rxn, rind in enumerate(ordering):
-        reac = reacs[rind]              # index in reaction list
-        pind = pdep_reacs.index(rind)   # index in list of third/pressure-dep reactions
+        reac = reacs[rind]  # index in reaction list
+        pind = pdep_reacs.index(rind)  # index in list of third/pressure-dep reactions
 
         # print reaction index
         if lang in ['c', 'cuda']:
@@ -922,7 +918,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 the_vars = []
                 indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
                 the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-                #estimate usages as the number of consequitive reactions
+                # estimate usages as the number of consequitive reactions
                 usages = []
                 for sp_i in indexes:
                     temp = i_rxn + 1
@@ -942,7 +938,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
 
             for sp in reac.thd_body:
                 isp = specs.index(next((s for s in specs
-                                  if s.name == sp[0]), None)
+                                        if s.name == sp[0]), None)
                                   )
                 if sp[1] > 1.0:
                     line += ' + {}'.format(sp[1] - 1.0)
@@ -959,7 +955,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 line = '  thd = m'
                 for sp in reac.thd_body:
                     isp = specs.index(next((s for s in specs
-                                      if s.name == sp[0]), None)
+                                            if s.name == sp[0]), None)
                                       )
                     if sp[1] > 1.0:
                         line += ' + {}'.format(sp[1] - 1.0)
@@ -1077,10 +1073,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                              'pow(T, {:.4}) '.format(reac.sri[4])
                              )
             else:
-                #simple falloff fn (i.e. F = 1)
+                # simple falloff fn (i.e. F = 1)
                 simple = True
                 line = '  ' + get_array(lang, 'pres_mod', pind) + ' = '
-                 # regardless of F formulation
+                # regardless of F formulation
                 if reac.low:
                     # unimolecular/recombination fall-off reaction
                     line += ' Pr / (1.0 + Pr)'
@@ -1103,11 +1099,11 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         # space in between each reaction
         file.write('\n')
         if lang == 'cuda' and smm is not None:
-            #mark for eviction
+            # mark for eviction
             the_vars = []
             indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-            #estimate usages as the number of consequitive reactions
+            # estimate usages as the number of consequitive reactions
             mark = []
             for i, sp_i in enumerate(indexes):
                 temp = i_rxn + 1
@@ -1158,10 +1154,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     None
 
     """
-
-    offset = 0
-    if lang == 'cuda' and CUDAParams.is_global():
-        offset = 1
 
     filename = 'spec_rates' + utils.file_ext[lang]
     file = open(path + filename, 'w')
@@ -1217,7 +1209,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     if lang == 'cuda' and smm is not None:
         smm.reset()
         get_array = smm.get_array
-        smm.write_init(file, indent = 2)
+        smm.write_init(file, indent=2)
 
     seen = [False for spec in specs]
     for order in ordering:
@@ -1227,28 +1219,37 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         for spind in i_specs:
             sp = specs[spind]
 
-            line = '  ' + get_array(lang, 'sp_rates', spind + offset) + ' {}= '.format('+' if seen[spind] else '')
+            line = '  ' + get_array(lang, 'sp_rates', spind) + ' {}= '.format('+' if seen[spind] else '')
             seen[spind] = True
 
             # continuation line
-            cline = ' ' * ( len(line) - 3)
+            cline = ' ' * (len(line) - 3)
 
             isfirst = True
 
             inreac = False
             if lang == 'cuda' and smm is not None:
-                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
+                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + (
+                    '' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates',
+                                                                           rev_reacs.index(reacs[rind])))
                             for rind in i_reacs]
-                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in range(len(i_reacs))]
-                the_vars = [the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' +
-                            utils.get_array(lang, 'pres_mod', pdep_reacs.index(i_reacs[i])) for i in range(len(i_reacs))]
-                #estimate usages
+                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
+                            range(len(i_reacs))]
+                the_vars = [
+                    the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' +
+                                                                                              utils.get_array(lang,
+                                                                                                              'pres_mod',
+                                                                                                              pdep_reacs.index(
+                                                                                                                  i_reacs[
+                                                                                                                      i]))
+                    for i in range(len(i_reacs))]
+                # estimate usages
                 usages = []
                 order_index = ordering.index(order)
                 for rxn in i_reacs:
                     temp = order_index + 1
                     while temp < len(ordering) and rxn in ordering[temp][1]:
-                        temp +=1
+                        temp += 1
                     usages.append(temp - order_index - 1)
                 smm.load_into_shared(file, the_vars, usages)
             # loop through reactions
@@ -1285,7 +1286,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             line += '{} * '.format(nu)
 
                         if rxn.rev:
-                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
+                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
+                                                                                                   rev_reacs.index(
+                                                                                                       rxn)) + ')'
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     elif nu < 0.0:
@@ -1303,7 +1306,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             line += '{} * '.format(abs(nu))
 
                         if rxn.rev:
-                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
+                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
+                                                                                                   rev_reacs.index(
+                                                                                                       rxn)) + ')'
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     else:
@@ -1328,7 +1333,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         line += '{} * '.format(nu)
 
                     if rxn.rev:
-                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
+                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
+                                                                                               rev_reacs.index(
+                                                                                                   rxn)) + ')'
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 
@@ -1354,7 +1361,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         line += '{} * '.format(nu)
 
                     if rxn.rev:
-                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates', rev_reacs.index(rxn)) +')'
+                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
+                                                                                               rev_reacs.index(
+                                                                                                   rxn)) + ')'
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 
@@ -1367,7 +1376,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     pind = pdep_reacs.index(rind)
                     rxn_out += ' * ' + get_array(lang, 'pres_mod', pind)
 
-                #if lang == 'cuda':
+                # if lang == 'cuda':
                 #    rxn_out = get_array(lang, rxn_out, None, preformed=True)
                 line += rxn_out
 
@@ -1379,25 +1388,34 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             file.write(line)
 
             if lang == 'cuda' and smm is not None:
-                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + ('' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates', rev_reacs.index(reacs[rind])))
+                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + (
+                    '' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates',
+                                                                           rev_reacs.index(reacs[rind])))
                             for rind in i_reacs]
-                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in range(len(i_reacs))]
-                the_vars = [the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' +
-                            utils.get_array(lang, 'pres_mod', pdep_reacs.index(i_reacs[i])) for i in range(len(i_reacs))]
-                #mark for eviction
+                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
+                            range(len(i_reacs))]
+                the_vars = [
+                    the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' +
+                                                                                              utils.get_array(lang,
+                                                                                                              'pres_mod',
+                                                                                                              pdep_reacs.index(
+                                                                                                                  i_reacs[
+                                                                                                                      i]))
+                    for i in range(len(i_reacs))]
+                # mark for eviction
                 mark = []
                 order_index = ordering.index(order)
                 for i, rxn in enumerate(i_reacs):
                     temp = order_index + 1
                     while temp < len(ordering) and rxn not in ordering[temp][1]:
-                        temp +=1
+                        temp += 1
                         if temp - order_index - 1 > 2:
                             mark.append(the_vars[i])
                 smm.mark_for_eviction(the_vars)
 
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
-            file.write('  ' + get_array(lang, 'sp_rates', i + offset) + ' = 0.0' + utils.line_end[lang])
+            file.write('  ' + get_array(lang, 'sp_rates', i) + ' = 0.0' + utils.line_end[lang])
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_spec_rates\n\n')
@@ -1409,6 +1427,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     file.close()
 
     return
+
 
 def write_chem_utils(path, lang, specs):
     """Write subroutine to evaluate species thermodynamic properties.
@@ -1476,14 +1495,12 @@ def write_chem_utils(path, lang, specs):
 
     if lang in ['c', 'cuda']:
         file.write('#include "header.h"\n')
-        if lang == 'cuda' and CUDAParams.is_global():
-            file.write('#include "gpu_macros.cuh"\n')
         file.write('\n')
 
     pre = ''
     if lang == 'cuda': pre = '__device__ '
 
-     ######################
+    ######################
     # species concentrations subroutine
     ######################
     line = pre
@@ -1500,7 +1517,7 @@ def write_chem_utils(path, lang, specs):
             '  double precision, intent(in) :: T, pres, y\n'.format(num_s) +
             '  double precision, intent(out) :: conc({})\n'.format(num_s) +
             '\n'
-            )
+        )
     elif lang == 'matlab':
         line += 'function conc = eval_conc (temp, pres, mass_frac)\n\n'
     file.write(line)
@@ -1842,6 +1859,7 @@ def write_chem_utils(path, lang, specs):
 
     return
 
+
 def write_derivs(path, lang, specs, reacs):
     """Writes derivative function file and header.
 
@@ -1904,7 +1922,6 @@ def write_derivs(path, lang, specs, reacs):
     elif lang == 'cuda':
         file.write('#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
                    '#include "gpu_memory.cuh"\n'
                    )
     file.write('\n')
@@ -1913,14 +1930,14 @@ def write_derivs(path, lang, specs, reacs):
     file.write('#if defined(CONP)\n\n')
 
     line = (pre + 'void dydt (const double t, const double pres, '
-            'const double * y, double * dy) {\n\n'
+                  'const double * y, double * dy) {\n\n'
             )
     file.write(line)
 
     # calculation of species molar concentrations
     file.write('  // species molar concentrations\n'
                '  double conc[{}];\n'.format(len(specs))
-              )
+               )
     file.write('  double mw_avg;\n')
     file.write('  double rho;\n')
 
@@ -1962,7 +1979,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // local array holding constant pressure specific heat\n'
                '  double cp[{}];\n'.format(len(specs)) +
                '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp);\n'
-               '\n'
+                                                               '\n'
                )
 
     file.write('  // constant pressure mass-average specific heat\n')
@@ -1978,17 +1995,15 @@ def write_derivs(path, lang, specs, reacs):
 
         isp = specs.index(sp)
         line += '(' + utils.get_array(lang, 'cp', isp) + \
-          ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
+                ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
 
         isfirst = False
 
     line += ';\n\n'
     file.write(line)
 
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # evaluate enthalpy
-        file.write('  // local array for species enthalpies\n'
-                   '  double h[{}];\n'.format(len(specs)))
+    file.write('  // local array for species enthalpies\n'
+               '  double h[{}];\n'.format(len(specs)))
     file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', h);\n')
 
     # energy equation
@@ -2005,7 +2020,7 @@ def write_derivs(path, lang, specs, reacs):
 
         isp = specs.index(sp)
         line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' + \
-           utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
+                utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
 
         isfirst = False
 
@@ -2026,8 +2041,8 @@ def write_derivs(path, lang, specs, reacs):
     file.write('#elif defined(CONV)\n\n')
 
     file.write(pre + 'void dydt (const double t, const double rho, '
-               'const double * y, double * dy) {\n'
-               '\n'
+                     'const double * y, double * dy) {\n'
+                     '\n'
                )
 
     # calculation of pressure
@@ -2053,11 +2068,10 @@ def write_derivs(path, lang, specs, reacs):
                utils.get_array(lang, 'y', 0) + ' * pres;\n\n'
                )
 
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # calculation of species molar concentrations
-        file.write('  // species molar concentrations\n'
-                   '  double conc[{}];\n'.format(len(specs))
-                   )
+    # calculation of species molar concentrations
+    file.write('  // species molar concentrations\n'
+               '  double conc[{}];\n'.format(len(specs))
+               )
 
     # Simply call subroutine
     file.write('  eval_conc (' + utils.get_array(lang, 'conc', isp) +
@@ -2157,6 +2171,7 @@ def write_derivs(path, lang, specs, reacs):
 
     file.close()
     return
+
 
 def write_mass_mole(path, lang, specs):
     """Writes files for mass/molar concentration and density conversion utility.
@@ -2361,10 +2376,11 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  pres  pressure\n'
                    ' * \param[in]  X     array of species mole fractions\n'
                    r' * \return     rho  mixture mass density' + '\n'
-                   ' */\n'
-                   'double getDensity (const double temp, const double pres, '
-                   'const double * X) {\n'
-                   '\n'
+                                                                 ' */\n'
+                                                                 'double getDensity (const double temp, const double '
+                                                                 'pres, '
+                                                                 'const double * X) {\n'
+                                                                 '\n'
                    )
     elif lang == 'fortran':
         file.write('!-------------------------------------------------------'
@@ -2374,14 +2390,14 @@ def write_mass_mole(path, lang, specs):
                    '!! @param[in]  pres  pressure\n'
                    '!! @param[in]  X     array of species mole fractions\n'
                    '!! @return     rho   mixture mass density' + '\n'
-                   '!-------------------------------------------------------'
-                   '----------\n'
-                   'function mass2mole (temp, pres, X) result(rho)\n'
-                   '  implicit none\n'
-                   '  double, intent(in) :: temp, pres\n'
-                   '  double, dimension(:), intent(in) :: X\n'
-                   '  double :: mw_avg, rho\n'
-                   '\n'
+                                                                 '!-------------------------------------------------------'
+                                                                 '----------\n'
+                                                                 'function mass2mole (temp, pres, X) result(rho)\n'
+                                                                 '  implicit none\n'
+                                                                 '  double, intent(in) :: temp, pres\n'
+                                                                 '  double, dimension(:), intent(in) :: X\n'
+                                                                 '  double :: mw_avg, rho\n'
+                                                                 '\n'
                    )
 
     # get molecular weight
@@ -2391,8 +2407,8 @@ def write_mass_mole(path, lang, specs):
                    )
         for sp in specs:
             file.write('  mw_avg += X[{}] * '.format(specs.index(sp)) +
-                      '{};\n'.format(sp.mw)
-                      )
+                       '{};\n'.format(sp.mw)
+                       )
         file.write('\n')
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n'
@@ -2424,7 +2440,7 @@ def write_mass_mole(path, lang, specs):
 
 
 def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
-                     initial_state = "", num_blocks=8, num_threads=64,
+                     initial_state="", num_blocks=8, num_threads=64,
                      no_shared=False, L1_preferred=True, multi_thread=1,
                      force_optimize=False):
     """Create rate subroutines from mechanism.
@@ -2475,7 +2491,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
-    if mech_name.endswith(tuple(['.cti','.xml'])):
+    if mech_name.endswith(tuple(['.cti', '.xml'])):
         [elems, specs, reacs] = mech.read_mech_ct(mech_name)
     else:
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
@@ -2554,81 +2570,81 @@ if __name__ == "__main__":
     import argparse
 
     # command line arguments
-    parser = argparse.ArgumentParser(description = 'Generates source code '
-                                     'for species and reaction rates.'
+    parser = argparse.ArgumentParser(description='Generates source code '
+                                                 'for species and reaction rates.'
                                      )
     parser.add_argument('-l', '--lang',
-                        type = str,
-                        choices = utils.langs,
-                        required = True,
-                        help = 'Programming language for output '
-                        'source files.'
+                        type=str,
+                        choices=utils.langs,
+                        required=True,
+                        help='Programming language for output '
+                             'source files.'
                         )
     parser.add_argument('-i', '--input',
-                        type = str,
-                        required = True,
-                        help = 'Input mechanism filename (e.g., mech.dat).'
+                        type=str,
+                        required=True,
+                        help='Input mechanism filename (e.g., mech.dat).'
                         )
     parser.add_argument('-t', '--thermo',
-                        type = str,
-                        default = None,
-                        help = 'Thermodynamic database filename (e.g., '
-                        'therm.dat), or nothing if in mechanism.'
+                        type=str,
+                        default=None,
+                        help='Thermodynamic database filename (e.g., '
+                             'therm.dat), or nothing if in mechanism.'
                         )
     parser.add_argument('-x', '--initial-moles',
-                    type=str,
-                    dest='initial_moles',
-                    default = '',
-                    required=False,
-                    help = 'A comma separated list of initial moles to set '
-                           'in the set_same_initial_conditions method.'
-                    )
-    #cuda specific
+                        type=str,
+                        dest='initial_moles',
+                        default='',
+                        required=False,
+                        help='A comma separated list of initial moles to set '
+                             'in the set_same_initial_conditions method.'
+                        )
+    # cuda specific
     parser.add_argument('-nco', '--no-cache-optimizer',
-                        dest = 'cache_optimizer',
-                        action = 'store_false',
-                        default = True,
-                        help = 'Attempt to optimize cache store/loading via '
-                               'use of a greedy selection algorithm.'
+                        dest='cache_optimizer',
+                        action='store_false',
+                        default=True,
+                        help='Attempt to optimize cache store/loading via '
+                             'use of a greedy selection algorithm.'
                         )
     parser.add_argument('-nosmem', '--no-shared-memory',
                         dest='no_shared',
                         action='store_true',
                         default=False,
-                        help = 'Use this option to turn off attempted shared '
-                               'memory acceleration for CUDA'
+                        help='Use this option to turn off attempted shared '
+                             'memory acceleration for CUDA'
                         )
     parser.add_argument('-pshare', '--prefer-shared',
                         dest='L1_preferred',
                         action='store_false',
                         default=True,
-                        help = 'Use this option to allocate more space for '
-                               'shared memory than the L1 cache for CUDA'
+                        help='Use this option to allocate more space for '
+                             'shared memory than the L1 cache for CUDA'
                         )
     parser.add_argument('-nb', '--num-blocks',
                         type=int,
                         dest='num_blocks',
-                        default = 8,
+                        default=8,
                         required=False,
-                        help = 'The target number of blocks / sm '
-                               'to achieve for CUDA.'
+                        help='The target number of blocks / sm '
+                             'to achieve for CUDA.'
                         )
     parser.add_argument('-nt', '--num-threads',
                         type=int,
                         dest='num_threads',
-                        default = 64,
+                        default=64,
                         required=False,
-                        help = 'The target number of threads / block '
-                               'to achieve for CUDA.'
+                        help='The target number of threads / block '
+                             'to achieve for CUDA.'
                         )
     parser.add_argument('-mt', '--multi-threaded',
-                    type=int,
-                    dest='multi_thread',
-                    default=1,
-                    required=False,
-                    help = 'The number of threads to use during '
-                           'the optimization process'
-                    )
+                        type=int,
+                        dest='multi_thread',
+                        default=1,
+                        required=False,
+                        help='The number of threads to use during '
+                             'the optimization process'
+                        )
     parser.add_argument('-fopt', '--force-optimize',
                         dest='force_optimize',
                         action='store_true',

@@ -10,6 +10,7 @@ from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
 import multiprocessing
 import pickle
 
+
 def get_nu(species, rxn):
     if species.name in rxn.prod and species.name in rxn.reac:
         nu = (rxn.prod_nu[rxn.prod.index(species.name)] -
@@ -22,6 +23,7 @@ def get_nu(species, rxn):
         # doesn't participate in reaction
         return None
     return nu
+
 
 def get_nu_name(sp_name, rxn):
     if sp_name in rxn.prod and sp_name in rxn.reac:
@@ -55,13 +57,15 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
 
     return r_to_s, s_to_r
 
+
 def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, multi_thread=1):
     """
     The work horse of the greedy_optimizer
 
     Notes
     -----
-    This method will start a list with the seed object, and greedily select the best object from the selection_pool (based on the score fn) until the list reaches the supplied size
+    This method will start a list with the seed object, and greedily select the best object from the selection_pool (
+    based on the score fn) until the list reaches the supplied size
 
     Parameters
     ----------
@@ -70,7 +74,8 @@ def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, mu
     selection_pool : list of object
         The pool to select from
     score_fn : function(list, object, additional_args) -> float
-        Given the current list, and a potential object, this returns a score estimating how good of a choice this object is
+        Given the current list, and a potential object, this returns a score estimating how good of a choice this
+        object is
         A large score should indicate a better choice
     additional_args : object
         Additional arguements to pass to the score_fn, can be None
@@ -103,16 +108,19 @@ def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, mu
                 best_candidate = selection_pool[score[0]]
         the_list.append(best_candidate)
         selection_pool.remove(best_candidate)
-        #updater(best_candidate)
+        # updater(best_candidate)
     return the_list
 
- #a score function that compares the percentage of shared species between reactions
+    # a score function that compares the percentage of shared species between reactions
+
+
 def __shared_specs_score(the_list, candidate, additional_args):
     reacs = additional_args['reacs']
     r_to_s = additional_args['r_to_s']
     ind_1 = reacs.index(the_list[-1])
     ind_2 = reacs.index(candidate)
     return len(r_to_s[ind_1].intersection(r_to_s[ind_2])) / len(r_to_s[ind_1])
+
 
 def __conc_temp(rxn, specs):
     ret_list = []
@@ -124,7 +132,9 @@ def __conc_temp(rxn, specs):
             ret_list.append(isp)
     return ret_list
 
- #a score function that compares the percentage of shared species between 
+    # a score function that compares the percentage of shared species between
+
+
 def __shared_specs_score_pdep(the_list, candidate, additional_args):
     reacs = additional_args['reacs']
     ind_1 = reacs.index(the_list[-1])
@@ -149,12 +159,13 @@ def __shared_specs_score_pdep(the_list, candidate, additional_args):
             misses += 1
 
     return 1.0 - misses / len(set(reacs[ind_1].reac + reacs[ind_1].prod + reacs[ind_2].reac + reacs[ind_2].prod + \
-                        [thd[0] for thd in reacs[ind_1].thd_body] + [thd[0] for thd in reacs[ind_2].thd_body]))
+                                  [thd[0] for thd in reacs[ind_1].thd_body] + [thd[0] for thd in
+                                                                               reacs[ind_2].thd_body]))
 
 
 def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s):
-    #candidate is a potential list index for the reaction 'reac_index'
-    #test between candidate and candidate + 1
+    # candidate is a potential list index for the reaction 'reac_index'
+    # test between candidate and candidate + 1
     ind_1 = rxn_rate_order[candidate_index]
     val_1 = len(r_to_s[ind_1].intersection(r_to_s[reac_index])) / len(r_to_s[ind_1])
     if candidate_index + 1 < len(rxn_rate_order):
@@ -162,6 +173,7 @@ def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s)
         val_2 = len(r_to_s[ind_2].intersection(r_to_s[reac_index])) / len(r_to_s[ind_2])
         val_1 = (val_1 + val_2) / 2.0
     return val_1
+
 
 def __update_split(the_len, splittings):
     if the_len == 0:
@@ -173,6 +185,7 @@ def __update_split(the_len, splittings):
         splittings[-1] += the_len
     else:
         splittings.append(the_len)
+
 
 def __get_max_rxn(the_list, reacs, spec_scores, reac_scores):
     reac_inds = [reacs.index(reac) for reac in the_list]
@@ -187,16 +200,20 @@ def __get_max_rxn(the_list, reacs, spec_scores, reac_scores):
             max_rxn = rxn
     return reacs[max_rxn]
 
+
 def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path):
     """
-    An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as long as possible
+    An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as
+    long as possible
 
     Notes
     -----
-    This method optimizes based on Jacobian matrix generation, as this is the most important and time consuming step of the reaction rate subroutines
+    This method optimizes based on Jacobian matrix generation, as this is the most important and time consuming step
+    of the reaction rate subroutines
     Species and reactions are reordered to optimize the cache rates for this.
 
-    Next orderings for the evaluation of reactions, pressure dependent reactions and species rates are determined in order to optimize the various rate routines
+    Next orderings for the evaluation of reactions, pressure dependent reactions and species rates are determined in
+    order to optimize the various rate routines
 
     Parameters
     ----------
@@ -242,7 +259,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
 
-    #first try to load past data
+    # first try to load past data
     if not force_optimize:
         try:
             same_mech = False
@@ -256,18 +273,19 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                 spec_ordering = pickle.load(file)
                 rxn_ordering = pickle.load(file)
             same_mech = all(any(s == sp for sp in specs) for s in old_specs) and \
-                            len(specs) == len(old_specs) and \
-                            all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
-                            len(reacs) == len(old_reacs)
+                        len(specs) == len(old_specs) and \
+                        all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
+                        len(reacs) == len(old_reacs)
         except Exception, e:
             same_mech = False
         if same_mech:
-            #we have to do the spec_rate_order each time
-            return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering, rxn_ordering
+            # we have to do the spec_rate_order each time
+            return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
+                   rxn_ordering
 
     splittings = []
 
-    #First find pdep reacs
+    # First find pdep reacs
     pdep_reacs = []
     for reac in reacs:
         if reac.thd or reac.pdep:
@@ -276,27 +294,28 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     rxn_ordering = []
     r_to_s, s_to_r = get_mappings(specs, reacs)
-    args = {'r_to_s' : r_to_s, 'reacs' : reacs}
+    args = {'r_to_s': r_to_s, 'reacs': reacs}
     reac_list = reacs[:]
-    #and finally order the rest of the reactions
+    # and finally order the rest of the reactions
     while len(reac_list):
         if len(rxn_ordering) and not ResetOnJacUnroll:
             max_rxn = reacs[rxn_ordering[-1]]
         else:
             max_rxn = __get_max_rxn(reac_list, reacs, s_to_r, r_to_s)
-        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=Jacob_Unroll, multi_thread=multi_thread)
-        #remove the seed, it was already added
+        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=Jacob_Unroll,
+                              multi_thread=multi_thread)
+        # remove the seed, it was already added
         if len(rxn_ordering) and not ResetOnJacUnroll:
             order = order[1:]
         rxn_ordering.extend([reacs.index(reac) for reac in order])
         reac_list = [reac for reac in reac_list if not reac in order]
         splittings.append(len(order))
 
-    #the reactions order is now determined, so let's reorder them
+    # the reactions order is now determined, so let's reorder them
     temp = reacs[:]
     reacs = [temp[i] for i in rxn_ordering]
 
-    #up next we will reorder the species so they are stored in the order that we will be loading them in the jacobian
+    # up next we will reorder the species so they are stored in the order that we will be loading them in the jacobian
     spec_ordering = []
     for reac in reacs:
         for spec_name in set(reac.reac + reac.prod):
@@ -306,18 +325,18 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                 if isp not in spec_ordering:
                     spec_ordering.append(isp)
 
-    #make sure we have them all (i.e. 3rd body only)
+    # make sure we have them all (i.e. 3rd body only)
     for isp in range(len(specs)):
         if not isp in spec_ordering:
             spec_ordering.append(isp)
 
-    #now reorder
+    # now reorder
     temp = specs[:]
     specs = [temp[i] for i in spec_ordering]
 
-    #we have to update our mappings now that things are reordered
+    # we have to update our mappings now that things are reordered
     r_to_s, s_to_r = get_mappings(specs, reacs)
-    
+
     rxn_rate_order = range(len(reacs))
     pdep_rate_order = [reacs.index(reac) for reac in pdep_reacs]
     spec_rate_order = []
@@ -325,7 +344,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
 
     print_spec_order = []
-    #finally reorder the spec and rxn orderings to fix for printing
+    # finally reorder the spec and rxn orderings to fix for printing
     for spec_ind in range(len(spec_ordering)):
         print_spec_order.append(
             spec_ordering.index(spec_ind)
@@ -337,7 +356,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             rxn_ordering.index(rxn_ind)
         )
 
-    #save to avoid reoptimization if possible
+    # save to avoid reoptimization if possible
     with open(build_path + 'optimized.pickle', 'wb') as file:
         pickle.dump(splittings, file)
         pickle.dump(specs, file)
@@ -348,8 +367,5 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(print_spec_order, file)
         pickle.dump(print_rxn_order, file)
 
-    #complete, so now return
+    # complete, so now return
     return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order
-
-
-

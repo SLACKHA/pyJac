@@ -8,6 +8,7 @@ from __future__ import division
 import sys
 import math
 import numpy as np
+import re
 
 # Local imports
 import chem_utilities as chem
@@ -17,6 +18,7 @@ import utils
 CANTERA_FLAG = False
 try:
     import cantera as ct
+
     CANTERA_FLAG = True
 except ImportError:
     CANTERA_FLAG = False
@@ -41,6 +43,7 @@ act_energy_fact = dict({'kelvins': 1.0,
 
 # get local element atomic weight dict
 elem_wt = chem.get_elem_wt()
+
 
 def read_mech(mech_filename, therm_filename):
     """Read and interpret mechanism file for elements, species, and reactions.
@@ -93,7 +96,7 @@ def read_mech(mech_filename, therm_filename):
         if not line: break
 
         # skip blank or commented lines
-        if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+        if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
         # don't convert to lowercase, since thermo
         # needs to match (for Chemkin)
@@ -109,7 +112,7 @@ def read_mech(mech_filename, therm_filename):
             # check for any entries on this line
             line_split = line.split()
             if len(line_split) > 1:
-                ind = line.index( line_split[1] )
+                ind = line.index(line_split[1])
                 line = line[ind:]
             else:
                 continue
@@ -120,7 +123,7 @@ def read_mech(mech_filename, therm_filename):
             # check for any entries on this line
             line_split = line.split()
             if len(line_split) > 1:
-                ind = line.index( line_split[1] )
+                ind = line.index(line_split[1])
                 line = line[ind:]
             else:
                 continue
@@ -199,11 +202,11 @@ def read_mech(mech_filename, therm_filename):
                 # get Arrhenius coefficients
                 line_split = line.split()
                 n = len(line_split)
-                reac_A = float( line_split[n - 3] )
-                reac_b = float( line_split[n - 2] )
-                reac_E = float( line_split[n - 1] )
+                reac_A = float(line_split[n - 3])
+                reac_b = float(line_split[n - 2])
+                reac_E = float(line_split[n - 1])
 
-                ind = line.index( line_split[n - 3] )
+                ind = line.index(line_split[n - 3])
                 line = line[0:ind].strip()
 
                 if '<=>' in line:
@@ -243,7 +246,7 @@ def read_mech(mech_filename, therm_filename):
                     # parentheses and not embedded within parentheses
                     # (e.g., '(+)').
                     # If not, part of species name.
-                    inParen = sub_str[ind1 + 1 : ind2].strip()
+                    inParen = sub_str[ind1 + 1: ind2].strip()
                     if inParen is '+':
                         # '+' embedded within parentheses
                         sub_str = sub_str[ind2 + 1:]
@@ -251,7 +254,7 @@ def read_mech(mech_filename, therm_filename):
                         pdep = True
 
                         # either 'm' or a specific species
-                        pdep_sp = sub_str[ind1 + 1 : ind2].replace('+', ' ')
+                        pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
                         pdep_sp = pdep_sp.strip()
 
                         if pdep_sp.lower() == 'm':
@@ -260,8 +263,8 @@ def read_mech(mech_filename, therm_filename):
 
                         # now remove from string
                         ind = reac_str.find(sub_str)
-                        reac_str = (reac_str[0 : ind1 + ind] +
-                                    reac_str[ind2 + ind + 1 :]
+                        reac_str = (reac_str[0: ind1 + ind] +
+                                    reac_str[ind2 + ind + 1:]
                                     )
                         break
                     else:
@@ -299,8 +302,8 @@ def read_mech(mech_filename, therm_filename):
                         # starts with number (coefficient)
 
                         # search for first letter
-                        for i in range( len(sp) ):
-                            if sp[i : i + 1].isalpha(): break
+                        for i in range(len(sp)):
+                            if sp[i: i + 1].isalpha(): break
 
                         nu = sp[0:i]
                         if '.' in nu:
@@ -341,7 +344,7 @@ def read_mech(mech_filename, therm_filename):
                     # Need to check if '+' is first character inside
                     # parentheses and not embedded within parentheses
                     # (e.g., '(+)'). If not, part of species name.
-                    inParen = sub_str[ind1 + 1 : ind2].strip()
+                    inParen = sub_str[ind1 + 1: ind2].strip()
                     if inParen is '+':
                         # '+' embedded within parentheses
                         sub_str = sub_str[ind2 + 1:]
@@ -349,7 +352,7 @@ def read_mech(mech_filename, therm_filename):
                         pdep = True
 
                         # either 'm' or a specific species
-                        pdep_sp = sub_str[ind1 + 1 : ind2].replace('+', ' ')
+                        pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
                         pdep_sp = pdep_sp.strip()
 
                         if pdep_sp.lower() == 'm':
@@ -358,8 +361,8 @@ def read_mech(mech_filename, therm_filename):
 
                         # now remove from string
                         ind = prod_str.find(sub_str)
-                        prod_str = (prod_str[0 : ind1 + ind] +
-                                    prod_str[ind2 + ind + 1 :]
+                        prod_str = (prod_str[0: ind1 + ind] +
+                                    prod_str[ind2 + ind + 1:]
                                     )
                         break
                     else:
@@ -398,7 +401,7 @@ def read_mech(mech_filename, therm_filename):
 
                         # search for first letter
                         for i in range(len(sp)):
-                            if sp[i : i + 1].isalpha(): break
+                            if sp[i: i + 1].isalpha(): break
 
                         nu = sp[0:i]
                         if '.' in nu:
@@ -440,14 +443,14 @@ def read_mech(mech_filename, therm_filename):
                 if units_A == 'moles':
                     reac_ord = sum(reac_nu)
                     if thd:
-                        reac_A /= 1000.**reac_ord
+                        reac_A /= 1000. ** reac_ord
                     elif pdep:
                         # Low- (chemically activated bimolecular reaction) or
                         # high-pressure (fall-off reaction) limit parameters
-                        reac_A /= 1000.**(reac_ord - 1.)
+                        reac_A /= 1000. ** (reac_ord - 1.)
                     else:
                         # Elementary reaction
-                        reac_A /= 1000.**(reac_ord - 1.)
+                        reac_A /= 1000. ** (reac_ord - 1.)
 
                 # add reaction to list
                 reac = chem.ReacInfo(reac_rev, reac_spec, reac_nu,
@@ -495,7 +498,7 @@ def read_mech(mech_filename, therm_filename):
 
                     # Convert low-pressure pre-exponential factor
                     if units_A == 'moles':
-                        par1 /= 1000.**sum(reacs[-1].reac_nu)
+                        par1 /= 1000. ** sum(reacs[-1].reac_nu)
 
                     reacs[-1].low.append(par1)
                     reacs[-1].low.append(par2)
@@ -514,7 +517,7 @@ def read_mech(mech_filename, therm_filename):
 
                     # Convert high-pressure pre-exponential factor
                     if units_A == 'moles':
-                        par1 /= 1000.**(sum(reacs[-1].reac_nu) - 2.)
+                        par1 /= 1000. ** (sum(reacs[-1].reac_nu) - 2.)
 
                     reacs[-1].high.append(par1)
                     reacs[-1].high.append(par2)
@@ -618,7 +621,7 @@ def read_mech(mech_filename, therm_filename):
                     if units_A == 'moles':
                         reac_ord = sum(reacs[-1].reac_nu)
                         # Looks like elementary reaction
-                        pars[1] /= 1000.**(reac_ord - 1.)
+                        pars[1] /= 1000. ** (reac_ord - 1.)
 
                     reacs[-1].plog_par.append(np.array(pars))
                 else:
@@ -637,7 +640,7 @@ def read_mech(mech_filename, therm_filename):
             # check for correct number
             n = reac.cheb_n_temp
             m = reac.cheb_n_pres
-            if len(reac.cheb_par) != n*m:
+            if len(reac.cheb_par) != n * m:
                 print('Error: incorrect number of CHEB coefficients in '
                       'reaction ' + repr(idx)
                       )
@@ -646,7 +649,7 @@ def read_mech(mech_filename, therm_filename):
                 # Convert units of first Chebyshev parameter
                 order = sum(reac.reac_nu)
                 if units_A == 'moles':
-                    reac.cheb_par[0] += math.log10(0.001**(order - 1.))
+                    reac.cheb_par[0] += math.log10(0.001 ** (order - 1.))
 
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
 
@@ -693,7 +696,7 @@ def read_thermo(filename, elems, specs):
             line = file.readline()
 
             # skip blank or commented lines
-            if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
             # skip 'thermo' at beginning
             if line[0:6].lower() == 'thermo': break
@@ -719,8 +722,9 @@ def read_thermo(filename, elems, specs):
 
             # break if end of file
             if line is None or line[0:3].lower() == 'end': break
+
             # skip blank/commented line
-            if line == '\n' or line == '\r\n' or line[0:1] == '!': continue
+            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
             # species name, columns 0:18
             spec = line[0:18].strip()
@@ -729,7 +733,7 @@ def read_thermo(filename, elems, specs):
             # columns of shorter species names, so make
             # sure no spaces.
             if spec.find(' ') > 0:
-                spec = spec[0 : spec.find(' ')]
+                spec = spec[0: spec.find(' ')]
 
             # now need to determine if this species is in mechanism
             if next((sp for sp in specs if sp.name == spec), None):
@@ -763,7 +767,7 @@ def read_thermo(filename, elems, specs):
                 # skip if blank
                 if e == '' or e == '0': continue
                 # may need to convert to float first, in case of e.g. "1."
-                e_num = float( e_str[2:].strip() )
+                e_num = float(e_str[2:].strip())
                 e_num = int(e_num)
 
                 spec.elem.append([e, e_num])
@@ -773,38 +777,40 @@ def read_thermo(filename, elems, specs):
 
             # temperatures for species
             T_spec = utils.read_str_num(line[45:73])
-            T_low  = T_spec[0]
+            T_low = T_spec[0]
             T_high = T_spec[1]
-            if len(T_spec) == 3: T_com = T_spec[2]
-            else: T_com = T_ranges[1]
+            if len(T_spec) == 3:
+                T_com = T_spec[2]
+            else:
+                T_com = T_ranges[1]
 
             spec.Trange = [T_low, T_com, T_high]
 
             # second species line
             line = file.readline()
             coeffs = utils.split_str(line[0:75], 15)
-            spec.hi[0] = float( coeffs[0] )
-            spec.hi[1] = float( coeffs[1] )
-            spec.hi[2] = float( coeffs[2] )
-            spec.hi[3] = float( coeffs[3] )
-            spec.hi[4] = float( coeffs[4] )
+            spec.hi[0] = float(coeffs[0])
+            spec.hi[1] = float(coeffs[1])
+            spec.hi[2] = float(coeffs[2])
+            spec.hi[3] = float(coeffs[3])
+            spec.hi[4] = float(coeffs[4])
 
             # third species line
             line = file.readline()
             coeffs = utils.split_str(line[0:75], 15)
-            spec.hi[5] = float( coeffs[0] )
-            spec.hi[6] = float( coeffs[1] )
-            spec.lo[0] = float( coeffs[2] )
-            spec.lo[1] = float( coeffs[3] )
-            spec.lo[2] = float( coeffs[4] )
+            spec.hi[5] = float(coeffs[0])
+            spec.hi[6] = float(coeffs[1])
+            spec.lo[0] = float(coeffs[2])
+            spec.lo[1] = float(coeffs[3])
+            spec.lo[2] = float(coeffs[4])
 
             # fourth species line
             line = file.readline()
             coeffs = utils.split_str(line[0:75], 15)
-            spec.lo[3] = float( coeffs[0] )
-            spec.lo[4] = float( coeffs[1] )
-            spec.lo[5] = float( coeffs[2] )
-            spec.lo[6] = float( coeffs[3] )
+            spec.lo[3] = float(coeffs[0])
+            spec.lo[4] = float(coeffs[1])
+            spec.lo[5] = float(coeffs[2])
+            spec.lo[6] = float(coeffs[3])
 
             # stop reading if all species in mechanism accounted for
             if not next((sp for sp in specs if sp.mw == 0.0), None): break

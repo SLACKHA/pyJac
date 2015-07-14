@@ -6,12 +6,12 @@ from __future__ import print_function
 
 # Standard libraries
 import sys
-import math
 import itertools
 
 # Local imports
 import chem_utilities as chem
 import utils
+
 
 def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     """
@@ -28,7 +28,8 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void \n'
-                   'k_eval_rxn_rates(const int NUM, const double T, const double P, const double* conc, double* fwd_rates, double* rev_rates) {\n'
+                   'k_eval_rxn_rates(const int NUM, const double T, const double P, const double* conc, '
+                   'double* fwd_rates, double* rev_rates) {\n'
                    '    double conc_local[NSP];\n'
                    '    double fwd_rates_local[FWD_RATES];\n'
                    '    double rev_rates_local[REV_RATES];\n'
@@ -57,7 +58,8 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '}\n'
                    '#elif RATES_TEST\n'
                    '__global__ void \n'
-                   'k_eval_rxn_rates(const int NUM, const double T, const double P, const double* conc, double* rates) {\n'
+                   'k_eval_rxn_rates(const int NUM, const double T, const double P, const double* conc, '
+                   'double* rates) {\n'
                    '    double conc_local[NSP];\n'
                    '    double rates_local[RATES];\n'
                    '    //copy in\n'
@@ -98,8 +100,8 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '#endif\n'
                    )
     file.write('#ifdef PROFILER\n'
-                   '__global__ void \n'
-                   'k_eval_spec_rates() {\n'
+               '__global__ void \n'
+               'k_eval_spec_rates() {\n'
                )
     if have_rev_rxns:
         file.write('    double fwd_rates_local[FWD_RATES] = {[0 ... FWD_RATES - 1] = 1.0};\n'
@@ -108,11 +110,13 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     else:
         file.write('    double rates_local[RATES] = {[0 ... RATES - 1] = 1.0};\n')
     if have_pdep_rxns:
-        file.write('    double pres_mod_local[PRES_MOD_RATES] = {[0 ... PRES_MOD_RATES - 1] = 1.0};\n' if have_pdep_rxns else '')
+        file.write(
+            '    double pres_mod_local[PRES_MOD_RATES] = {[0 ... PRES_MOD_RATES - 1] = 1.0};\n' if have_pdep_rxns
+            else '')
     file.write(
-               '    double dy_local[NN];\n'
-               '    eval_spec_rates('
-               )
+        '    double dy_local[NN];\n'
+        '    eval_spec_rates('
+    )
     if have_rev_rxns:
         file.write('fwd_rates_local, rev_rates_local, ')
     else:
@@ -123,7 +127,7 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
     file.write('}\n'
                '#elif RATES_TEST\n'
                '__global__ void k_eval_spec_rates(const int NUM, '
-              )
+               )
     if have_rev_rxns:
         file.write('const double* fwd_rates, const double* rev_rates, ')
     else:
@@ -148,17 +152,17 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
                    '    for (int i = 0; i < REV_RATES; i++) {\n'
                    '        rev_rates_local[i] = rev_rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
                    '    }\n'
-                  )
+                   )
     else:
         file.write('    for (int i = 0; i < RATES; i++) {\n'
                    '        rates_local[i] = rates[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
                    '    }\n'
-                  )
+                   )
     if have_pdep_rxns:
         file.write('    for (int i = 0; i < PRES_MOD_RATES; i++) {\n'
                    '        pres_mod_local[i] = pres_mod[i * NUM + threadIdx.x + blockIdx.x * blockDim.x];\n'
                    '    }\n'
-                  )
+                   )
     file.write('    eval_spec_rates(')
     if have_rev_rxns:
         file.write('fwd_rates_local, rev_rates_local, ')
@@ -168,12 +172,12 @@ def __write_kernels(file, have_rev_rxns, have_pdep_rxns):
         file.write('pres_mod_local, ')
     file.write('dy_local);\n')
     file.write(
-               '   //copy back\n'
-               '   for (int i = 0; i < NN; i++) {\n'
-               '        dy[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = dy_local[i];\n'
-               '    }\n'
-               '}\n'
-               )
+        '   //copy back\n'
+        '   for (int i = 0; i < NN; i++) {\n'
+        '        dy[i * NUM + threadIdx.x + blockIdx.x * blockDim.x] = dy_local[i];\n'
+        '    }\n'
+        '}\n'
+    )
     file.write('#endif\n')
     file.write('#ifdef PROFILER\n'
                '__global__ void \n'
@@ -243,18 +247,24 @@ def __write_c_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P
     if have_pdep_rxns:
         file.write(
             '        get_rxn_pres_mod({}, {}, conc_host, pres_mod_host);\n'.format(T, P))
-    file.write('        eval_spec_rates ({}{} spec_rates_host);\n'.format('fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '        dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
-               '#ifdef RATES_TEST\n'
-               '        write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '        write_net_rates_of_progress(fp,{}{});\n'.format(' fwd_rates_host, rev_rates_host' if have_rev_rxns else ' rates_host', ', pres_mod_host' if have_pdep_rxns else '') +
-               '#endif\n' +
-               '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
-               '    }\n'
-               '#ifdef RATES_TEST\n'
-               '    write_jacob(fp, jacob_host);\n'
-               '#endif\n'
-               )
+    file.write('        eval_spec_rates ({}{} spec_rates_host);\n'.format(
+        'fwd_rates_host, rev_rates_host,' if have_rev_rxns else 'rates_host,',
+        ' pres_mod_host,' if have_pdep_rxns else '') +
+        '        dydt({}, {}, y_host, dy_host);\n'.format(T, P) +
+        '#ifdef RATES_TEST\n'
+        '        write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(
+        ' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,',
+        ' pres_mod_host,' if have_pdep_rxns else '') +
+        '        write_net_rates_of_progress(fp,{}{});\n'.format(
+        ' fwd_rates_host, rev_rates_host' if have_rev_rxns else ' rates_host',
+        ', pres_mod_host' if have_pdep_rxns else '') +
+        '#endif\n' +
+        '        eval_jacob(0, {}, y_host, jacob_host);\n'.format(P) +
+        '    }\n'
+        '#ifdef RATES_TEST\n'
+        '    write_jacob(fp, jacob_host);\n'
+        '#endif\n'
+        )
 
 
 def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Pretty_P):
@@ -278,19 +288,25 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                '    }\n'
                )
     file.write(
-    '    cudaErrorCheck(cudaMemcpy(d_conc, conc_host_full, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));\n')
+        '    cudaErrorCheck(cudaMemcpy(d_conc, conc_host_full, padded * NSP * sizeof(double), '
+        'cudaMemcpyHostToDevice));\n'
+        )
     if have_rev_rxns:
         file.write('#ifdef PROFILER\n'
                    '    cuProfilerStart();\n'
                    '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
-                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', d_conc, d_fwd_rates, d_rev_rates')
+                   '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T,
+                                                                                                                     P,
+                                                                                                                     ', d_conc, d_fwd_rates, d_rev_rates')
                    )
         file.write(
-               '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n' +
-               '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, d_rev_rates, padded * REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-               )
+            '    cudaErrorCheck(cudaMemcpy(fwd_rates_host_full, d_fwd_rates, padded * FWD_RATES * sizeof(double), '
+            'cudaMemcpyDeviceToHost));\n' +
+            '    cudaErrorCheck(cudaMemcpy(rev_rates_host_full, d_rev_rates, padded * REV_RATES * sizeof(double), '
+            'cudaMemcpyDeviceToHost));\n'
+            )
         file.write('    for (int j = 0; j < FWD_RATES; ++j) {\n'
                    '            fwd_rates_host[j] = fwd_rates_host_full[j * padded];\n'
                    '    }\n'
@@ -307,10 +323,14 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', d_conc, d_rates')
-            )
+            '    k_eval_rxn_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P,
+                                                                                                              ', '
+                                                                                                              'd_conc, d_rates')
+        )
         file.write(
-        '    cudaErrorCheck(cudaMemcpy(rates_host_full, d_rates, padded * RATES * sizeof(double), cudaMemcpyDeviceToHost));\n')
+            '    cudaErrorCheck(cudaMemcpy(rates_host_full, d_rates, padded * RATES * sizeof(double), '
+            'cudaMemcpyDeviceToHost));\n'
+            )
 
         file.write('    for (int j = 0; j < RATES; ++j) {\n'
                    '        rates_host[j] = rates_host_full[j * padded];\n'
@@ -324,15 +344,18 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    k_get_rxn_pres_mod<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_get_rxn_pres_mod<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P, ', d_conc, d_pres_mod')
-            )
-        file.write(
-        '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, d_pres_mod, padded * PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
+            '    k_get_rxn_pres_mod<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}{});\n'.format(T, P,
+                                                                                                                ', '
+                                                                                                                'd_conc, d_pres_mod')
         )
+        file.write(
+            '    cudaErrorCheck(cudaMemcpy(pres_mod_host_full, d_pres_mod, padded * PRES_MOD_RATES * sizeof(double), '
+            'cudaMemcpyDeviceToHost));\n'
+            )
         file.write('    for (int j = 0; j < PRES_MOD_RATES; ++j) {\n'
                    '        pres_mod_host[j] = pres_mod_host_full[j * padded];\n'
                    '    }\n'
-            '#endif\n'
+                   '#endif\n'
                    )
 
     if have_rev_rxns:
@@ -341,9 +364,10 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
                    '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>();\n'
                    '    cuProfilerStop();\n'
                    '#elif RATES_TEST\n'
-                   '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format('d_fwd_rates, d_rev_rates' + (', d_pres_mod' if have_pdep_rxns else '') + \
-                        ', d_spec_rates')
-                   )
+                   '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format(
+            'd_fwd_rates, d_rev_rates' + (', d_pres_mod' if have_pdep_rxns else '') + \
+            ', d_spec_rates')
+        )
     else:
         file.write(
             '#ifdef PROFILER\n'
@@ -351,62 +375,78 @@ def __write_cuda_rate_evaluator(file, have_rev_rxns, have_pdep_rxns, T, P, Prett
             '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({});\n'
             '    cuProfilerStop();\n'
             '#elif RATES_TEST\n'
-            '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format('d_rates' + (', d_pres_mod' if have_pdep_rxns else '') +
-                ', d_spec_rates')
+            '    k_eval_spec_rates<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {});\n'.format(
+            'd_rates' + (', d_pres_mod' if have_pdep_rxns else '') +
+            ', d_spec_rates')
             )
     file.write(
-           '    cudaErrorCheck(cudaMemcpy(spec_rates_host_full, d_spec_rates, padded * NSP * sizeof(double), cudaMemcpyDeviceToHost));\n')
+        '    cudaErrorCheck(cudaMemcpy(spec_rates_host_full, d_spec_rates, padded * NSP * sizeof(double), '
+        'cudaMemcpyDeviceToHost));\n'
+        )
     file.write(
-               '    for (int j = 0; j < NSP; ++j) {\n'
-               '        spec_rates_host[j] = spec_rates_host_full[j * padded];\n'
-               '    }\n'
-               '#endif\n'
-               )
+        '    for (int j = 0; j < NSP; ++j) {\n'
+        '        spec_rates_host[j] = spec_rates_host_full[j * padded];\n'
+        '    }\n'
+        '#endif\n'
+        )
     file.write('#ifdef PROFILER\n'
-                '    cuProfilerStart();\n'
-                '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
-                '    cuProfilerStop();\n'
-                '#elif RATES_TEST\n'
-                '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, padded * NN * sizeof(double), cudaMemcpyHostToDevice));\n' +
-                '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}, {});\n'.format(T, P, 'd_y' + ', d_dy' if have_pdep_rxns else '')
-                )
-    file.write('    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n')
-    file.write(
-               '    for (int j = 0; j < NN; ++j) {\n'
-               '        dy_host[j] = dy_host_full[j * padded];\n'
-               '    }\n'
-               '#endif\n'
-               )
-    file.write('#ifdef RATES_TEST\n'
-               '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '    write_net_rates_of_progress(fp, {}{});\n'.format(' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,', ' pres_mod_host,' if have_pdep_rxns else '') +
-               '#endif\n'
-               )
-    file.write(
-           '#ifdef CONP\n'
-           '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n' +
-           '#elif CONV\n'
-           '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n' +
-           '#endif\n'
-           )
-    file.write(
-               '#ifdef PROFILER\n'
                '    cuProfilerStart();\n'
-               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
+               '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
                '    cuProfilerStop();\n'
                '#elif RATES_TEST\n'
-               '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, 0, {}{});\n'.format(P, ', d_y, d_jac') +
-               '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n' +
-               '    for (int j = 0; j < NN * NN; ++j) {\n'
-               '        jacob_host[j] = jacob_host_full[j * padded];\n'
-               '    }\n'
-               '    write_jacob(fp, jacob_host);\n'
-               '#endif\n'
+               '    cudaErrorCheck(cudaMemcpy(d_y, y_host_full, padded * NN * sizeof(double), '
+               'cudaMemcpyHostToDevice));\n' +
+               '    k_eval_dy<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, {}, {}, {});\n'.format(T, P,
+                                                                                                            'd_y' +
+                                                                                                            ', '
+                                                                                                            'd_dy' if
+                                                                                                            have_pdep_rxns else '')
                )
+    file.write(
+        '    cudaErrorCheck(cudaMemcpy(dy_host_full, d_dy, padded * NN * sizeof(double), cudaMemcpyDeviceToHost));\n')
+    file.write(
+        '    for (int j = 0; j < NN; ++j) {\n'
+        '        dy_host[j] = dy_host_full[j * padded];\n'
+        '    }\n'
+        '#endif\n'
+    )
+    file.write(
+        '#ifdef RATES_TEST\n'
+        '    write_rates(fp,{}{} spec_rates_host, dy_host);\n'.format(
+        ' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,',
+        ' pres_mod_host,' if have_pdep_rxns else '') +
+        '    write_net_rates_of_progress(fp, {}{});\n'.format(
+        ' fwd_rates_host, rev_rates_host,' if have_rev_rxns else ' rates_host,',
+        ' pres_mod_host,' if have_pdep_rxns else '') +
+        '#endif\n'
+        )
+    file.write(
+        '#ifdef CONP\n'
+        '    cudaErrorCheck(cudaMemcpy(d_pres, pres_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n' +
+        '#elif CONV\n'
+        '    cudaErrorCheck(cudaMemcpy(d_rho, rho_host_full, padded * sizeof(double), cudaMemcpyHostToDevice));\n' +
+        '#endif\n'
+        )
+    file.write(
+        '#ifdef PROFILER\n'
+        '    cuProfilerStart();\n'
+        '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>({}, {});\n'.format(T, P) +
+        '    cuProfilerStop();\n'
+        '#elif RATES_TEST\n'
+        '    k_eval_jacob<<<grid_size, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(padded, 0, {}{});\n'.format(P,
+                                                                                                     ', d_y, d_jac') +
+        '    cudaErrorCheck(cudaMemcpy(jacob_host_full, d_jac, padded * NN * NN * sizeof(double), '
+        'cudaMemcpyDeviceToHost));\n' +
+        '    for (int j = 0; j < NN * NN; ++j) {\n'
+        '        jacob_host[j] = jacob_host_full[j * padded];\n'
+        '    }\n'
+        '    write_jacob(fp, jacob_host);\n'
+        '#endif\n'
+        )
 
 
 def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='',
-    old_spec_order=None, old_rxn_order=None, cache_optimized=False):
+                                 old_spec_order=None, old_rxn_order=None, cache_optimized=False):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
@@ -424,7 +464,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
     with open(path + 'mechanism{}'.format(utils.header_ext[lang]), 'w') as file:
 
         file.write('#ifndef MECHANISM_{}\n'.format(utils.header_ext[lang][1:]) +
-                   '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang][1:]))
+                   '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang][1:])
+                   )
 
         # convience: write species indexes
         file.write('/* Species Indexes\n')
@@ -432,50 +473,48 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                              for i, spec in enumerate(specs)))
         file.write('*/\n\n')
 
-        file.write("//Number of species\n")
-        file.write('#define NSP {}\n'.format(len(specs)))
-        file.write("//Number of variables. NN = NSP + 1 (temperature)\n")
-        file.write('#define NN {}\n'.format(len(specs) + 1))
+        file.write('//Number of species\n'
+                   '#define NSP {}\n'.format(len(specs))
+                   '//Number of variables. NN = NSP + 1 (temperature)\n'
+                   '#define NN {}\n'.format(len(specs) + 1)
+                   )
         if have_rev_rxns:
-            file.write('//Number of forward reactions\n')
-            file.write('#define FWD_RATES {}\n'.format(len(reacs)))
-            file.write('//Number of reversible reactions\n')
-            file.write('#define REV_RATES {}\n'.format(
-                len([reac for reac in reacs if reac.rev])))
+            file.write('//Number of forward reactions\n'
+                       '#define FWD_RATES {}\n'.format(len(reacs))
+                       '//Number of reversible reactions\n'
+                       '#define REV_RATES {}\n'.format(
+                       len([reac for reac in reacs if reac.rev]))
+                       )
         else:
             file.write('//Number of reactions\n'
                        '#define RATES {}\n'.format(len(reac)))
         if have_pdep_rxns:
             file.write('//Number of reactions with pressure modified rates\n')
             file.write('#define PRES_MOD_RATES {}\n\n'.format(
-                len([reac for reac in reacs if reac.pdep or reac.thd])))
+                len([reac for reac in reacs if reac.pdep or reac.thd]))
+                )
 
-        file.write('//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
-                   '{} set_same_initial_conditions(int NUM,{} double**, double**);\n\n'.format(
-                    'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
+        file.write(
+            '//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
+            '{} set_same_initial_conditions(int NUM,{} double**, double**);\n\n'.format(
+                'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
+            )
+        file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
+                   '    void write_jacobian_and_rates_output(int NUM);\n'
+                   '    //apply masking of ICs for cache optimized mechanisms\n'
+                   '    void apply_mask(double*);\n'
+                   '#endif\n'
                    )
-        file.write('#if defined (RATES_TEST) || defined (PROFILER)\n')
-        file.write('    void write_jacobian_and_rates_output(int NUM);\n')
-        file.write('    //apply masking of ICs for cache optimized mechanisms\n')
-        file.write('    void apply_mask(double*);\n')
-        file.write('#endif\n')
-
-        if lang == 'cuda':
-            # close previous extern
-            file.write('#ifdef __cplusplus\n'
-                       '}\n'
-                       '#endif\n\n')
 
         file.write('#endif\n\n')
 
     reversed_specs = []
     for i in range(len(specs)):
-      reversed_specs.append(old_spec_order.index(i))
+        reversed_specs.append(old_spec_order.index(i))
 
     # now the mechanism file
     with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
         file.write('#include <stdio.h>\n'
-                   '#include <string.h>\n'
                    '#include "mass_mole.h"\n'
                    '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'
@@ -483,7 +522,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '    #include "rates{}"\n'.format(utils.header_ext[lang]) +
                    '    #include "jacob{}"\n'.format(utils.header_ext[lang]) +
                    '    #include "dydt{}"\n'.format(utils.header_ext[lang]) +
-                   '#endif\n')
+                   '#endif\n'
+                   )
         if lang == 'cuda':
             file.write('#include <cuda.h>\n'
                        '#include <cuda_runtime.h>\n'
@@ -493,15 +533,16 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             file.write('#ifdef PROFILER\n'
                        '    #include "cuda_profiler_api.h"\n'
                        '    #include "cudaProfiler.h"\n'
-                       '#endif\n')
+                       '#endif\n'
+                       )
             file.write('#ifndef SHARED_SIZE\n'
                        '    #define SHARED_SIZE (0)\n'
-                       '#endif\n')
+                       '#endif\n'
+                       )
 
             file.write('#include "gpu_macros.cuh"\n')
             file.write('#include "gpu_memory.cuh"\n')
             __write_kernels(file, have_rev_rxns, have_pdep_rxns)
-
 
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double* y_specs) {\n')
@@ -511,7 +552,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             for i, spec in enumerate(old_spec_order):
                 file.write('        y_specs[{0}] = temp[{1}];\n'.format(spec, i))
         file.write('    }\n')
-
 
         needed_arr = ['y', 'pres']
         needed_arr_conv = ['y', 'rho']
@@ -526,9 +566,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             needed_arr = ['double** ' + a + '_host' for a in needed_arr]
             needed_arr_conv = ['double** ' + a + '_host' for a in needed_arr_conv]
         file.write('#ifdef CONP\n'
-                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void', ', '.join(needed_arr)) +
+                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void',
+                                                                           ', '.join(needed_arr)) +
                    '#elif CONV\n'
-                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void', ', '.join(needed_arr_conv)) +
+                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void',
+                                                                           ', '.join(needed_arr_conv)) +
                    '#endif\n'
                    )
         file.write('{\n')
@@ -543,7 +585,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 '#elif CONV\n'
                 '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_y, d_rho);\n'
                 '#endif\n'
-                )
+            )
         else:
             file.write('    int padded = NUM;\n')
         file.write('    double Xi [NSP] = {0.0};\n'
@@ -558,18 +600,18 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             try:
                 conditions = [x.strip() for x in initial_conditions.split(",")]
                 if len(conditions) < 3:
-                  print("Initial conditions improperly specified, expecting form T,P,Species1=...,Species2=...")
-                  sys.exit(1)
+                    print("Initial conditions improperly specified, expecting form T,P,Species1=...,Species2=...")
+                    sys.exit(1)
             except:
                 print("Error in initial conditions list, not comma separated")
                 sys.exit(1)
             try:
-              T0 = float(conditions[0])
-              P = float(conditions[1])
-              mole_list = conditions[2:]
+                T0 = float(conditions[0])
+                P = float(conditions[1])
+                mole_list = conditions[2:]
             except:
-              print("Could not parse initial T or P as floats...")
-              sys.exit(1)
+                print("Could not parse initial T or P as floats...")
+                sys.exit(1)
             try:
                 mole_list = [x.split("=") for x in mole_list]
             except:
@@ -581,70 +623,71 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 print("Unknown (non-float) value found as initial mole number in list")
                 sys.exit(1)
             try:
-                mole_list = [(next(i for i, spec in enumerate(specs) if spec.name == split[0]), split[1]) for split in mole_list]
+                mole_list = [(next(i for i, spec in enumerate(specs) if spec.name == split[0]), split[1]) for split in
+                             mole_list]
             except:
                 print("Unknown species in initial mole list")
                 sys.exit(1)
         for x in mole_list:
             file.write('    Xi[{}] = {}'.format(x[0], x[1]) + utils.line_end[lang])
         file.write(
-                   '    for (int j = 0; j < NSP; ++ j) {\n'
-                   '        Xsum += Xi[j];\n'
-                   '    }\n'
-                   '    if (Xsum == 0.0) {\n'
-                   '        printf("Use of the set initial conditions function requires user implementation!");\n'
-                   '        exit(-1);\n'
-                   '    }\n'
-                   '    for (int j = 0; j < NSP; ++ j) {\n'
-                   '        Xi[j] /= Xsum;\n'
-                   '    }\n\n'
-                   '    //convert to mass fractions\n'
-                   '    double Yi[NSP] = {0.0};\n'
-                   '    mole2mass(Xi, Yi);\n\n'
-                   '    //set initial pressure, units [PA]\n' +
-                   '    double P = {};\n'.format(chem.PA * P) +
-                   '    // set intial temperature, units [K]\n' +
-                   '    double T0 = {};\n\n'.format(T0)
-                   )
+            '    for (int j = 0; j < NSP; ++ j) {\n'
+            '        Xsum += Xi[j];\n'
+            '    }\n'
+            '    if (Xsum == 0.0) {\n'
+            '        printf("Use of the set initial conditions function requires user implementation!");\n'
+            '        exit(-1);\n'
+            '    }\n'
+            '    for (int j = 0; j < NSP; ++ j) {\n'
+            '        Xi[j] /= Xsum;\n'
+            '    }\n\n'
+            '    //convert to mass fractions\n'
+            '    double Yi[NSP] = {0.0};\n'
+            '    mole2mass(Xi, Yi);\n\n'
+            '    //set initial pressure, units [PA]\n' +
+            '    double P = {};\n'.format(chem.PA * P) +
+            '    // set intial temperature, units [K]\n' +
+            '    double T0 = {};\n\n'.format(T0)
+            )
         if lang == 'cuda':
             file.write(
-                   '    cudaMallocHost((void**)y_host, padded * NN * sizeof(double));\n'
-                   '#ifdef CONP\n'
-                   '    cudaMallocHost((void**)pres_host, padded * sizeof(double));\n'
-                   '#elif defined(CONV)\n'
-                   '    cudaMallocHost((void**)rho_host, padded * sizeof(double));\n'
-                   '#endif\n'
-                   )
+                '    cudaMallocHost((void**)y_host, padded * NN * sizeof(double));\n'
+                '#ifdef CONP\n'
+                '    cudaMallocHost((void**)pres_host, padded * sizeof(double));\n'
+                '#elif defined(CONV)\n'
+                '    cudaMallocHost((void**)rho_host, padded * sizeof(double));\n'
+                '#endif\n'
+            )
         else:
             file.write(
-                   '    (*y_host) = malloc(padded * NN * sizeof(double));\n'
-                   '#ifdef CONP\n'
-                   '    (*pres_host) = malloc(padded * sizeof(double));\n'
-                   '#elif defined(CONV)\n'
-                   '    (*rho_host) = malloc(padded * sizeof(double));\n'
-                   '#endif\n'
-                   )
+                '    (*y_host) = malloc(padded * NN * sizeof(double));\n'
+                '#ifdef CONP\n'
+                '    (*pres_host) = malloc(padded * sizeof(double));\n'
+                '#elif defined(CONV)\n'
+                '    (*rho_host) = malloc(padded * sizeof(double));\n'
+                '#endif\n'
+            )
         file.write(
-                   '    //load temperature and mass fractions for all threads (cells)\n'
-                   '    for (int i = 0; i < padded; ++i) {\n'
-                   '        (*y_host)[i] = T0;\n'
-                   '        //loop through species\n'
-                   '        for (int j = 1; j < NN; ++j) {\n'
-                   '            (*y_host)[i + padded * j] = Yi[j - 1];\n'
-                   '        }\n'
-                   '    }\n\n'
-                   '#ifdef CONV\n'
-                   '    //calculate density\n'
-                   '    double rho = getDensity(T0, P, Xi);\n'
-                   '#endif\n\n'
-                   '    for (int i = 0; i < padded; ++i) {\n'
-                   '#ifdef CONV\n'
-                   '        (*rho_host)[i] = rho;\n'
-                   '#elif defined(CONP)\n'
-                   '        (*pres_host)[i] = P;\n'
-                   '#endif\n'
-                   '    }\n'
-                   )
+            '    //load temperature and mass fractions for all threads (cells)\n'
+            '    for (int i = 0; i < padded; ++i) {\n'
+            '        (*y_host)[i] = T0;\n'
+            '        //loop through species\n'
+            '        for (int j = 1; j < NN; ++j) {\n'
+            '            (*y_host)[i + padded * j] = Yi[j - 1];\n'
+            '        }\n'
+            '    }\n\n'
+            '#ifdef CONV\n'
+            '    //calculate density\n'
+            '    double rho = getDensity(T0, P, Xi);\n'
+            '#endif\n\n'
+            '    for (int i = 0; i < padded; ++i) {\n'
+            '#ifdef CONV\n'
+            '        (*rho_host)[i] = rho;\n'
+            '#elif defined(CONP)\n'
+            '        (*pres_host)[i] = P;\n'
+            '#endif\n'
+            '    }\n'
+        )
         if lang == 'cuda':  # copy memory over
             file.write('    return padded;\n')
 
@@ -663,36 +706,43 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         line += ', const double* spec_rates_host, const double* dy_host) {\n'
         file.write(line)
         # convience method to write rates to file
-        file.write('    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang])
+        file.write(
+            '    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang])
         if have_rev_rxns:
-            file.write('    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
+            file.write(
+                '    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[
+                    lang])
             old_rev_order = [rxn for rxn in old_rxn_order if reacs[rxn].rev]
             rev_reacs = [rxn for rxn in reacs if rxn.rev]
             old_rev_order = [rev_reacs.index(reacs[rxn]) for rxn in old_rev_order]
-            file.write('    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
+            file.write(
+                '    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[
+                    lang])
 
             file.write('    fprintf(fp, "Forward Rates\\n");\n'
-                   '    for(int i = 0; i < FWD_RATES; ++i) {\n'
-                   '        fprintf(fp, "%.15le\\n", fwd_rates_host[rxn_ord[i]]);\n'
-                   '    }\n'
-                   )
+                       '    for(int i = 0; i < FWD_RATES; ++i) {\n'
+                       '        fprintf(fp, "%.15le\\n", fwd_rates_host[rxn_ord[i]]);\n'
+                       '    }\n'
+                       )
             file.write('    fprintf(fp, "Rev Rates\\n");\n')
             file.write('    for(int i = 0; i < REV_RATES; ++i) {\n'
                        '        fprintf(fp, "%.15le\\n", rev_rates_host[rev_rxn_ord[i]]);\n'
                        '    }\n'
                        )
         else:
-            file.write('    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
+            file.write(
+                '    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
             file.write('    fprintf(fp, "Rates\\n");\n'
-                   '    for(int i = 0; i < RATES; ++i) {\n'
-                   '        fprintf(fp, "%.15le\\n", rates_host[rxn_ord[i]]);\n'
-                   '    }\n'
-                   )
+                       '    for(int i = 0; i < RATES; ++i) {\n'
+                       '        fprintf(fp, "%.15le\\n", rates_host[rxn_ord[i]]);\n'
+                       '    }\n'
+                       )
         if have_pdep_rxns:
             old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd]
             pdep_reacs = [rxn for rxn in reacs if rxn.pdep or rxn.thd]
             old_pdep_order = [pdep_reacs.index(reacs[rxn]) for rxn in old_pdep_order]
-            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) + utils.line_end[lang])
+            file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) +
+                       utils.line_end[lang])
             file.write('    fprintf(fp, "Pres Mod Rates\\n");\n')
             file.write('    for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
                        '        fprintf(fp, "%.15le\\n", pres_mod_host[pdep_rxn_ord[i]]);\n'
@@ -721,8 +771,10 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             line += ', const double* pres_mod_host'
         file.write(line + ') {\n')
         if have_rev_rxns:
-            file.write('    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
-            file.write('    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
+            file.write(
+                '    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
+            file.write(
+                '    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[lang])
         else:
             file.write('    int rxn_ord[RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[lang])
 
@@ -745,7 +797,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             line += ')'
             file.write(line + utils.line_end[lang])
         file.write('}\n')
-
 
         file.write('void write_jacob(FILE* fp, const double* jacob_host) {\n' +
                    '    int spec_order[NSP] = {{ {} }}'.format(', '.join(map(str, old_spec_order))) + utils.line_end[lang] +
@@ -796,9 +847,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             T_list = [800, 1600]
             P_list = [1, 10, 50]
             for T in T_list:
-              for P in P_list:
-                __write_c_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
+                for P in P_list:
+                    __write_c_rate_evaluator(
+                        file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
             file.write('    fclose(fp);\n'
                        '}\n'
                        )
@@ -811,7 +862,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    //and L1 size\n'
                        '#endif\n'
                        '    int grid_size = round(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n'
-                      )
+                       )
             file.write('#ifdef PREFERL1\n'
                        '    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));\n'
                        '#else\n'
@@ -825,7 +876,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    double* d_rho;\n'
                        '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, &d_y, &d_rho);\n'
                        '#endif\n'
-                          )
+                       )
             file.write('    int spec_order[NSP] = {{ {} }};\n'.format(', '.join(map(str, reversed_specs))) +
                        '    //set mass fractions to non-zero to turn on all reactions\n'
                        '    double y_host[NN] = {0.0};\n'
@@ -865,8 +916,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 file.write('    double* rates_host_full = (double*)malloc(padded * RATES * sizeof(double));\n'
                            '    double rates_host[RATES] = {0.0};\n')
             if have_pdep_rxns:
-                file.write('    double* pres_mod_host_full = (double*)malloc(padded * PRES_MOD_RATES * sizeof(double));\n'
-                           '    double pres_mod_host[PRES_MOD_RATES] = {0.0};\n')
+                file.write(
+                    '    double* pres_mod_host_full = (double*)malloc(padded * PRES_MOD_RATES * sizeof(double));\n'
+                    '    double pres_mod_host[PRES_MOD_RATES] = {0.0};\n')
 
             file.write('    double spec_rates_host[NSP] = {0.0};\n'
                        '    double dy_host[NN] = {0.0};\n'
@@ -909,7 +961,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             for T in T_list:
               for P in P_list:
                 __write_cuda_rate_evaluator(
-                file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P)
+                    file, have_rev_rxns, have_pdep_rxns, T, P * chem.PA, P
+                    )
 
             file.write('    fclose(fp);\n'
                        '    free(conc_host_full);\n'
@@ -968,10 +1021,12 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '\n'
                        )
             file.write('#ifdef CONP\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** pres_device);\n'
+                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
+                       'double** pres_device);\n'
                        'void free_gpu_memory(double* y_device, double* pres_device);\n'
                        '#else\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** rho_device);\n'
+                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
+                       'double** rho_device);\n'
                        'void free_gpu_memory(double* y_device, double* rho_device);\n'
                        '#endif\n'
                        '\n'
@@ -980,8 +1035,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         with open(path + 'gpu_memory.cu', 'w') as file:
             init_template = 'initialize_pointer(&{}, {});'
             free_template = 'cudaErrorCheck(cudaFree({}));'
-            file.write('#include <string.h>\n'
-                       '#include "gpu_memory.cuh"\n'
+            file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
             file.write('void initialize_pointer(double** ptr, int size) {\n'
@@ -989,9 +1043,11 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    cudaErrorCheck(cudaMemset(*ptr, 0, size * sizeof(double)));\n'
                        '}\n')
             file.write('#ifdef CONP\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** pres_device)\n'
+                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
+                       'double** pres_device)\n'
                        '#else\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, double** rho_device)\n'
+                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
+                       'double** rho_device)\n'
                        '#endif\n'
                        '{\n'
                        '    int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
@@ -1041,6 +1097,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '}\n'
                        )
             file.write('#endif\n')
+
 
 def write_header(path, lang):
     """Writes minimal header file used by all other source files.

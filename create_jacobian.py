@@ -2267,7 +2267,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 
 
 def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state="", num_blocks=8,
-                    num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1, force_optimize=False):
+                    num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1, force_optimize=False,
+                    build_path='./out/'):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
@@ -2295,8 +2296,10 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
     multi_thread : int, optional
         The number of threads to use during optimization
-    force_optimize : boo, optional
+    force_optimize : bool, optional
         If true, redo the cache optimization even if the same mechanism
+    build_path : str, optional
+        The output directory for the jacobian files
 
     Returns
     -------
@@ -2312,7 +2315,6 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         sys.exit(2)
 
     # create output directory if none exists
-    build_path = './out/'
     utils.create_dir(build_path)
 
     # Interpret reaction mechanism file, depending on Cantera or

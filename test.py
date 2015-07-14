@@ -34,6 +34,15 @@ cmd_compile = dict(c='gcc',
                    fortran='gfortran'
                    )
 
+# Flags based on language
+flags = dict(c='-std=c99',
+             cuda='',
+             fortran='')
+
+libs = dict(c = '-lm',
+            cuda = '',
+            fortran = '')
+
 
 class ReactorConstPres(object):
 
@@ -123,8 +132,9 @@ def __write_header_include(file, lang):
     )
 
     file_list = ['header', 'mechanism', 'chem_utils', 'rates', 'dydt', 'jacob']
-    file.write('\n'.join(['#include "{}"'.format(the_file)
-                          for the_file in file_list]) + '\n')
+    file.write('\n'.join(['#include "{}.{}"'.format(
+        the_file, 'h' if lang == 'c' else 'cuh')
+        for the_file in file_list]) + '\n')
 
     if lang == 'cuda':
         file.write('#include <cuda.h>\n'
@@ -277,13 +287,13 @@ def write_cuda_test(build_dir):
         __write_condition_reader(f)
 
         f.write(
-            '  double conc[NSP];\n'
-            '  double fwd_rates[FWD_RATES];\n'
-            '  double rev_rates[REV_RATES];\n'
-            '  double pres_mod[PRES_MOD_RATES];\n'
-            '  double sp_rates[NSP];\n'
-            '  double dy[NN];\n'
-            '  double jacob[NN * NN];\n'
+            '  double conc[NSP] = {0};\n'
+            '  double fwd_rates[FWD_RATES] = {0};\n'
+            '  double rev_rates[REV_RATES]= {0};\n'
+            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
+            '  double sp_rates[NSP] = {0};\n'
+            '  double dy[NN] = {0};\n'
+            '  double jacob[NN * NN] = {0};\n'
             '\n'
             '  cudaErrorCheck(cudaSetDevice(0));\n'
             '  cudaErrorCheck(cudaDeviceSetCacheConfig('
@@ -372,13 +382,13 @@ def write_c_test(build_dir):
         f.write(
             '  double mw_avg;\n'
             '  double rho;\n'
-            '  double conc[NSP];\n'
-            '  double fwd_rates[FWD_RATES];\n'
-            '  double rev_rates[REV_RATES];\n'
-            '  double pres_mod[PRES_MOD_RATES];\n'
-            '  double sp_rates[NSP];\n'
-            '  double dy[NN];\n'
-            '  double jacob[NN * NN];\n'
+            '  double conc[NSP] = {0};\n'
+            '  double fwd_rates[FWD_RATES] = {0};\n'
+            '  double rev_rates[REV_RATES] = {0};\n'
+            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
+            '  double sp_rates[NSP] = {0};\n'
+            '  double dy[NN] = {0};\n'
+            '  double jacob[NN * NN] = {0};\n'
             '\n'
             '  fp = fopen ("test/output.txt", "w");\n'
             '\n'
@@ -425,11 +435,11 @@ def eval_jacobian(dydt, order):
                              3. / 4., -3. / 20., 1. / 60.
                              ])
 
-    sqrt_rnd = sqrt(np.finfo(float).eps)
+    sqrt_rnd = np.sqrt(np.finfo(float).eps)
     err_wt = abs(y) * rel_tol + abs_tol
 
     r0 = (1000. * rel_tol * np.finfo(float).eps * len(y) *
-          sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
+          np.sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
           )
 
     jacob = np.zeros(len(y) ** 2)
@@ -460,16 +470,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
 
+    # generate jacobian
+    create_jacobian.create_jacobian(
+        lang, mech_filename, therm_filename,
+        optimize_cache=False, build_path=build_dir)
+
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
     if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
-
-    # generate jacobian
-    create_jacobian.create_jacobian(
-        lang, mech_filename, therm_filename,
-        optimize_cache=False, build_path=build_dir)
 
     # Write test driver
     if lang == 'c':
@@ -483,7 +493,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
              ]
 
     for f in files:
-        args = [cmd_compile[lang], '-I.' + os.path.sep + build_dir,
+        args = [cmd_compile[lang], flags[lang],
+                '-I.' + os.path.sep + build_dir,
                 '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
                 '-o', os.path.join(test_dir, f + '.o')
                 ]
@@ -496,6 +507,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
     # Link into executable
     args = ([cmd_compile[lang]] +
             [os.path.join(test_dir, f + '.o') for f in files] +
+            [libs[lang]] + 
             ['-o', os.path.join(test_dir, 'test')]
             )
     try:
@@ -524,8 +536,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
                     isinstance(gas.reaction(idx), ct.ThreeBodyReaction) or
                     isinstance(gas.reaction(idx), ct.FalloffReaction) or
                     isinstance(
-                        gas.reaction(idx), ct.ChemicallyActivatedReaction)
-                    ]
+        gas.reaction(idx), ct.ChemicallyActivatedReaction)
+    ]
 
     num_trials = 10
     rand_temp = np.random.uniform(800., 2000., num_trials)
@@ -534,6 +546,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
     for (temp, pres, mass_frac) in zip(rand_temp, rand_pres, rand_mass):
         # Normalize mass fractions
         mass_frac /= sum(mass_frac)
+
+        print()
+        print('Testing condition {} / {}'.format(np.where(rand_temp == temp)[0][0] + 1, num_trials))
 
         with open(os.path.join(test_dir, 'input.txt'), 'w') as f:
             f.write('{:.15e}\n'.format(temp))
@@ -592,7 +607,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         test_spec_rates = data[1: num + 1]
         data = data[num + 1:]
         err = np.linalg.norm(test_spec_rates - gas.net_production_rates, 2)
-        print('L2 norm relative error in species rates: {:.2e}'.format(err))
         err *= 100. / max(gas.net_production_rates)
         print('Percentage of maximum: {:.2e} %'.format(err))
 
@@ -613,6 +627,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         print('L2 norm relative error in Jacobian: {:.2e}'.format(err))
         err *= 100. / max(jacob)
         print('Percentage of maximum: {:.2e} %'.format(err))
+        print()
 
     # Cleanup all files in test directory.
     for f in os.listdir(test_dir):

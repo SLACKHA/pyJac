@@ -1917,7 +1917,6 @@ def write_derivs(path, lang, specs, reacs):
     elif lang == 'cuda':
         file.write('#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
                    '#include "gpu_memory.cuh"\n'
                    )
     file.write('\n')

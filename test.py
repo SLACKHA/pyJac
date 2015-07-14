@@ -35,8 +35,8 @@ cmd_compile = dict(c='gcc',
                    )
 
 # Flags based on language
-flags = dict(c='-std=c99',
-             cuda=['-arch=sm_20', '-g', '-G', '-O0',
+flags = dict(c=['-std=c99'],
+             cuda=['-arch=sm_20',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
                    '-dc'],
@@ -289,6 +289,13 @@ def write_cuda_test(build_dir):
 
         __write_condition_reader(f)
 
+        the_arrays = {}
+        the_arrays['NN'] = ['d_y', 'd_dy']
+        the_arrays['NSP'] = ['d_conc', 'd_spec_rates']
+        the_arrays['FWD_RATES'] = ['d_fwd_rates']
+        the_arrays['REV_RATES'] = ['d_rev_rates']
+        the_arrays['PRES_MOD_RATES'] = ['d_pres_mod_rates']
+        the_arrays['NN * NN'] = ['d_jacob']
         f.write(
             '  double conc[NSP] = {0};\n'
             '  double fwd_rates[FWD_RATES] = {0};\n'
@@ -302,28 +309,17 @@ def write_cuda_test(build_dir):
             '\n'
             '  cudaErrorCheck(cudaSetDevice(0));\n'
             '  cudaErrorCheck(cudaDeviceSetCacheConfig('
-            'cudaFuncCachePreferL1));\n' +
-            '\n'.join(['  double *{} = 0;'.format(x) for x in
-                       ['d_y', 'd_conc', 'd_fwd_rates', 'd_rev_rates',
-                        'd_pres_mod_rates', 'd_spec_rates', 'd_jacob',
-                        'd_dy']]) + '\n'
+            'cudaFuncCachePreferL1));\n'
             '  //initialize cuda variables\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_y, '
-            'NN * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_conc,'
-            ' NSP * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_fwd_rates,'
-            ' FWD_RATES * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_rev_rates,'
-            ' REV_RATES * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_pres_mod_rates,'
-            ' PRES_MOD_RATES * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_dy,'
-            ' NN * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_spec_rates,'
-            ' NSP * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)&d_jacob,'
-            ' NN * NN * sizeof(double)));\n'
+        )
+        for size in the_arrays:
+            for array in the_arrays[size]:
+                f.write('  double* {} = 0;\n'.format(array))
+                f.write('  cudaErrorCheck(cudaMalloc((void**)&'
+                        '{}, {} * sizeof(double)));\n'.format(array, size))
+                f.write('  cudaErrorCheck(cudaMemset({}, 0, '.format(array) +
+                        '{} * sizeof(double)));\n'.format(size))
+        f.write(
             '  //copy mass fractions\n'
             '  cudaErrorCheck(cudaMemcpy(d_y, y, NN * sizeof(double),'
             ' cudaMemcpyHostToDevice));\n'
@@ -481,7 +477,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
     # generate jacobian
     create_jacobian.create_jacobian(
         lang, mech_filename, therm_filename,
-        optimize_cache=False, build_path=build_dir)
+        optimize_cache=False, build_path=build_dir, no_shared=True)
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
@@ -642,9 +638,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         print()
 
     # Cleanup all files in test directory.
-    #for f in os.listdir(test_dir):
-    #    os.remove(os.path.join(test_dir, f))
-    #os.rmdir(test_dir)
+    for f in os.listdir(test_dir):
+        os.remove(os.path.join(test_dir, f))
+    os.rmdir(test_dir)
 
 if __name__ == '__main__':
     parser = ArgumentParser(

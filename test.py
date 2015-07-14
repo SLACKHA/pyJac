@@ -36,12 +36,15 @@ cmd_compile = dict(c='gcc',
 
 # Flags based on language
 flags = dict(c='-std=c99',
-             cuda='',
+             cuda=['-arch=sm_20', '-g', '-G', '-O0',
+                   '-I/usr/local/cuda/include/',
+                   '-I/usr/local/cuda/samples/common/inc/',
+                   '-dc'],
              fortran='')
 
-libs = dict(c = '-lm',
-            cuda = '',
-            fortran = '')
+libs = dict(c='-lm',
+            cuda='-arch=sm_20',
+            fortran='')
 
 
 class ReactorConstPres(object):
@@ -131,10 +134,11 @@ def __write_header_include(file, lang):
         '\n'
     )
 
-    file_list = ['header', 'mechanism', 'chem_utils', 'rates', 'dydt', 'jacob']
-    file.write('\n'.join(['#include "{}.{}"'.format(
-        the_file, 'h' if lang == 'c' else 'cuh')
-        for the_file in file_list]) + '\n')
+    file_list = ['mechanism', 'chem_utils', 'rates', 'dydt', 'jacob']
+    file.write('\n'.join(['#include "header.h"'] +
+                         ['#include "{}.{}"'.format(
+                             the_file, 'h' if lang == 'c' else 'cuh')
+                          for the_file in file_list]) + '\n')
 
     if lang == 'cuda':
         file.write('#include <cuda.h>\n'
@@ -206,7 +210,6 @@ def __write_condition_reader(file):
     file.write(
         '  int buff_size = 1024;\n'
         '  char buffer [buff_size];\n'
-        '  char* ptr, *eptr;\n'
         '  double data[NN + 1];\n'
         '  for (int i = 0; i < NN + 1; ++i) {\n'
         '    if (fgets (buffer, buff_size, fp) != NULL) {\n'
@@ -291,43 +294,48 @@ def write_cuda_test(build_dir):
             '  double fwd_rates[FWD_RATES] = {0};\n'
             '  double rev_rates[REV_RATES]= {0};\n'
             '  double pres_mod[PRES_MOD_RATES] = {0};\n'
-            '  double sp_rates[NSP] = {0};\n'
+            '  double spec_rates[NSP] = {0};\n'
             '  double dy[NN] = {0};\n'
             '  double jacob[NN * NN] = {0};\n'
             '\n'
+            '  fp = fopen ("test/output.txt", "w");\n'
+            '\n'
             '  cudaErrorCheck(cudaSetDevice(0));\n'
             '  cudaErrorCheck(cudaDeviceSetCacheConfig('
-            'cudaFuncCachePreferL1));\n'
-            '  double *d_y, *d_conc, *d_fwd_rates, *d_rev_rates,'
-            ' *d_pres_mod_rates, *d_dy, *d_spec_rates, *d_jacob;\n'
+            'cudaFuncCachePreferL1));\n' +
+            '\n'.join(['  double *{} = 0;'.format(x) for x in
+                       ['d_y', 'd_conc', 'd_fwd_rates', 'd_rev_rates',
+                        'd_pres_mod_rates', 'd_spec_rates', 'd_jacob',
+                        'd_dy']]) + '\n'
             '  //initialize cuda variables\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_y, NN * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_conc,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_y, '
+            'NN * sizeof(double)));\n'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_conc,'
             ' NSP * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_fwd_rates,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_fwd_rates,'
             ' FWD_RATES * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_rev_rates,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_rev_rates,'
             ' REV_RATES * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_pres_mod_rates,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_pres_mod_rates,'
             ' PRES_MOD_RATES * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_dy,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_dy,'
             ' NN * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_spec_rates,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_spec_rates,'
             ' NSP * sizeof(double)));\n'
-            '  cudaErrorCheck(cudaMalloc((void**)d_jacob,'
+            '  cudaErrorCheck(cudaMalloc((void**)&d_jacob,'
             ' NN * NN * sizeof(double)));\n'
             '  //copy mass fractions\n'
-            '  cudaErrorCheck(cudaMemcpy(y, d_y, NN * sizeof(double),'
+            '  cudaErrorCheck(cudaMemcpy(d_y, y, NN * sizeof(double),'
             ' cudaMemcpyHostToDevice));\n'
-            '  k_eval_conc(d_y, pres, d_conc);\n'
-            '  k_eval_rxn_rates(d_y, pres, d_conc,'
+            '  k_eval_conc<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc);\n'
+            '  k_eval_rxn_rates<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc,'
             ' d_fwd_rates, d_rev_rates);\n'
-            '  k_get_rxn_pres_mod(d_y, pres, d_conc,'
+            '  k_get_rxn_pres_mod<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc,'
             ' d_pres_mod_rates);\n'
-            '  k_eval_spec_rates(d_fwd_rates, d_rev_rates,'
-            ' d_pres_mod_rates, d_spec_rates);\n'
-            '  k_eval_dy_dt(pres, d_y, d_dy);\n'
-            '  k_eval_jacob(pres, d_y, d_jacob);\n'
+            '  k_eval_spec_rates<<<1, 1, SHARED_SIZE>>>'
+            '(d_fwd_rates, d_rev_rates, d_pres_mod_rates, d_spec_rates);\n'
+            '  k_eval_dy_dt<<<1, 1, SHARED_SIZE>>>(pres, d_y, d_dy);\n'
+            '  k_eval_jacob<<<1, 1, SHARED_SIZE>>>(pres, d_y, d_jacob);\n'
             '  //copy back\n'
             '  cudaErrorCheck(cudaMemcpy(conc, d_conc,'
             ' NSP * sizeof(double), cudaMemcpyDeviceToHost));\n'
@@ -346,7 +354,7 @@ def write_cuda_test(build_dir):
             '  //write\n'
             '  write_conc (fp, conc);\n'
             '  write_rates (fp, fwd_rates, rev_rates, '
-            'pres_mod, sp_rates, dy);\n'
+            'pres_mod, spec_rates, dy);\n'
             '  write_jacob (fp, jacob);\n'
             '\n'
             '  fclose (fp);\n'
@@ -493,11 +501,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
              ]
 
     for f in files:
-        args = [cmd_compile[lang], flags[lang],
-                '-I.' + os.path.sep + build_dir,
-                '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
-                '-o', os.path.join(test_dir, f + '.o')
-                ]
+        args = [cmd_compile[lang]]
+        args.extend(flags[lang])
+        args.extend([
+            '-I.' + os.path.sep + build_dir,
+            '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
+            '-o', os.path.join(test_dir, f + '.o')
+        ])
+        args = [val for val in args if val.strip()]
         try:
             subprocess.check_call(args)
         except subprocess.CalledProcessError:
@@ -507,7 +518,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
     # Link into executable
     args = ([cmd_compile[lang]] +
             [os.path.join(test_dir, f + '.o') for f in files] +
-            [libs[lang]] + 
+            [libs[lang]] +
             ['-o', os.path.join(test_dir, 'test')]
             )
     try:
@@ -548,7 +559,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         mass_frac /= sum(mass_frac)
 
         print()
-        print('Testing condition {} / {}'.format(np.where(rand_temp == temp)[0][0] + 1, num_trials))
+        print('Testing condition {} / {}'.format(np.where(rand_temp == temp)
+                                                 [0][0] + 1, num_trials))
 
         with open(os.path.join(test_dir, 'input.txt'), 'w') as f:
             f.write('{:.15e}\n'.format(temp))
@@ -630,9 +642,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         print()
 
     # Cleanup all files in test directory.
-    for f in os.listdir(test_dir):
-        os.remove(os.path.join(test_dir, f))
-    os.rmdir(test_dir)
+    #for f in os.listdir(test_dir):
+    #    os.remove(os.path.join(test_dir, f))
+    #os.rmdir(test_dir)
 
 if __name__ == '__main__':
     parser = ArgumentParser(
@@ -646,7 +658,7 @@ if __name__ == '__main__':
                              'source files.')
     parser.add_argument('-b', '--build_dir',
                         type=str,
-                        default='.' + os.path.sep + 'out' + os.path.sep,
+                        default='out' + os.path.sep,
                         help='The directory the jacob/rates/tester'
                         ' files will be generated and built in.')
     parser.add_argument('-i', '--input',

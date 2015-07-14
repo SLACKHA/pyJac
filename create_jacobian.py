@@ -1329,8 +1329,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '\n'
                    '#include "header.h"\n'
                    '\n'
-                   'void eval_jacob (const double, const double, double*, '
-                   'double*);\n'
+                   'void eval_jacob (const double, const double, '
+                   'const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1343,7 +1343,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#include "header.h"\n'
                    '\n'
                    '__device__ void eval_jacob (const double, const double, '
-                   'double*, double*);\n'
+                   'const double*, double*);\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1375,8 +1375,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '\n'
                    )
     elif lang == 'cuda':
-        file.write('#include <math.h>\n'
-                   '#include "jacobs/jac_include.h"\n'
+        file.write('#include <math.h>\n' +
+                   ('#include "jacobs/jac_include.h"\n' if 
+                    do_unroll else '') + 
                    '#include "header.h"\n'
                    '#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
@@ -1392,7 +1393,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     if lang in ['c', 'cuda']:
         line += ('void eval_jacob (const double t, const double pres, '
-                 'double * y, double * jac) {\n\n')
+                 'const double * y, double * jac) {\n\n')
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
 
@@ -1644,10 +1645,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         line = '  double X = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if lang != 'cuda':
+    if not do_unroll:
         line = '  '
         if lang == 'c':
             line += 'double '
+        elif lang == 'cuda':
+            line += 'register double '
         line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
         file.write(line)
 

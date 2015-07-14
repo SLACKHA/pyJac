@@ -497,12 +497,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         file.write('    void apply_mask(double*);\n')
         file.write('#endif\n')
 
-        if lang == 'cuda':
-            # close previous extern
-            file.write('#ifdef __cplusplus\n'
-                       '}\n'
-                       '#endif\n\n')
-
         file.write('#endif\n\n')
 
     reversed_specs = []

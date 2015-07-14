@@ -512,7 +512,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
     # now the mechanism file
     with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
         file.write('#include <stdio.h>\n'
-                   '#include <string.h>\n'
                    '#include "mass_mole.h"\n'
                    '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'
@@ -1033,8 +1032,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         with open(path + 'gpu_memory.cu', 'w') as file:
             init_template = 'initialize_pointer(&{}, {});'
             free_template = 'cudaErrorCheck(cudaFree({}));'
-            file.write('#include <string.h>\n'
-                       '#include "gpu_memory.cuh"\n'
+            file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
             file.write('void initialize_pointer(double** ptr, int size) {\n'

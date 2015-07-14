@@ -749,8 +749,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         file.write('#include <math.h>\n'
                    '#include "header.h"\n'
                    )
-        if lang == 'cuda' and CUDAParams.is_global():
-            file.write('#include "gpu_macros.cuh"\n')
         file.write('\n')
 
     # list of reactions with third-body or pressure-dependence
@@ -1157,10 +1155,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
     """
 
-    offset = 0
-    if lang == 'cuda' and CUDAParams.is_global():
-        offset = 1
-
     filename = 'spec_rates' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
@@ -1225,7 +1219,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         for spind in i_specs:
             sp = specs[spind]
 
-            line = '  ' + get_array(lang, 'sp_rates', spind + offset) + ' {}= '.format('+' if seen[spind] else '')
+            line = '  ' + get_array(lang, 'sp_rates', spind) + ' {}= '.format('+' if seen[spind] else '')
             seen[spind] = True
 
             # continuation line
@@ -1421,7 +1415,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
-            file.write('  ' + get_array(lang, 'sp_rates', i + offset) + ' = 0.0' + utils.line_end[lang])
+            file.write('  ' + get_array(lang, 'sp_rates', i) + ' = 0.0' + utils.line_end[lang])
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_spec_rates\n\n')
@@ -1501,8 +1495,6 @@ def write_chem_utils(path, lang, specs):
 
     if lang in ['c', 'cuda']:
         file.write('#include "header.h"\n')
-        if lang == 'cuda' and CUDAParams.is_global():
-            file.write('#include "gpu_macros.cuh"\n')
         file.write('\n')
 
     pre = ''
@@ -2006,10 +1998,8 @@ def write_derivs(path, lang, specs, reacs):
     line += ';\n\n'
     file.write(line)
 
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # evaluate enthalpy
-        file.write('  // local array for species enthalpies\n'
-                   '  double h[{}];\n'.format(len(specs)))
+    file.write('  // local array for species enthalpies\n'
+               '  double h[{}];\n'.format(len(specs)))
     file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', h);\n')
 
     # energy equation
@@ -2074,11 +2064,10 @@ def write_derivs(path, lang, specs, reacs):
                utils.get_array(lang, 'y', 0) + ' * pres;\n\n'
                )
 
-    if lang != 'cuda' or not CUDAParams.is_global():
-        # calculation of species molar concentrations
-        file.write('  // species molar concentrations\n'
-                   '  double conc[{}];\n'.format(len(specs))
-                   )
+    # calculation of species molar concentrations
+    file.write('  // species molar concentrations\n'
+               '  double conc[{}];\n'.format(len(specs))
+               )
 
     # Simply call subroutine
     file.write('  eval_conc (' + utils.get_array(lang, 'conc', isp) +

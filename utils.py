@@ -147,10 +147,5 @@ def get_index(lang, index):
     retval = None
     if lang in ['fortran', 'matlab']:
         return str(index + 1)
-    if lang == 'c':
+    if lang in ['c', 'cuda']:
         return str(index)
-    if lang == 'cuda':
-        if CUDAParams.MemoryStrategy == CUDAParams.CudaMemStrats.Global:
-            return "CU_LINEAR_OFFSET({})".format(index)
-        else:
-            return str(index)

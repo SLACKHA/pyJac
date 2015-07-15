@@ -251,7 +251,7 @@ def write_rates(file, lang, rxn):
 
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
     jline = 'j_temp'
-    if rxn.pdep and not rxn.pdep_sp:
+    if rxn.pdep and not rxn.pdep_sp and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body
                         if thd[0] == sp_j.name), None)
         if alphaij is None:
@@ -267,7 +267,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += ' + pres_mod_temp'
     elif rxn.pdep and rxn.pdep_sp and rxn.pdep_sp == sp_j.name:
         jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
-    elif rxn.thd and not rxn.pdep:
+    elif rxn.thd and not rxn.pdep and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body
                         if thd[0] == sp_j.name), None)
         if alphaij is None:
@@ -781,6 +781,10 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                 if conc_temp_log is not None:
                     conc_temp_log.append((thd_sp[0], thd_sp[1] - 1.0))
         line += ')'
+
+        if not rxn.thd_body:
+            # only depends on +m
+            conc_temp_log = []
 
         if last_conc_temp is not None:
             # need to update based on the last

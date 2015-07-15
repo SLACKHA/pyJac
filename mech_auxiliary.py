@@ -474,14 +474,14 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         file.write('*/\n\n')
 
         file.write('//Number of species\n'
-                   '#define NSP {}\n'.format(len(specs))
-                   '//Number of variables. NN = NSP + 1 (temperature)\n'
+                   '#define NSP {}\n'.format(len(specs)) +
+                   '//Number of variables. NN = NSP + 1 (temperature)\n' +
                    '#define NN {}\n'.format(len(specs) + 1)
                    )
         if have_rev_rxns:
-            file.write('//Number of forward reactions\n'
-                       '#define FWD_RATES {}\n'.format(len(reacs))
-                       '//Number of reversible reactions\n'
+            file.write('//Number of forward reactions\n' +
+                       '#define FWD_RATES {}\n'.format(len(reacs)) +
+                       '//Number of reversible reactions\n'+
                        '#define REV_RATES {}\n'.format(
                        len([reac for reac in reacs if reac.rev]))
                        )

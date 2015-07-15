@@ -149,3 +149,17 @@ def get_index(lang, index):
         return str(index + 1)
     if lang in ['c', 'cuda']:
         return str(index)
+
+def reassign_species_lists(reacs, specs):
+    """
+    Given a list of ReacInfo, and SpecInfo's, this method will update the ReacInfo's 
+    reactants / products / third body list to integers representing the species' index in the list
+    """
+
+    species_map = {sp.name: i for i, sp in enumerate(specs)}
+    for rxn in reacs:
+        rxn.reac = [species_map[sp] for sp in rxn.reac]
+        rxn.prod = [species_map[sp] for sp in rxn.prod]
+        rxn.thd_body = [(species_map[thd[0]], thd[1]) for thd in rxn.thd_body]
+        if rxn.pdep_sp:
+            rxn.pdep_sp = species_map[rxn.pdep_sp]

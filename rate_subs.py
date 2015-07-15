@@ -410,14 +410,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
         rxn = reacs[i_rxn]
 
         if lang == 'cuda' and smm is not None:
-            indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
-                       for s in set(rxn.reac + rxn.prod)]
+            indexes = list(set(rxn.reac + rxn.prod))
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
             # estimate usages as the number of consequitive reactions
             usages = []
             for sp_i in indexes:
                 temp = i_rxn + 1
-                while temp < len(ordering) and specs[sp_i].name in set(
+                while temp < len(ordering) and sp_i in set(
                                 reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
                     temp += 1
                 usages.append(temp - i_rxn - 1)
@@ -508,9 +507,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
         line = '  ' + get_array(lang, 'fwd_rxn_rates', i_rxn) + ' = '
 
         # reactants
-        for sp in rxn.reac:
-            isp = next(i for i in range(len(specs)) if specs[i].name == sp)
-            nu = rxn.reac_nu[rxn.reac.index(sp)]
+        for i, isp in enumerate(rxn.reac):
+            nu = rxn.reac_nu[i]
 
             # check if stoichiometric coefficient is double or integer
             if isinstance(nu, float):
@@ -558,8 +556,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     sum_nu += nu
 
                     # get species object
-                    sp = next((sp for sp in specs if
-                               sp.name == prod_sp), None)
+                    sp = specs[prod_sp]
                     if not sp:
                         print('Error: species ' + prod_sp + ' in reaction '
                                                             '{} not found.\n'.format(i_rxn)
@@ -597,8 +594,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     sum_nu -= nu
 
                     # get species object
-                    sp = next((sp for sp in specs if sp.name == reac_sp),
-                              None)
+                    sp = specs[reac_sp]
                     if not sp:
                         print('Error: species ' + reac_sp + ' in reaction '
                                                             '{} not found.\n'.format(i_rxn)
@@ -700,10 +696,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             line = '  ' + get_array(lang, 'rev_rxn_rates', rev_reacs.index(i_rxn)) + ' = '
 
             # reactants (products from forward reaction)
-            for sp in rxn.prod:
-                isp = next(i for i in range(len(specs))
-                           if specs[i].name == sp)
-                nu = rxn.prod_nu[rxn.prod.index(sp)]
+            for isp in rxn.prod:
+                nu = rxn.prod_nu[rxn.prod.index(isp)]
 
                 # check if stoichiometric coefficient is double or integer
                 if isinstance(nu, float):
@@ -730,14 +724,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
         if lang == 'cuda' and smm is not None:
             # figure out which to mark for removal
-            indexes = [next(isp for isp in range(len(specs)) if specs[isp].name == s)
-                       for s in set(rxn.reac + rxn.prod)]
+            indexes = set(rxn.reac + rxn.prod)
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
             mark = []
             # mark em if they're absent from the next two (or more) rxns
             for i, sp_i in enumerate(indexes):
                 temp = i_rxn
-                while temp < len(ordering) and specs[sp_i].name not in set(
+                while temp < len(ordering) and sp_i not in set(
                                 reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
                     temp += 1
                     if temp - i_rxn - 1 > 2:
@@ -955,7 +948,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if reac.thd_body:
             if lang == 'cuda' and smm is not None:
                 the_vars = []
-                indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
+                indexes = [sp[0] for sp in reac.thd_body]
                 the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
                 # estimate usages as the number of consequitive reactions
                 usages = []
@@ -963,7 +956,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                     temp = i_rxn + 1
                     while temp < len(ordering):
                         rxn = reacs[ordering[temp]]
-                        if specs[sp_i].name in set([x[0] for x in rxn.thd_body]):
+                        if sp_i in set([x[0] for x in rxn.thd_body]):
                             temp += 1
                         else:
                             break
@@ -976,31 +969,25 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             line = '  ' + get_array(lang, 'pres_mod', pind) + ' = m'
 
             for sp in reac.thd_body:
-                isp = specs.index(next((s for s in specs
-                                        if s.name == sp[0]), None)
-                                  )
                 if sp[1] > 1.0:
                     line += ' + {}'.format(sp[1] - 1.0)
                 elif sp[1] < 1.0:
                     line += ' - {}'.format(1.0 - sp[1])
-                line += ' * ' + get_array(lang, 'C', isp)
+                line += ' * ' + get_array(lang, 'C', sp[0])
 
             line += utils.line_end[lang]
             file.write(line)
 
         # pressure dependence
         if reac.pdep:
-            if not reac.pdep_sp:
+            if reac.pdep_sp == '':
                 line = '  thd = m'
                 for sp in reac.thd_body:
-                    isp = specs.index(next((s for s in specs
-                                            if s.name == sp[0]), None)
-                                      )
                     if sp[1] > 1.0:
                         line += ' + {}'.format(sp[1] - 1.0)
                     elif sp[1] < 1.0:
                         line += ' - {}'.format(1.0 - sp[1])
-                    line += ' * ' + get_array(lang, 'C', isp)
+                    line += ' * ' + get_array(lang, 'C', sp[0])
 
             file.write(line + utils.line_end[lang])
 
@@ -1031,11 +1018,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             file.write(line)
 
             # reduced pressure
-            if reac.pdep_sp:
-                isp = next(i for i in range(len(specs))
-                           if specs[i].name == reac.pdep_sp
-                           )
-                line = '  Pr = k0 * ' + get_array(lang, 'C', isp) + ' / kinf'
+            if reac.pdep_sp != '':
+                line = '  Pr = k0 * ' + get_array(lang, 'C', reac.pdep_sp) + ' / kinf'
             else:
                 line = '  Pr = k0 * thd / kinf'
             line += utils.line_end[lang]
@@ -1140,7 +1124,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if lang == 'cuda' and smm is not None:
             # mark for eviction
             the_vars = []
-            indexes = [specs.index(next(s for s in specs if s.name == sp[0])) for sp in reac.thd_body]
+            indexes = [sp[0] for sp in reac.thd_body]
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
             # estimate usages as the number of consequitive reactions
             mark = []
@@ -1148,7 +1132,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 temp = i_rxn + 1
                 while temp < len(ordering):
                     rxn = reacs[ordering[temp]]
-                    if specs[sp_i].name not in set([x[0] for x in rxn.thd_body]):
+                    if sp_i not in set([x[0] for x in rxn.thd_body]):
                         temp += 1
                     else:
                         break
@@ -1308,9 +1292,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
                 rxn_out = ''
                 # first check to see if in both products and reactants
-                if sp.name in rxn.prod and sp.name in rxn.reac:
-                    pisp = rxn.prod.index(sp.name)
-                    risp = rxn.reac.index(sp.name)
+                if spind in rxn.prod and spind in rxn.reac:
+                    pisp = rxn.prod.index(spind)
+                    risp = rxn.reac.index(spind)
                     nu = rxn.prod_nu[pisp] - rxn.reac_nu[risp]
                     inreac = inreac or nu != 0
 
@@ -1356,9 +1340,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if isfirst: isfirst = False
 
                 # check products
-                elif sp.name in rxn.prod:
+                elif spind in rxn.prod:
                     inreac = True
-                    isp = rxn.prod.index(sp.name)
+                    isp = rxn.prod.index(spind)
                     nu = rxn.prod_nu[isp]
 
                     if not isfirst: line += ' + '
@@ -1381,9 +1365,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if isfirst: isfirst = False
 
                 # check reactants
-                elif sp.name in rxn.reac:
+                elif spind in rxn.reac:
                     inreac = True
-                    isp = rxn.reac.index(sp.name)
+                    isp = rxn.reac.index(spind)
                     nu = rxn.reac_nu[isp]
 
                     if isfirst:
@@ -2568,6 +2552,9 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
         smm = shared.shared_memory_manager(num_blocks, num_threads,
                                            L1_preferred
                                            )
+
+    #reassign the reaction's product / reactant / third body list to integer indexes for speed
+    utils.reassign_species_lists(reacs, specs)
 
     # now begin writing subroutines
 

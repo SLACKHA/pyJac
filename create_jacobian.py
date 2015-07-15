@@ -39,8 +39,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     if rxn.pdep or rxn.thd:
         variable_list.append(utils.get_array('cuda', 'pres_mod', pdep_reacs.index(rind)))
     for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
-        sp_real = next(spec for spec in specs if spec.name == sp)
-        variable_list.append(utils.get_array('cuda', 'conc', specs.index(sp_real)))
+        variable_list.append(utils.get_array('cuda', 'conc', sp))
 
     alphaij_count = 0
     # calculate usages
@@ -57,26 +56,26 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
         if rxn.rev:
             rev_usage += alphaij_count
 
-    for sp_name in rxn.reac:
-        nu = rxn.reac_nu[rxn.reac.index(sp_name)]
+    for i, sp in enumerate(rxn.reac):
+        nu = rxn.reac_nu[i]
         if nu - 1 > 0:
-            reac_usages[rxn.reac.index(sp_name)] += 1
+            reac_usages[i] += 1
             if rxn.thd:
                 pres_mod_usage += 1
-        for sp_name_2 in rxn.reac:
-            if sp_name == sp_name_2:
+        for i2, sp2 in rxn.reac:
+            if sp == sp2:
                 continue
-            reac_usages[rxn.reac.index(sp_name_2)] += 1
+            reac_usages[i2] += 1
 
     if rxn.rev:
-        for sp_name in rxn.prod:
-            nu = rxn.prod_nu[rxn.prod.index(sp_name)]
+        for i, sp in enumerate(rxn.prod):
+            nu = rxn.prod_nu[i]
             if nu - 1 > 0:
-                prod_usages[rxn.prod.index(sp_name)] += 1
-            for sp_name_2 in rxn.prod:
-                if sp_name == sp_name_2:
+                prod_usages[i] += 1
+            for i2, sp2 in enumerate(rxn.prod):
+                if sp == sp2:
                     continue
-                prod_usages[rxn.prod.index(sp_name_2)] += 1
+                prod_usages[i2] += 1
 
     usages.append(fwd_usage)
     if rxn.rev:
@@ -163,18 +162,10 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             prod_nu = 1
 
     # get reac and prod nu sums
-    for sp_name in rxn.reac:
-        nu = rxn.reac_nu[rxn.reac.index(sp_name)]
-        if nu == 0:
-            continue
-        reac_nu += nu
+    reac_nu = sum(rxn.reac_nu)
 
     if rxn.rev:
-        for sp_name in rxn.prod:
-            nu = rxn.prod_nu[rxn.prod.index(sp_name)]
-            if nu == 0:
-                continue
-            prod_nu += nu
+        prod_nu = sum(rxn.prod_nu)
 
     if reac_nu != 0:
         if reac_nu == -1:
@@ -230,7 +221,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         jline += ')'
     file.write(jline + utils.line_end[lang])
 
-    if rxn.pdep and not rxn.thd and not rxn.pdep_sp:
+    if rxn.pdep and not rxn.thd and rxn.pdep_sp == '':
         file.write('  pres_mod_temp /= conc_temp' + utils.line_end[lang])
     return alphaij_hat
 
@@ -251,9 +242,9 @@ def write_rates(file, lang, rxn):
 
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
     jline = 'j_temp'
-    if rxn.pdep and not rxn.pdep_sp and alphaij_hat is not None:
+    if rxn.pdep and rxn.pdep_sp == '' and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body
-                        if thd[0] == sp_j.name), None)
+                        if thd[0] == j_sp), None)
         if alphaij is None:
             alphaij = 1.0
         if alphaij != alphaij_hat:
@@ -265,11 +256,11 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                     jline += ' + {} * pres_mod_temp'.format(diff)
             else:
                 jline += ' + pres_mod_temp'
-    elif rxn.pdep and rxn.pdep_sp and rxn.pdep_sp == sp_j.name:
+    elif rxn.pdep and rxn.pdep_sp == j_sp:
         jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
     elif rxn.thd and not rxn.pdep and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body
-                        if thd[0] == sp_j.name), None)
+                        if thd[0] == j_sp), None)
         if alphaij is None:
             alphaij = 1.0
         if alphaij != alphaij_hat:
@@ -283,57 +274,54 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += ' + '
             jline += get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
 
-    if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
+    if (rxn.pdep or rxn.thd) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
         jline += ' * '
 
-    if sp_j.name in rxn.reac:
+    if j_sp in rxn.reac:
         if not rxn.pdep and not rxn.thd:
             jline += ' + '
-        nu = rxn.reac_nu[rxn.reac.index(sp_j.name)]
+        nu = rxn.reac_nu[rxn.reac.index(j_sp)]
         if nu != 1:
             if nu == -1:
                 jline += '-'
             else:
                 jline += '{} * '.format(float(nu))
         jline += 'kf'
-        nu_temp = rxn.reac_nu[rxn.reac.index(sp_j.name)]
-        if (nu_temp - 1) > 0:
-            if isinstance(nu_temp - 1, float):
+        if (nu - 1) > 0:
+            if isinstance(nu - 1, float):
                 jline += ' * pow(' + \
                          get_array(lang, 'conc', j_sp)
-                jline += ', {})'.format(nu_temp - 1)
+                jline += ', {})'.format(nu - 1)
             else:
                 # integer, so just use multiplication
-                for i in range(nu_temp - 1):
+                for i in range(nu - 1):
                     jline += ' * ' + \
                              get_array(lang, 'conc', j_sp)
 
         # loop through remaining reactants
-        for sp_reac in rxn.reac:
-            if sp_reac == sp_j.name:
+        for i, isp in enumerate(rxn.reac):
+            if isp == j_sp:
                 continue
 
-            nu_temp = rxn.reac_nu[rxn.reac.index(sp_reac)]
-            isp = next(i for i in range(len(specs))
-                       if specs[i].name == sp_reac)
-            if isinstance(nu_temp, float):
+            nu = rxn.reac_nu[i]
+            if isinstance(nu, float):
                 jline += ' * pow(' + \
                          get_array(lang, 'conc', isp)
-                jline += ', ' + str(nu_temp) + ')'
+                jline += ', ' + str(nu) + ')'
             else:
                 # integer, so just use multiplication
-                for i in range(nu_temp):
+                for i in range(nu):
                     jline += ' * ' + \
                              get_array(lang, 'conc', isp)
 
-    if rxn.rev and sp_j.name in rxn.prod:
-        if not rxn.pdep and not rxn.thd and not sp_j.name in rxn.reac:
+    if rxn.rev and j_sp in rxn.prod:
+        if not rxn.pdep and not rxn.thd and not j_sp in rxn.reac:
             jline += ' + '
-        elif sp_j.name in rxn.reac:
+        elif j_sp in rxn.reac:
             jline += ' + '
 
-        nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
+        nu = rxn.prod_nu[rxn.prod.index(j_sp)]
         if nu != -1:
             if nu == 1:
                 jline += '-'
@@ -341,33 +329,30 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += '{} * '.format(float(-1 * nu))
 
         jline += 'kr'
-        temp_nu = rxn.prod_nu[rxn.prod.index(sp_j.name)]
-        if (temp_nu - 1) > 0:
-            if isinstance(temp_nu - 1, float):
+        if (nu - 1) > 0:
+            if isinstance(nu - 1, float):
                 jline += ' * pow(' + \
                          get_array(lang, 'conc', j_sp)
-                jline += ', {})'.format(temp_nu - 1)
+                jline += ', {})'.format(nu - 1)
             else:
                 # integer, so just use multiplication
-                for i in range(temp_nu - 1):
+                for i in range(nu - 1):
                     jline += ' * ' + \
                              get_array(lang, 'conc', j_sp)
 
         # loop through remaining products
-        for sp_prod in rxn.prod:
-            if sp_prod == sp_j.name:
+        for i, isp in enumerate(rxn.prod):
+            if isp == j_sp:
                 continue
 
-            temp_nu = rxn.prod_nu[rxn.prod.index(sp_prod)]
-            isp = next(i for i in range(len(specs))
-                       if specs[i].name == sp_prod)
-            if isinstance(temp_nu, float):
+            nu = rxn.prod_nu[i]
+            if isinstance(nu, float):
                 jline += ' * pow(' + \
                          get_array(lang, 'conc', isp)
-                jline += ', {})'.format(temp_nu)
+                jline += ', {})'.format(nu)
             else:
                 # integer, so just use multiplication
-                jline += ''.join([' * ' + get_array(lang, 'conc', isp) for i in range(temp_nu)])
+                jline += ''.join([' * ' + get_array(lang, 'conc', isp) for i in range(nu)])
 
     return jline
 
@@ -375,10 +360,9 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
 def write_kc(file, lang, specs, rxn):
     sum_nu = 0
     coeffs = {}
-    for sp_name in set(rxn.reac + rxn.prod):
-        spec = next((spec for spec in specs
-                     if spec.name == sp_name), None)
-        nu = get_nu(spec, rxn)
+    for isp in set(rxn.reac + rxn.prod):
+        spec = specs[isp]
+        nu = get_nu(isp, rxn)
 
         if nu == 0:
             continue
@@ -477,17 +461,17 @@ def write_kc(file, lang, specs, rxn):
     file.write(line)
 
 
-def get_nu(sp_k, rxn):
-    if sp_k.name in rxn.prod and sp_k.name in rxn.reac:
-        nu = (rxn.prod_nu[rxn.prod.index(sp_k.name)] -
-              rxn.reac_nu[rxn.reac.index(sp_k.name)])
+def get_nu(isp, rxn):
+    if isp in rxn.prod and isp in rxn.reac:
+        nu = (rxn.prod_nu[rxn.prod.index(isp)] -
+              rxn.reac_nu[rxn.reac.index(isp)])
         # check if net production zero
         if nu == 0:
             return 0
-    elif sp_k.name in rxn.prod:
-        nu = rxn.prod_nu[rxn.prod.index(sp_k.name)]
-    elif sp_k.name in rxn.reac:
-        nu = -rxn.reac_nu[rxn.reac.index(sp_k.name)]
+    elif isp in rxn.prod:
+        nu = rxn.prod_nu[rxn.prod.index(isp)]
+    elif isp in rxn.reac:
+        nu = -rxn.reac_nu[rxn.reac.index(isp)]
     else:
         # doesn't participate in reaction
         return 0
@@ -611,9 +595,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
             continue
 
         # all participating species
-        for rxn_sp in (rxn.reac + rxn.prod):
-            sp_ind = next((specs.index(s) for s in specs
-                           if s.name == rxn_sp), None)
+        for sp_ind in rxn.reac + rxn.prod:
 
             # skip if already printed
             if dBdT_flag[sp_ind]:
@@ -683,19 +665,16 @@ def write_db_dt(file, lang, specs, rxn):
     notfirst = False
     # contribution from dBdT terms from
     # all participating species
-    for sp in rxn.prod:
-        if sp in rxn.reac:
-            nu = (rxn.prod_nu[rxn.prod.index(sp)] -
-                  rxn.reac_nu[rxn.reac.index(sp)]
+    for sp_ind in rxn.prod:
+        if sp_ind in rxn.reac:
+            nu = (rxn.prod_nu[rxn.prod.index(sp_ind)] -
+                  rxn.reac_nu[rxn.reac.index(sp_ind)]
                   )
         else:
-            nu = rxn.prod_nu[rxn.prod.index(sp)]
+            nu = rxn.prod_nu[rxn.prod.index(sp_ind)]
 
         if (nu == 0):
             continue
-
-        sp_ind = next((specs.index(s) for s in specs
-                       if s.name == sp), None)
 
         if lang in ['c', 'cuda']:
             dBdT = template.format(sp_ind)
@@ -725,15 +704,12 @@ def write_db_dt(file, lang, specs, rxn):
             jline += dBdT
         notfirst = True
 
-    for sp in rxn.reac:
+    for sp_ind in rxn.reac:
         # skip species also in products, already counted
-        if sp in rxn.prod:
+        if sp_ind in rxn.prod:
             continue
 
-        nu = -rxn.reac_nu[rxn.reac.index(sp)]
-
-        sp_ind = next((specs.index(s) for s in specs
-                       if s.name == sp), None)
+        nu = -rxn.reac_nu[rxn.reac.index(sp_ind)]
 
         if lang in ['c', 'cuda']:
             dBdT = template.format(sp_ind)
@@ -765,22 +741,20 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
     if rxn.thd_body:
         # take care of the conc_temp collapsing
         conc_temp_log = []
-    if rxn.pdep_sp:
-        line += get_array(lang, 'conc', specs.index(rxn.pdep_sp))
+    if rxn.pdep_sp != '':
+        line += get_array(lang, 'conc', rxn.pdep_sp)
     else:
         line += '(m'
 
-        for thd_sp in rxn.thd_body:
-            isp = specs.index(next((s for s in specs
-                                    if s.name == thd_sp[0]), None))
-            if thd_sp[1] > 1.0:
-                line += ' + {} * '.format(thd_sp[1] - 1.0)
-            elif thd_sp[1] < 1.0:
-                line += ' - {} * '.format(1.0 - thd_sp[1])
-            if thd_sp[1] != 1.0:
+        for isp, eff in rxn.thd_body:
+            if eff > 1.0:
+                line += ' + {} * '.format(eff - 1.0)
+            elif eff < 1.0:
+                line += ' - {} * '.format(1.0 - eff)
+            if eff != 1.0:
                 line += get_array(lang, 'conc', isp)
                 if conc_temp_log is not None:
-                    conc_temp_log.append((thd_sp[0], thd_sp[1] - 1.0))
+                    conc_temp_log.append((isp, eff))
         line += ')'
 
         if not rxn.thd_body:
@@ -808,8 +782,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                 line = '  conc_temp += ('
 
                 for i, thd_sp in enumerate(new_conc_temp):
-                    isp = specs.index(next((s for s in specs
-                                            if s.name == thd_sp[0]), None))
+                    isp = thd_sp[0]
                     if i > 0:
                         line += ' {}{} * '.format('- ' if thd_sp[1] < 0 else '+ ', abs(thd_sp[1]))
                     else:
@@ -1563,7 +1536,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write('\n')
 
     # third-body variable needed for reactions
-    if any((rxn.pdep and not rxn.pdep_sp) or rxn.thd for rxn in reacs):
+    if any((rxn.pdep and rxn.pdep_sp == '') or rxn.thd for rxn in reacs):
         line = '  '
         if lang == 'c':
             line += 'double '
@@ -1783,9 +1756,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         # loop over reactants
         jline = ''
-        nu = 0
-        for sp in rxn.reac:
-            nu += rxn.reac_nu[rxn.reac.index(sp)]
+        nu = sum(rxn.reac_nu)
         jline += '{})'.format(float(nu))
 
         # contribution from temperature derivative of reaction rates
@@ -1826,11 +1797,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         # print line for reaction
         file.write(jline + ') / rho' + utils.line_end[lang])
 
-        for rxn_sp in set(rxn.reac + rxn.prod):
-            sp_k, k_sp = next(((s, specs.index(s)) for s in specs
-                               if s.name == rxn_sp), None)
+        for k_sp in set(rxn.reac + rxn.prod):
+            sp_k = specs[k_sp]
             line = '  '
-            nu = get_nu(sp_k, rxn)
+            nu = get_nu(k_sp, rxn)
             if nu == 0:
                 continue
             if lang in ['c', 'cuda']:
@@ -1878,11 +1848,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         # now loop through each species
         for j_sp, sp_j in enumerate(specs):
-            for rxn_sp_k in set(rxn.reac + rxn.prod):
-                sp_k, k_sp = next(((s, specs.index(s)) for s in specs
-                                   if s.name == rxn_sp_k), None)
+            for k_sp in set(rxn.reac + rxn.prod):
+                sp_k = specs[k_sp]
 
-                nu = get_nu(sp_k, rxn)
+                nu = get_nu(k_sp, rxn)
 
                 # sparse indexes
                 if lang in ['c', 'cuda']:
@@ -2356,6 +2325,9 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     smm = None
     if lang == 'cuda' and not no_shared:
         smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+
+    #reassign the reaction's product / reactant / third body list to integer indexes for speed
+    utils.reassign_species_lists(reacs, specs)
 
     ## now begin writing subroutines
 

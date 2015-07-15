@@ -162,10 +162,10 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             prod_nu = 1
 
     # get reac and prod nu sums
-    reac_nu = sum(rxn.reac_nu)
+    reac_nu += sum(rxn.reac_nu)
 
     if rxn.rev:
-        prod_nu = sum(rxn.prod_nu)
+        prod_nu += sum(rxn.prod_nu)
 
     if reac_nu != 0:
         if reac_nu == -1:
@@ -754,7 +754,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
             if eff != 1.0:
                 line += get_array(lang, 'conc', isp)
                 if conc_temp_log is not None:
-                    conc_temp_log.append((isp, eff))
+                    conc_temp_log.append((isp, eff - 1.0))
         line += ')'
 
         if not rxn.thd_body:

@@ -460,9 +460,12 @@ def eval_jacobian(dydt, order):
     return jacob
 
 
-def test(lang, build_dir, mech_filename, therm_filename=None):
+def test(lang, build_dir, mech_filename, therm_filename=None, seed=False):
     """
     """
+
+    if seed:
+        np.random.seed(0)
 
     test_dir = '.' + os.path.sep + 'test'
     utils.create_dir(test_dir)
@@ -681,5 +684,10 @@ if __name__ == '__main__':
                         default=None,
                         help='Thermodynamic database filename (e.g., '
                              'therm.dat), or nothing if in mechanism.')
+    parser.add_argument('-s', '--seed',
+                        action='store_true',
+                        default=False,
+                        help='Allows user to use the same seed '
+                        'for the random number generator')
     args = parser.parse_args()
-    test(args.lang, args.build_dir, args.input, args.thermo)
+    test(args.lang, args.build_dir, args.input, args.thermo, args.seed)

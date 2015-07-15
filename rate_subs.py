@@ -789,15 +789,15 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     pdep_flag = False
     troe_flag = False
     sri_flag = False
-    for reac in reacs:
+    for i_rxn, reac in enumerate(reacs):
         if reac.thd:
             # add reaction index to list
             thd_flag = True
-            pdep_reacs.append(reacs.index(reac))
+            pdep_reacs.append(i_rxn)
         if reac.pdep:
             # add reaction index to list
             pdep_flag = True
-            if not reac.thd: pdep_reacs.append(reacs.index(reac))
+            if not reac.thd: pdep_reacs.append(i_rxn)
 
             if reac.troe and not troe_flag: troe_flag = True
             if reac.sri and not sri_flag: sri_flag = True
@@ -1193,10 +1193,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
     # pressure dependent reactions
     pdep_reacs = []
-    for reac in reacs:
+    for i_rxn, reac in enumerate(reacs):
         if reac.thd or reac.pdep:
             # add reaction index to list
-            pdep_reacs.append(reacs.index(reac))
+            pdep_reacs.append(i_rxn)
 
     line = ''
     if lang == 'cuda': line = '__device__ '
@@ -1548,7 +1548,7 @@ def write_chem_utils(path, lang, specs):
     # calculation of mw avg
     line = '  *mw_avg = '
     isfirst = True
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -1556,11 +1556,11 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += ('(mass_frac[{}] * {})'.format(specs.index(sp),
+            line += ('(mass_frac[{}] * {})'.format(isp,
                      utils.round_sig(1.0 / sp.mw, 9))
                      )
         elif lang in ['fortran', 'matlab']:
-            line += ('(mass_frac[{}] * {})'.format(specs.index(sp) + 1,
+            line += ('(mass_frac[{}] * {})'.format(isp + 1,
                      utils.round_sig(1.0 / sp.mw, 9))
                      )
 
@@ -1578,8 +1578,7 @@ def write_chem_utils(path, lang, specs):
     # calculation of species molar concentrations
 
     # loop through species
-    for sp in specs:
-        isp = specs.index(sp)
+    for isp, sp in enumerate(specs):
         line = '  conc'
         if lang in ['c', 'cuda']:
             line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
@@ -1616,7 +1615,7 @@ def write_chem_utils(path, lang, specs):
     file.write(line)
 
     # loop through species
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         line = '  if (T <= {:})'.format(sp.Trange[1])
         if lang in ['c', 'cuda']:
             line += ' {\n'
@@ -1626,7 +1625,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
 
-        line = '    ' + utils.get_array(lang, 'h', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'h', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} + T * ('.format(sp.lo[5]) +
                  '{:.8e} + T * ('.format(sp.lo[0]) +
@@ -1643,7 +1642,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
 
-        line = '    ' + utils.get_array(lang, 'h', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'h', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} + T * ('.format(sp.hi[5]) +
                  '{:.8e} + T * ('.format(sp.hi[0]) +
@@ -1687,7 +1686,7 @@ def write_chem_utils(path, lang, specs):
     file.write(line)
 
     # loop through species
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         line = '  if (T <= {:})'.format(sp.Trange[1])
         if lang in ['c', 'cuda']:
             line += ' {\n'
@@ -1697,7 +1696,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
 
-        line = '    ' + utils.get_array(lang, 'u', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'u', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} + T * ('.format(sp.lo[5]) +
                  '{:.8e} - 1.0 + T * ('.format(sp.lo[0]) +
@@ -1714,7 +1713,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
 
-        line = '    ' + utils.get_array(lang, 'u', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'u', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} + T * ('.format(sp.hi[5]) +
                  '{:.8e} - 1.0 + T * ('.format(sp.hi[0]) +
@@ -1758,7 +1757,7 @@ def write_chem_utils(path, lang, specs):
     file.write(line)
 
     # loop through species
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         line = '  if (T <= {:})'.format(sp.Trange[1])
         if lang in ['c', 'cuda']:
             line += ' {\n'
@@ -1768,7 +1767,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
 
-        line = '    ' + utils.get_array(lang, 'cv', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cv', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} - 1.0 + T * ('.format(sp.lo[0]) +
                  '{:.8e} + T * ('.format(sp.lo[1]) +
@@ -1784,7 +1783,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
 
-        line = '    ' + utils.get_array(lang, 'cv', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cv', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} - 1.0 + T * ('.format(sp.hi[0]) +
                  '{:.8e} + T * ('.format(sp.hi[1]) +
@@ -1827,7 +1826,7 @@ def write_chem_utils(path, lang, specs):
     file.write(line)
 
     # loop through species
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         line = '  if (T <= {:})'.format(sp.Trange[1])
         if lang in ['c', 'cuda']:
             line += ' {\n'
@@ -1837,7 +1836,7 @@ def write_chem_utils(path, lang, specs):
             line += '\n'
         file.write(line)
 
-        line = '    ' + utils.get_array(lang, 'cp', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cp', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} + T * ('.format(sp.lo[0]) +
                  '{:.8e} + T * ('.format(sp.lo[1]) +
@@ -1853,7 +1852,7 @@ def write_chem_utils(path, lang, specs):
         elif lang in ['fortran', 'matlab']:
             file.write('  else\n')
 
-        line = '    ' + utils.get_array(lang, 'cp', specs.index(sp))
+        line = '    ' + utils.get_array(lang, 'cp', isp)
         line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
                  '({:.8e} + T * ('.format(sp.hi[0]) +
                  '{:.8e} + T * ('.format(sp.hi[1]) +
@@ -2008,7 +2007,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // constant pressure mass-average specific heat\n')
     line = '  double cp_avg = '
     isfirst = True
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -2016,7 +2015,6 @@ def write_derivs(path, lang, specs, reacs):
 
         if not isfirst: line += ' + '
 
-        isp = specs.index(sp)
         line += '(' + utils.get_array(lang, 'cp', isp) + \
                 ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
 
@@ -2033,7 +2031,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // rate of change of temperature\n')
     line = '  ' + utils.get_array(lang, 'dy', 0) + ' = (-1.0 / (rho * cp_avg)) * ( '
     isfirst = True
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -2041,7 +2039,6 @@ def write_derivs(path, lang, specs, reacs):
 
         if not isfirst: line += ' + '
 
-        isp = specs.index(sp)
         line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' + \
                 utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
 
@@ -2074,14 +2071,14 @@ def write_derivs(path, lang, specs, reacs):
                )
     line = '  pres = '
     isfirst = True
-    for sp in specs:
+    for isp, sp in enumerate(specs):
         if len(line) > 70:
             line += '\n'
             file.write(line)
             line = '      '
 
         if not isfirst: line += ' + '
-        line += '(' + utils.get_array(lang, 'y', specs.index(sp) + 1) + ' / {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'y', isp + 1) + ' / {})'.format(sp.mw)
 
         isfirst = False
 
@@ -2281,17 +2278,17 @@ def write_mass_mole(path, lang, specs):
         file.write('  // average molecular weight\n'
                    '  double mw_avg = 0.0;\n'
                    )
-        for sp in specs:
-            file.write('  mw_avg += X[{}] * '.format(specs.index(sp)) +
+        for isp, sp in enumerate(specs):
+            file.write('  mw_avg += X[{}] * '.format(isp) +
                        '{};\n'.format(sp.mw)
                        )
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n'
                    '  mw_avg = 0.0\n'
                    )
-        for sp in specs:
+        for isp, sp in enumerate(specs):
             file.write('  mw_avg = mw_avg + '
-                       'X({}) * '.format(specs.index(sp) + 1) +
+                       'X({}) * '.format(isp + 1) +
                        '{}\n'.format(sp.mw)
                        )
     file.write('\n')
@@ -2299,8 +2296,8 @@ def write_mass_mole(path, lang, specs):
     # calculate mass fractions
     if lang in ['c', 'cuda']:
         file.write('  // calculate mass fractions\n')
-        for sp in specs:
-            file.write('  Y[{0}] = X[{0}] * '.format(specs.index(sp)) +
+        for isp, sp in enumerate(specs):
+            file.write('  Y[{0}] = X[{0}] * '.format(isp) +
                        '{} / mw_avg;\n'.format(sp.mw)
                        )
         file.write('\n'
@@ -2309,8 +2306,8 @@ def write_mass_mole(path, lang, specs):
                    )
     elif lang == 'fortran':
         file.write('  ! calculate mass fractions\n')
-        for sp in specs:
-            file.write('  Y({0}) = X({0}) * '.format(specs.index(sp) + 1) +
+        for isp, sp in enumerate(specs):
+            file.write('  Y({0}) = X({0}) * '.format(isp + 1) +
                        '{} / mw_avg\n'.format(sp.mw)
                        )
         file.write('\n'
@@ -2352,17 +2349,17 @@ def write_mass_mole(path, lang, specs):
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n')
         file.write('  double mw_avg = 0.0;\n')
-        for sp in specs:
-            file.write('  mw_avg += Y[{}] / '.format(specs.index(sp)) +
+        for isp, sp in enumerate(specs):
+            file.write('  mw_avg += Y[{}] / '.format(isp) +
                        '{};\n'.format(sp.mw)
                        )
         file.write('  mw_avg = 1.0 / mw_avg;\n')
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n')
         file.write('  mw_avg = 0.0\n')
-        for sp in specs:
+        for isp, sp in enumerate(specs):
             file.write('  mw_avg = mw_avg + '
-                       'Y({}) / '.format(specs.index(sp) + 1) +
+                       'Y({}) / '.format(isp + 1) +
                        '{}\n'.format(sp.mw)
                        )
     file.write('\n')
@@ -2370,8 +2367,8 @@ def write_mass_mole(path, lang, specs):
     # calculate mass fractions
     if lang in ['c', 'cuda']:
         file.write('  // calculate mass fractions\n')
-        for sp in specs:
-            file.write('  X[{0}] = Y[{0}] * '.format(specs.index(sp)) +
+        for isp, sp in enumerate(specs):
+            file.write('  X[{0}] = Y[{0}] * '.format(isp) +
                        'mw_avg / {};\n'.format(sp.mw)
                        )
         file.write('\n'
@@ -2380,8 +2377,8 @@ def write_mass_mole(path, lang, specs):
                    )
     elif lang == 'fortran':
         file.write('  ! calculate mass fractions\n')
-        for sp in specs:
-            file.write('  X({0}) = Y({0}) * '.format(specs.index(sp) + 1) +
+        for isp, sp in enumerate(specs):
+            file.write('  X({0}) = Y({0}) * '.format(isp + 1) +
                        'mw_avg / {}\n'.format(sp.mw)
                        )
         file.write('\n'
@@ -2428,8 +2425,8 @@ def write_mass_mole(path, lang, specs):
         file.write('  // average molecular weight\n'
                    '  double mw_avg = 0.0;\n'
                    )
-        for sp in specs:
-            file.write('  mw_avg += X[{}] * '.format(specs.index(sp)) +
+        for isp, sp in enumerate(specs):
+            file.write('  mw_avg += X[{}] * '.format(isp) +
                        '{};\n'.format(sp.mw)
                        )
         file.write('\n')
@@ -2437,9 +2434,9 @@ def write_mass_mole(path, lang, specs):
         file.write('  ! average molecular weight\n'
                    '  mw_avg = 0.0\n'
                    )
-        for sp in specs:
+        for isp, sp in enumerate(specs):
             file.write('  mw_avg = mw_avg + '
-                       'X({}) * '.format(specs.index(sp) + 1) +
+                       'X({}) * '.format(isp + 1) +
                        '{}\n'.format(sp.mw)
                        )
         file.write('\n')

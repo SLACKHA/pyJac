@@ -63,39 +63,78 @@ def rxn_rate_const(A, b, E):
     """
 
     line = ''
-    logA = math.log(A)
 
-    if not E:
-        # E = 0
-        if not b:
-            # b = 0
-            line += str(A)
-        else:
-            # b != 0
-            if isinstance(b, int):
+    if A > 0:
+        logA = math.log(A)
+
+        if not E:
+            # E = 0
+            if not b:
+                # b = 0
                 line += str(A)
-                for i in range(b):
-                    line += ' * T'
             else:
+                # b != 0
+                if isinstance(b, int):
+                    line += str(A)
+                    for i in range(b):
+                        line += ' * T'
+                else:
+                    line += 'exp({:.8e}'.format(logA)
+                    if b > 0:
+                        line += ' + ' + str(b)
+                    else:
+                        line += ' - ' + str(abs(b))
+                    line += ' * logT)'
+        else:
+            # E != 0
+            if not b:
+                # b = 0
+                line += 'exp({:.8e}'.format(logA) + ' - ({:.8e} / T))'.format(E)
+            else:
+                # b!= 0
                 line += 'exp({:.8e}'.format(logA)
                 if b > 0:
                     line += ' + ' + str(b)
                 else:
                     line += ' - ' + str(abs(b))
-                line += ' * logT)'
-    else:
-        # E != 0
-        if not b:
-            # b = 0
-            line += 'exp({:.8e}'.format(logA) + ' - ({:.8e} / T))'.format(E)
-        else:
-            # b!= 0
-            line += 'exp({:.8e}'.format(logA)
-            if b > 0:
-                line += ' + ' + str(b)
+                line += ' * logT - ({:.8e} / T))'.format(E)
+    elif A < 0:
+        #a < 0, can't take the log of it
+        #the reaction, should also be a duplicate to make any sort of sense
+        if not E:
+            #E = 0
+            if not b:
+                #b = 0
+                line += str(A)
             else:
-                line += ' - ' + str(abs(b))
-            line += ' * logT - ({:.8e} / T))'.format(E)
+                #b != 0
+                if isinstance(b, int):
+                    line += str(A)
+                    for i in range(b):
+                        line += ' * T'
+                else:
+                    line += '{:.8e} * exp('.format(A)
+                    if b > 0:
+                        line += str(b)
+                    else:
+                        line += '-' + str(abs(b))
+                    line += ' * logT)'
+        else:
+            #E != 0
+            if not b:
+                # b = 0
+                line += '{:.8e} * exp(-({:.8e} / T))'.format(A, E)
+            else:
+                # b!= 0
+                line += '{:.8e} * exp('.format(A)
+                if b > 0:
+                    line += str(b)
+                else:
+                    line += '-' + str(abs(b))
+                line += ' * logT - ({:.8e} / T))'.format(E)
+
+    else:
+      raise NotImplementedError
 
     return line
 

@@ -475,7 +475,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None):
         sys.exit(1)
 
     # Create Jacobian and supporting source code files
-    create_jacobian(lang, mech_filename, therm_name=thermo_filename,
+    create_jacobian(lang, mech_filename, therm_name=therm_filename,
                     optimize_cache=False, build_path=build_dir, no_shared=True
                     )
 

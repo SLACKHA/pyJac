@@ -623,7 +623,7 @@ def read_mech(mech_filename, therm_filename):
                         # Looks like elementary reaction
                         pars[1] /= 1000. ** (reac_ord - 1.)
 
-                    reacs[-1].plog_par.append(np.array(pars))
+                    reacs[-1].plog_par.append(pars)
                 else:
                     # enhanced third body efficiencies
                     line = line.replace('/', ' ')
@@ -990,7 +990,7 @@ def read_mech_ct(filename):
                         rate[1].temperature_exponent,
                         rate[1].activation_energy * E_fac
                         ]
-                reac.plog_par.append(np.array(pars))
+                reac.plog_par.append(pars)
 
         elif isinstance(rxn, ct.ChebyshevReaction):
             reac = chem.ReacInfo(rxn.reversible,

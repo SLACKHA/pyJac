@@ -35,7 +35,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     # add variables
     variable_list.append(utils.get_array('cuda', 'fwd_rates', rind))
     if rxn.rev:
-        variable_list.append(utils.get_array('cuda', 'rev_rates', rev_reacs.index(rxn)))
+        variable_list.append(utils.get_array('cuda', 'rev_rates', rev_reacs.index(rind)))
     if rxn.pdep or rxn.thd:
         variable_list.append(utils.get_array('cuda', 'pres_mod', pdep_reacs.index(rind)))
     for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
@@ -103,12 +103,12 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     return variable_list, usages
 
 
-def get_net_rate_string(lang, rxn, rind, rev_reacs, get_array):
+def get_net_rate_string(lang, rind, rev_reacs, get_array):
     jline = ''
     if rxn.rev:
         jline += '(' + get_array(lang, 'fwd_rates', rind)
         jline += ' - ' + \
-                 get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+                 get_array(lang, 'rev_rates', rev_reacs.index(rind))
         jline += ')'
     else:
         jline += get_array(lang, 'fwd_rates', rind)
@@ -144,7 +144,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                       'exp(-T / {:.4}))'.format(rxn.sri[2])
                       )
 
-        jline += ') * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
+        jline += ') * ' + get_net_rate_string(lang, rind, rev_reacs, get_array)
         file.write(jline + utils.line_end[lang])
 
     file.write('  j_temp = -mw_avg * rho_inv * (')
@@ -190,7 +190,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += ' + '
         else:
             jline += ' - {} * '.format(float(prod_nu))
-        jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+        jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rind))
 
     # find alphaij_hat
     alphaij_hat = None
@@ -214,7 +214,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                 jline += ' - '
             else:
                 jline += ' + {} * '.format(alphaij_hat)
-            jline += get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
+            jline += get_net_rate_string(lang, rind, rev_reacs, get_array)
     elif rxn.pdep:
         jline += ') + pres_mod_temp'
         jline += ')'
@@ -281,7 +281,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                     jline += ' + {} * '.format(diff)
             else:
                 jline += ' + '
-            jline += get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
+            jline += get_net_rate_string(lang, rind, rev_reacs, get_array)
 
     if (rxn.pdep or rxn.thd) and (sp_j.name in rxn.reac or (rxn.rev and sp_j.name in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
@@ -604,7 +604,8 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
         template = 'dBdT[{}]'
     else:
         template = 'dBdT_{}'
-    for rxn in rev_reacs:
+    for i_rxn in rev_reacs:
+        rxn = reacs[i_rxn]
         # only reactions with no reverse Arrhenius parameters
         if rxn.rev_par:
             continue
@@ -890,7 +891,7 @@ def write_pdep_dt(file, lang, rxn, rev_reacs, rind, pind, get_array):
         # forward and reverse reaction rates
         jline += '(' + get_array(lang, 'fwd_rates', rind)
         jline += ' - ' + \
-                 get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+                 get_array(lang, 'rev_rates', rev_reacs.index(rind))
         jline += ')'
     else:
         # forward reaction rate only
@@ -1352,14 +1353,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # numbers of species and reactions
     num_s = len(specs)
     num_r = len(reacs)
-    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     num_rev = len(rev_reacs)
 
     pdep_reacs = []
-    for reac in reacs:
+    for i, reac in enumerate(reacs):
         if reac.thd or reac.pdep:
             # add reaction index to list
-            pdep_reacs.append(reacs.index(reac))
+            pdep_reacs.append(i)
     num_pdep = len(pdep_reacs)
 
     # create file depending on language
@@ -1405,7 +1406,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                  '  \n'
                  '  real(wp) :: T, rho, cp_avg, logT\n'
                  )
-        if any(rxn.thd for rxn in rev_reacs):
+        if any(reacs[rxn].thd for rxn in rev_reacs):
             line += '  real(wp) :: m\n'
         line += ('  real(wp), dimension({}) :: '.format(num_s) +
                  'conc, cp, h, dy\n'
@@ -1751,7 +1752,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     # forward and reverse reaction rates
                     jline += '(' + get_array(lang, 'fwd_rates', rind)
                     jline += ' - ' + \
-                             get_array(lang, 'rev_rates', rev_reacs.index(rxn))
+                             get_array(lang, 'rev_rates', rev_reacs.index(rind))
                     jline += ')'
                 else:
                     # forward reaction rate only
@@ -1788,7 +1789,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             # reversible reaction
 
             jline += ' - ' + \
-                     get_array(lang, 'rev_rates', rev_reacs.index(rxn)) + \
+                     get_array(lang, 'rev_rates', rev_reacs.index(rind)) + \
                      ' * ('
 
             file.write(jline)

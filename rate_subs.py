@@ -42,7 +42,7 @@ def rxn_rate_const(A, b, E):
         b \in \mathbb{Z} \text{ (integers) }
         \end{cases}
 
-    .. [1] TF Lu and CK Law, "Toward accommodating doubleistic fuel chemistry
+    .. [1] TF Lu and CK Law, "Toward accommodating realistic fuel chemistry
        in large-scale computations," Progress in Energy and Combustion
        Science, vol. 35, pp. 192-215, 2009. doi:10.1016/j.pecs.2008.10.002
 

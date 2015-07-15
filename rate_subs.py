@@ -167,7 +167,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
     num_s = len(specs)
     num_r = len(reacs)
-    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     num_rev = len(rev_reacs)
     pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd or rxn.pdep]
 
@@ -505,7 +505,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             file.write(line + utils.line_end[lang])
             file.write('  }\n')
 
-        line = '  ' + get_array(lang, 'fwd_rxn_rates', reacs.index(rxn)) + ' = '
+        line = '  ' + get_array(lang, 'fwd_rxn_rates', i_rxn) + ' = '
 
         # reactants
         for sp in rxn.reac:
@@ -562,7 +562,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                                sp.name == prod_sp), None)
                     if not sp:
                         print('Error: species ' + prod_sp + ' in reaction '
-                                                            '{} not found.\n'.format(reacs.index(rxn))
+                                                            '{} not found.\n'.format(i_rxn)
                               )
                         sys.exit()
 
@@ -601,7 +601,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                               None)
                     if not sp:
                         print('Error: species ' + reac_sp + ' in reaction '
-                                                            '{} not found.\n'.format(reacs.index(rxn))
+                                                            '{} not found.\n'.format(i_rxn)
                               )
                         sys.exit()
 
@@ -697,7 +697,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                         )
                 file.write(line)
 
-            line = '  ' + get_array(lang, 'rev_rxn_rates', rev_reacs.index(rxn)) + ' = '
+            line = '  ' + get_array(lang, 'rev_rxn_rates', rev_reacs.index(i_rxn)) + ' = '
 
             # reactants (products from forward reaction)
             for sp in rxn.prod:
@@ -1204,7 +1204,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
     num_s = len(specs)
     num_r = len(reacs)
-    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     num_rev = len(rev_reacs)
 
     # pressure dependent reactions
@@ -1270,7 +1270,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             if lang == 'cuda' and smm is not None:
                 the_vars = [utils.get_array(lang, 'fwd_rates', rind) + (
                     '' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates',
-                                                                           rev_reacs.index(reacs[rind])))
+                                                                           rev_reacs.index(rind)))
                             for rind in i_reacs]
                 the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
                             range(len(i_reacs))]
@@ -1327,7 +1327,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         if rxn.rev:
                             rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
                                                                                                    rev_reacs.index(
-                                                                                                       rxn)) + ')'
+                                                                                                       rind)) + ')'
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     elif nu < 0.0:
@@ -1347,7 +1347,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         if rxn.rev:
                             rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
                                                                                                    rev_reacs.index(
-                                                                                                       rxn)) + ')'
+                                                                                                       rind)) + ')'
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     else:
@@ -1374,7 +1374,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if rxn.rev:
                         rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
                                                                                                rev_reacs.index(
-                                                                                                   rxn)) + ')'
+                                                                                                   rind)) + ')'
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 
@@ -1402,7 +1402,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if rxn.rev:
                         rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
                                                                                                rev_reacs.index(
-                                                                                                   rxn)) + ')'
+                                                                                                   rind)) + ')'
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 
@@ -1429,7 +1429,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             if lang == 'cuda' and smm is not None:
                 the_vars = [utils.get_array(lang, 'fwd_rates', rind) + (
                     '' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates',
-                                                                           rev_reacs.index(reacs[rind])))
+                                                                           rev_reacs.index(rind)))
                             for rind in i_reacs]
                 the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
                             range(len(i_reacs))]
@@ -1984,7 +1984,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  eval_conc (y[0], pres, &y[1], &mw_avg, &rho, conc);\n\n')
 
     # evaluate reaction rates
-    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     file.write('  // local arrays holding reaction rates\n'
                '  double fwd_rates[{}];\n'.format(len(reacs))
                )
@@ -2119,7 +2119,7 @@ def write_derivs(path, lang, specs, reacs):
                )
 
     # evaluate reaction rates
-    rev_reacs = [rxn for rxn in reacs if rxn.rev]
+    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     file.write('  // local arrays holding reaction rates\n'
                '  double fwd_rates[{}];\n'.format(len(reacs))
                )

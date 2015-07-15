@@ -713,8 +713,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 '    int rxn_ord[FWD_RATES] = {{ {} }}'.format(', '.join(map(str, old_rxn_order))) + utils.line_end[
                     lang])
             old_rev_order = [rxn for rxn in old_rxn_order if reacs[rxn].rev]
-            rev_reacs = [rxn for rxn in reacs if rxn.rev]
-            old_rev_order = [rev_reacs.index(reacs[rxn]) for rxn in old_rev_order]
+            rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
+            old_rev_order = [rev_reacs.index(rxn) for rxn in old_rev_order]
             file.write(
                 '    int rev_rxn_ord[REV_RATES] = {{ {} }}'.format(', '.join(map(str, old_rev_order))) + utils.line_end[
                     lang])
@@ -739,8 +739,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        )
         if have_pdep_rxns:
             old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd]
-            pdep_reacs = [rxn for rxn in reacs if rxn.pdep or rxn.thd]
-            old_pdep_order = [pdep_reacs.index(reacs[rxn]) for rxn in old_pdep_order]
+            pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd]
+            old_pdep_order = [pdep_reacs.index(rxn) for rxn in old_pdep_order]
             file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) +
                        utils.line_end[lang])
             file.write('    fprintf(fp, "Pres Mod Rates\\n");\n')
@@ -785,7 +785,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             line = '    fprintf(fp, "%.15le\\n", '
             if have_rev_rxns:
                 line += '(fwd_rates_host[rxn_ord[{}]]'.format(rind)
-                if reac in rev_reacs:
+                if rind in rev_reacs:
                     line += ' - rev_rates_host[rev_rxn_ord[{}]]'.format(rev_count)
                     rev_count += 1
                 line += ')'

@@ -1035,7 +1035,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
     # print line for reaction
     return jline + ') * rho_inv' + utils.line_end[lang]
 
-def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, get_array):
+def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     # Chebyshev reaction
 
     # Reduced temperature and pressure needed many times.
@@ -1886,7 +1886,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         elif rxn.cheb:
             write_cheb_rxn_dt(file, lang, jline, rxn, rind,
-                rev_reacs.index(rind) if rxn.rev else None, get_array)
+                rev_reacs.index(rind) if rxn.rev else None,
+                specs, get_array)
 
         else:
             jline += get_elementary_rxn_dt(lang, specs, rxn, rind, 

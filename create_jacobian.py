@@ -1001,7 +1001,6 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
     jline += get_rxn_params_dt(rxn, rev=False)
 
     # loop over reactants
-    jline = ''
     nu = sum(rxn.reac_nu)
     jline += '{})'.format(float(nu))
 

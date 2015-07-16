@@ -1086,7 +1086,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 else:
                     line += 'exp({:.4} / T)'.format(abs(reac.sri_par[1]))
 
-                if reac.sri[2] > 0.0:
+                if reac.sri_par[2] > 0.0:
                     line += ' + exp(-T / {:.4}), X) '.format(reac.sri_par[2])
                 else:
                     line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri_par[2]))

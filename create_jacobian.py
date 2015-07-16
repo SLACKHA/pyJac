@@ -871,7 +871,7 @@ def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
              '{:8})) / T)'.format(rxn.sri_par[2])
              )
 
-    if len(rxn.sri) == 5:
+    if len(rxn.sri_par) == 5:
         jline += ' + ({:.8} / T)'.format(rxn.sri_par[4])
 
     return jline

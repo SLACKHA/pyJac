@@ -1111,7 +1111,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, get_array):
 
     if rxn.rev:
         jline += ' + ' + get_array(lang, 'rev_rxn_rates', rev_idx)
-        jline += ' * (T * ' + get_dBdT(lang, specs, rxn)
+        jline += ' * (T * ' + get_db_dt(lang, specs, rxn)
         jline += ' + {})'.format(sum(rxn.prod_nu))
 
     jline += '))'
@@ -1183,7 +1183,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                 jline_p += '[{}]'.format(rev_idx)
             elif lang in ['fortran', 'matlab']:
                 jline_p += '({})'.format(rev_idx + 1)
-            jline_p += ' * (T * ' + get_dBdT(lang, specs, rxn)
+            jline_p += ' * (T * ' + get_db_dt(lang, specs, rxn)
 
             jline_p += ' + {})'.format(sum(rxn.prod_nu))
 

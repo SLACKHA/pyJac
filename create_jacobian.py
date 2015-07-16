@@ -1099,17 +1099,17 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
 
     jline += '))'
 
-    jline += ' * (' + get_array(lang, 'fwd_rxn_rates', rind)
+    jline += ' * (' + get_array(lang, 'fwd_rates', rind)
 
     if rxn.rev:
         # reverse reaction rate also
-        get_array(lang, 'rev_rxn_rates', rev_idx)
+        get_array(lang, 'rev_reacs', rev_idx)
 
-    jline += ') - ' + get_array(lang, 'fwd_rxn_rates', rind)
+    jline += ') - ' + get_array(lang, 'fwd_rates', rind)
     jline += ' * {}'.format(sum(rxn.reac_nu))
 
     if rxn.rev:
-        jline += ' + ' + get_array(lang, 'rev_rxn_rates', rev_idx)
+        jline += ' + ' + get_array(lang, 'rev_rates', rev_idx)
         jline += ' * (T * ' + get_db_dt(lang, specs, rxn)
         jline += ' + {})'.format(sum(rxn.prod_nu))
 
@@ -1143,45 +1143,34 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                    '&& (pres <= {:.4e})) {{\n'.format(p2)
                    )
 
-        jline_p = (jline + '({:.8e} + '.format(1. + b_p1) +
-                   '{:.8e} / T + '.format(E_p1) +
-                   '({:.8e} + '.format(b_p2 - b_p1) +
-                   '{:.8e} / T) * '.format(E_p2 - E_p1) +
-                   '(log(pres) - {:.8e}) /'.format(math.log(p1)) +
-                   ' {:.8e}'.format(math.log(p2) - math.log(p1)) +
-                   ' + ({:.8e}'.format(math.log(A_p2 / A_p1)) +
-                   ' + {:.8e} * logT'.format(b_p2 - b_p1) +
-                   ' + {:.8e} / T) / '.format(E_p2 - E_p1) +
-                   '{:.8e})'.format(math.log(p2) - math.log(p1))
-                   )
+        if A_p2 / A_p1 < 0:
+            #MIT mechanisms occaisionally have (for some unknown reason)
+            #negative A's, so we need to handle the log(K2) - log(K1) term differently
+            raise NotImplementedError
+        else:
+            jline_p = (jline + '({:.8e} + '.format(1. + b_p1) +
+                       '{:.8e} / T + '.format(E_p1) +
+                       '({:.8e} + '.format(b_p2 - b_p1) +
+                       '{:.8e} / T) * '.format(E_p2 - E_p1) +
+                       '(log(pres) - {:.8e}) /'.format(math.log(p1)) +
+                       ' {:.8e}'.format(math.log(p2) - math.log(p1)) +
+                       ' + ({:.8e}'.format(math.log(A_p2 / A_p1)) +
+                       ' + {:.8e} * logT'.format(b_p2 - b_p1) +
+                       ' + {:.8e} / T) / '.format(E_p2 - E_p1) +
+                       '{:.8e})'.format(math.log(p2) - math.log(p1))
+                       )
 
-        jline_p += ' * (fwd_rxn_rates'
-        if lang in ['c', 'cuda']:
-            jline_p += '[{}]'.format(rind)
-        elif lang in ['fortran', 'matlab']:
-            jline_p += '({})'.format(rind + 1)
+        jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
 
         if rxn.rev:
             # reverse reaction rate also
-            jline_p += ' - rev_rxn_rates'
-            if lang in ['c', 'cuda']:
-                jline_p += '[{}]'.format(rev_idx)
-            elif lang in ['fortran', 'matlab']:
-                jline_p += '({})'.format(rev_idx + 1)
+            jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-        jline_p += ') - fwd_rxn_rates'
-        if lang in ['c', 'cuda']:
-            jline_p += '[{}]'.format(rind)
-        elif lang in ['fortran', 'matlab']:
-            jline_p += '({})'.format(rind + 1)
+        jline_p += ') - ' + get_array(lang, 'fwd_rates', rind)
         jline_p += ' * {}'.format(sum(rxn.reac_nu))
 
         if rxn.rev:
-            jline_p += ' + rev_rxn_rates'
-            if lang in ['c', 'cuda']:
-                jline_p += '[{}]'.format(rev_idx)
-            elif lang in ['fortran', 'matlab']:
-                jline_p += '({})'.format(rev_idx + 1)
+            jline_p += ' + ' + get_array(lang, 'rev_rates', rev_idx)
             jline_p += ' * (T * ' + get_db_dt(lang, specs, rxn)
 
             jline_p += ' + {})'.format(sum(rxn.prod_nu))

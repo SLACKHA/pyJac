@@ -460,6 +460,11 @@ def eval_jacobian(dydt, order):
 
     return jacob
 
+def __is_pdep(rxn):
+    return (isinstance(rxn, ct.ThreeBodyReaction) or
+    isinstance(rxn, ct.FalloffReaction) or
+    isinstance(rxn, ct.ChemicallyActivatedReaction))
+
 
 def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, generate_jacob=True):
     """
@@ -496,10 +501,15 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
     elif lang == 'cuda':
         write_cuda_test(build_dir)
 
+    #get the cantera object
+    gas = ct.Solution(mech_filename)
+
     # Compile generated source code
     files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-             'rxn_rates', 'rxn_rates_pres_mod', 'test'
+             'rxn_rates', 'test'
              ]
+    if any(__is_pdep(rxn) for rxn in gas.reactions()):
+        files += ['rxn_rates_pres_mod'] 
 
     for f in files:
         args = [cmd_compile[lang]]
@@ -529,15 +539,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         sys.exit(1)
 
     # Now generate data and check results
-    gas = ct.Solution(mech_filename)
 
     # Need to get reversible reactions and those for which
     # pressure modification applies.
     idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
     idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
-                isinstance(rxn, ct.ThreeBodyReaction) or
-                isinstance(rxn, ct.FalloffReaction) or
-                isinstance(rxn, ct.ChemicallyActivatedReaction)
+                __is_pdep(rxn)
                 ]
     # Index of element in idx_pmod that corresponds to reversible reaction
     idx_pmod_rev = [

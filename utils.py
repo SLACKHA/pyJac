@@ -128,7 +128,7 @@ def get_array(lang, name, index, twod=None):
 
     if lang in ['fortran', 'matlab']:
         if twod is not None:
-            return name + array_chars[lang].format(index + 1) + ', {}'.format(get_index(twod + 1)))
+            return name +'({}, {})'.format(index + 1, twod + 1)
         return name + array_chars[lang].format(index + 1)
     return name + array_chars[lang].format(index)
 

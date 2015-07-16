@@ -8,6 +8,10 @@ import errno
 # local includes
 import CUDAParams
 
+line_start = '  '
+comment = dict(c='//', cuda='//',
+                fortran='!', matlab='%')
+
 # list of supported languages
 langs = ['c', 'cuda', 'fortran', 'matlab']
 

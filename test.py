@@ -226,7 +226,7 @@ def __write_condition_reader(file):
         '  }\n')
 
 
-def __write_kernels(file):
+def __write_kernels(file, pmod):
     file.write(
         '  __global__\n'
         'void k_eval_conc(const double* y, double pres, double* conc) {\n'
@@ -242,13 +242,14 @@ def __write_kernels(file):
         '   eval_rxn_rates(y[0], pres, conc, fwd_rates, rev_rates);\n'
         '}\n\n'
     )
-    file.write(
-        '  __global__\n'
-        'void k_get_rxn_pres_mod(const double* y, double pres,'
-        ' const double* conc, double* pres_mod) {\n'
-        '   get_rxn_pres_mod(y[0], pres, conc, pres_mod);\n'
-        '}\n\n'
-    )
+    if pmod:
+        file.write(
+            '  __global__\n'
+            'void k_get_rxn_pres_mod(const double* y, double pres,'
+            ' const double* conc, double* pres_mod) {\n'
+            '   get_rxn_pres_mod(y[0], pres, conc, pres_mod);\n'
+            '}\n\n'
+        )
     file.write(
         '  __global__\n'
         'void k_eval_spec_rates(const double* fwd_rates,'
@@ -271,7 +272,7 @@ def __write_kernels(file):
     )
 
 
-def write_cuda_test(build_dir):
+def write_cuda_test(build_dir, pmod):
     with open(build_dir + os.path.sep + 'test.cu', 'w') as f:
         __write_header_include(f, 'cuda')
         f.write(
@@ -327,8 +328,13 @@ def write_cuda_test(build_dir):
             '  k_eval_conc<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc);\n'
             '  k_eval_rxn_rates<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc,'
             ' d_fwd_rates, d_rev_rates);\n'
+            )
+        if pmod:
+            f.write(
             '  k_get_rxn_pres_mod<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc,'
             ' d_pres_mod_rates);\n'
+            )
+        f.write(
             '  k_eval_spec_rates<<<1, 1, SHARED_SIZE>>>'
             '(d_fwd_rates, d_rev_rates, d_pres_mod_rates, d_spec_rates);\n'
             '  k_eval_dy_dt<<<1, 1, SHARED_SIZE>>>(pres, d_y, d_dy);\n'
@@ -371,7 +377,7 @@ def write_cuda_test(build_dir):
         )
 
 
-def write_c_test(build_dir):
+def write_c_test(build_dir, pmod):
     with open(build_dir + os.path.sep + 'test.c', 'w') as f:
         __write_header_include(f, 'c')
         __write_output_methods(f)
@@ -401,7 +407,12 @@ def write_c_test(build_dir):
             '  write_conc (fp, conc);\n'
             '\n'
             '  eval_rxn_rates (y[0], pres, conc, fwd_rates, rev_rates);\n'
+            )
+        if pmod:
+            f.write(
             '  get_rxn_pres_mod (y[0], pres, conc, pres_mod);\n'
+            )
+        f.write(
             '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, sp_rates);\n'
             '  dydt (0.0, pres, y, dy);\n'
             '  write_rates (fp, fwd_rates, rev_rates, '
@@ -495,20 +506,21 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
 
-    # Write test driver
-    if lang == 'c':
-        write_c_test(build_dir)
-    elif lang == 'cuda':
-        write_cuda_test(build_dir)
-
     #get the cantera object
     gas = ct.Solution(mech_filename)
+    pmod = any(__is_pdep(rxn) for rxn in gas.reactions())
+
+    # Write test driver
+    if lang == 'c':
+        write_c_test(build_dir, pmod)
+    elif lang == 'cuda':
+        write_cuda_test(build_dir, pmod)
 
     # Compile generated source code
     files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
              'rxn_rates', 'test'
              ]
-    if any(__is_pdep(rxn) for rxn in gas.reactions()):
+    if pmod:
         files += ['rxn_rates_pres_mod'] 
 
     for f in files:

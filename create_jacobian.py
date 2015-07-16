@@ -227,8 +227,84 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
 
 
 def write_rates(file, lang, rxn):
-    file.write('  kf = ' + rate.rxn_rate_const(rxn.A, rxn.b, rxn.E) +
-               utils.line_end[lang])
+    if not (rxn.cheb or rxn.plog):
+        file.write('  kf = ' + rate.rxn_rate_const(rxn.A, rxn.b, rxn.E) +
+                   utils.line_end[lang])
+    elif rxn.plog:
+        vals = rxn.plog_par[0]
+        file.write('  if (pres <= {:.4e}) {{\n'.format(vals[0]))
+        line = ('    kf = ' + rate.rxn_rate_const(vals[1], vals[2], vals[3]))
+        file.write(line + utils.line_end[lang])
+
+        for idx, vals in enumerate(rxn.plog_par[:-1]):
+            vals2 = rxn.plog_par[idx + 1]
+
+            line = ('  }} else if ((pres > {:.4e}) '.format(vals[0]) +
+                    '&& (pres <= {:.4e})) {{\n'.format(vals2[0]))
+            file.write(line)
+
+            line = ('    kf = log(' +
+                    rate.rxn_rate_const(vals[1], vals[2], vals[3]) + ')'
+                    )
+            file.write(line + utils.line_end[lang])
+            line = ('    kf2 = log(' +
+                    rate.rxn_rate_const(vals2[1], vals2[2], vals2[3]) + ')'
+                    )
+            file.write(line + utils.line_end[lang])
+
+            pres_log_diff = math.log(vals2[0]) - math.log(vals[0])
+            line = ('    kf = exp(kf + (kf2 - kf) * (log(pres) - ' +
+                    '{:.8e}) / '.format(math.log(vals[0])) +
+                    '{:.8e})'.format(pres_log_diff)
+                    )
+            file.write(line + utils.line_end[lang])
+
+        vals = rxn.plog_par[-1]
+        file.write('  }} else if (pres > {:.4e}) {{\n'.format(vals[0]))
+        line = ('    kf = ' + rate.rxn_rate_const(vals[1], vals[2], vals[3]))
+        file.write(line + utils.line_end[lang])
+        file.write('  }\n')
+    elif rxn.cheb:
+        # Special forward rate coefficient for Chebyshev formulation
+        tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
+        tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
+        line = ('  Tred = ((2.0 / T) - ' +
+                '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
+                )
+        file.write(line + utils.line_end[lang])
+
+        plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
+                        math.log10(rxn.cheb_plim[1])
+                        )
+        plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
+                        math.log10(rxn.cheb_plim[0])
+                        )
+        line = ('  Pred = (2.0 * log10(pres) - ' +
+                '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
+                )
+        file.write(line + utils.line_end[lang])
+
+        line = '  kf = ' + utils.exp_10_fun[lang]
+        for i in range(rxn.cheb_n_temp):
+
+            line += 'cheb_t({}, Tred) * ('.format(i)
+
+            for j in range(rxn.cheb_n_pres):
+                if j > 0:
+                    line += ' + '
+
+                line += ('cheb_t({}, Pred) * '.format(j) +
+                         '{:.8e}'.format(rxn.cheb_par[i, j])
+                         )
+            line += ')'
+            if i != rxn.cheb_n_temp - 1:
+                line += ' + \n'
+                file.write(line)
+                line = ' ' * 7
+
+        line += ')'
+        file.write(line + utils.line_end[lang])
+
     if rxn.rev and not rxn.rev_par:
         file.write('  kr = kf / Kc' + utils.line_end[lang])
     elif rxn.rev_par:
@@ -238,6 +314,8 @@ def write_rates(file, lang, rxn):
                                        rxn.rev_par[2]
                                        ) +
                    utils.line_end[lang])
+
+
 
 
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
@@ -1747,6 +1825,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     if any(rxn.cheb for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
+
+    if any(rxn.cheb for rxn in reacs) and not (lang == 'cuda' and do_unroll):
+        file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
     if not do_unroll:
         line = utils.line_start

@@ -1133,7 +1133,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                           A_p1, b_p1, E_p1
                           )
 
-    file.write(jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
+    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
 
     for idx, vals in enumerate(rxn.plog_par[:-1]):
         (p1, A_p1, b_p1, E_p1) = vals
@@ -1202,7 +1202,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                           A_pn, b_pn, E_pn
                           )
 
-    file.write(jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
+    file.write(utils.line_start +jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
 
     file.write(utils.line_start + '}\n')
 

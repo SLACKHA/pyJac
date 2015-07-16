@@ -138,9 +138,9 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += ('- X * X * '
                       '{:.6} * '.format(2.0 / math.log(10.0)) +
                       'log10(Pr) * '
-                      'log({:.4} * '.format(rxn.sri[0]) +
-                      'exp(-{:4} / T) + '.format(rxn.sri[1]) +
-                      'exp(-T / {:.4}))'.format(rxn.sri[2])
+                      'log({:.4} * '.format(rxn.sri_par[0]) +
+                      'exp(-{:4} / T) + '.format(rxn.sri_par[1]) +
+                      'exp(-T / {:.4}))'.format(rxn.sri_par[2])
                       )
 
         jline += ') * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
@@ -853,26 +853,26 @@ def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
 
 def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     jline = (' + X * ((('
-             '{:.8} / '.format(rxn.sri[0] * rxn.sri[1]) +
+             '{:.8} / '.format(rxn.sri_par[0] * rxn.sri_par[1]) +
              '(T * T)) * exp(-'
-             '{:.8} / T) - '.format(rxn.sri[1]) +
-             '{:.8e} * '.format(1.0 / rxn.sri[2]) +
-             'exp(-T / {:.8})) / '.format(rxn.sri[2]) +
-             '({:.8} * '.format(rxn.sri[0]) +
-             'exp(-{:.8} / T) + '.format(rxn.sri[1]) +
-             'exp(-T / {:.8})) - '.format(rxn.sri[2]) +
+             '{:.8} / T) - '.format(rxn.sri_par[1]) +
+             '{:.8e} * '.format(1.0 / rxn.sri_par[2]) +
+             'exp(-T / {:.8})) / '.format(rxn.sri_par[2]) +
+             '({:.8} * '.format(rxn.sri_par[0]) +
+             'exp(-{:.8} / T) + '.format(rxn.sri_par[1]) +
+             'exp(-T / {:.8})) - '.format(rxn.sri_par[2]) +
              'X * {:.8} * '.format(2.0 / math.log(10.0)) +
              'log10(Pr) * ('
              '{:.8e} + ('.format(beta_0minf) +
              '{:.8e} / T) - 1.0) * '.format(E_0minf) +
-             'log({:8} * exp('.format(rxn.sri[0]) +
-             '-{:.8} / T) + '.format(rxn.sri[1]) +
+             'log({:8} * exp('.format(rxn.sri_par[0]) +
+             '-{:.8} / T) + '.format(rxn.sri_par[1]) +
              'exp(-T / '
-             '{:8})) / T)'.format(rxn.sri[2])
+             '{:8})) / T)'.format(rxn.sri_par[2])
              )
 
     if len(rxn.sri) == 5:
-        jline += ' + ({:.8} / T)'.format(rxn.sri[4])
+        jline += ' + ({:.8} / T)'.format(rxn.sri_par[4])
 
     return jline
 

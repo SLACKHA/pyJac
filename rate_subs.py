@@ -1078,22 +1078,22 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 file.write(line)
 
                 line = '  ' + get_array(lang, 'pres_mod', pind)
-                line += ' = pow({:4} * '.format(reac.sri[0])
+                line += ' = pow({:4} * '.format(reac.sri_par[0])
                 # Need to check for negative parameters, and
                 # skip "-" sign if so.
-                if reac.sri[1] > 0.0:
-                    line += 'exp(-{:.4} / T)'.format(reac.sri[1])
+                if reac.sri_par[1] > 0.0:
+                    line += 'exp(-{:.4} / T)'.format(reac.sri_par[1])
                 else:
-                    line += 'exp({:.4} / T)'.format(abs(reac.sri[1]))
+                    line += 'exp({:.4} / T)'.format(abs(reac.sri_par[1]))
 
                 if reac.sri[2] > 0.0:
-                    line += ' + exp(-T / {:.4}), X) '.format(reac.sri[2])
+                    line += ' + exp(-T / {:.4}), X) '.format(reac.sri_par[2])
                 else:
-                    line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri[2]))
+                    line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri_par[2]))
 
-                if len(reac.sri) == 5:
-                    line += ('* {:.8e} * '.format(reac.sri[3]) +
-                             'pow(T, {:.4}) '.format(reac.sri[4])
+                if len(reac.sri_par) == 5:
+                    line += ('* {:.8e} * '.format(reac.sri_par[3]) +
+                             'pow(T, {:.4}) '.format(reac.sri_par[4])
                              )
             else:
                 # simple falloff fn (i.e. F = 1)

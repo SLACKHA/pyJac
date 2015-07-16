@@ -117,6 +117,7 @@ def convert_mech(mech_filename, therm_filename=None):
     arg = ['--input=' + mech_filename]
     if therm_filename is not None:
         arg.append('--thermo=' + therm_filename)
+    arg.append('--permissive')
 
     # Convert the mechanism
     ck2cti.main(arg)
@@ -460,7 +461,7 @@ def eval_jacobian(dydt, order):
     return jacob
 
 
-def test(lang, build_dir, mech_filename, therm_filename=None, seed=False):
+def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, generate_jacob=True):
     """
     """
 
@@ -477,10 +478,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False):
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
 
-    # Create Jacobian and supporting source code files
-    create_jacobian(lang, mech_filename, therm_name=therm_filename,
-                    optimize_cache=False, build_path=build_dir, no_shared=True
-                    )
+    if generate_jacob:
+        # Create Jacobian and supporting source code files
+        create_jacobian(lang, mech_filename, therm_name=therm_filename,
+                        optimize_cache=False, build_path=build_dir, no_shared=True
+                        )
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
@@ -689,5 +691,11 @@ if __name__ == '__main__':
                         default=False,
                         help='Allows user to use the same seed '
                         'for the random number generator')
+    parser.add_argument('-dng', '--do_not_generate',
+                        action='store_false',
+                        dest='generate_jacob',
+                        default=True,
+                        help='Use this option to have the tester utilize'
+                        ' the already existant jacobian files')
     args = parser.parse_args()
-    test(args.lang, args.build_dir, args.input, args.thermo, args.seed)
+    test(args.lang, args.build_dir, args.input, args.thermo, args.seed, args.generate_jacob)

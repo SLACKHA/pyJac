@@ -1113,7 +1113,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         jline += ' * (T * ' + get_db_dt(lang, specs, rxn)
         jline += ' + {})'.format(sum(rxn.prod_nu))
 
-    jline += '))'
+    #jline += '))'
     # print line for reaction
     file.write(jline + utils.line_end[lang])
 
@@ -1175,7 +1175,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
 
             jline_p += ' + {})'.format(sum(rxn.prod_nu))
 
-        jline_p += '))'
+        #jline_p += '))'
         # print line for reaction
         file.write(utils.line_start + jline_p + utils.line_end[lang])
 

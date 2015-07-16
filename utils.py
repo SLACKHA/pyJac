@@ -4,6 +4,7 @@
 # Standard libraries
 import os
 import errno
+from math import log10, floor
 
 # local includes
 import CUDAParams
@@ -38,7 +39,6 @@ array_chars = dict(c="[{}]", cuda="[{}]",
 
 
 def round_sig(x, sig=8):
-    from math import log10, floor
     if x == 0:
         return 0
     return round(x, sig - int(floor(log10(abs(x)))) - 1)
@@ -126,9 +126,11 @@ def get_array(lang, name, index, twod=None):
         If not None and the lang is fortan or matlab this will be formatted as a second index in the array
     """
 
-    if lang in ['fortran', 'matlab'] and twod is not None:
-        return name + array_chars[lang].format(get_index(lang, index) + ', {}'.format(get_index(lang, twod)))
-    return name + array_chars[lang].format(get_index(lang, index))
+    if lang in ['fortran', 'matlab']:
+        if twod is not None:
+            return name + array_chars[lang].format(index + 1) + ', {}'.format(get_index(twod + 1)))
+        return name + array_chars[lang].format(index + 1)
+    return name + array_chars[lang].format(index)
 
 
 def get_index(lang, index):

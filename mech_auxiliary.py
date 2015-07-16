@@ -478,21 +478,16 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '//Number of variables. NN = NSP + 1 (temperature)\n' +
                    '#define NN {}\n'.format(len(specs) + 1)
                    )
-        if have_rev_rxns:
-            file.write('//Number of forward reactions\n' +
-                       '#define FWD_RATES {}\n'.format(len(reacs)) +
-                       '//Number of reversible reactions\n'+
-                       '#define REV_RATES {}\n'.format(
-                       len([reac for reac in reacs if reac.rev]))
-                       )
-        else:
-            file.write('//Number of reactions\n'
-                       '#define RATES {}\n'.format(len(reac)))
-        if have_pdep_rxns:
-            file.write('//Number of reactions with pressure modified rates\n')
-            file.write('#define PRES_MOD_RATES {}\n\n'.format(
-                len([reac for reac in reacs if reac.pdep or reac.thd]))
-                )
+        file.write('//Number of forward reactions\n' +
+                   '#define FWD_RATES {}\n'.format(len(reacs)) +
+                   '//Number of reversible reactions\n'+
+                   '#define REV_RATES {}\n'.format(
+                   len([reac for reac in reacs if reac.rev]))
+                   )
+        file.write('//Number of reactions with pressure modified rates\n')
+        file.write('#define PRES_MOD_RATES {}\n\n'.format(
+            len([reac for reac in reacs if reac.pdep or reac.thd]))
+            )
 
         file.write(
             '//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +

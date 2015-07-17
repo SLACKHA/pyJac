@@ -833,7 +833,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         smm.write_init(file, indent=2)
 
     # declarations for third-body variables
-    if thd_flag:
+    if thd_flag or pdep_flag:
         if lang == 'c':
             file.write('  // third body variable declaration\n'
                        '  double thd;\n'

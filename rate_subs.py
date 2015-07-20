@@ -108,7 +108,7 @@ def rxn_rate_const(A, b, E):
                 line += str(A)
             else:
                 #b != 0
-                if isinstance(b, int):
+                if b.is_integer():
                     line += str(A)
                     for i in range(b):
                         line += ' * T'
@@ -511,12 +511,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             nu = rxn.reac_nu[i]
 
             # check if stoichiometric coefficient is double or integer
-            if isinstance(nu, float):
-                line += 'pow(' + get_array(lang, 'C', isp) + ', {}) *'.format(nu)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
                 for i in range(nu):
                     line += '' + get_array(lang, 'C', isp) + ' * '
+            else:
+                line += ('pow(' + get_array(lang, 'C', isp) +
+                         ', {}) *'.format(nu)
+                         )
 
         # Rate constant: print if not reversible, or reversible but
         # with explicit reverse parameters.
@@ -597,29 +599,29 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     sp = specs[reac_sp]
                     if not sp:
                         print('Error: species ' + reac_sp + ' in reaction '
-                                                            '{} not found.\n'.format(i_rxn)
+                              '{} not found.\n'.format(i_rxn)
                               )
                         sys.exit()
 
                     lo_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
-                                            sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                        sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
-                                                                ]
+                        ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
                     hi_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
-                                            sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                        sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]
-                                                                ]
+                        ]
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
                         coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(
                             lo_array))], \
-                                               [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+                            [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
 
                 isFirst = True
                 for T_mid in coeffs:
@@ -700,12 +702,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 nu = rxn.prod_nu[rxn.prod.index(isp)]
 
                 # check if stoichiometric coefficient is double or integer
-                if isinstance(nu, float):
-                    line += 'pow(' + get_array(lang, 'C', isp) + ', {}) * '.format(nu)
-                else:
+                if nu.is_integer():
                     # integer, so just use multiplication
                     for i in range(nu):
                         line += '' + get_array(lang, 'C', isp) + ' * '
+                else:
+                    line += ('pow(' + get_array(lang, 'C', isp) +
+                             ', {}) * '.format(nu)
+                             )
 
             # rate constant
             if rxn.rev_par:
@@ -1302,7 +1306,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if nu > 0.0:
                         if not isfirst: line += ' + '
                         if nu > 1:
-                            if isinstance(nu, int):
+                            if nu.is_integer():
                                 line += '{} * '.format(float(nu))
                             else:
                                 line += '{:3} * '.format(nu)
@@ -1322,7 +1326,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             line += ' - '
 
                         if nu < -1:
-                            if isinstance(nu, int):
+                            if nu.is_integer():
                                 line += '{} * '.format(float(abs(nu)))
                             else:
                                 line += '{:3} * '.format(abs(nu))
@@ -1349,7 +1353,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if not isfirst: line += ' + '
 
                     if nu > 1:
-                        if isinstance(nu, int):
+                        if nu.is_integer():
                             line += '{} * '.format(float(nu))
                         else:
                             line += '{:3} * '.format(nu)
@@ -1377,7 +1381,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         line += ' - '
 
                     if nu > 1:
-                        if isinstance(nu, int):
+                        if nu.is_integer():
                             line += '{} * '.format(float(nu))
                         else:
                             line += '{:3} * '.format(nu)

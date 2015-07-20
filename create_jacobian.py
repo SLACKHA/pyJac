@@ -289,15 +289,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += '{} * '.format(float(nu))
         jline += 'kf'
         if (nu - 1) > 0:
-            if isinstance(nu - 1, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', j_sp)
-                jline += ', {})'.format(nu - 1)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
                 for i in range(nu - 1):
-                    jline += ' * ' + \
-                             get_array(lang, 'conc', j_sp)
+                    jline += ' * ' + get_array(lang, 'conc', j_sp)
+            else:
+                jline += (' * pow(' + get_array(lang, 'conc', j_sp)
+                          ', {})'.format(nu - 1)
+                          )
 
         # loop through remaining reactants
         for i, isp in enumerate(rxn.reac):
@@ -305,15 +304,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu = rxn.reac_nu[i]
-            if isinstance(nu, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', isp)
-                jline += ', ' + str(nu) + ')'
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
                 for i in range(nu):
-                    jline += ' * ' + \
-                             get_array(lang, 'conc', isp)
+                    jline += ' * ' + get_array(lang, 'conc', isp)
+            else:
+                jline += (' * pow(' + get_array(lang, 'conc', isp)
+                          ', ' + str(nu) + ')'
+                          )
 
     if rxn.rev and j_sp in rxn.prod:
         if not rxn.pdep and not rxn.thd and not j_sp in rxn.reac:
@@ -330,15 +328,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
 
         jline += 'kr'
         if (nu - 1) > 0:
-            if isinstance(nu - 1, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', j_sp)
-                jline += ', {})'.format(nu - 1)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
                 for i in range(nu - 1):
-                    jline += ' * ' + \
-                             get_array(lang, 'conc', j_sp)
+                    jline += ' * ' + get_array(lang, 'conc', j_sp)
+            else:
+                jline += (' * pow(' + get_array(lang, 'conc', j_sp)
+                          ', {})'.format(nu - 1)
+                          )
 
         # loop through remaining products
         for i, isp in enumerate(rxn.prod):
@@ -346,13 +343,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu = rxn.prod_nu[i]
-            if isinstance(nu, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', isp)
-                jline += ', {})'.format(nu)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
-                jline += ''.join([' * ' + get_array(lang, 'conc', isp) for i in range(nu)])
+                jline += (''.join([' * ' +
+                          get_array(lang, 'conc', isp) for i in range(nu)])
+                          )
+            if else:
+                jline += ' * pow(' + get_array(lang, 'conc', isp)
+                jline += ', {})'.format(nu)
 
     return jline
 

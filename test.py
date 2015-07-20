@@ -602,7 +602,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         num = int(data[0])
         test_conc = data[1: num + 1]
         data = data[num + 1:]
-        err = ((test_conc - gas.concentrations) /
+        err = (abs(test_conc - gas.concentrations) /
                              gas.concentrations)
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
@@ -627,7 +627,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         test_fwd_rates[idx_pmod] *= test_pres_mod
         test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
 
-        err = ((test_fwd_rates - gas.forward_rates_of_progress)
+        err = (abs(test_fwd_rates - gas.forward_rates_of_progress)
                              / gas.forward_rates_of_progress)
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
@@ -636,7 +636,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
             format(max_err * 100., loc))
 
-        err = ((test_rev_rates - gas.reverse_rates_of_progress[idx_rev]
+        err = (abs(test_rev_rates - gas.reverse_rates_of_progress[idx_rev]
                   ) / gas.reverse_rates_of_progress[idx_rev])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
@@ -651,7 +651,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         data = data[num + 1:]
         non_zero = np.where(test_spec_rates != 0.)
         zero = np.where(test_spec_rates == 0.)
-        err = ((test_spec_rates[non_zero] - gas.net_production_rates[non_zero]) /
+        err = (abs(test_spec_rates[non_zero] - gas.net_production_rates[non_zero]) /
             gas.net_production_rates[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
@@ -671,7 +671,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         data = data[num + 1:]
         non_zero = np.where(test_dydt != 0.)
         zero = np.where(test_dydt == 0.)
-        err = ((test_dydt[non_zero] - ode()[non_zero]) /
+        err = (abs(test_dydt[non_zero] - ode()[non_zero]) /
                              ode()[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
@@ -688,7 +688,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         zero = np.where(test_jacob == 0.)
         # Calculate "true" Jacobian numerically
         jacob = eval_jacobian(ode, 6)
-        err = ((test_jacob[non_zero] - jacob[non_zero]) /
+        err = (abs(test_jacob[non_zero] - jacob[non_zero]) /
                              jacob[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]

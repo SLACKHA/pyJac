@@ -222,7 +222,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                        '  } else if (i == 3) {\n'
                        '    return (8.0 * x * x * x - 4.0 * x);\n'
                        '  } else {\n'
-                       '    return (sin((double)(i + 1)) * acos(x) / '
+                       '    return (sin((double)(i + 1) * acos(x)) / '
                        'sin(acos(x)));\n'
                        '  }\n'
                        '}\n\n'

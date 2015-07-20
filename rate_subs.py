@@ -110,7 +110,7 @@ def rxn_rate_const(A, b, E):
                 #b != 0
                 if b.is_integer():
                     line += str(A)
-                    for i in range(b):
+                    for i in range(int(b)):
                         line += ' * T'
                 else:
                     line += '{:.8e} * exp('.format(A)
@@ -513,7 +513,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             # check if stoichiometric coefficient is double or integer
             if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu):
+                for i in range(int(nu)):
                     line += '' + get_array(lang, 'C', isp) + ' * '
             else:
                 line += ('pow(' + get_array(lang, 'C', isp) +
@@ -704,7 +704,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 # check if stoichiometric coefficient is double or integer
                 if nu.is_integer():
                     # integer, so just use multiplication
-                    for i in range(nu):
+                    for i in range(int(nu)):
                         line += '' + get_array(lang, 'C', isp) + ' * '
                 else:
                     line += ('pow(' + get_array(lang, 'C', isp) +
@@ -1314,9 +1314,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             line += '{} * '.format(nu)
 
                         if rxn.rev:
-                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
-                                                                                                   rev_reacs.index(
-                                                                                                       rind)) + ')'
+                            rxn_out = (
+                                '(' + get_array(lang, 'fwd_rates', rind) +
+                                ' - ' + get_array(lang, 'rev_rates',
+                                            rev_reacs.index(rind)) + ')'
+                                )
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     elif nu < 0.0:
@@ -1334,9 +1336,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             line += '{} * '.format(abs(nu))
 
                         if rxn.rev:
-                            rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
-                                                                                                   rev_reacs.index(
-                                                                                                       rind)) + ')'
+                            rxn_out = (
+                                '(' + get_array(lang, 'fwd_rates', rind) +
+                                ' - ' + get_array(lang, 'rev_rates',
+                                            rev_reacs.index(rind)) + ')'
+                                )
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     else:
@@ -1361,9 +1365,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         line += '{} * '.format(nu)
 
                     if rxn.rev:
-                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
-                                                                                               rev_reacs.index(
-                                                                                                   rind)) + ')'
+                        rxn_out = (
+                            '(' + get_array(lang, 'fwd_rates', rind) +
+                            ' - ' + get_array(lang, 'rev_rates',
+                                        rev_reacs.index(rind)) + ')'
+                            )
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 
@@ -1389,9 +1395,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         line += '{} * '.format(nu)
 
                     if rxn.rev:
-                        rxn_out = '(' + get_array(lang, 'fwd_rates', rind) + ' - ' + get_array(lang, 'rev_rates',
-                                                                                               rev_reacs.index(
-                                                                                                   rind)) + ')'
+                        rxn_out = (
+                            '(' + get_array(lang, 'fwd_rates', rind) +
+                            ' - ' + get_array(lang, 'rev_rates',
+                                        rev_reacs.index(rind)) + ')'
+                            )
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 

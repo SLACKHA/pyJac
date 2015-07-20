@@ -291,10 +291,10 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
         if (nu - 1) > 0:
             if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu - 1):
+                for i in range(int(nu) - 1):
                     jline += ' * ' + get_array(lang, 'conc', j_sp)
             else:
-                jline += (' * pow(' + get_array(lang, 'conc', j_sp)
+                jline += (' * pow(' + get_array(lang, 'conc', j_sp) +
                           ', {})'.format(nu - 1)
                           )
 
@@ -306,10 +306,10 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
             nu = rxn.reac_nu[i]
             if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu):
+                for i in range(int(nu)):
                     jline += ' * ' + get_array(lang, 'conc', isp)
             else:
-                jline += (' * pow(' + get_array(lang, 'conc', isp)
+                jline += (' * pow(' + get_array(lang, 'conc', isp) +
                           ', ' + str(nu) + ')'
                           )
 
@@ -330,10 +330,10 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
         if (nu - 1) > 0:
             if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu - 1):
+                for i in range(int(nu) - 1):
                     jline += ' * ' + get_array(lang, 'conc', j_sp)
             else:
-                jline += (' * pow(' + get_array(lang, 'conc', j_sp)
+                jline += (' * pow(' + get_array(lang, 'conc', j_sp) +
                           ', {})'.format(nu - 1)
                           )
 
@@ -346,9 +346,9 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
             if nu.is_integer():
                 # integer, so just use multiplication
                 jline += (''.join([' * ' +
-                          get_array(lang, 'conc', isp) for i in range(nu)])
+                          get_array(lang, 'conc', isp) for i in range(int(nu))])
                           )
-            if else:
+            else:
                 jline += ' * pow(' + get_array(lang, 'conc', isp)
                 jline += ', {})'.format(nu)
 

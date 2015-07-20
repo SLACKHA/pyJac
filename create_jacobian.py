@@ -1271,7 +1271,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                           A_pn, b_pn, E_pn
                           )
 
-    file.write(utils.line_start +jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
+    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
 
     file.write(utils.line_start + '}\n')
 

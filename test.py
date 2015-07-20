@@ -521,7 +521,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
              'rxn_rates', 'test'
              ]
     if pmod:
-        files += ['rxn_rates_pres_mod'] 
+        files += ['rxn_rates_pres_mod']
 
     for f in files:
         args = [cmd_compile[lang]]
@@ -631,19 +631,20 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
                              / gas.forward_rates_of_progress)
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100.                     
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm error in forward reaction rates: {:.2e}%'.format(err))
         print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
             format(max_err * 100., loc))
 
-        err = (abs(test_rev_rates - gas.reverse_rates_of_progress[idx_rev]
-                  ) / gas.reverse_rates_of_progress[idx_rev])
-        max_err = np.max(err)
-        loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100.  
-        print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
-        print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
-            format(max_err * 100., loc))
+        if idx_rev:
+            err = (abs(test_rev_rates - gas.reverse_rates_of_progress[idx_rev]
+                      ) / gas.reverse_rates_of_progress[idx_rev])
+            max_err = np.max(err)
+            loc = np.where(err == max_err)[0]
+            err = np.linalg.norm(err, 2) * 100.  
+            print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
+            print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
+                format(max_err * 100., loc))
 
         # Species production rates
         num = int(data[0])
@@ -655,7 +656,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
             gas.net_production_rates[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100.  
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero net production rates: '
             '{:.2e} %'.format(err))
         print('Max error in non-zero net production rates: {:.2e}% '
@@ -675,7 +676,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
                              ode()[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100. 
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
         print('Max error in non-zero dydt: {:.2e}% '
             '@ index {}'.format(max_err * 100., loc))
@@ -692,7 +693,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
                              jacob[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100. 
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero Jacobian: {:.2e} %'
               .format(err))
         print('Max error in non-zero Jacobian: {:.2e}% '

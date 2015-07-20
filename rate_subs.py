@@ -1042,7 +1042,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 else:
                     line += 'exp(T / {:.8e})'.format(abs(reac.troe_par[2]))
 
-                if len(reac.troe_par) == 4:
+                if len(reac.troe_par) == 4 and reac.troe_par[3] != 0.0:
                     line += ' + '
                     if reac.troe_par[3] > 0.0:
                         val = reac.troe_par[3]
@@ -1091,7 +1091,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 else:
                     line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri_par[2]))
 
-                if len(reac.sri_par) == 5:
+                if (len(reac.sri_par) == 5 and
+                        reac.sri_par[3] != 1.0 and reac.sri_par[4] != 0.0):
                     line += ('* {:.8e} * '.format(reac.sri_par[3]) +
                              'pow(T, {:.4}) '.format(reac.sri_par[4])
                              )

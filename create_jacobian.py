@@ -138,9 +138,9 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += ('- X * X * '
                       '{:.6} * '.format(2.0 / math.log(10.0)) +
                       'log10(Pr) * '
-                      'log({:.4} * '.format(rxn.sri[0]) +
-                      'exp(-{:4} / T) + '.format(rxn.sri[1]) +
-                      'exp(-T / {:.4}))'.format(rxn.sri[2])
+                      'log({:.4} * '.format(rxn.sri_par[0]) +
+                      'exp(-{:4} / T) + '.format(rxn.sri_par[1]) +
+                      'exp(-T / {:.4}))'.format(rxn.sri_par[2])
                       )
 
         jline += ') * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
@@ -367,15 +367,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += '{} * '.format(float(nu))
         jline += 'kf'
         if (nu - 1) > 0:
-            if isinstance(nu - 1, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', j_sp)
-                jline += ', {})'.format(nu - 1)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu - 1):
-                    jline += ' * ' + \
-                             get_array(lang, 'conc', j_sp)
+                for i in range(int(nu) - 1):
+                    jline += ' * ' + get_array(lang, 'conc', j_sp)
+            else:
+                jline += (' * pow(' + get_array(lang, 'conc', j_sp) +
+                          ', {})'.format(nu - 1)
+                          )
 
         # loop through remaining reactants
         for i, isp in enumerate(rxn.reac):
@@ -383,15 +382,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu = rxn.reac_nu[i]
-            if isinstance(nu, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', isp)
-                jline += ', ' + str(nu) + ')'
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu):
-                    jline += ' * ' + \
-                             get_array(lang, 'conc', isp)
+                for i in range(int(nu)):
+                    jline += ' * ' + get_array(lang, 'conc', isp)
+            else:
+                jline += (' * pow(' + get_array(lang, 'conc', isp) +
+                          ', ' + str(nu) + ')'
+                          )
 
     if rxn.rev and j_sp in rxn.prod:
         if not rxn.pdep and not rxn.thd and not j_sp in rxn.reac:
@@ -408,15 +406,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
 
         jline += 'kr'
         if (nu - 1) > 0:
-            if isinstance(nu - 1, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', j_sp)
-                jline += ', {})'.format(nu - 1)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
-                for i in range(nu - 1):
-                    jline += ' * ' + \
-                             get_array(lang, 'conc', j_sp)
+                for i in range(int(nu) - 1):
+                    jline += ' * ' + get_array(lang, 'conc', j_sp)
+            else:
+                jline += (' * pow(' + get_array(lang, 'conc', j_sp) +
+                          ', {})'.format(nu - 1)
+                          )
 
         # loop through remaining products
         for i, isp in enumerate(rxn.prod):
@@ -424,13 +421,14 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu = rxn.prod_nu[i]
-            if isinstance(nu, float):
-                jline += ' * pow(' + \
-                         get_array(lang, 'conc', isp)
-                jline += ', {})'.format(nu)
-            else:
+            if nu.is_integer():
                 # integer, so just use multiplication
-                jline += ''.join([' * ' + get_array(lang, 'conc', isp) for i in range(nu)])
+                jline += (''.join([' * ' +
+                          get_array(lang, 'conc', isp) for i in range(int(nu))])
+                          )
+            else:
+                jline += ' * pow(' + get_array(lang, 'conc', isp)
+                jline += ', {})'.format(nu)
 
     return jline
 
@@ -862,7 +860,7 @@ def write_troe(file, lang, rxn):
             ' + {:.8e} * exp(T / '.format(rxn.troe_par[0]) +
             '{:.8e})'.format(rxn.troe_par[2])
             )
-    if len(rxn.troe_par) == 4:
+    if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
         line += ' + exp(-{:.8e} / T)'.format(rxn.troe_par[3])
     line += utils.line_end[lang]
     file.write(line)
@@ -927,26 +925,26 @@ def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
 
 def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     jline = (' + X * ((('
-             '{:.8} / '.format(rxn.sri[0] * rxn.sri[1]) +
+             '{:.8} / '.format(rxn.sri_par[0] * rxn.sri_par[1]) +
              '(T * T)) * exp(-'
-             '{:.8} / T) - '.format(rxn.sri[1]) +
-             '{:.8e} * '.format(1.0 / rxn.sri[2]) +
-             'exp(-T / {:.8})) / '.format(rxn.sri[2]) +
-             '({:.8} * '.format(rxn.sri[0]) +
-             'exp(-{:.8} / T) + '.format(rxn.sri[1]) +
-             'exp(-T / {:.8})) - '.format(rxn.sri[2]) +
+             '{:.8} / T) - '.format(rxn.sri_par[1]) +
+             '{:.8e} * '.format(1.0 / rxn.sri_par[2]) +
+             'exp(-T / {:.8})) / '.format(rxn.sri_par[2]) +
+             '({:.8} * '.format(rxn.sri_par[0]) +
+             'exp(-{:.8} / T) + '.format(rxn.sri_par[1]) +
+             'exp(-T / {:.8})) - '.format(rxn.sri_par[2]) +
              'X * {:.8} * '.format(2.0 / math.log(10.0)) +
              'log10(Pr) * ('
              '{:.8e} + ('.format(beta_0minf) +
              '{:.8e} / T) - 1.0) * '.format(E_0minf) +
-             'log({:8} * exp('.format(rxn.sri[0]) +
-             '-{:.8} / T) + '.format(rxn.sri[1]) +
+             'log({:8} * exp('.format(rxn.sri_par[0]) +
+             '-{:.8} / T) + '.format(rxn.sri_par[1]) +
              'exp(-T / '
-             '{:8})) / T)'.format(rxn.sri[2])
+             '{:8})) / T)'.format(rxn.sri_par[2])
              )
 
-    if len(rxn.sri) == 5:
-        jline += ' + ({:.8} / T)'.format(rxn.sri[4])
+    if len(rxn.sri_par) == 5 and rxn.sri_par[4] != 0.0:
+        jline += ' + ({:.8} / T)'.format(rxn.sri_par[4])
 
     return jline
 
@@ -968,7 +966,7 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
              'exp(-T / '
              '{:.8e})'.format(rxn.troe_par[2])
              )
-    if len(rxn.troe_par) == 4:
+    if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
         jline += (' + ({:.8e} / '.format(rxn.troe_par[3]) +
                   '(T * T)) * exp('
                   '-{:.8e} / T)'.format(rxn.troe_par[3])
@@ -1702,7 +1700,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write(utils.line_start + 'eval_rxn_rates (T, pres, conc, fwd_rates, '
                    'rev_rates);\n')
     elif lang == 'fortran':
-            file.write(utils.line_start + 
+            file.write(utils.line_start +
                        'call eval_rxn_rates (T, pres, conc, fwd_rates, '
                        'rev_rates)\n'
                        )
@@ -1928,7 +1926,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 write_troe(file, lang, rxn)
             elif rxn.sri:
                 write_sri(file, lang)
-            
+
             jline = get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array)
 
         elif rxn.thd_body:
@@ -1960,7 +1958,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         if rxn.plog:
 
-            write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, 
+            write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                 rev_reacs.index(rind) if rxn.rev else None, get_array)
 
         elif rxn.cheb:
@@ -1969,7 +1967,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 specs, get_array)
 
         else:
-            jline += get_elementary_rxn_dt(lang, specs, rxn, rind, 
+            jline += get_elementary_rxn_dt(lang, specs, rxn, rind,
                 rev_reacs.index(rind) if rxn.rev else None, get_array)
             file.write(jline)
 
@@ -2326,7 +2324,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
         Programming language.
     inidicies : list
         A list of indicies where the Jacobian is non-zero
-    nvars : int 
+    nvars : int
         How many variables in the Jacobian matrix
 
     Returns
@@ -2432,13 +2430,13 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     mech_name : str
         Reaction mechanism filename (e.g. 'mech.dat').
     therm_name : str, optional
-        Thermodynamic database filename (e.g. 'therm.dat') 
+        Thermodynamic database filename (e.g. 'therm.dat')
         or nothing if info in mechanism file.
     optimize_cache : bool, optional
-        If true, use the greedy optimizer to attempt to 
+        If true, use the greedy optimizer to attempt to
         improve cache hit rates
     initial_state : str, optional
-        A comma separated list of the initial conditions to use in form T,P,X (e.g. 800,1,H2=1.0,O2=0.5) 
+        A comma separated list of the initial conditions to use in form T,P,X (e.g. 800,1,H2=1.0,O2=0.5)
         Temperature in K, P in atm
     num_blocks : int, optional
         The target number of blocks / sm to achieve for cuda
@@ -2511,7 +2509,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
     # print reaction rate subroutine
     rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_rate_order, smm)
 
-    # if third-body/pressure-dependent reactions, 
+    # if third-body/pressure-dependent reactions,
     # print modification subroutine
     if next((r for r in reacs if (r.thd or r.pdep)), None):
         rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_rate_order, smm)

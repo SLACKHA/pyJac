@@ -888,19 +888,7 @@ def read_mech_ct(filename):
 
     for rxn in gas.reactions():
 
-        if isinstance(rxn, ct.ElementaryReaction):
-            # Instantiate internal reaction based on Cantera Reaction data.
-            reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
-                                 rxn.rate.pre_exponential_factor,
-                                 rxn.rate.temperature_exponent,
-                                 rxn.rate.activation_energy * E_fac
-                                 )
-
-        elif isinstance(rxn, ct.ThreeBodyReaction):
+        if isinstance(rxn, ct.ThreeBodyReaction):
             # Instantiate internal reaction based on Cantera Reaction data.
             reac = chem.ReacInfo(rxn.reversible,
                                  rxn.reactants.keys(),
@@ -1006,6 +994,18 @@ def read_mech_ct(filename):
             reac.cheb_plim = [rxn.Pmin, rxn.Pmax]
             reac.cheb_tlim = [rxn.Tmin, rxn.Tmax]
             reac.cheb_par = rxn.coeffs
+
+        elif isinstance(rxn, ct.ElementaryReaction):
+            # Instantiate internal reaction based on Cantera Reaction data.
+            reac = chem.ReacInfo(rxn.reversible,
+                                 rxn.reactants.keys(),
+                                 rxn.reactants.values(),
+                                 rxn.products.keys(),
+                                 rxn.products.values(),
+                                 rxn.rate.pre_exponential_factor,
+                                 rxn.rate.temperature_exponent,
+                                 rxn.rate.activation_energy * E_fac
+                                 )
 
         else:
             print('Error: unsupported reaction.')

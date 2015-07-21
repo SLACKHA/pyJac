@@ -1558,6 +1558,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#define JACOB_HEAD\n'
                    '\n'
                    '#include "header.h"\n'
+                   '#include "chem_utils.h"\n'
+                   '#include "rates.h"\n'
                    '\n'
                    'void eval_jacob (const double, const double, '
                    'const double*, double*);\n'
@@ -1571,6 +1573,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#define JACOB_HEAD\n'
                    '\n'
                    '#include "header.h"\n'
+                   ('#include "jacobs/jac_include.h"\n' if 
+                    do_unroll else '') + 
+                   '#include "chem_utils.cuh"\n'
+                   '#include "rates.cuh"\n'
+                   '#include "gpu_macros.cuh"\n'
                    '\n'
                    '__device__ void eval_jacob (const double, const double, '
                    'const double*, double*);\n'
@@ -1598,20 +1605,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # header files
     if lang == 'c':
-        file.write('#include <math.h>\n'
-                   '#include "header.h"\n'
-                   '#include "chem_utils.h"\n'
-                   '#include "rates.h"\n'
+        file.write('#include "jacob.h"\n'
                    '\n'
                    )
     elif lang == 'cuda':
-        file.write('#include <math.h>\n' +
-                   ('#include "jacobs/jac_include.h"\n' if 
-                    do_unroll else '') + 
-                   '#include "header.h"\n'
-                   '#include "chem_utils.cuh"\n'
-                   '#include "rates.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
+        file.write('#include "jacob.cuh"\n'
                    '\n'
                    )
 

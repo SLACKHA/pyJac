@@ -1076,7 +1076,10 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
     # loop over reactants
     nu = sum(rxn.reac_nu)
-    jline += ' + {})'.format(1. - float(nu))
+    if nu != 1.0:
+        jline += ' + {})'.format(1. - float(nu))
+    else:
+        jline += ')'
 
     # contribution from temperature derivative of reaction rates
     if rxn.rev:
@@ -1091,13 +1094,18 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
             # product nu sum
             nu = sum(rxn.prod_nu)
-            jline += ' + {})'.format(1. - float(nu))
+            if nu != 1.0:
+                jline += ' + {})'.format(1. - float(nu))
+            else:
+                jline += ')'
         else:
             jline += get_rxn_params_dt(rxn, rev=False)
 
             # product nu sum
             nu = sum(rxn.prod_nu)
-            jline += ' + {} - T * ('.format(1. - float(nu))
+            if nu != 1.0:
+                jline += ' + {} '.format(1. - float(nu))
+            jline += '- T * ('
 
             # product nu sum
             jline += get_db_dt(lang, specs, rxn)
@@ -1223,7 +1231,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             #negative A's, so we need to handle the log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
-            jline_p = (jline + '({:.8e} + '.format(1. + b_p1) +
+            jline_p = (jline + '({:.8e} + '.format(b_p1) +
                        '{:.8e} / T + '.format(E_p1) +
                        '({:.8e} + '.format(b_p2 - b_p1) +
                        '{:.8e} / T) * '.format(E_p2 - E_p1) +
@@ -1241,13 +1249,19 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             # reverse reaction rate also
             jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-        jline_p += ') + ' + get_array(lang, 'fwd_rates', rind)
-        jline_p += ' * {}'.format(-sum(rxn.reac_nu))
+        jline_p += ') '
+        nu = sum(rxn.reac_nu)
+        if nu != 1.0:
+            jline_p += get_array(lang, 'fwd_rates', rind)
+            jline_p += ' * {}'.format(1. - nu)
 
         if rxn.rev:
             jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
-            jline_p += ' * ({} -'.format(-sum(rxn.prod_nu))
-            jline_p += ' T * (' + get_db_dt(lang, specs, rxn)
+            jline_p += ' * ('
+            nu = sum(rxn.prod_nu)
+            if nu != 1.0:
+                jline_p+= '{} - '.format(1. - nu)
+            jline_p += 'T * (' + get_db_dt(lang, specs, rxn)
             jline_p += '))'
 
         jline_p += ' * rho_inv'

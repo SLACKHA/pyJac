@@ -1241,12 +1241,12 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             # reverse reaction rate also
             jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-        jline_p += ') - ' + get_array(lang, 'fwd_rates', rind)
-        jline_p += ' * {}'.format(sum(rxn.reac_nu))
+        jline_p += ') + ' + get_array(lang, 'fwd_rates', rind)
+        jline_p += ' * {}'.format(-sum(rxn.reac_nu))
 
         if rxn.rev:
-            jline_p += ' + ' + get_array(lang, 'rev_rates', rev_idx)
-            jline_p += ' * ({} +'.format(sum(rxn.prod_nu))
+            jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
+            jline_p += ' * ({} -'.format(-sum(rxn.prod_nu))
             jline_p += ' T * (' + get_db_dt(lang, specs, rxn)
             jline_p += '))'
 

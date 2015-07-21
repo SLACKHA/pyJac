@@ -619,8 +619,6 @@ def get_rxn_params_dt(rxn, rev=False):
             jline += '{:.8e}'.format(rxn.rev_par[1])
         elif abs(rxn.rev_par[2]) > 1.0e-90:
             jline += '({:.8e} / T)'.format(rxn.rev_par[2])
-        jline += '{}1.0 - '.format(' + ' if (abs(rxn.rev_par[1]) > 1.0e-90) or (
-            abs(rxn.rev_par[2]) > 1.0e-90) else '')
     else:
         if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
             jline += '{:.8e} + ({:.8e} / T)'.format(rxn.b, rxn.E)
@@ -628,8 +626,6 @@ def get_rxn_params_dt(rxn, rev=False):
             jline += '{:.8e}'.format(rxn.b)
         elif abs(rxn.E) > 1.0e-90:
             jline += '({:.8e} / T)'.format(rxn.E)
-        jline += '{}1.0 - '.format(' + ' if (abs(rxn.b)
-                                             > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
     return jline
 
 
@@ -1080,7 +1076,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
     # loop over reactants
     nu = sum(rxn.reac_nu)
-    jline += '{})'.format(float(nu))
+    jline += ' + {})'.format(1. - float(nu))
 
     # contribution from temperature derivative of reaction rates
     if rxn.rev:
@@ -1095,13 +1091,13 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
             # product nu sum
             nu = sum(rxn.prod_nu)
-            jline += '{})'.format(float(nu))
+            jline += ' + {})'.format(1. - float(nu))
         else:
             jline += get_rxn_params_dt(rxn, rev=False)
 
             # product nu sum
             nu = sum(rxn.prod_nu)
-            jline += '{} - T * ('.format(float(nu))
+            jline += ' + {} - T * ('.format(1. - float(nu))
 
             # product nu sum
             jline += get_db_dt(lang, specs, rxn)

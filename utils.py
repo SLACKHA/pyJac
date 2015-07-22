@@ -169,3 +169,16 @@ def reassign_species_lists(reacs, specs):
         rxn.thd_body = [(species_map[thd[0]], thd[1]) for thd in rxn.thd_body]
         if rxn.pdep_sp:
             rxn.pdep_sp = species_map[rxn.pdep_sp]
+
+def is_integer(val):
+    """Returns whether a value is an integer regardless of whether it's a float or it's an int"""
+    if isinstance(val, int):
+        return True
+    elif isinstance(val, float) and val.is_integer():
+        return True
+    else:
+        #last ditch effort
+        try:
+            return int(val) == float(val)
+        except:
+            return False

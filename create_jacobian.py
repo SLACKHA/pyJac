@@ -367,7 +367,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += '{} * '.format(float(nu))
         jline += 'kf'
         if (nu - 1) > 0:
-            if nu.is_integer():
+            if utils.is_integer(nu):
                 # integer, so just use multiplication
                 for i in range(int(nu) - 1):
                     jline += ' * ' + get_array(lang, 'conc', j_sp)
@@ -382,7 +382,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu = rxn.reac_nu[i]
-            if nu.is_integer():
+            if utils.is_integer(nu):
                 # integer, so just use multiplication
                 for i in range(int(nu)):
                     jline += ' * ' + get_array(lang, 'conc', isp)
@@ -406,7 +406,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
 
         jline += 'kr'
         if (nu - 1) > 0:
-            if nu.is_integer():
+            if utils.is_integer(nu):
                 # integer, so just use multiplication
                 for i in range(int(nu) - 1):
                     jline += ' * ' + get_array(lang, 'conc', j_sp)
@@ -421,7 +421,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 continue
 
             nu = rxn.prod_nu[i]
-            if nu.is_integer():
+            if utils.is_integer(nu):
                 # integer, so just use multiplication
                 jline += (''.join([' * ' +
                           get_array(lang, 'conc', isp) for i in range(int(nu))])

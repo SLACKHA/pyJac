@@ -1587,12 +1587,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write('#ifndef JACOB_HEAD\n'
                    '#define JACOB_HEAD\n'
                    '\n'
-                   '#include "header.h"\n'
+                   '#include "header.h"\n' +
                    ('#include "jacobs/jac_include.h"\n' if 
-                    do_unroll else '') + 
-                   '#include "chem_utils.cuh"\n'
-                   '#include "rates.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
+                    do_unroll else '') +
                    '\n'
                    '__device__ void eval_jacob (const double, const double, '
                    'const double*, double*);\n'

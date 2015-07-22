@@ -62,7 +62,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
             reac_usages[i] += 1
             if rxn.thd:
                 pres_mod_usage += 1
-        for i2, sp2 in rxn.reac:
+        for i2, sp2 in enumerate(rxn.reac):
             if sp == sp2:
                 continue
             reac_usages[i2] += 1

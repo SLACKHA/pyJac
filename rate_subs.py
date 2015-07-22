@@ -108,7 +108,7 @@ def rxn_rate_const(A, b, E):
                 line += str(A)
             else:
                 #b != 0
-                if b.is_integer():
+                if utils.is_integer(b):
                     line += str(A)
                     for i in range(int(b)):
                         line += ' * T'
@@ -511,7 +511,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             nu = rxn.reac_nu[i]
 
             # check if stoichiometric coefficient is double or integer
-            if nu.is_integer():
+            if utils.is_integer(nu):
                 # integer, so just use multiplication
                 for i in range(int(nu)):
                     line += '' + get_array(lang, 'C', isp) + ' * '
@@ -702,7 +702,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 nu = rxn.prod_nu[rxn.prod.index(isp)]
 
                 # check if stoichiometric coefficient is double or integer
-                if nu.is_integer():
+                if utils.is_integer(nu):
                     # integer, so just use multiplication
                     for i in range(int(nu)):
                         line += '' + get_array(lang, 'C', isp) + ' * '
@@ -1306,7 +1306,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if nu > 0.0:
                         if not isfirst: line += ' + '
                         if nu > 1:
-                            if nu.is_integer():
+                            if utils.is_integer(nu):
                                 line += '{} * '.format(float(nu))
                             else:
                                 line += '{:3} * '.format(nu)
@@ -1328,7 +1328,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             line += ' - '
 
                         if nu < -1:
-                            if nu.is_integer():
+                            if utils.is_integer(nu):
                                 line += '{} * '.format(float(abs(nu)))
                             else:
                                 line += '{:3} * '.format(abs(nu))
@@ -1357,7 +1357,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     if not isfirst: line += ' + '
 
                     if nu > 1:
-                        if nu.is_integer():
+                        if utils.is_integer(nu):
                             line += '{} * '.format(float(nu))
                         else:
                             line += '{:3} * '.format(nu)
@@ -1387,7 +1387,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         line += ' - '
 
                     if nu > 1:
-                        if nu.is_integer():
+                        if utils.is_integer(nu):
                             line += '{} * '.format(float(nu))
                         else:
                             line += '{:3} * '.format(nu)

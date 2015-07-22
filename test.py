@@ -281,7 +281,7 @@ def write_cuda_test(build_dir, pmod):
             '#endif\n\n'
         )
         __write_output_methods(f)
-        __write_kernels(f)
+        __write_kernels(f, pmod)
         f.write('int main (void) {\n'
                 '\n'
                 '  FILE* fp = fopen ("test/input.txt", "r");\n'

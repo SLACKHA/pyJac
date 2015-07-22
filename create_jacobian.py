@@ -1590,6 +1590,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#include "header.h"\n' +
                    ('#include "jacobs/jac_include.h"\n' if 
                     do_unroll else '') +
+                   '#include "chem_utils.cuh"\n'
+                   '#include "rates.cuh"\n'
                    '\n'
                    '__device__ void eval_jacob (const double, const double, '
                    'const double*, double*);\n'

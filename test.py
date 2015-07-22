@@ -272,7 +272,7 @@ def __write_kernels(file, pmod):
     )
 
 
-def write_cuda_test(build_dir, pmod):
+def write_cuda_test(build_dir, rev, pmod):
     with open(build_dir + os.path.sep + 'test.cu', 'w') as f:
         __write_header_include(f, 'cuda')
         f.write(
@@ -301,8 +301,16 @@ def write_cuda_test(build_dir, pmod):
         f.write(
             '  double conc[NSP] = {0};\n'
             '  double fwd_rates[FWD_RATES] = {0};\n'
-            '  double rev_rates[REV_RATES]= {0};\n'
-            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
+            )
+        f.write(
+            '  double rev_rates[REV_RATES]= {0};\n' if rev
+            else '  double* rev_rates = 0;\n'
+        )
+        f.write(
+            '  double pres_mod[PRES_MOD_RATES] = {0};\n' if pmod
+            else '  double* pres_mod = 0;\n'
+        )
+        f.write(
             '  double spec_rates[NSP] = {0};\n'
             '  double dy[NN] = {0};\n'
             '  double jacob[NN * NN] = {0};\n'
@@ -509,12 +517,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
     #get the cantera object
     gas = ct.Solution(mech_filename)
     pmod = any(__is_pdep(rxn) for rxn in gas.reactions())
+    rev = any(rxn.reversible for rxn in gas.reactions())
 
     # Write test driver
     if lang == 'c':
         write_c_test(build_dir, pmod)
     elif lang == 'cuda':
-        write_cuda_test(build_dir, pmod)
+        write_cuda_test(build_dir, rev, pmod)
 
     # Compile generated source code
     files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',

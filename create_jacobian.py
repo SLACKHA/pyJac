@@ -1702,7 +1702,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
         file.write(utils.line_start + 'double fwd_rates[{}];\n'.format(num_r))
-        file.write(utils.line_start + 'double rev_rates[{}];\n'.format(num_rev))
+        if lang == 'cuda' and num_rev == 0:
+            file.write(utils.line_start + 'double* rev_rates = 0;\n')
+        else:
+            file.write(utils.line_start + 'double rev_rates[{}];\n'.format(num_rev))
         file.write(utils.line_start + 'eval_rxn_rates (T, pres, conc, fwd_rates, '
                    'rev_rates);\n')
     elif lang == 'fortran':
@@ -1716,8 +1719,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    )
     file.write('\n')
 
-    if lang in ['c', 'cuda']:
+    if lang == 'c' or (lang == 'cuda' and num_pdep != 0):
         file.write(utils.line_start + 'double pres_mod[{}];\n'.format(num_pdep))
+    elif lang == 'cuda':
+        file.write(utils.line_start + 'double* pres_mod = 0;\n')
+
+
     if len(pdep_reacs):
         file.write(utils.line_start + utils.comment[lang] + 'get pressure modifications to reaction rates\n')
         # evaluate third-body and pressure-dependence reaction modifications

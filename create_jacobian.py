@@ -1136,7 +1136,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
                utils.line_end[lang]
                )
 
-    jline += '(1.0 + {:.8e} * ('.format(math.log(10.))
+    jline += '({:.8e} * ('.format(math.log(10.))
 
     for i in range(rxn.cheb_n_temp):
         for j in range(rxn.cheb_n_pres):
@@ -1183,18 +1183,25 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
 
     if rxn.rev:
         # reverse reaction rate also
-        get_array(lang, 'rev_reacs', rev_idx)
+        jline += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-    jline += ') - ' + get_array(lang, 'fwd_rates', rind)
-    jline += ' * {}'.format(sum(rxn.reac_nu))
+    jline += ')'
+    nu = sum(rxn.reac_nu)
+    if nu != 1.0:
+        jline += ' + ' + get_array(lang, 'fwd_rates', rind)
+        jline += ' * {}'.format(1. - nu)
 
     if rxn.rev:
-        jline += ' + ' + get_array(lang, 'rev_rates', rev_idx)
-        jline += ' * ({} +'.format(sum(rxn.prod_nu))
-        jline += ' T * (' + get_db_dt(lang, specs, rxn)
+        jline += ' - ' + get_array(lang, 'rev_rates', rev_idx) + ' * ('
+        nu = sum(rxn.prod_nu)
+        if nu != 1.0:
+            jline += '{} - '.format(1. - nu)
+        else:
+            jline += '-'
+        jline += 'T * (' + get_db_dt(lang, specs, rxn)
         jline += '))'
 
-    #jline += '))'
+    jline += ' * rho_inv'
     # print line for reaction
     file.write(jline + utils.line_end[lang])
 

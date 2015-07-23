@@ -774,8 +774,6 @@ def get_db_dt(lang, specs, rxn):
             jline += ' * '
         jline += dBdT
 
-    jline += '))'
-
     return jline
 
 
@@ -1067,52 +1065,104 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
     """
 
-    jline = get_array(lang, 'fwd_rates', rind)
-    jline += ' * ('
+    jline = ''
+    if rxn.rev and rxn.rev_par:
+        dk_dt = get_rxn_params_dt(rxn, rev=False)
+        nu = sum(rxn.reac_nu)
 
-    jline += get_rxn_params_dt(rxn, rev=False)
+        if dk_dt or nu != 1.0:
+            #we actually need to do the dk/dt for both
+            line = get_array(lang, 'fwd_rates', rind)
+            jline += ' * ('
+            if dk_dt:
+                jline += dk_dt
 
-    # loop over reactants
-    nu = sum(rxn.reac_nu)
-    if nu != 1.0:
-        jline += ' + {})'.format(1. - float(nu))
-    else:
-        jline += ')'
-
-    # contribution from temperature derivative of reaction rates
-    if rxn.rev:
-        # reversible reaction
+            # loop over reactants
+            nu = sum(rxn.reac_nu)
+            if nu != 1.0:
+                if dk_dt and jline:
+                    jline += ' + '
+                jline += '{}'.format(1. - float(nu))
+            jline += ')'
 
         jline += ' - ' + \
             get_array(lang, 'rev_rates', rev_idx) + \
             ' * ('
 
-        if rxn.rev_par:
-            jline += get_rxn_params_dt(rxn, rev=True)
+        dk_dt = get_rxn_params_dt(rxn, rev=True)
+        nu = sum(rxn.prod_nu)
+        if dk_dt or nu != 1.0:
+            if dk_dt:
+                jline += dk_dt
 
             # product nu sum
             nu = sum(rxn.prod_nu)
             if nu != 1.0:
-                jline += ' + {})'.format(1. - float(nu))
-            else:
-                jline += ')'
-        else:
-            jline += get_rxn_params_dt(rxn, rev=False)
-
-            # product nu sum
-            nu = sum(rxn.prod_nu)
-            if nu != 1.0:
-                jline += ' + {} '.format(1. - float(nu))
-            jline += '- T * ('
-
-            # product nu sum
-            jline += get_db_dt(lang, specs, rxn)
+                if dk_dt and jline:
+                    jline += ' + '
+                jline += '{}'.format(1. - float(nu))
             jline += ')'
+    elif rxn.rev:
+        #we don't need the dk/dt for both, 
+        #so write different to not calculate twice, and instead
+        #rely on loading fwd/rev rates again, as they should
+        #be cached
+
+        dk_dt = get_rxn_params_dt(rxn, rev=False)
+        if dk_dt:
+            jline += '('
+            jline += get_array(lang, 'fwd_rates', rind)
+            if rxn.rev:
+                jline += ' - ' + \
+                get_array(lang, 'rev_rates', rev_idx)
+            jline += ')'
+            jline += ' * ('
+
+            jline += dk_dt
+            jline += ')'
+
+        # loop over reactants
+        nu = sum(rxn.reac_nu)
+        if nu != 1.0:
+            if jline:
+                jline += ' + '
+            jline += get_array(lang, 'fwd_rates', rind)
+            jline += ' * {}'.format(1. - float(nu))
+
+        if jline:
+            jline += ' - '
+        jline += get_array(lang, 'rev_rates', rev_idx)
+        jline += ' * ('
+        # product nu sum
+        nu = sum(rxn.prod_nu)
+        if nu != 1.0:
+            jline += '{} + '.format(1. - float(nu))
+        jline += '-T * ('
+
+        # product nu sum
+        jline += get_db_dt(lang, specs, rxn)
+        jline += '))'
     else:
-        jline += ')'
+        #forward only, combine dk/dt and nu sum
+        dk_dt = get_rxn_params_dt(rxn, rev=False)
+        nu = sum(rxn.reac_nu)
+        if dk_dt or nu != 1.0:
+            jline += get_array(lang, 'fwd_rates', rind)
+            jline += ' * ('
+            jline += dk_dt
+
+            # loop over reactants
+            nu = sum(rxn.reac_nu)
+            if nu != 1.0:
+                if jline:
+                    jline += ' + '
+                jline += '{}'.format(1. - float(nu))
+
+            jline += ')'
+
 
     # print line for reaction
-    return jline + ') * rho_inv' + utils.line_end[lang]
+    return jline + ')) * rho_inv' + utils.line_end[lang]
 
 def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     # Chebyshev reaction

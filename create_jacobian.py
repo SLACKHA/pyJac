@@ -1239,13 +1239,13 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     nu = sum(rxn.reac_nu)
     if nu != 1.0:
         jline += ' + ' + get_array(lang, 'fwd_rates', rind)
-        jline += ' * {}'.format(1. - nu)
+        jline += ' * {}'.format(1. - float(nu))
 
     if rxn.rev:
         jline += ' - ' + get_array(lang, 'rev_rates', rev_idx) + ' * ('
         nu = sum(rxn.prod_nu)
         if nu != 1.0:
-            jline += '{} - '.format(1. - nu)
+            jline += '{} - '.format(1. - float(nu))
         else:
             jline += '-'
         jline += 'T * (' + get_db_dt(lang, specs, rxn)

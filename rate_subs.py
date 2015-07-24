@@ -138,6 +138,92 @@ def rxn_rate_const(A, b, E):
 
     return line
 
+def get_cheb_rate(lang, rxn):
+    """
+    Given a reaction, and a temperature and pressure, this routine
+    will generate code to evaluate the Chebyshev rate efficiently
+
+    Assumes:
+    Existence of variables dot_prod* of sized at least rxn.cheb_n_temp
+    Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1
+    """
+
+    line_list = []
+    tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
+    tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
+    line_list.append(
+            'Tred = ((2.0 / T) - ' +
+            '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
+            )
+
+    plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
+                    math.log10(rxn.cheb_plim[1])
+                    )
+    plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
+                    math.log10(rxn.cheb_plim[0])
+                    )
+    line_list.append(
+            'Pred = (2.0 * log10(pres) - ' +
+            '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
+            )
+
+    line_list.append('cheb_temp_0 = 1')
+    line_list.append('cheb_temp_1 = Pred')
+    #start pressure dot product
+    for i in range(rxn.cheb_n_temp):
+        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
+          '= {:.8e} + Pred * {:.8e}'.format(rxn.cheb_par[i, 0], 
+            rxn.cheb_par[i, 1]))
+
+    #finish pressure dot product
+    update_one = True
+    for j in range(2, rxn.cheb_n_pres):
+        if update_one:
+            new = 1
+            old = 0
+        else:
+            new = 0
+            old = 1
+        line = 'cheb_temp_{}'.format(old)
+        line += ' = 2 * Pred * cheb_temp_{}'.format(new)
+        line += ' - cheb_temp_{}'.format(old)
+        line_list.append(line)
+        for i in range(rxn.cheb_n_temp):
+            line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
+              ' += {:.8e} * cheb_temp_{}'.format(
+                rxn.cheb_par[i, j], old))
+
+        update_one = not update_one
+
+    line_list.append('cheb_temp_0 = 1')
+    line_list.append('cheb_temp_1 = Tred')
+    #finally, do the temperature portion
+    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 0) +
+                     ' + Tred * ' + utils.get_array(lang, 'dot_prod', 1))
+
+    update_one = True
+    for i in range(2, rxn.cheb_n_temp):
+        if update_one:
+            new = 1
+            old = 0
+        else:
+            new = 0
+            old = 1
+        line = 'cheb_temp_{}'.format(new)
+        line += ' = 2 * Tred * cheb_temp_{}'.format(new)
+        line += ' - cheb_temp_{}'.format(old)
+        line_list.append(line)
+        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
+                         ' * ' + 'cheb_temp_{}'.format(new))
+
+        update_one = not update_one
+
+    line_list.append('kf = ' + utils.exp_10_fun[lang] + 'kf)')
+    line_list = [utils.line_start + line + utils.line_end[lang] for
+                  line in line_list]
+
+    return ''.join(line_list)
+
 
 def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     """Write reaction rate subroutine.
@@ -404,6 +490,11 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 file.write('  register double kf;\n')
             file.write('  register double kf2;\n')
 
+    if any(rxn.cheb for rxn in reacs):
+        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+        file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
     file.write('\n')
 
     for i_rxn in ordering:
@@ -429,45 +520,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     )
             file.write(line)
         elif rxn.cheb:
-            # Special forward rate coefficient for Chebyshev formulation
-            tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
-            tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
-            line = ('  Tred = ((2.0 / T) - ' +
-                    '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
-                    )
-            file.write(line + utils.line_end[lang])
-
-            plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
-                            math.log10(rxn.cheb_plim[1])
-                            )
-            plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
-                            math.log10(rxn.cheb_plim[0])
-                            )
-            line = ('  Pred = (2.0 * log10(pres) - ' +
-                    '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
-                    )
-            file.write(line + utils.line_end[lang])
-
-            line = '  kf = ' + utils.exp_10_fun[lang]
-            for i in range(rxn.cheb_n_temp):
-
-                line += 'cheb_t({}, Tred) * ('.format(i)
-
-                for j in range(rxn.cheb_n_pres):
-                    if j > 0:
-                        line += ' + '
-
-                    line += ('cheb_t({}, Pred) * '.format(j) +
-                             '{:.8e}'.format(rxn.cheb_par[i, j])
-                             )
-                line += ')'
-                if i != rxn.cheb_n_temp - 1:
-                    line += ' + \n'
-                    file.write(line)
-                    line = ' ' * 7
-
-            line += ')'
-            file.write(line + utils.line_end[lang])
+            file.write(get_cheb_rate(lang, rxn))
         elif rxn.plog:
             # Special forward rate evaluation for Plog reacions
             vals = rxn.plog_par[0]

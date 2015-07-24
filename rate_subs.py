@@ -209,12 +209,12 @@ def get_cheb_rate(lang, rxn):
         else:
             new = 0
             old = 1
-        line = 'cheb_temp_{}'.format(new)
+        line = 'cheb_temp_{}'.format(old)
         line += ' = 2 * Tred * cheb_temp_{}'.format(new)
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
         line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
-                         ' * ' + 'cheb_temp_{}'.format(new))
+                         ' * ' + 'cheb_temp_{}'.format(old))
 
         update_one = not update_one
 

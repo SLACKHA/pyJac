@@ -276,44 +276,6 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                        'const double*, double*);\n'
                        )
 
-        if any([rxn.cheb for rxn in reacs]):
-            # Write Chebyshev polynomial functions (if needed).
-
-            # Chebyshev polynomial of the first kind
-            file.write('inline static double cheb_t (const int i, '
-                       'const double x) {\n'
-                       '  if (i == 0) {\n'
-                       '    return (1.0);\n'
-                       '  } else if (i == 1) {\n'
-                       '    return (x);\n'
-                       '  } else if (i == 2) {\n'
-                       '    return (2.0 * x * x - 1.0);\n'
-                       '  } else if (i == 3) {\n'
-                       '    return (4.0 * x * x * x - 3.0 * x);\n'
-                       '  } else {\n'
-                       '    return (cos((double)(i) * acos(x)));\n'
-                       '  }\n'
-                       '}\n\n'
-                       )
-
-            # Chebyshev polynomial of the second kind
-            file.write('inline static double cheb_u (const int i, '
-                       'const double x) {\n'
-                       '  if (i == 0) {\n'
-                       '    return (1.0);\n'
-                       '  } else if (i == 1) {\n'
-                       '    return (2.0 * x);\n'
-                       '  } else if (i == 2) {\n'
-                       '    return (4.0 * x * x - 1.0);\n'
-                       '  } else if (i == 3) {\n'
-                       '    return (8.0 * x * x * x - 4.0 * x);\n'
-                       '  } else {\n'
-                       '    return (sin((double)(i + 1) * acos(x)) / '
-                       'sin(acos(x)));\n'
-                       '  }\n'
-                       '}\n\n'
-                       )
-
         file.write('\n'
                    '#endif\n'
                    )
@@ -335,44 +297,6 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
         if pdep_reacs:
             file.write('__device__ void get_rxn_pres_mod (const double, const '
                        'double, const double*, double*);\n'
-                       )
-
-        if any([rxn.cheb for rxn in reacs]):
-            # Write Chebyshev polynomial functions (if needed).
-
-            # Chebyshev polynomial of the first kind
-            file.write('__device__ inline static double cheb_t (const int i, '
-                       'const double x) {\n'
-                       '  if (i == 0) {\n'
-                       '    return (1.0);\n'
-                       '  } else if (i == 1) {\n'
-                       '    return (x);\n'
-                       '  } else if (i == 2) {\n'
-                       '    return (2.0 * x * x - 1.0);\n'
-                       '  } else if (i == 3) {\n'
-                       '    return (4.0 * x * x * x - 3.0 * x);\n'
-                       '  } else {\n'
-                       '    return (cos((double)(i) * acos(x)));\n'
-                       '  }\n'
-                       '}\n\n'
-                       )
-
-            # Chebyshev polynomial of the second kind
-            file.write('__device__ inline static double cheb_u (const int i, '
-                       'const double x) {\n'
-                       '  if (i == 0) {\n'
-                       '    return (1.0);\n'
-                       '  } else if (i == 1) {\n'
-                       '    return (2.0 * x);\n'
-                       '  } else if (i == 2) {\n'
-                       '    return (4.0 * x * x - 1.0);\n'
-                       '  } else if (i == 3) {\n'
-                       '    return (8.0 * x * x * x - 4.0 * x);\n'
-                       '  } else {\n'
-                       '    return (sin((double)(i + 1)) * acos(x) / '
-                       'sin(acos(x)));\n'
-                       '  }\n'
-                       '}\n\n'
                        )
 
         file.write('\n')
@@ -473,12 +397,21 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 kf_flag = False
             file.write('  double Tred;\n'
                        '  double Pred;\n')
+            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+            dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
         elif lang == 'cuda':
             if kf_flag:
                 file.write('  register double kf;\n')
                 kf_flag = False
             file.write('  register double Tred;\n'
                        '  register double Pred;\n')
+            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+            dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
+
     if any([rxn.plog for rxn in reacs]):
         # Variables needed for Plog
         if lang == 'c':
@@ -489,11 +422,6 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             if kf_flag:
                 file.write('  register double kf;\n')
             file.write('  register double kf2;\n')
-
-    if any(rxn.cheb for rxn in reacs):
-        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
-        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-        file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
 
     file.write('\n')
 

@@ -1309,7 +1309,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         jline += ' - ' + get_array(lang, 'rev_rates', rev_idx) + ' * ('
         nu = sum(rxn.prod_nu)
         if nu != 1.0:
-            jline += '{} +'.format(1. - float(nu))
+            jline += '{} + '.format(1. - float(nu))
         jline += '-T * (' + get_db_dt(lang, specs, rxn)
         jline += '))'
 

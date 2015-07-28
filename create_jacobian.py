@@ -265,7 +265,7 @@ def write_rates(file, lang, rxn):
         file.write(line + utils.line_end[lang])
         file.write('  }\n')
     elif rxn.cheb:
-        file.write(rate.get_cheb_rate(lang, rxn))
+        file.write(rate.get_cheb_rate(lang, rxn, False))
     if rxn.rev and not rxn.rev_par:
         file.write('  kr = kf / Kc' + utils.line_end[lang])
     elif rxn.rev_par:

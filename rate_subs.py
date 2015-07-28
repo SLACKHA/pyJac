@@ -138,7 +138,7 @@ def rxn_rate_const(A, b, E):
 
     return line
 
-def get_cheb_rate(lang, rxn):
+def get_cheb_rate(lang, rxn, write_defns=True):
     """
     Given a reaction, and a temperature and pressure, this routine
     will generate code to evaluate the Chebyshev rate efficiently
@@ -151,10 +151,11 @@ def get_cheb_rate(lang, rxn):
     line_list = []
     tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
     tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
-    line_list.append(
-            'Tred = ((2.0 / T) - ' +
-            '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
-            )
+    if write_defns:
+        line_list.append(
+                'Tred = ((2.0 / T) - ' +
+                '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub)
+                )
 
     plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
                     math.log10(rxn.cheb_plim[1])
@@ -162,10 +163,11 @@ def get_cheb_rate(lang, rxn):
     plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
                     math.log10(rxn.cheb_plim[0])
                     )
-    line_list.append(
-            'Pred = (2.0 * log10(pres) - ' +
-            '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
-            )
+    if write_defns:
+        line_list.append(
+                'Pred = (2.0 * log10(pres) - ' +
+                '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub)
+                )
 
     line_list.append('cheb_temp_0 = 1')
     line_list.append('cheb_temp_1 = Pred')

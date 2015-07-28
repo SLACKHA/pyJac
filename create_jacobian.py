@@ -1125,40 +1125,96 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
     # print line for reaction
     return jline + ')) * rho_inv' + utils.line_end[lang]
 
-def get_cheb_rxn_dt_partial_sum(lang, rxn, T_is_2nd_kind):
-    """
-    Given a reaction, and a temperature and pressure, this routine
-    will generate code to evaluate the dk/dT for a Chebyshev reaction
-    efficiently
-
-    T_is_2nd_kind : if true, then it's U(Tred), otherwise it's U(Pred)
-
-    Assumes:
-    Existence of variables dot_prod* of sized at least rxn.cheb_n_temp
-    Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1
-    """
-
-    i_start = 1 if T_is_2nd_kind else 0
-    j_start = 1 if not T_is_2nd_kind else 0
-
+def write_cheb_ut(file, lang, rxn):
     line_list = []
+    tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
+    tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
+
+    plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
+                    math.log10(rxn.cheb_plim[1])
+                    )
+    plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
+                    math.log10(rxn.cheb_plim[0])
+                    )
+
     line_list.append('cheb_temp_0 = 1')
-    line_list.append('cheb_temp_1 = {}Pred'.format(
-        '2 * ' if not T_is_2nd_kind else ''
-        ))
+    line_list.append('cheb_temp_1 = Pred')
     #start pressure dot product
-    for i in range(i_start, rxn.cheb_n_temp):
-        if T_is_2nd_kind:
-            line_list.append(utils.get_array(lang, 'dot_prod', i) + 
-              ' = {:.8e} + Pred * {:.8e}'.format(rxn.cheb_par[i, 0], 
-                rxn.cheb_par[i, 1]))
-        else:
-            line_list.append(utils.get_array(lang, 'dot_prod', i) + 
-              ' = Pred * {:.8e}'.format(rxn.cheb_par[i, 1]))
+    for i in range(1, rxn.cheb_n_temp):
+        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
+          '= {:.8e} + Pred * {:.8e}'.format(i * rxn.cheb_par[i, 0], 
+            i * rxn.cheb_par[i, 1]))
 
     #finish pressure dot product
     update_one = True
-    for j in range(j_start, rxn.cheb_n_pres):
+    for j in range(2, rxn.cheb_n_pres):
+        if update_one:
+            new = 1
+            old = 0
+        else:
+            new = 0
+            old = 1
+        line = 'cheb_temp_{}'.format(old)
+        line += ' = 2 * Pred * cheb_temp_{}'.format(new)
+        line += ' - cheb_temp_{}'.format(old)
+        line_list.append(line)
+        for i in range(1, rxn.cheb_n_temp):
+            line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
+              ' += {:.8e} * cheb_temp_{}'.format(
+                i * rxn.cheb_par[i, j], old))
+
+        update_one = not update_one
+
+    line_list.append('cheb_temp_0 = 1')
+    line_list.append('cheb_temp_1 = 2 * Tred')
+    #finally, do the temperature portion
+    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 1) + 
+                     ' + 2 * Tred * ' + utils.get_array(lang, 'dot_prod', 2))
+
+    update_one = True
+    for i in range(3, rxn.cheb_n_temp):
+        if update_one:
+            new = 1
+            old = 0
+        else:
+            new = 0
+            old = 1
+        line = 'cheb_temp_{}'.format(old)
+        line += ' = 2 * Tred * cheb_temp_{}'.format(new)
+        line += ' - cheb_temp_{}'.format(old)
+        line_list.append(line)
+        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
+                         ' * ' + 'cheb_temp_{}'.format(old))
+
+        update_one = not update_one
+
+    line_list = [utils.line_start + line + utils.line_end[lang] for
+                  line in line_list]
+    file.write(''.join(line_list))
+
+def write_cheb_up(file, lang, rxn):
+    line_list = []
+    tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
+    tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
+
+    plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
+                    math.log10(rxn.cheb_plim[1])
+                    )
+    plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
+                    math.log10(rxn.cheb_plim[0])
+                    )
+
+    line_list.append('cheb_temp_0 = 1')
+    line_list.append('cheb_temp_1 = 2 * Pred')
+    #start pressure dot product
+    for i in range(rxn.cheb_n_temp):
+        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
+          '= {:.8e} + Pred * {:.8e}'.format(rxn.cheb_par[i, 1], 
+            4 * rxn.cheb_par[i, 2]))
+
+    #finish pressure dot product
+    update_one = True
+    for j in range(3, rxn.cheb_n_pres):
         if update_one:
             new = 1
             old = 0
@@ -1172,20 +1228,18 @@ def get_cheb_rxn_dt_partial_sum(lang, rxn, T_is_2nd_kind):
         for i in range(rxn.cheb_n_temp):
             line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
               ' += {:.8e} * cheb_temp_{}'.format(
-                (1. if T_is_2nd_kind else j) * 
-                rxn.cheb_par[i, j], old))
+                j * rxn.cheb_par[i, j], old))
 
         update_one = not update_one
 
     line_list.append('cheb_temp_0 = 1')
-    line_list.append('cheb_temp_1 = {}Tred'.format(
-        '2 * ' if T_is_2nd_kind else ''
-        ))
+    line_list.append('cheb_temp_1 = Tred')
     #finally, do the temperature portion
-    kf_str = 'kf' if T_is_2nd_kind else 'kf2'
+    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 0) + 
+                     ' + Tred * ' + utils.get_array(lang, 'dot_prod', 1))
 
     update_one = True
-    for i in range(i_start, rxn.cheb_n_temp):
+    for i in range(2, rxn.cheb_n_temp):
         if update_one:
             new = 1
             old = 0
@@ -1196,18 +1250,14 @@ def get_cheb_rxn_dt_partial_sum(lang, rxn, T_is_2nd_kind):
         line += ' = 2 * Tred * cheb_temp_{}'.format(new)
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
-        line_list.append('{} += '.format(kf_str)
-                         + utils.get_array(lang, 'dot_prod', i) + 
-                         ' * ' + 'cheb_temp_{}'.format(old) + 
-                         ('' if not T_is_2nd_kind else ' * {}'.format(
-                            i)))
+        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
+                         ' * ' + 'cheb_temp_{}'.format(old))
 
         update_one = not update_one
 
     line_list = [utils.line_start + line + utils.line_end[lang] for
                   line in line_list]
-
-    return ''.join(line_list)
+    file.write(''.join(line_list))
 
 def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     # Chebyshev reaction
@@ -1231,14 +1281,17 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
             utils.line_end[lang]
             )
 
-    file.write(utils.line_start + 'kf = 0' + utils.line_end[lang])
-    file.write(utils.line_start + 'kf2 = 0' + utils.line_end[lang])
+    #do U(T) sum
+    write_cheb_ut(file, lang, rxn)
+    file.write(utils.line_start + 'j_temp = kf * ({:.8e} / T)'.format(
+        -2. / tlim_inv_sub) + utils.line_end[lang])
 
-    file.write(get_cheb_rxn_dt_partial_sum(lang, rxn, True))
-    file.write(get_cheb_rxn_dt_partial_sum(lang, rxn, False))
+    #do U(P) sum
+    write_cheb_up(file, lang, rxn)
 
-    jline += '{:.8e} * (kf * ({:.8e} / T) + kf2 * {:.8e})'.format(math.log(10),
-     -2. / tlim_inv_sub, (2. / math.log(10)) / plim_log_sub)
+
+    jline += '({:.8e} * (j_temp + kf * {:.8e})'.format(math.log(10),
+        (2. / math.log(10)) / plim_log_sub)
 
     jline += ' * (' + get_array(lang, 'fwd_rates', rind)
 
@@ -1246,7 +1299,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         # reverse reaction rate also
         jline += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-    jline += ')'
+    jline += '))'
     nu = sum(rxn.reac_nu)
     if nu != 1.0:
         jline += ' + ' + get_array(lang, 'fwd_rates', rind)
@@ -1256,10 +1309,8 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         jline += ' - ' + get_array(lang, 'rev_rates', rev_idx) + ' * ('
         nu = sum(rxn.prod_nu)
         if nu != 1.0:
-            jline += '{} - '.format(1. - float(nu))
-        else:
-            jline += '-'
-        jline += 'T * (' + get_db_dt(lang, specs, rxn)
+            jline += '{} +'.format(1. - float(nu))
+        jline += '-T * (' + get_db_dt(lang, specs, rxn)
         jline += '))'
 
     jline += ')) * rho_inv'

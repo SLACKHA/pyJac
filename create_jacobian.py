@@ -1369,7 +1369,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
         jline_p += ') '
         nu = sum(rxn.reac_nu)
         if nu != 1.0:
-            jline_p += get_array(lang, 'fwd_rates', rind)
+            jline_p += ' + ' + get_array(lang, 'fwd_rates', rind)
             jline_p += ' * {}'.format(1. - nu)
 
         if rxn.rev:
@@ -1377,8 +1377,8 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             jline_p += ' * ('
             nu = sum(rxn.prod_nu)
             if nu != 1.0:
-                jline_p+= '{} - '.format(1. - nu)
-            jline_p += 'T * (' + get_db_dt(lang, specs, rxn)
+                jline_p+= '{} + '.format(1. - nu)
+            jline_p += '-T * (' + get_db_dt(lang, specs, rxn)
             jline_p += '))'
 
         jline_p += ')) * rho_inv'
@@ -1489,7 +1489,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     file.write(line)
 
 
-def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, this_cheb, no_shared):
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, this_cheb, this_plog, no_shared):
     """
     Writes the header and definitions for of any of the various sub-functions for CUDA
 
@@ -1616,6 +1616,9 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
         file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
         dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
         file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
+    if this_plog:
+        file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
     return file
 
@@ -1963,6 +1966,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
         dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
         file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
+    if any(rxn.plog for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
     if not do_unroll:
@@ -2013,6 +2018,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             troe = False
             sri = False
             cheb = False
+            plog = True
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
@@ -2026,9 +2032,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     sri = True
                 if reacs[ind_next].cheb:
                     cheb = True
+                if reacs[ind_next].plog:
+                    plog = True
             batch_has_thd = thd
             # write the specific evaluator for this reaction
             file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri,
+                                    cheb, plog,
                                     smm is None)
 
         if lang == 'cuda' and smm is not None:

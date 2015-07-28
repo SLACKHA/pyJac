@@ -404,7 +404,6 @@ def write_c_test(build_dir, pmod):
             '  double conc[NSP] = {0};\n'
             '  double fwd_rates[FWD_RATES] = {0};\n'
             '  double rev_rates[REV_RATES] = {0};\n'
-            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
             '  double sp_rates[NSP] = {0};\n'
             '  double dy[NN] = {0};\n'
             '  double jacob[NN * NN] = {0};\n'
@@ -418,8 +417,11 @@ def write_c_test(build_dir, pmod):
             )
         if pmod:
             f.write(
+            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
             '  get_rxn_pres_mod (y[0], pres, conc, pres_mod);\n'
             )
+        else:
+            f.write('double* pres_mod = 0;\n')
         f.write(
             '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, sp_rates);\n'
             '  dydt (0.0, pres, y, dy);\n'

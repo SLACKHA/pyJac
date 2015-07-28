@@ -516,8 +516,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
-    pmod = any(__is_pdep(rxn) for rxn in gas.reactions())
-    rev = any(rxn.reversible for rxn in gas.reactions())
+    pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+    rev = any([rxn.reversible for rxn in gas.reactions()])
 
     # Write test driver
     if lang == 'c':
@@ -640,7 +640,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
                              / gas.forward_rates_of_progress)
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100.                     
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm error in forward reaction rates: {:.2e}%'.format(err))
         print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
             format(max_err * 100., loc))
@@ -650,7 +650,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
                       ) / gas.reverse_rates_of_progress[idx_rev])
             max_err = np.max(err)
             loc = np.where(err == max_err)[0]
-            err = np.linalg.norm(err, 2) * 100.  
+            err = np.linalg.norm(err, 2) * 100.
             print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
             print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
                 format(max_err * 100., loc))
@@ -665,7 +665,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
             gas.net_production_rates[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100.  
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero net production rates: '
             '{:.2e} %'.format(err))
         print('Max error in non-zero net production rates: {:.2e}% '
@@ -702,7 +702,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
                              jacob[non_zero])
         max_err = np.max(err)
         loc = np.where(err == max_err)[0]
-        err = np.linalg.norm(err, 2) * 100. 
+        err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero Jacobian: {:.2e} %'
               .format(err))
         print('Max error in non-zero Jacobian: {:.2e}% '

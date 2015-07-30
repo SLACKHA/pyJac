@@ -1758,7 +1758,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if any(rxn.cheb for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
 
-    if not do_unroll:
+    if not do_unroll or lang == 'c':
         line = utils.line_start
         if lang == 'c':
             line += 'double '

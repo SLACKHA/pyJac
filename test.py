@@ -821,7 +821,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
             '@ index {}'.format(max_err * 100., loc))
         err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
         print('L2 norm difference of "zero" Cantera Jacobian {:.2e}'.format(err))
-        print()
 
         num = int(data[0])
         jacob = data[1: num + 1]

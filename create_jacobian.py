@@ -1182,64 +1182,6 @@ def write_cheb_ut(file, lang, rxn):
                   line in line_list]
     file.write(''.join(line_list))
 
-def write_cheb_up(file, lang, rxn):
-    line_list = []
-
-    line_list.append('cheb_temp_0 = 1')
-    line_list.append('cheb_temp_1 = 2 * Pred')
-    #start pressure dot product
-    for i in range(rxn.cheb_n_temp):
-        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
-          '= {:.8e} + Pred * {:.8e}'.format(rxn.cheb_par[i, 1], 
-            4 * rxn.cheb_par[i, 2]))
-
-    #finish pressure dot product
-    update_one = True
-    for j in range(3, rxn.cheb_n_pres):
-        if update_one:
-            new = 1
-            old = 0
-        else:
-            new = 0
-            old = 1
-        line = 'cheb_temp_{}'.format(old)
-        line += ' = 2 * Pred * cheb_temp_{}'.format(new)
-        line += ' - cheb_temp_{}'.format(old)
-        line_list.append(line)
-        for i in range(rxn.cheb_n_temp):
-            line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
-              ' += {:.8e} * cheb_temp_{}'.format(
-                j * rxn.cheb_par[i, j], old))
-
-        update_one = not update_one
-
-    line_list.append('cheb_temp_0 = 1')
-    line_list.append('cheb_temp_1 = Tred')
-    #finally, do the temperature portion
-    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 0) + 
-                     ' + Tred * ' + utils.get_array(lang, 'dot_prod', 1))
-
-    update_one = True
-    for i in range(2, rxn.cheb_n_temp):
-        if update_one:
-            new = 1
-            old = 0
-        else:
-            new = 0
-            old = 1
-        line = 'cheb_temp_{}'.format(old)
-        line += ' = 2 * Tred * cheb_temp_{}'.format(new)
-        line += ' - cheb_temp_{}'.format(old)
-        line_list.append(line)
-        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
-                         ' * ' + 'cheb_temp_{}'.format(old))
-
-        update_one = not update_one
-
-    line_list = [utils.line_start + line + utils.line_end[lang] for
-                  line in line_list]
-    file.write(''.join(line_list))
-
 def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     # Chebyshev reaction
     tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
@@ -1264,15 +1206,9 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
 
     #do U(T) sum
     write_cheb_ut(file, lang, rxn)
-    file.write(utils.line_start + 'j_temp = kf * ({:.8e} / T)'.format(
-        -2. / tlim_inv_sub) + utils.line_end[lang])
 
-    #do U(P) sum
-    write_cheb_up(file, lang, rxn)
-
-
-    jline += '({:.8e} * (j_temp + kf * {:.8e})'.format(math.log(10),
-        (2. / math.log(10)) / plim_log_sub)
+    jline += 'kf * ({:.8e} / T)'.format(
+            -2. * math.log(10) / tlim_inv_sub)
 
     jline += ' * (' + get_array(lang, 'fwd_rates', rind)
 
@@ -1280,7 +1216,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         # reverse reaction rate also
         jline += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-    jline += '))'
+    jline += ')'
     nu = sum(rxn.reac_nu)
     if nu != 1.0:
         jline += ' + ' + get_array(lang, 'fwd_rates', rind)

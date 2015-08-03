@@ -1271,10 +1271,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                        '{:.8e} / T) * '.format(E_p2 - E_p1) +
                        '(log(pres) - {:.8e}) /'.format(math.log(p1)) +
                        ' {:.8e}'.format(math.log(p2) - math.log(p1)) +
-                       ' + ({:.8e}'.format(math.log(A_p2 / A_p1)) +
-                       ' + {:.8e} * logT'.format(b_p2 - b_p1) +
-                       ' + {:.8e} / T) / '.format(E_p2 - E_p1) +
-                       '{:.8e})'.format(math.log(p2) - math.log(p1))
+                       ')'
                        )
 
         jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)

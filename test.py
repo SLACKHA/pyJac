@@ -823,11 +823,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         print()
 
         num = int(data[0])
-        test_jacob = data[1: num + 1]
+        jacob = data[1: num + 1]
         non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
         # Calculate "true" Jacobian numerically
-        jacob = eval_jacobian(ode, 6)
         err = (abs(test_jacob[non_zero] - jacob[non_zero]) /
                              jacob[non_zero])
         max_err = np.max(err)

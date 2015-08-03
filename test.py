@@ -127,7 +127,7 @@ def convert_mech(mech_filename, therm_filename=None):
           )
     return mech_filename
 
-def __write_fd_jacob(file, lang):
+def __write_fd_jacob(file, lang, atol=1e-16, rtol=1e-8):
     file.write(
     """
     #define FD_ORD 6
@@ -176,21 +176,28 @@ def __write_fd_jacob(file, lang):
 
       double ewt[NN];
       #pragma unroll
-      for (int i = 0; i < NN; ++i) {
-        ewt[i] = ATOL + (RTOL * fabs(y[i]));
-      }
+      """
+    )
+    file.write(
+    """
+      for (int i = 0; i < NN; ++i) {{
+        ewt[i] = {} + ({} * fabs(y[i]));
+      }}
 
       // unit roundoff of machine
       double srur = sqrt(DBL_EPSILON);
 
       double sum = 0.0;
       #pragma unroll
-      for (int i = 0; i < NN; ++i) {
+      for (int i = 0; i < NN; ++i) {{
         sum += (ewt[i] * ydot[i]) * (ewt[i] * ydot[i]);
-      }
+      }}
       double fac = sqrt(sum / ((double)(NN)));
-      double r0 = 1000.0 * 1e-8 * DBL_EPSILON * ((double)(NN)) * fac;
-
+      double r0 = 1000.0 * {} * DBL_EPSILON * ((double)(NN)) * fac;
+      """.format(atol, rtol, rtol)
+    )
+    file.write(
+    """
       double ftemp[NN] = {0};
 
       #pragma unroll

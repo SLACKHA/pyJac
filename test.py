@@ -510,7 +510,6 @@ def write_c_test(build_dir, pmod):
             '  double conc[NSP] = {0};\n'
             '  double fwd_rates[FWD_RATES] = {0};\n'
             '  double rev_rates[REV_RATES] = {0};\n'
-            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
             '  double sp_rates[NSP] = {0};\n'
             '  double dy[NN] = {0};\n'
             '  double jacob[NN * NN] = {0};\n'
@@ -524,8 +523,11 @@ def write_c_test(build_dir, pmod):
             )
         if pmod:
             f.write(
+            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
             '  get_rxn_pres_mod (y[0], pres, conc, pres_mod);\n'
             )
+        else:
+            f.write('double* pres_mod = 0;\n')
         f.write(
             '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, sp_rates);\n'
             '  dydt (0.0, pres, y, dy);\n'
@@ -625,8 +627,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
-    pmod = any(__is_pdep(rxn) for rxn in gas.reactions())
-    rev = any(rxn.reversible for rxn in gas.reactions())
+    pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+    rev = any([rxn.reversible for rxn in gas.reactions()])
 
     # Write test driver
     if lang == 'c':

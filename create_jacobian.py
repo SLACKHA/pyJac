@@ -227,8 +227,45 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
 
 
 def write_rates(file, lang, rxn):
-    file.write('  kf = ' + rate.rxn_rate_const(rxn.A, rxn.b, rxn.E) +
-               utils.line_end[lang])
+    if not (rxn.cheb or rxn.plog):
+        file.write('  kf = ' + rate.rxn_rate_const(rxn.A, rxn.b, rxn.E) +
+                   utils.line_end[lang])
+    elif rxn.plog:
+        vals = rxn.plog_par[0]
+        file.write('  if (pres <= {:.4e}) {{\n'.format(vals[0]))
+        line = ('    kf = ' + rate.rxn_rate_const(vals[1], vals[2], vals[3]))
+        file.write(line + utils.line_end[lang])
+
+        for idx, vals in enumerate(rxn.plog_par[:-1]):
+            vals2 = rxn.plog_par[idx + 1]
+
+            line = ('  }} else if ((pres > {:.4e}) '.format(vals[0]) +
+                    '&& (pres <= {:.4e})) {{\n'.format(vals2[0]))
+            file.write(line)
+
+            line = ('    kf = log(' +
+                    rate.rxn_rate_const(vals[1], vals[2], vals[3]) + ')'
+                    )
+            file.write(line + utils.line_end[lang])
+            line = ('    kf2 = log(' +
+                    rate.rxn_rate_const(vals2[1], vals2[2], vals2[3]) + ')'
+                    )
+            file.write(line + utils.line_end[lang])
+
+            pres_log_diff = math.log(vals2[0]) - math.log(vals[0])
+            line = ('    kf = exp(kf + (kf2 - kf) * (log(pres) - ' +
+                    '{:.8e}) / '.format(math.log(vals[0])) +
+                    '{:.8e})'.format(pres_log_diff)
+                    )
+            file.write(line + utils.line_end[lang])
+
+        vals = rxn.plog_par[-1]
+        file.write('  }} else if (pres > {:.4e}) {{\n'.format(vals[0]))
+        line = ('    kf = ' + rate.rxn_rate_const(vals[1], vals[2], vals[3]))
+        file.write(line + utils.line_end[lang])
+        file.write('  }\n')
+    elif rxn.cheb:
+        file.write(rate.get_cheb_rate(lang, rxn, False))
     if rxn.rev and not rxn.rev_par:
         file.write('  kr = kf / Kc' + utils.line_end[lang])
     elif rxn.rev_par:
@@ -238,6 +275,8 @@ def write_rates(file, lang, rxn):
                                        rxn.rev_par[2]
                                        ) +
                    utils.line_end[lang])
+
+
 
 
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
@@ -539,8 +578,6 @@ def get_rxn_params_dt(rxn, rev=False):
             jline += '{:.8e}'.format(rxn.rev_par[1])
         elif abs(rxn.rev_par[2]) > 1.0e-90:
             jline += '({:.8e} / T)'.format(rxn.rev_par[2])
-        jline += '{}1.0 - '.format(' + ' if (abs(rxn.rev_par[1]) > 1.0e-90) or (
-            abs(rxn.rev_par[2]) > 1.0e-90) else '')
     else:
         if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
             jline += '{:.8e} + ({:.8e} / T)'.format(rxn.b, rxn.E)
@@ -548,8 +585,6 @@ def get_rxn_params_dt(rxn, rev=False):
             jline += '{:.8e}'.format(rxn.b)
         elif abs(rxn.E) > 1.0e-90:
             jline += '({:.8e} / T)'.format(rxn.E)
-        jline += '{}1.0 - '.format(' + ' if (abs(rxn.b)
-                                             > 1.0e-90) or (abs(rxn.E) > 1.0e-90) else '')
     return jline
 
 
@@ -699,8 +734,6 @@ def get_db_dt(lang, specs, rxn):
                 jline += ' - {}'.format(float(abs(nu)))
             jline += ' * '
         jline += dBdT
-
-    jline += '))'
 
     return jline
 
@@ -993,125 +1026,211 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
     """
 
-    jline = get_array(lang, 'fwd_rates', rind)
-    jline += ' * ('
+    jline = ''
+    if rxn.rev and rxn.rev_par:
+        dk_dt = get_rxn_params_dt(rxn, rev=False)
+        nu = sum(rxn.reac_nu)
 
-    jline += get_rxn_params_dt(rxn, rev=False)
+        if dk_dt or nu != 1.0:
+            #we actually need to do the dk/dt for both
+            line = get_array(lang, 'fwd_rates', rind)
+            jline += ' * ('
+            if dk_dt:
+                jline += dk_dt
 
-    # loop over reactants
-    nu = sum(rxn.reac_nu)
-    jline += '{})'.format(float(nu))
-
-    # contribution from temperature derivative of reaction rates
-    if rxn.rev:
-        # reversible reaction
+            # loop over reactants
+            nu = sum(rxn.reac_nu)
+            if nu != 1.0:
+                if dk_dt and jline:
+                    jline += ' + '
+                jline += '{}'.format(1. - float(nu))
+            jline += ')'
 
         jline += ' - ' + \
             get_array(lang, 'rev_rates', rev_idx) + \
             ' * ('
 
-        if rxn.rev_par:
-            jline += get_rxn_params_dt(rxn, rev=True)
+        dk_dt = get_rxn_params_dt(rxn, rev=True)
+        nu = sum(rxn.prod_nu)
+        if dk_dt or nu != 1.0:
+            if dk_dt:
+                jline += dk_dt
 
             # product nu sum
             nu = sum(rxn.prod_nu)
-            jline += '{})'.format(float(nu))
-        else:
-            jline += get_rxn_params_dt(rxn, rev=False)
-
-            # product nu sum
-            nu = sum(rxn.prod_nu)
-            jline += '{} - T * ('.format(float(nu))
-
-            # product nu sum
-            jline += get_db_dt(lang, specs, rxn)
+            if nu != 1.0:
+                if dk_dt and jline:
+                    jline += ' + '
+                jline += '{}'.format(1. - float(nu))
             jline += ')'
+    elif rxn.rev:
+        #we don't need the dk/dt for both, 
+        #so write different to not calculate twice, and instead
+        #rely on loading fwd/rev rates again, as they should
+        #be cached
+
+        dk_dt = get_rxn_params_dt(rxn, rev=False)
+        if dk_dt:
+            jline += '('
+            jline += get_array(lang, 'fwd_rates', rind)
+            if rxn.rev:
+                jline += ' - ' + \
+                get_array(lang, 'rev_rates', rev_idx)
+            jline += ')'
+            jline += ' * ('
+
+            jline += dk_dt
+            jline += ')'
+
+        # loop over reactants
+        nu = sum(rxn.reac_nu)
+        if nu != 1.0:
+            if jline:
+                jline += ' + '
+            jline += get_array(lang, 'fwd_rates', rind)
+            jline += ' * {}'.format(1. - float(nu))
+
+        if jline:
+            jline += ' - '
+        jline += get_array(lang, 'rev_rates', rev_idx)
+        jline += ' * ('
+        # product nu sum
+        nu = sum(rxn.prod_nu)
+        if nu != 1.0:
+            jline += '{} + '.format(1. - float(nu))
+        jline += '-T * ('
+
+        # product nu sum
+        jline += get_db_dt(lang, specs, rxn)
+        jline += '))'
     else:
-        jline += ')'
+        #forward only, combine dk/dt and nu sum
+        dk_dt = get_rxn_params_dt(rxn, rev=False)
+        nu = sum(rxn.reac_nu)
+        if dk_dt or nu != 1.0:
+            jline += get_array(lang, 'fwd_rates', rind)
+            jline += ' * ('
+            jline += dk_dt
+
+            # loop over reactants
+            nu = sum(rxn.reac_nu)
+            if nu != 1.0:
+                if jline:
+                    jline += ' + '
+                jline += '{}'.format(1. - float(nu))
+
+            jline += ')'
+
 
     # print line for reaction
-    return jline + ') * rho_inv' + utils.line_end[lang]
+    return jline + ')) * rho_inv' + utils.line_end[lang]
+
+def write_cheb_ut(file, lang, rxn):
+    line_list = []
+    line_list.append('cheb_temp_0 = 1')
+    line_list.append('cheb_temp_1 = Pred')
+    #start pressure dot product
+    for i in range(1, rxn.cheb_n_temp):
+        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
+          '= {:.8e} + Pred * {:.8e}'.format(i * rxn.cheb_par[i, 0], 
+            i * rxn.cheb_par[i, 1]))
+
+    #finish pressure dot product
+    update_one = True
+    for j in range(2, rxn.cheb_n_pres):
+        if update_one:
+            new = 1
+            old = 0
+        else:
+            new = 0
+            old = 1
+        line = 'cheb_temp_{}'.format(old)
+        line += ' = 2 * Pred * cheb_temp_{}'.format(new)
+        line += ' - cheb_temp_{}'.format(old)
+        line_list.append(line)
+        for i in range(1, rxn.cheb_n_temp):
+            line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
+              ' += {:.8e} * cheb_temp_{}'.format(
+                i * rxn.cheb_par[i, j], old))
+
+        update_one = not update_one
+
+    line_list.append('cheb_temp_0 = 1')
+    line_list.append('cheb_temp_1 = 2 * Tred')
+    #finally, do the temperature portion
+    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 1) + 
+                     ' + 2 * Tred * ' + utils.get_array(lang, 'dot_prod', 2))
+
+    update_one = True
+    for i in range(3, rxn.cheb_n_temp):
+        if update_one:
+            new = 1
+            old = 0
+        else:
+            new = 0
+            old = 1
+        line = 'cheb_temp_{}'.format(old)
+        line += ' = 2 * Tred * cheb_temp_{}'.format(new)
+        line += ' - cheb_temp_{}'.format(old)
+        line_list.append(line)
+        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
+                         ' * ' + 'cheb_temp_{}'.format(old))
+
+        update_one = not update_one
+
+    line_list = [utils.line_start + line + utils.line_end[lang] for
+                  line in line_list]
+    file.write(''.join(line_list))
 
 def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     # Chebyshev reaction
-
-    # Reduced temperature and pressure needed many times.
-    tlim_inv_sum = 1. / rxn.cheb_tlim[0] + 1. / rxn.cheb_tlim[1]
-    tlim_inv_sub = 1. / rxn.cheb_tlim[1] - 1. / rxn.cheb_tlim[0]
-    file.write('  Tred = ((2.0 / T) - ' +
-               '{:.8e}) / '.format(tlim_inv_sum) +
-               '{:.8e}'.format(tlim_inv_sub) +
-               utils.line_end[lang]
-               )
+    tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
+    tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
+    file.write(utils.line_start + 
+            'Tred = ((2.0 / T) - ' +
+            '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub) +
+            utils.line_end[lang]
+            )
 
     plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
-                    math.log10(rxn.cheb_plim[1]))
+                    math.log10(rxn.cheb_plim[1])
+                    )
     plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
-                    math.log10(rxn.cheb_plim[0]))
-    file.write('  Pred = (2.0 * log10(pres) - ' +
-               '{:.8e}) / '.format(plim_log_sum) +
-               '{:.8e}'.format(plim_log_sub) +
-               utils.line_end[lang]
-               )
-
-    jline += '(1.0 + {:.8e} * ('.format(math.log(10.))
-
-    for i in range(rxn.cheb_n_temp):
-        for j in range(rxn.cheb_n_pres):
-
-            if i == 0 and j == 0:
-                continue
-
-            jline += '{:.8e} * ('.format(rxn.cheb_par[i, j])
-
-            if i != 0:
-                jline += (
-                    '{:.1f} * '.format(i) +
-                    'cheb_u({}, Tred) * '.format(i - 1) +
-                    'cheb_t({}, Pred) * '.format(j) +
-                    '({:.8e} / T)'.format(-2. / tlim_inv_sub)
+                    math.log10(rxn.cheb_plim[0])
                     )
-                if j != 0:
-                    jline += ' + '
+    file.write(utils.line_start + 
+            'Pred = (2.0 * log10(pres) - ' +
+            '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub) + 
+            utils.line_end[lang]
+            )
 
-            if j != 0:
-                jline += (
-                    '{:.1f} * '.format(j) +
-                    'cheb_t({}, Tred) * '.format(i) +
-                    'cheb_u({}, Pred) * '.format(j - 1) +
-                    '{:.8e}'.format(2. / (math.log(10.) *
-                                    plim_log_sub)
-                                    )
-                    )
+    #do U(T) sum
+    write_cheb_ut(file, lang, rxn)
 
-
-            jline += ')'
-
-            if j < rxn.cheb_n_pres - 1:
-                jline += ' + '
-
-        if i < rxn.cheb_n_temp - 1:
-            jline += ' + \n'
-            file.write(jline)
-            jline = utils.line_start
-
-    jline += '))'
+    jline += 'kf * ({:.8e} / T)'.format(
+            -2. * math.log(10) / tlim_inv_sub)
 
     jline += ' * (' + get_array(lang, 'fwd_rates', rind)
 
     if rxn.rev:
         # reverse reaction rate also
-        get_array(lang, 'rev_reacs', rev_idx)
+        jline += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-    jline += ') - ' + get_array(lang, 'fwd_rates', rind)
-    jline += ' * {}'.format(sum(rxn.reac_nu))
+    jline += ')'
+    nu = sum(rxn.reac_nu)
+    if nu != 1.0:
+        jline += ' + ' + get_array(lang, 'fwd_rates', rind)
+        jline += ' * {}'.format(1. - float(nu))
 
     if rxn.rev:
-        jline += ' + ' + get_array(lang, 'rev_rates', rev_idx)
-        jline += ' * (T * ' + get_db_dt(lang, specs, rxn)
-        jline += ' + {})'.format(sum(rxn.prod_nu))
+        jline += ' - ' + get_array(lang, 'rev_rates', rev_idx) + ' * ('
+        nu = sum(rxn.prod_nu)
+        if nu != 1.0:
+            jline += '{} + '.format(1. - float(nu))
+        jline += '-T * (' + get_db_dt(lang, specs, rxn)
+        jline += '))'
 
-    jline += '))'
+    jline += ')) * rho_inv'
     # print line for reaction
     file.write(jline + utils.line_end[lang])
 
@@ -1146,16 +1265,13 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             #negative A's, so we need to handle the log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
-            jline_p = (jline + '({:.8e} + '.format(1. + b_p1) +
+            jline_p = (jline + '({:.8e} + '.format(b_p1) +
                        '{:.8e} / T + '.format(E_p1) +
                        '({:.8e} + '.format(b_p2 - b_p1) +
                        '{:.8e} / T) * '.format(E_p2 - E_p1) +
                        '(log(pres) - {:.8e}) /'.format(math.log(p1)) +
                        ' {:.8e}'.format(math.log(p2) - math.log(p1)) +
-                       ' + ({:.8e}'.format(math.log(A_p2 / A_p1)) +
-                       ' + {:.8e} * logT'.format(b_p2 - b_p1) +
-                       ' + {:.8e} / T) / '.format(E_p2 - E_p1) +
-                       '{:.8e})'.format(math.log(p2) - math.log(p1))
+                       ')'
                        )
 
         jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
@@ -1164,16 +1280,23 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             # reverse reaction rate also
             jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-        jline_p += ') - ' + get_array(lang, 'fwd_rates', rind)
-        jline_p += ' * {}'.format(sum(rxn.reac_nu))
+        jline_p += ') '
+        nu = sum(rxn.reac_nu)
+        if nu != 1.0:
+            jline_p += ' + ' + get_array(lang, 'fwd_rates', rind)
+            jline_p += ' * {}'.format(1. - nu)
 
         if rxn.rev:
-            jline_p += ' + ' + get_array(lang, 'rev_rates', rev_idx)
-            jline_p += ' * (T * ' + get_db_dt(lang, specs, rxn)
+            jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
+            jline_p += ' * ('
+            nu = sum(rxn.prod_nu)
+            if nu != 1.0:
+                jline_p+= '{} + '.format(1. - nu)
+            jline_p += '-T * (' + get_db_dt(lang, specs, rxn)
+            jline_p += '))'
 
-            jline_p += ' + {})'.format(sum(rxn.prod_nu))
-
-        jline_p += '))'
+        jline_p += ')) * rho_inv'
+        #jline_p += '))'
         # print line for reaction
         file.write(utils.line_start + jline_p + utils.line_end[lang])
 
@@ -1189,7 +1312,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                           A_pn, b_pn, E_pn
                           )
 
-    file.write(utils.line_start +jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
+    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
 
     file.write(utils.line_start + '}\n')
 
@@ -1280,7 +1403,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     file.write(line)
 
 
-def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, this_cheb, no_shared):
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, this_cheb, this_plog, no_shared):
     """
     Writes the header and definitions for of any of the various sub-functions for CUDA
 
@@ -1403,8 +1526,13 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, thi
         file.write(line)
 
     if this_cheb:
-        line = utils.line_start + 'double Tred, Pred' + utils.line_end[lang]
-        file.write(line)
+        file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
+        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+        file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
+    if this_plog:
+        file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
     return file
 
@@ -1476,6 +1604,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#define JACOB_HEAD\n'
                    '\n'
                    '#include "header.h"\n'
+                   '#include "chem_utils.h"\n'
+                   '#include "rates.h"\n'
                    '\n'
                    'void eval_jacob (const double, const double, '
                    'const double*, double*);\n'
@@ -1521,20 +1651,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # header files
     if lang == 'c':
-        file.write('#include <math.h>\n'
-                   '#include "header.h"\n'
-                   '#include "chem_utils.h"\n'
-                   '#include "rates.h"\n'
+        file.write('#include "jacob.h"\n'
                    '\n'
                    )
     elif lang == 'cuda':
-        file.write('#include <math.h>\n' +
-                   ('#include "jacobs/jac_include.h"\n' if
-                    do_unroll else '') +
-                   '#include "header.h"\n'
-                   '#include "chem_utils.cuh"\n'
-                   '#include "rates.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
+        file.write('#include "jacob.cuh"\n'
                    '\n'
                    )
 
@@ -1757,6 +1878,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     if any(rxn.cheb for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
+        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+        file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
+    if not do_unroll or lang == 'c':
+        file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
     if not do_unroll or lang == 'c':
         line = utils.line_start
@@ -1806,6 +1933,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             troe = False
             sri = False
             cheb = False
+            plog = True
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
@@ -1819,9 +1947,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     sri = True
                 if reacs[ind_next].cheb:
                     cheb = True
+                if reacs[ind_next].plog:
+                    plog = True
             batch_has_thd = thd
             # write the specific evaluator for this reaction
             file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri,
+                                    cheb, plog,
                                     smm is None)
 
         if lang == 'cuda' and smm is not None:

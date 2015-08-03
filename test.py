@@ -805,6 +805,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
 
         num = int(data[0])
         test_jacob = data[1: num + 1]
+        data = data[num + 1:]
         non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
         # Calculate "true" Jacobian numerically
@@ -824,6 +825,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
 
         num = int(data[0])
         jacob = data[1: num + 1]
+        data = data[num + 1:]
         non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
         # Calculate "true" Jacobian numerically

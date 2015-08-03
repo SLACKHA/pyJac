@@ -1127,16 +1127,6 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
 
 def write_cheb_ut(file, lang, rxn):
     line_list = []
-    tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
-    tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
-
-    plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
-                    math.log10(rxn.cheb_plim[1])
-                    )
-    plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
-                    math.log10(rxn.cheb_plim[0])
-                    )
-
     line_list.append('cheb_temp_0 = 1')
     line_list.append('cheb_temp_1 = Pred')
     #start pressure dot product
@@ -1194,15 +1184,6 @@ def write_cheb_ut(file, lang, rxn):
 
 def write_cheb_up(file, lang, rxn):
     line_list = []
-    tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
-    tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
-
-    plim_log_sum = (math.log10(rxn.cheb_plim[0]) +
-                    math.log10(rxn.cheb_plim[1])
-                    )
-    plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
-                    math.log10(rxn.cheb_plim[0])
-                    )
 
     line_list.append('cheb_temp_0 = 1')
     line_list.append('cheb_temp_1 = 2 * Pred')

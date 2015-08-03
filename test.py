@@ -741,7 +741,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         err = (abs(test_fwd_rates - gas.forward_rates_of_progress)
                              / gas.forward_rates_of_progress)
         max_err = np.max(err)
-        loc = np.where(err == max_err)[0]
+        loc = np.where(err == max_err)
         err = np.linalg.norm(err, 2) * 100.                     
         print('L2 norm error in forward reaction rates: {:.2e}%'.format(err))
         print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
@@ -751,7 +751,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
             err = (abs(test_rev_rates - gas.reverse_rates_of_progress[idx_rev]
                       ) / gas.reverse_rates_of_progress[idx_rev])
             max_err = np.max(err)
-            loc = np.where(err == max_err)[0]
+            loc = np.where(err == max_err)
             err = np.linalg.norm(err, 2) * 100.  
             print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
             print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
@@ -761,12 +761,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         num = int(data[0])
         test_spec_rates = data[1: num + 1]
         data = data[num + 1:]
-        non_zero = np.where(test_spec_rates != 0.)
-        zero = np.where(test_spec_rates == 0.)
+        non_zero = np.where(test_spec_rates != 0.)[0]
+        zero = np.where(test_spec_rates == 0.)[0]
         err = (abs(test_spec_rates[non_zero] - gas.net_production_rates[non_zero]) /
             gas.net_production_rates[non_zero])
         max_err = np.max(err)
-        loc = np.where(err == max_err)[0]
+        loc = non_zero[np.where(err == max_err)]
         err = np.linalg.norm(err, 2) * 100.  
         print('L2 norm relative error of non-zero net production rates: '
             '{:.2e} %'.format(err))
@@ -781,12 +781,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=False, genera
         num = int(data[0])
         test_dydt = data[1: num + 1]
         data = data[num + 1:]
-        non_zero = np.where(test_dydt != 0.)
-        zero = np.where(test_dydt == 0.)
+        non_zero = np.where(test_dydt != 0.)[0]
+        zero = np.where(test_dydt == 0.)[0]
         err = (abs(test_dydt[non_zero] - ode()[non_zero]) /
                              ode()[non_zero])
         max_err = np.max(err)
-        loc = np.where(err == max_err)[0]
+        loc = non_zero[np.where(err == max_err)]
         err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
         print('Max error in non-zero dydt: {:.2e}% '

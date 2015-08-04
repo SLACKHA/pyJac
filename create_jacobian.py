@@ -535,17 +535,13 @@ def get_infs(rxn):
 
 def write_dt_comment(file, lang, rind):
     line = utils.line_start + utils.comment[lang]
-    line += ('partial of rxn ' + str(rind) + ' wrt T' +
-             utils.line_end[lang]
-             )
+    line += ('partial of rxn ' + str(rind) + ' wrt T' + '\n')
     file.write(line)
 
 
 def write_dy_comment(file, lang, rind):
     line = utils.line_start + utils.comment[lang]
-    line += ('partial of rxn ' + str(rind) + ' wrt species' +
-             utils.line_end[lang]
-             )
+    line += ('partial of rxn ' + str(rind) + ' wrt species' + '\n')
     file.write(line)
 
 
@@ -1064,7 +1060,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
                 jline += '{}'.format(1. - float(nu))
             jline += ')'
     elif rxn.rev:
-        #we don't need the dk/dt for both, 
+        #we don't need the dk/dt for both,
         #so write different to not calculate twice, and instead
         #rely on loading fwd/rev rates again, as they should
         #be cached
@@ -1131,8 +1127,8 @@ def write_cheb_ut(file, lang, rxn):
     line_list.append('cheb_temp_1 = Pred')
     #start pressure dot product
     for i in range(1, rxn.cheb_n_temp):
-        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
-          '= {:.8e} + Pred * {:.8e}'.format(i * rxn.cheb_par[i, 0], 
+        line_list.append(utils.get_array(lang, 'dot_prod', i) +
+          '= {:.8e} + Pred * {:.8e}'.format(i * rxn.cheb_par[i, 0],
             i * rxn.cheb_par[i, 1]))
 
     #finish pressure dot product
@@ -1149,7 +1145,7 @@ def write_cheb_ut(file, lang, rxn):
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
         for i in range(1, rxn.cheb_n_temp):
-            line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
+            line_list.append(utils.get_array(lang, 'dot_prod', i)  +
               ' += {:.8e} * cheb_temp_{}'.format(
                 i * rxn.cheb_par[i, j], old))
 
@@ -1158,7 +1154,7 @@ def write_cheb_ut(file, lang, rxn):
     line_list.append('cheb_temp_0 = 1')
     line_list.append('cheb_temp_1 = 2 * Tred')
     #finally, do the temperature portion
-    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 1) + 
+    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 1) +
                      ' + 2 * Tred * ' + utils.get_array(lang, 'dot_prod', 2))
 
     update_one = True
@@ -1173,7 +1169,7 @@ def write_cheb_ut(file, lang, rxn):
         line += ' = 2 * Tred * cheb_temp_{}'.format(new)
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
-        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
+        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) +
                          ' * ' + 'cheb_temp_{}'.format(old))
 
         update_one = not update_one
@@ -1186,7 +1182,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     # Chebyshev reaction
     tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
     tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
-    file.write(utils.line_start + 
+    file.write(utils.line_start +
             'Tred = ((2.0 / T) - ' +
             '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub) +
             utils.line_end[lang]
@@ -1198,9 +1194,9 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     plim_log_sub = (math.log10(rxn.cheb_plim[1]) -
                     math.log10(rxn.cheb_plim[0])
                     )
-    file.write(utils.line_start + 
+    file.write(utils.line_start +
             'Pred = (2.0 * log10(pres) - ' +
-            '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub) + 
+            '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub) +
             utils.line_end[lang]
             )
 
@@ -1619,8 +1615,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#define JACOB_HEAD\n'
                    '\n'
                    '#include "header.h"\n' +
-                   ('#include "jacobs/jac_include.h"\n' if 
-                    do_unroll else '') + 
+                   ('#include "jacobs/jac_include.h"\n' if
+                    do_unroll else '') +
                    '#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
                    '#include "gpu_macros.cuh"\n'
@@ -2628,7 +2624,7 @@ if __name__ == "__main__":
                         dest='cache_optimizer',
                         action='store_false',
                         default=True,
-                        help='Attempt to optimize cache store/loading via use '
+                        help='Do not attempt to optimize cache store/loading via use '
                              'of a greedy selection algorithm.')
     parser.add_argument('-nosmem', '--no-shared-memory',
                         dest='no_shared',

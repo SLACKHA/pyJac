@@ -937,7 +937,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 the_vars = []
                 indexes = [sp[0] for sp in reac.thd_body]
                 the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-                # estimate usages as the number of consequitive reactions
+                # estimate usages as the number of consecutive reactions
                 usages = []
                 for sp_i in indexes:
                     temp = i_rxn + 1
@@ -956,7 +956,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             line = '  ' + get_array(lang, 'pres_mod', pind) + ' = m'
 
             for sp in reac.thd_body:
-                if sp[1] > 1.0:
+                if sp[1] == 1.0:
+                    continue
+                elif sp[1] > 1.0:
                     line += ' + {}'.format(sp[1] - 1.0)
                 elif sp[1] < 1.0:
                     line += ' - {}'.format(1.0 - sp[1])
@@ -970,7 +972,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             if reac.pdep_sp == '':
                 line = '  thd = m'
                 for sp in reac.thd_body:
-                    if sp[1] > 1.0:
+                    if sp[1] == 1.0:
+                        continue
+                    elif sp[1] > 1.0:
                         line += ' + {}'.format(sp[1] - 1.0)
                     elif sp[1] < 1.0:
                         line += ' - {}'.format(1.0 - sp[1])
@@ -1112,15 +1116,15 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if lang == 'cuda' and smm is not None:
             # mark for eviction
             the_vars = []
-            indexes = [sp[0] for sp in reac.thd_body]
+            indexes = [sp[0] for sp in reac.thd_body if sp[1] != 1.0]
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-            # estimate usages as the number of consequitive reactions
+            # estimate usages as the number of consecutive reactions
             mark = []
             for i, sp_i in enumerate(indexes):
                 temp = i_rxn + 1
                 while temp < len(ordering):
                     rxn = reacs[ordering[temp]]
-                    if sp_i not in set([x[0] for x in rxn.thd_body]):
+                    if sp_i not in set([x[0] for x in rxn.thd_body if x[1] != 1.0]):
                         temp += 1
                     else:
                         break

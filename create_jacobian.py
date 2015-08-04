@@ -283,7 +283,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
     jline = 'j_temp'
     if rxn.pdep and rxn.pdep_sp == '' and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body
-                        if thd[0] == j_sp), None)
+                        if thd[0] == j_sp and thd[1] != 1.0), None)
         if alphaij is None:
             alphaij = 1.0
         if alphaij != alphaij_hat:
@@ -299,7 +299,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
         jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
     elif rxn.thd and not rxn.pdep and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body
-                        if thd[0] == j_sp), None)
+                        if thd[0] == j_sp and thd[1] != 1.0), None)
         if alphaij is None:
             alphaij = 1.0
         if alphaij != alphaij_hat:

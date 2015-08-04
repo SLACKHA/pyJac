@@ -92,12 +92,12 @@ def rxn_rate_const(A, b, E):
                 line += 'exp({:.8e}'.format(logA) + ' - ({:.8e} / T))'.format(E)
             else:
                 # b!= 0
-                line += 'exp({:.8e}'.format(logA)
+                line += 'exp({:.16e}'.format(logA)
                 if b > 0:
                     line += ' + ' + str(b)
                 else:
                     line += ' - ' + str(abs(b))
-                line += ' * logT - ({:.8e} / T))'.format(E)
+                line += ' * logT - ({:.16e} / T))'.format(E)
     elif A < 0:
         #a < 0, can't take the log of it
         #the reaction, should also be a duplicate to make any sort of sense
@@ -173,8 +173,8 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     line_list.append('cheb_temp_1 = Pred')
     #start pressure dot product
     for i in range(rxn.cheb_n_temp):
-        line_list.append(utils.get_array(lang, 'dot_prod', i) + 
-          '= {:.8e} + Pred * {:.8e}'.format(rxn.cheb_par[i, 0], 
+        line_list.append(utils.get_array(lang, 'dot_prod', i) +
+          '= {:.8e} + Pred * {:.8e}'.format(rxn.cheb_par[i, 0],
             rxn.cheb_par[i, 1]))
 
     #finish pressure dot product
@@ -191,7 +191,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
         for i in range(rxn.cheb_n_temp):
-            line_list.append(utils.get_array(lang, 'dot_prod', i)  + 
+            line_list.append(utils.get_array(lang, 'dot_prod', i)  +
               ' += {:.8e} * cheb_temp_{}'.format(
                 rxn.cheb_par[i, j], old))
 
@@ -215,7 +215,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
         line += ' = 2 * Tred * cheb_temp_{}'.format(new)
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
-        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) + 
+        line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) +
                          ' * ' + 'cheb_temp_{}'.format(old))
 
         update_one = not update_one
@@ -1552,8 +1552,8 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += ('(mass_frac[{}] * {})'.format(isp,
-                     utils.round_sig(1.0 / sp.mw, 9))
+            line += ('(mass_frac[{}] * {:.16e})'.format(isp,
+                     1.0 / sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
             line += ('(mass_frac[{}] * {})'.format(isp + 1,
@@ -1580,7 +1580,7 @@ def write_chem_utils(path, lang, specs):
             line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
         elif lang in ['fortran', 'matlab']:
             line += '({0}) = (*rho) * mass_frac({0}) * '.format(isp + 1)
-        line += '{}'.format(1.0 / sp.mw) + utils.line_end[lang]
+        line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
 
     file.write('\n')

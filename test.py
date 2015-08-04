@@ -127,7 +127,7 @@ def convert_mech(mech_filename, therm_filename=None):
           )
     return mech_filename
 
-def __write_fd_jacob(file, lang, atol=1e-16, rtol=1e-8):
+def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-10):
     file.write(
 """
 #define FD_ORD 6
@@ -553,8 +553,8 @@ def write_c_test(build_dir, pmod):
 def eval_jacobian(dydt, order):
     """
     """
-    abs_tol = 1.e-16
-    rel_tol = 1.e-8
+    abs_tol = 1.e-20
+    rel_tol = 1.e-10
 
     y = np.hstack((dydt.gas.T, dydt.gas.Y))
 
@@ -709,10 +709,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         print('Testing condition {} / {}'.format(i + 1, num_trials))
 
         with open(os.path.join(test_dir, 'input.txt'), 'w') as f:
-            f.write('{:.15e}\n'.format(temp))
-            f.write('{:.15e}\n'.format(pres))
+            f.write('{:.16e}\n'.format(temp))
+            f.write('{:.16e}\n'.format(pres))
             for val in mass_frac:
-                f.write('{:.15e}\n'.format(val))
+                f.write('{:.16e}\n'.format(val))
 
         # Run testing executable to get output printed to file
         subprocess.check_call(os.path.join(test_dir, 'test'))
@@ -728,10 +728,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         num = int(data[0])
         test_conc = data[1: num + 1]
         data = data[num + 1:]
-        err = (abs(test_conc - gas.concentrations) /
-                             gas.concentrations)
+        err = abs((test_conc - gas.concentrations) /
+                  gas.concentrations
+                  )
         max_err = np.max(err)
-        loc = np.where(err == max_err)[0]
+        loc = np.argmax(err)
         err = np.linalg.norm(err, 2) * 100.
         print('L2 norm error in concentration: {:.2e} %'.format(err))
         print('Max error in concentration: {:.2e} % @ species {}'
@@ -753,26 +754,27 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         test_fwd_rates[idx_pmod] *= test_pres_mod
         test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
 
-        err = (abs(test_fwd_rates - gas.forward_rates_of_progress)
-                             / gas.forward_rates_of_progress)
+        err = abs((test_fwd_rates - gas.forward_rates_of_progress) /
+                  gas.forward_rates_of_progress
+                  )
         max_err = np.max(err)
-        loc = np.where(err == max_err)
+        loc = np.argmax(err)
         err = np.linalg.norm(err, 2) * 100.
         print('L2 norm error in forward reaction rates: {:.2e}%'.format(err))
         print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
-            format(max_err * 100., loc))
+              format(max_err * 100., loc))
 
         if idx_rev:
-            err = (abs(test_rev_rates -
-                   gas.reverse_rates_of_progress[idx_rev]) /
-                   gas.reverse_rates_of_progress[idx_rev]
-                   )
+            err = abs((test_rev_rates -
+                      gas.reverse_rates_of_progress[idx_rev]) /
+                      gas.reverse_rates_of_progress[idx_rev]
+                      )
             max_err = np.max(err)
-            loc = np.where(err == max_err)
+            loc = np.argmax(err)
             err = np.linalg.norm(err, 2) * 100.
             print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
             print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
-                format(max_err * 100., loc))
+                  format(max_err * 100., loc))
 
         # Species production rates
         num = int(data[0])
@@ -780,12 +782,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         data = data[num + 1:]
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
-        err = (abs(test_spec_rates[non_zero] -
-               gas.net_production_rates[non_zero]) /
-               gas.net_production_rates[non_zero]
-               )
+        err = abs((test_spec_rates[non_zero] -
+                  gas.net_production_rates[non_zero]) /
+                  gas.net_production_rates[non_zero]
+                  )
         max_err = np.max(err)
-        loc = non_zero[np.where(err == max_err)]
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err, 2) * 100.
         print('L2 norm relative error of non-zero net production rates: '
               '{:.2e} %'.format(err)
@@ -804,10 +806,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         data = data[num + 1:]
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
-        err = (abs(test_dydt[non_zero] - ode()[non_zero]) /
-                             ode()[non_zero])
+        err = abs((test_dydt[non_zero] - ode()[non_zero]) /
+                  ode()[non_zero]
+                  )
         max_err = np.max(err)
-        loc = non_zero[np.where(err == max_err)]
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err, 2) * 100.
         err_dydt[i] = err
         print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
@@ -825,11 +828,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         zero = np.where(test_jacob == 0.)[0]
         # Calculate "true" Jacobian numerically
         jacob = eval_jacobian(ode, 6)
-        err = (abs(test_jacob[non_zero] - jacob[non_zero]) /
-               jacob[non_zero]
-               )
+        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                  jacob[non_zero]
+                  )
         max_err = np.max(err)
-        loc = non_zero[np.where(err == max_err)]
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err, 2) * 100.
         #err_jac[i] = err
         print('L2 norm relative error of non-zero Cantera Jacobian: {:.2e} %'
@@ -846,10 +849,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
         # Calculate "true" Jacobian numerically
-        err = (abs(test_jacob[non_zero] - jacob[non_zero]) /
-                             jacob[non_zero])
+        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                  jacob[non_zero]
+                  )
         max_err = np.max(err)
-        loc = non_zero[np.where(err == max_err)]
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err, 2) * 100.
         err_jac[i] = err
         print('L2 norm relative error of our non-zero Jacobian: {:.2e} %'

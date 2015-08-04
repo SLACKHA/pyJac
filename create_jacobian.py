@@ -781,11 +781,13 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                 if match is None:
                     new_conc_temp.append((species, -alpha))
 
-            if len(new_conc_temp):
+            use_conc = new_conc_temp if len(new_conc_temp) < len(conc_temp_log) else conc_temp_log
+            if len(use_conc):
                 # remake the line with the updated numbers
-                line = utils.line_start + 'conc_temp += ('
+                line = utils.line_start + 'conc_temp {}= ('.format(
+                    '+' if use_conc == new_conc_temp else '')
 
-                for i, thd_sp in enumerate(new_conc_temp):
+                for i, thd_sp in enumerate(use_conc):
                     isp = thd_sp[0]
                     if i > 0:
                         line += ' {}{} * '.format('- ' if thd_sp[1] < 0 else '+ ', abs(thd_sp[1]))

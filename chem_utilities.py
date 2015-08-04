@@ -14,7 +14,7 @@ __all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',
            'ReacInfo', 'SpecInfo', 'calc_spec_smh']
 
 # universal gas constants, SI units
-RU = 8.314510e3  # J/(kmole * K)
+RU = 8314.4621  # J/(kmole * K)
 RUC = 1.9858775  # cal/(mole * K)
 RU_JOUL = 8.314510e0
 
@@ -47,9 +47,9 @@ def get_elem_wt():
         Dictionary with element name keys and atomic weight [kg/kmol] values.
     """
     elem_wt = dict([
-        ('h', 1.00797), ('he', 4.00260), ('li', 6.93900),
-        ('be', 9.01220), ('b', 10.81100), ('c', 12.01115),
-        ('n', 14.00670), ('o', 15.99940), ('f', 18.99840),
+        ('h', 1.00794), ('he', 4.00260), ('li', 6.93900),
+        ('be', 9.01220), ('b', 10.81100), ('c', 12.0110),
+        ('n', 14.00674), ('o', 15.99940), ('f', 18.99840),
         ('ne', 20.18300), ('na', 22.98980), ('mg', 24.31200),
         ('al', 26.98150), ('si', 28.08600), ('p', 30.97380),
         ('s', 32.06400), ('cl', 35.45300), ('ar', 39.94800),

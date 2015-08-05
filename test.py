@@ -127,110 +127,110 @@ def convert_mech(mech_filename, therm_filename=None):
           )
     return mech_filename
 
-def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-10):
+def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-16):
     file.write(
-"""
-#define FD_ORD 6
+        """
+        #define FD_ORD 6
 
-void eval_fd_jacob (const double t, const double pres, double * y, double * jac) {
+        void eval_fd_jacob (const double t, const double pres, double * y, double * jac) {
 
-  double ydot[NN] = {0};
-  dydt (t, pres, y, ydot);
+          double ydot[NN] = {0};
+          dydt (t, pres, y, ydot);
 
-  // Finite difference coefficients
-  double x_coeffs[FD_ORD];
-  double y_coeffs[FD_ORD];
+          // Finite difference coefficients
+          double x_coeffs[FD_ORD];
+          double y_coeffs[FD_ORD];
 
-  if (FD_ORD == 2) {
-    // 2nd order central difference
-    x_coeffs[0] = -1.0;
-    x_coeffs[1] = 1.0;
-    y_coeffs[0] = -0.5;
-    y_coeffs[1] = 0.5;
-  } else if (FD_ORD == 4) {
-    // 4th order central difference
-    x_coeffs[0] = -2.0;
-    x_coeffs[1] = -1.0;
-    x_coeffs[2] = 1.0;
-    x_coeffs[3] = 2.0;
-    y_coeffs[0] = 1.0 / 12.0;
-    y_coeffs[1] = -2.0 / 3.0;
-    y_coeffs[2] = 2.0 / 3.0;
-    y_coeffs[3] = -1.0 / 12.0;
-  } else {
-    // 6th order central difference
-    x_coeffs[0] = -3.0;
-    x_coeffs[1] = -2.0;
-    x_coeffs[2] = -1.0;
-    x_coeffs[3] = 1.0;
-    x_coeffs[4] = 2.0;
-    x_coeffs[5] = 3.0;
+          if (FD_ORD == 2) {
+            // 2nd order central difference
+            x_coeffs[0] = -1.0;
+            x_coeffs[1] = 1.0;
+            y_coeffs[0] = -0.5;
+            y_coeffs[1] = 0.5;
+          } else if (FD_ORD == 4) {
+            // 4th order central difference
+            x_coeffs[0] = -2.0;
+            x_coeffs[1] = -1.0;
+            x_coeffs[2] = 1.0;
+            x_coeffs[3] = 2.0;
+            y_coeffs[0] = 1.0 / 12.0;
+            y_coeffs[1] = -2.0 / 3.0;
+            y_coeffs[2] = 2.0 / 3.0;
+            y_coeffs[3] = -1.0 / 12.0;
+          } else {
+            // 6th order central difference
+            x_coeffs[0] = -3.0;
+            x_coeffs[1] = -2.0;
+            x_coeffs[2] = -1.0;
+            x_coeffs[3] = 1.0;
+            x_coeffs[4] = 2.0;
+            x_coeffs[5] = 3.0;
 
-    y_coeffs[0] = -1.0 / 60.0;
-    y_coeffs[1] = 3.0 / 20.0;
-    y_coeffs[2] = -3.0 / 4.0;
-    y_coeffs[3] = 3.0 / 4.0;
-    y_coeffs[4] = -3.0 / 20.0;
-    y_coeffs[5] = 1.0 / 60.0;
-  }
+            y_coeffs[0] = -1.0 / 60.0;
+            y_coeffs[1] = 3.0 / 20.0;
+            y_coeffs[2] = -3.0 / 4.0;
+            y_coeffs[3] = 3.0 / 4.0;
+            y_coeffs[4] = -3.0 / 20.0;
+            y_coeffs[5] = 1.0 / 60.0;
+          }
 
-  double ewt[NN];
-  #pragma unroll
-  """
-)
+          double ewt[NN];
+          #pragma unroll
+          """
+        )
     file.write(
-"""
-  for (int i = 0; i < NN; ++i) {{
-    ewt[i] = {} + ({} * fabs(y[i]));
-  }}
+        """
+          for (int i = 0; i < NN; ++i) {{
+            ewt[i] = {} + ({} * fabs(y[i]));
+          }}
 
-  // unit roundoff of machine
-  double srur = sqrt(DBL_EPSILON);
+          // unit roundoff of machine
+          double srur = sqrt(DBL_EPSILON);
 
-  double sum = 0.0;
-  #pragma unroll
-  for (int i = 0; i < NN; ++i) {{
-    sum += (ewt[i] * ydot[i]) * (ewt[i] * ydot[i]);
-  }}
-  double fac = sqrt(sum / ((double)(NN)));
-  double r0 = 1000.0 * {} * DBL_EPSILON * ((double)(NN)) * fac;
-  """.format(atol, rtol, rtol)
-)
+          double sum = 0.0;
+          #pragma unroll
+          for (int i = 0; i < NN; ++i) {{
+            sum += (ewt[i] * ydot[i]) * (ewt[i] * ydot[i]);
+          }}
+          double fac = sqrt(sum / ((double)(NN)));
+          double r0 = 1000.0 * {} * DBL_EPSILON * ((double)(NN)) * fac;
+          """.format(atol, rtol, rtol)
+        )
     file.write(
-"""
-  double ftemp[NN] = {0};
+        """
+          double ftemp[NN] = {0};
 
-  #pragma unroll
-  for (int j = 0; j < NN; ++j) {
-    double yj_orig = y[j];
-    double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
+          #pragma unroll
+          for (int j = 0; j < NN; ++j) {
+            double yj_orig = y[j];
+            double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
 
-    #pragma unroll
-    for (int i = 0; i < NN; ++i) {
-      jac[i + NN*j] = 0.0;
-    }
+            #pragma unroll
+            for (int i = 0; i < NN; ++i) {
+              jac[i + NN*j] = 0.0;
+            }
 
-    #pragma unroll
-    for (int k = 0; k < FD_ORD; ++k) {
-      y[j] = yj_orig + x_coeffs[k] * r;
-      dydt (t, pres, y, ftemp);
-      #pragma unroll
-      for (int i = 0; i < NN; ++i) {
-        jac[i + NN*j] += y_coeffs[k] * ftemp[i];
-      }
-    }
+            #pragma unroll
+            for (int k = 0; k < FD_ORD; ++k) {
+              y[j] = yj_orig + x_coeffs[k] * r;
+              dydt (t, pres, y, ftemp);
+              #pragma unroll
+              for (int i = 0; i < NN; ++i) {
+                jac[i + NN*j] += y_coeffs[k] * ftemp[i];
+              }
+            }
 
-    #pragma unroll
-    for (int i = 0; i < NN; ++i) {
-      jac[i + NN*j] /= r;
-    }
+            #pragma unroll
+            for (int i = 0; i < NN; ++i) {
+              jac[i + NN*j] /= r;
+            }
 
-    y[j] = yj_orig;
-  }
+            y[j] = yj_orig;
+          }
 
-}
-"""
-)
+        }
+        """
+        )
 
 
 def __write_header_include(file, lang):
@@ -238,13 +238,14 @@ def __write_header_include(file, lang):
         '#include <stdlib.h>\n'
         '#include <stdio.h>\n'
         '\n'
-    )
+        )
 
     file_list = ['mechanism', 'chem_utils', 'rates', 'dydt', 'jacob']
     file.write('\n'.join(['#include "header.h"'] +
                          ['#include "{}.{}"'.format(
                              the_file, 'h' if lang == 'c' else 'cuh')
-                          for the_file in file_list]) + '\n')
+                          for the_file in file_list]) + '\n'
+               )
 
     if lang == 'cuda':
         file.write('#include <cuda.h>\n'
@@ -252,7 +253,8 @@ def __write_header_include(file, lang):
                    '#include <helper_cuda.h>\n'
                    '#include "launch_bounds.cuh"\n'
                    '#include "gpu_macros.cuh"\n'
-                   '#include "gpu_memory.cuh"\n\n')
+                   '#include "gpu_memory.cuh"\n\n'
+                   )
 
 
 def __write_output_methods(file):
@@ -309,7 +311,7 @@ def __write_output_methods(file):
         '}\n'
         '\n'
         '\n'
-    )
+        )
 
 
 def __write_condition_reader(file):
@@ -328,7 +330,8 @@ def __write_condition_reader(file):
         '  pres = data[1];\n'
         '  for (int i = 0; i < NSP; ++i) {\n'
         '    y[i + 1] = data[i + 2];\n'
-        '  }\n')
+        '  }\n'
+        )
 
 
 def __write_kernels(file, pmod):
@@ -338,7 +341,7 @@ def __write_kernels(file, pmod):
         '   double rho, mw_avg;\n'
         '   eval_conc(y[0], pres, &y[1], &mw_avg, &rho, conc);\n'
         '}\n\n'
-    )
+        )
     file.write(
         '  __global__\n'
         'void k_eval_rxn_rates(const double* y, double pres, '
@@ -346,7 +349,7 @@ def __write_kernels(file, pmod):
         ' double* rev_rates) {\n'
         '   eval_rxn_rates(y[0], pres, conc, fwd_rates, rev_rates);\n'
         '}\n\n'
-    )
+        )
     if pmod:
         file.write(
             '  __global__\n'
@@ -362,19 +365,19 @@ def __write_kernels(file, pmod):
         ', double* sp_rates) {\n'
         '   eval_spec_rates(fwd_rates, rev_rates, pres_mod, sp_rates);\n'
         '}\n\n'
-    )
+        )
     file.write(
         '  __global__\n'
         'void k_eval_dy_dt(double pres, const double* y, double* dy) {\n'
         '   dydt(0, pres, y, dy);\n'
         '}\n\n'
-    )
+        )
     file.write(
         '  __global__\n'
         'void k_eval_jacob(double pres, const double* y, double* jacob) {\n'
         '   eval_jacob(0, pres, y, jacob);\n'
         '}\n\n'
-    )
+        )
 
 
 def write_cuda_test(build_dir, rev, pmod):
@@ -554,7 +557,7 @@ def eval_jacobian(dydt, order):
     """
     """
     abs_tol = 1.e-20
-    rel_tol = 1.e-10
+    rel_tol = 1.e-16
 
     y = np.hstack((dydt.gas.T, dydt.gas.Y))
 
@@ -827,21 +830,26 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
         # Calculate "true" Jacobian numerically
-        jacob = eval_jacobian(ode, 6)
-        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                  jacob[non_zero]
-                  )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
-        #err_jac[i] = err
-        print('L2 norm relative error of non-zero Cantera Jacobian: {:.2e} %'
-              .format(err))
-        print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
-        err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
-        #err_jac_zero[i] = err
-        print('L2 norm difference of "zero" Cantera Jacobian: {:.2e}'.format(err))
+        try:
+            jacob = eval_jacobian(ode, 6)
+            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                      jacob[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err, 2) * 100.
+            #err_jac[i] = err
+            print('L2 norm relative error of non-zero Cantera Jacobian: '
+                  '{:.2e} %'.format(err))
+            print('Max error in non-zero Jacobian: {:.2e}% '
+                  '@ index {}'.format(max_err * 100., loc))
+            err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
+            #err_jac_zero[i] = err
+            print('L2 norm difference of "zero" Cantera Jacobian: '
+                  '{:.2e}'.format(err))
+        except:
+            print('Cantera unable to calculate Jacobian. '
+                  'Using custom FD only.')
 
         num = int(data[0])
         jacob = data[1: num + 1]

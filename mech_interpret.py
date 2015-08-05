@@ -818,7 +818,7 @@ def read_thermo(filename, elems, specs):
     return None
 
 
-def read_mech_ct(filename, gas=None):
+def read_mech_ct(filename=None, gas=None):
     """Read and interpret Cantera-format mechanism file.
 
     Parameters
@@ -851,7 +851,7 @@ def read_mech_ct(filename, gas=None):
     elif not gas:
         print('Error: need either filename or Cantera Solution object.')
         sys.exit(1)
-    
+
     # Elements
     elems = gas.element_names
     for e, wt in zip(elems, gas.atomic_weights):

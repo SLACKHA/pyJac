@@ -2684,5 +2684,3 @@ if __name__ == "__main__":
                      args.no_shared, args.L1_preferred, args.multi_thread,
                      args.force_optimize
                      )
-
-    return 0

@@ -923,5 +923,3 @@ if __name__ == '__main__':
     test(args.lang, args.build_dir, args.input, args.thermo, args.seed,
          args.generate_jacob, args.num_trials
          )
-
-    return 0

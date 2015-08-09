@@ -2668,5 +2668,3 @@ if __name__ == "__main__":
     create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks,
                     args.num_threads \
                     , args.no_shared, args.L1_preferred, args.multi_thread, args.force_optimize)
-
-    return 0

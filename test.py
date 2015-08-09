@@ -878,6 +878,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         os.remove(os.path.join(test_dir, f))
     os.rmdir(test_dir)
 
+    return 0
+
 if __name__ == '__main__':
     parser = ArgumentParser(
         description='Tests create_jacobian versus a finite difference'
@@ -921,3 +923,5 @@ if __name__ == '__main__':
     test(args.lang, args.build_dir, args.input, args.thermo, args.seed,
          args.generate_jacob, args.num_trials
          )
+
+    return 0

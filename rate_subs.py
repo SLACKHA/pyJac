@@ -2586,7 +2586,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
                                      old_rxn_order, optimize_cache
                                      )
 
-    return
+    return 0
 
 
 if __name__ == "__main__":
@@ -2684,3 +2684,5 @@ if __name__ == "__main__":
                      args.no_shared, args.L1_preferred, args.multi_thread,
                      args.force_optimize
                      )
+
+    return 0

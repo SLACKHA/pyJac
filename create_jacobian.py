@@ -2588,7 +2588,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
 
     write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
-    return None
+    return 0
 
 
 if __name__ == "__main__":
@@ -2668,3 +2668,5 @@ if __name__ == "__main__":
     create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer, args.initial_conditions, args.num_blocks,
                     args.num_threads \
                     , args.no_shared, args.L1_preferred, args.multi_thread, args.force_optimize)
+
+    return 0

@@ -1880,7 +1880,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
         file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
 
-    if not do_unroll or lang == 'c':
+    if any(rxn.plog for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
     if not do_unroll or lang == 'c':

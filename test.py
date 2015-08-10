@@ -604,7 +604,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
     """
     """
 
-    if seed:
+    if seed is not None:
         np.random.seed(seed)
 
     test_dir = '.' + os.path.sep + 'test'

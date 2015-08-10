@@ -604,7 +604,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
     """
     """
 
-    if seed:
+    if seed is not None:
         np.random.seed(seed)
 
     test_dir = '.' + os.path.sep + 'test'
@@ -877,6 +877,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
     for f in os.listdir(test_dir):
         os.remove(os.path.join(test_dir, f))
     os.rmdir(test_dir)
+
+    return 0
 
 if __name__ == '__main__':
     parser = ArgumentParser(

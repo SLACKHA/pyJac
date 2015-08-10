@@ -496,9 +496,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             )
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
                    '    void write_jacobian_and_rates_output(int NUM);\n'
-                   '    //apply masking of ICs for cache optimized mechanisms\n'
-                   '    void apply_mask(double*);\n'
                    '#endif\n'
+                   '//apply masking of ICs for cache optimized mechanisms\n'
+                   'void apply_mask(double*);\n'
                    )
 
         file.write('#endif\n\n')

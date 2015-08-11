@@ -380,12 +380,19 @@ def select_pairs(particles, num_pairs, num_skip=0):
             #particles[i], particles[j] = particles[j], particles[i]
 
         # Move to end of list
-        particles.append(particles.pop(i))
-        particles.append(particles.pop(i))
+        #particles.append(particles.pop(i))
+        #particles.append(particles.pop(i))
         # Swap with pair at end of list
-        #i_last = -2 * (i_pair + 1)
+        i_last = -2 * (i_pair + num_skip + 1)
+        temp_comp = particles[i]()
+        particles[i](particles[i_last]())
+        particles[i_last](temp_comp)
+
+        temp_comp = particles[j]()
+        particles[j](particles[i_last + 1]())
+        particles[i_last + 1](temp_comp)
         #particles[i], particles[i_last] = particles[i_last], particles[i]
-        #particles[i+1], particles[i_last+1] = particles[i_last+1], particles[i+1]
+        #particles[j], particles[i_last+1] = particles[i_last+1], particles[j]
 
 
 def inflow(streams):
@@ -432,14 +439,15 @@ def save_data(idx, time, particles, data):
     for i, p in enumerate(particles):
         data[idx, i, 0] = time
         data[idx, i, 1] = p.gas.T
-        data[idx, i, 2:] = p()[1:]
+        data[idx, i, 2] = p.gas.P
+        data[idx, i, 3:] = p()[1:]
 
 
 def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
                               oxidizer, complete_products=['CO2','H2O','N2'],
                               num_part=100, tau_res=(10./1000.),
                               tau_mix=(1./1000.), tau_pair=(1./1000.),
-                              num_res=5
+                              num_res=10
                               ):
     """Perform partially stirred reactor (PaSR) simulation.
 
@@ -555,12 +563,12 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
     part_out = 0.0
     part_pair = 0.0
 
-    times = np.zeros(num_steps + 2)
-    temp_mean = np.zeros(num_steps + 2)
+    times = np.zeros(num_steps + 1)
+    temp_mean = np.zeros(num_steps + 1)
     temp_mean[0] = np.mean([p.gas.T for p in particles])
 
     # Array of full particle data for all timesteps
-    particle_data = np.empty([num_steps + 2, num_part, gas.n_species + 2])
+    particle_data = np.empty([num_steps + 1, num_part, gas.n_species + 3])
     save_data(i_step, time, particles, particle_data)
 
     print('Time [ms]  Temperature [K]')

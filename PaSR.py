@@ -115,7 +115,7 @@ class Particle(object):
         if isinstance(other, Particle):
             h = other.gas.enthalpy_mass - self.gas.enthalpy_mass
             Y = other.gas.Y - self.gas.Y
-            return(h, Y)
+            return np.hstack((h, Y))
         elif isinstance(other, np.ndarray):
             h = other[0] - self.gas.enthalpy_mass
             Y = other[1:] - self.gas.Y
@@ -215,12 +215,12 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     fuel_sum = sum(fuel.values())
     if fuel_sum > 1.0:
         for sp, x in fuel.items():
-            fuel[sp] = x/fuel_sum
+            fuel[sp] = x / fuel_sum
 
     oxid_sum = sum(oxidizer.values())
     if oxid_sum > 1.0:
         for sp, x in oxidizer.items():
-            oxidizer[sp] = x/oxid_sum
+            oxidizer[sp] = x / oxid_sum
 
     # Check oxidation state of complete products
     for sp, el in product(complete_products, gas.element_names):
@@ -322,66 +322,89 @@ def pairwise(iterable):
 
 
 def mix_substep(particles, dt, tau_mix):
-    """
+    """Pairwise mixing step.
+
+    :param particles:
+        List of Particle objects.
+    :param dt:
+        Time step [s] to increment particles.
+    :param tau_mix:
+        Mixing timescale [s].
     """
 
-    decay = 0.5 * (1. - np.exp(-2. * dt / tau_mix))
+    decay = 0.5 * (1.0 - np.exp(-2.0 * dt / tau_mix))
     for p1, p2 in pairwise(particles):
         delt = (p1 - p2) * decay
         p1 -= delt
         p2 += delt
 
         # Update with new compositions
-        particles[particles.index(p1)] = p1
-        particles[particles.index(p2)] = p2
+        comp1 = p1()
+        comp2 = p2()
+        particles[particles.index(p1)](comp1)
+        particles[particles.index(p2)](comp2)
 
 
-def reaction_substep(particles, dt):
+def reaction_substep(particles, end_time):
     """Advance each of the particles in time through reactions.
 
     :param particles:
         List of Particle objects.
     :param dt:
-        Time step [s] to increment particle.
+        Time step [s] to increment particles.
     """
     for p in particles:
-        p.netw.advance(p.netw.time + dt)
+        p.netw.advance(end_time)
 
 
-def select_pairs(particles, num_pairs):
+def select_pairs(particles, num_pairs, num_skip=0):
     """Randomly select pair(s) of particles and move to end of list.
+
+    :param particles:
+        List of Particle objects.
+    :param num_pairs:
+        Number of pairs to be selected and moved.
+    :param num_skip:
+        Number of pairs at end of list to be skipped. Optional, default 0.
     """
 
-    pairs = np.random.randint(len(particles) // 2, size=num_pairs)
+    for i_pair in range(num_pairs):
+        i = 2 * np.random.randint((len(particles) // 2) - i_pair - num_skip)
+        j = i + 1
 
-    for i_pair, i in enumerate(pairs):
         # Commute particles at random
         if np.random.random() > 0.5:
-            particles[i], particles[i+1] = particles[i+1], particles[i]
+            temp_comp = particles[i]()
+            particles[i](particles[j]())
+            particles[j](temp_comp)
+            #particles[i], particles[j] = particles[j], particles[i]
 
+        # Move to end of list
+        particles.append(particles.pop(i))
+        particles.append(particles.pop(i))
         # Swap with pair at end of list
-        i_last = -2 * (i_pair + 1)
-        particles[i], particles[i_last+1] = particles[i_last+1], particles[i]
-        particles[i+1], particles[i_last] = particles[i_last], particles[i+1]
+        #i_last = -2 * (i_pair + 1)
+        #particles[i], particles[i_last] = particles[i_last], particles[i]
+        #particles[i+1], particles[i_last+1] = particles[i_last+1], particles[i+1]
 
 
 def inflow(streams):
     """Determine index of stream for next inflowing particle.
 
     :param streams:
-    List of Stream objects for inlet streams.
+        List of Stream objects for inlet streams.
     """
 
     # Find stream with largest running flow rate
     sum_flows = 0.0
     fl_max = 0.0
     i_inflow = None
-    for i, str in enumerate(streams):
-        str.xflow += str.flow
-        sum_flows += str.flow
+    for i, stream in enumerate(streams):
+        streams[i].xflow += stream.flow
+        sum_flows += stream.flow
 
-        if str.xflow > fl_max:
-            fl_max = str.xflow
+        if streams[i].xflow > fl_max:
+            fl_max = streams[i].xflow
             i_inflow = i
 
     # Check sum of flows
@@ -418,7 +441,7 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
                               tau_mix=(1./1000.), tau_pair=(1./1000.),
                               num_res=5
                               ):
-    """
+    """Perform partially stirred reactor (PaSR) simulation.
 
     :param mech:
         Mechanism filename (in Cantera format).
@@ -461,7 +484,7 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
     num_substeps = 1 + int(dt_max / dt_sub)
 
     time_end = num_res * tau_res
-    num_steps = time_end / dt_avg
+    num_steps = int(time_end / dt_avg)
 
     # Set initial conditions
     gas = ct.Solution(mech)
@@ -519,7 +542,7 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
     # Initialize all particles with pilot composition
     particles = []
     for i in range(num_part):
-        g = ct.Solution(mech_filename)
+        g = ct.Solution(mech)
         g.TPX = gas.T, gas.P, gas.X
         particles.append(Particle(g))
 
@@ -528,24 +551,27 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
 
     time = 0.0
     i_step = 0
+
     part_out = 0.0
     part_pair = 0.0
 
-    times = np.zeros(num_steps + 1)
-    temp_mean = np.zeros(num_steps + 1)
+    times = np.zeros(num_steps + 2)
+    temp_mean = np.zeros(num_steps + 2)
     temp_mean[0] = np.mean([p.gas.T for p in particles])
 
     # Array of full particle data for all timesteps
-    particle_data = np.empty([num_steps + 1, num_part, gas.n_species + 2])
+    particle_data = np.empty([num_steps + 2, num_part, gas.n_species + 2])
     save_data(i_step, time, particles, particle_data)
+
+    print('Time [ms]  Temperature [K]')
+    temp_mean[i_step] = np.mean([p.gas.T for p in particles])
+    print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
 
     while time < time_end:
         if (time + dt_max) > time_end:
             dt = time_end - time
         else:
             dt = dt_max
-        time += dt
-        i_step += 1
 
         part_out += num_part * dt / tau_res
         npart_out = int(round(part_out))
@@ -553,8 +579,8 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
 
         # Select num_pairs random pairs of particles for each
         # inflow/outflow particle and shift to end.
-        num_pairs = 2 * npart_out
-        select_pairs(particles, num_pairs)
+        num_fl_pairs = 2 * npart_out
+        select_pairs(particles, num_fl_pairs)
 
         # Set alternate particles to inflow properties
         for i in range(npart_out):
@@ -565,19 +591,23 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
         part_pair += 0.5 * num_part * dt / tau_pair
         num_pairs = int(round(part_pair))
         part_pair -= num_pairs
-        select_pairs(particles, num_pairs)
+        select_pairs(particles, num_pairs, num_fl_pairs)
 
         # Rotate particles
         temp_comp = particles[-1]()
         for i in [i*2 + 1 for i in range(num_pairs - 1)]:
-            particles[-i] =  particles[-(i+2)]
+            #particles[-i] = particles[-(i+2)]
+            particles[-i](particles[-(i+2)])
         particles[-(num_pairs * 2 - 1)](temp_comp)
 
         # Now loop over mix-react substeps
         dt_sub = dt / num_substeps
         for i in range(num_substeps):
             mix_substep(particles, dt_sub, tau_mix)
-            reaction_substep(particles, dt_sub)
+            reaction_substep(particles, time + dt_sub * (i + 1))
+
+        time += dt
+        i_step += 1
 
         # Save mean properties
         temp_mean[i_step] = np.mean([p.gas.T for p in particles])
@@ -586,7 +616,7 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
         # Save full data
         save_data(i_step, time, particles, particle_data)
 
-        print(time, temp_mean[i_step])
+        print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
 
     return particle_data
 

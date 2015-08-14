@@ -164,8 +164,8 @@ class ReacInfo(CommonEqualityMixin):
         self.dup = False
 
         # third-body efficiencies
-        self.thd = False
-        self.thd_body = []  # in pairs with species and efficiency
+        self.thd_body = False
+        self.thd_body_eff = []  # in pairs with species and efficiency
 
         # pressure dependence
         self.pdep = False

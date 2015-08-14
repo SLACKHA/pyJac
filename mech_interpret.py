@@ -457,7 +457,7 @@ def read_mech(mech_filename, therm_filename):
                                      prod_spec, prod_nu, reac_A, reac_b,
                                      reac_E
                                      )
-                reac.thd = thd
+                reac.thd_body = thd
                 reac.pdep = pdep
                 if pdep: reac.pdep_sp = pdep_sp
 
@@ -630,7 +630,7 @@ def read_mech(mech_filename, therm_filename):
                     line_split = line.split()
                     for i in range(0, len(line_split), 2):
                         pair = [line_split[i], float(line_split[i + 1])]
-                        reacs[-1].thd_body.append(pair)
+                        reacs[-1].thd_body_eff.append(pair)
 
     file.close()
 
@@ -905,9 +905,9 @@ def read_mech_ct(filename=None, gas=None):
                                  rxn.rate.temperature_exponent,
                                  rxn.rate.activation_energy * E_fac
                                  )
-            reac.thd = True
+            reac.thd_body = True
             for thd_body in rxn.efficiencies:
-                reac.thd_body.append([thd_body, rxn.efficiencies[thd_body]])
+                reac.thd_body_eff.append([thd_body, rxn.efficiencies[thd_body]])
 
         elif isinstance(rxn, ct.FalloffReaction):
             reac = chem.ReacInfo(rxn.reversible,
@@ -925,7 +925,7 @@ def read_mech_ct(filename=None, gas=None):
                 reac.pdep_sp = rxn.efficiencies.keys()[0]
             else:
                 for sp in rxn.efficiencies:
-                    reac.thd_body.append([sp, rxn.efficiencies[sp]])
+                    reac.thd_body_eff.append([sp, rxn.efficiencies[sp]])
 
             reac.low = [rxn.low_rate.pre_exponential_factor,
                         rxn.low_rate.temperature_exponent,
@@ -955,7 +955,7 @@ def read_mech_ct(filename=None, gas=None):
                 reac.pdep_sp = rxn.efficiencies.keys()[0]
             else:
                 for sp in rxn.efficiencies:
-                    reac.thd_body.append([sp, rxn.efficiencies[sp]])
+                    reac.thd_body_eff.append([sp, rxn.efficiencies[sp]])
 
             reac.high = [rxn.high_rate.pre_exponential_factor,
                          rxn.high_rate.temperature_exponent,

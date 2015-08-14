@@ -46,21 +46,21 @@ def round_sig(x, sig=8):
 
 def read_str_num(string, sep=None):
     """Returns a list of floats pulled from a string.
-    
+
     Delimiter is optional; if not specified, uses whitespace.
-    
+
     Parameters
     ----------
     string : str
         String to be parsed.
     sep : str, optional
         Delimiter (default is None, which means consecutive whitespace).
-    
+
     Returns
     -------
     list of float
         Floats separated by `sep` in `string`.
-    
+
     """
 
     # separate string into space-delimited strings of numbers
@@ -70,37 +70,37 @@ def read_str_num(string, sep=None):
 
 def split_str(seq, length):
     """Separate a string seq into length-sized pieces.
-    
+
     Parameters
     ----------
     seq : str
         String containing sequence of smaller strings of constant length.
     length : int
         Length of individual sequences.
-    
+
     Returns
     -------
     list of str
         List of strings of length `length` from `seq`.
-    
+
     """
     return [seq[i: i + length] for i in range(0, len(seq), length)]
 
 
 def create_dir(path):
     """Creates a new directory based on input path.
-    
+
     No error if path already exists, but other error is reported.
-    
+
     Parameters
     ----------
     path : str
         Path of directory to be created
-    
+
     Returns
     -------
     None
-    
+
     """
     try:
         os.makedirs(path)
@@ -158,7 +158,7 @@ def get_index(lang, index):
 
 def reassign_species_lists(reacs, specs):
     """
-    Given a list of ReacInfo, and SpecInfo's, this method will update the ReacInfo's 
+    Given a list of ReacInfo, and SpecInfo's, this method will update the ReacInfo's
     reactants / products / third body list to integers representing the species' index in the list
     """
 
@@ -166,7 +166,7 @@ def reassign_species_lists(reacs, specs):
     for rxn in reacs:
         rxn.reac = [species_map[sp] for sp in rxn.reac]
         rxn.prod = [species_map[sp] for sp in rxn.prod]
-        rxn.thd_body = [(species_map[thd[0]], thd[1]) for thd in rxn.thd_body]
+        rxn.thd_body_eff = [(species_map[thd[0]], thd[1]) for thd in rxn.thd_body_eff]
         if rxn.pdep_sp:
             rxn.pdep_sp = species_map[rxn.pdep_sp]
 

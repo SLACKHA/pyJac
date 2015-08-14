@@ -457,7 +457,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
     # some information variables
     have_rev_rxns = any(reac.rev for reac in reacs)
-    have_pdep_rxns = any(reac.thd or reac.pdep for reac in reacs)
+    have_pdep_rxns = any(reac.thd_body or reac.pdep for reac in reacs)
 
     # the mechanism header defines a number of useful preprocessor defines, as
     # well as defining method stubs for setting initial conditions
@@ -486,7 +486,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    )
         file.write('//Number of reactions with pressure modified rates\n')
         file.write('#define PRES_MOD_RATES {}\n\n'.format(
-            len([reac for reac in reacs if reac.pdep or reac.thd]))
+            len([reac for reac in reacs if reac.pdep or reac.thd_body]))
             )
 
         file.write(
@@ -733,8 +733,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '    }\n'
                        )
         if have_pdep_rxns:
-            old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd]
-            pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd]
+            old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd_body]
+            pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
             old_pdep_order = [pdep_reacs.index(rxn) for rxn in old_pdep_order]
             file.write('    int pdep_rxn_ord[PRES_MOD_RATES] = {{ {} }}'.format(', '.join(map(str, old_pdep_order))) +
                        utils.line_end[lang])

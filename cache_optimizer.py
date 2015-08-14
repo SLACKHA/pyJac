@@ -1,4 +1,4 @@
-""" Cache Optimizer 
+""" Cache Optimizer
 
     Reorders loads of rate and species subs to optimize cache hits, etc.
 """
@@ -46,7 +46,7 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
         for rind, rxn in enumerate(reacs):
             the_set = set(rxn.reac + rxn.prod)
             if consider_thd:
-                thd_sp = [thd[0] for thd in rxn.thd_body if thd[1] - 1.0 != 0]
+                thd_sp = [thd[0] for thd in rxn.thd_body_eff if thd[1] - 1.0 != 0]
                 if thd_sp:
                     the_set = the_set.union(set(thd_sp))
             if any(sp.name == x for x in the_set):
@@ -124,7 +124,7 @@ def __shared_specs_score(the_list, candidate, additional_args):
 
 def __conc_temp(rxn, specs):
     ret_list = []
-    for thd_sp in rxn.thd_body:
+    for thd_sp in rxn.thd_body_eff:
         isp = specs.index(next((s for s in specs
                                 if s.name == thd_sp[0]), None))
         val = thd_sp[1] - 1.0
@@ -140,12 +140,12 @@ def __shared_specs_score_pdep(the_list, candidate, additional_args):
     ind_1 = reacs.index(the_list[-1])
     ind_2 = reacs.index(candidate)
     misses = 0
-    for spec, val in reacs[ind_1].thd_body:
-        other_val = next((sp[1] for sp in reacs[ind_2].thd_body if sp[0] == spec), None)
+    for spec, val in reacs[ind_1].thd_body_eff:
+        other_val = next((sp[1] for sp in reacs[ind_2].thd_body_eff if sp[0] == spec), None)
         if other_val is None or other_val != val:
             misses += 1
-    for spec, val in reacs[ind_2].thd_body:
-        if not any(sp[0] == spec for sp in reacs[ind_1].thd_body):
+    for spec, val in reacs[ind_2].thd_body_eff:
+        if not any(sp[0] == spec for sp in reacs[ind_1].thd_body_eff):
             misses += 1
     for sp in set(reacs[ind_1].reac + reacs[ind_1].prod):
         nu_1 = get_nu_name(sp, reacs[ind_1])
@@ -158,9 +158,11 @@ def __shared_specs_score_pdep(the_list, candidate, additional_args):
         if nu_2 is not None and nu_2 != 0 and (nu_1 is None or nu_1 == 0):
             misses += 1
 
-    return 1.0 - misses / len(set(reacs[ind_1].reac + reacs[ind_1].prod + reacs[ind_2].reac + reacs[ind_2].prod + \
-                                  [thd[0] for thd in reacs[ind_1].thd_body] + [thd[0] for thd in
-                                                                               reacs[ind_2].thd_body]))
+    return (1.0 - misses / len(set(reacs[ind_1].reac + reacs[ind_1].prod +
+            reacs[ind_2].reac + reacs[ind_2].prod +
+            [thd[0] for thd in reacs[ind_1].thd_body_eff] +
+            [thd[0] for thd in reacs[ind_2].thd_body_eff]))
+            )
 
 
 def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s):
@@ -288,7 +290,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     # First find pdep reacs
     pdep_reacs = []
     for reac in reacs:
-        if reac.thd or reac.pdep:
+        if reac.thd_body or reac.pdep:
             # add reaction index to list
             pdep_reacs.append(reac)
 

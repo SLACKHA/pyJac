@@ -29,25 +29,25 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     usages = []
     fwd_usage = 2
     rev_usage = 0 if not rxn.rev else 2
-    pres_mod_usage = 0 if not (rxn.pdep or rxn.thd) else (4 if rxn.thd else 2)
+    pres_mod_usage = 0 if not (rxn.pdep or rxn.thd_body) else (4 if rxn.thd_body else 2)
     reac_usages = [0 for i in range(len(rxn.reac))]
     prod_usages = [0 for i in range(len(rxn.prod))]
     # add variables
     variable_list.append(utils.get_array('cuda', 'fwd_rates', rind))
     if rxn.rev:
         variable_list.append(utils.get_array('cuda', 'rev_rates', rev_reacs.index(rind)))
-    if rxn.pdep or rxn.thd:
+    if rxn.pdep or rxn.thd_body:
         variable_list.append(utils.get_array('cuda', 'pres_mod', pdep_reacs.index(rind)))
-    for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
+    for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff]):
         variable_list.append(utils.get_array('cuda', 'conc', sp))
 
     alphaij_count = 0
     # calculate usages
-    if rxn.thd or rxn.pdep:
+    if rxn.thd_body or rxn.pdep:
         fwd_usage += 1
         if rxn.rev:
             rev_usage += 1
-        for i, thd in enumerate(rxn.thd_body):
+        for i, thd in enumerate(rxn.thd_body_eff):
             # check alphaij
             alphaij = thd[1]
             if alphaij is not None and alphaij != 1.0:
@@ -60,7 +60,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
         nu = rxn.reac_nu[i]
         if nu - 1 > 0:
             reac_usages[i] += 1
-            if rxn.thd:
+            if rxn.thd_body:
                 pres_mod_usage += 1
         for i2, sp2 in enumerate(rxn.reac):
             if sp == sp2:
@@ -80,15 +80,15 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     usages.append(fwd_usage)
     if rxn.rev:
         usages.append(rev_usage)
-    if rxn.pdep or rxn.thd:
+    if rxn.pdep or rxn.thd_body:
         usages.append(pres_mod_usage)
-    for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body]):
+    for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff]):
         u = 0
         if sp in rxn.reac:
             u += reac_usages[rxn.reac.index(sp)]
         if sp in rxn.prod:
             u += prod_usages[rxn.prod.index(sp)]
-        if sp in rxn.thd_body:
+        if sp in rxn.thd_body_eff:
             u += 1
         usages.append(u)
 
@@ -150,13 +150,13 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     jline = ''
     # next, contribution from dR/dYj
     # namely the T_dy independent term
-    if rxn.pdep or rxn.thd:
+    if rxn.pdep or rxn.thd_body:
         jline += get_array(lang, 'pres_mod', pind)
         jline += ' * ('
 
     reac_nu = 0
     prod_nu = 0
-    if rxn.thd and not rxn.pdep:
+    if rxn.thd_body and not rxn.pdep:
         reac_nu = 1
         if rxn.rev:
             prod_nu = 1
@@ -188,7 +188,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     counter = {}
     counter[1.0] = 0
     if rxn.thd_body:
-        for spec, efficiency in rxn.thd_body:
+        for spec, efficiency in rxn.thd_body_eff:
             if not efficiency in counter:
                 counter[efficiency] = 0
             counter[efficiency] += 1
@@ -196,7 +196,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
 
     # now handle third body / pdep parts if needed
-    if rxn.thd and not rxn.pdep:
+    if rxn.thd_body and not rxn.pdep:
         jline += '))'
         if alphaij_hat is not None:
             if alphaij_hat == 1.0:
@@ -221,7 +221,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         jline += ')'
     file.write(jline + utils.line_end[lang])
 
-    if rxn.pdep and not rxn.thd and rxn.pdep_sp == '':
+    if rxn.pdep and not rxn.thd_body_eff and rxn.pdep_sp == '':
         file.write('  pres_mod_temp /= conc_temp' + utils.line_end[lang])
     return alphaij_hat
 
@@ -282,7 +282,7 @@ def write_rates(file, lang, rxn):
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
     jline = 'j_temp'
     if rxn.pdep and rxn.pdep_sp == '' and alphaij_hat is not None:
-        alphaij = next((thd[1] for thd in rxn.thd_body
+        alphaij = next((thd[1] for thd in rxn.thd_body_eff
                         if thd[0] == j_sp and thd[1] != 1.0), None)
         if alphaij is None:
             alphaij = 1.0
@@ -297,8 +297,8 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += ' + pres_mod_temp'
     elif rxn.pdep and rxn.pdep_sp == j_sp:
         jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
-    elif rxn.thd and not rxn.pdep and alphaij_hat is not None:
-        alphaij = next((thd[1] for thd in rxn.thd_body
+    elif rxn.thd_body and not rxn.pdep and alphaij_hat is not None:
+        alphaij = next((thd[1] for thd in rxn.thd_body_eff
                         if thd[0] == j_sp and thd[1] != 1.0), None)
         if alphaij is None:
             alphaij = 1.0
@@ -313,12 +313,12 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 jline += ' + '
             jline += get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
 
-    if (rxn.pdep or rxn.thd) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
+    if (rxn.pdep or rxn.thd_body) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
         jline += ' * '
 
     if j_sp in rxn.reac:
-        if not rxn.pdep and not rxn.thd:
+        if not rxn.pdep and not rxn.thd_body:
             jline += ' + '
         nu = rxn.reac_nu[rxn.reac.index(j_sp)]
         if nu != 1:
@@ -353,7 +353,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                           )
 
     if rxn.rev and j_sp in rxn.prod:
-        if not rxn.pdep and not rxn.thd and not j_sp in rxn.reac:
+        if not rxn.pdep and not rxn.thd_body and not j_sp in rxn.reac:
             jline += ' + '
         elif j_sp in rxn.reac:
             jline += ' + '
@@ -746,7 +746,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
     else:
         line += '(m'
 
-        for isp, eff in rxn.thd_body:
+        for isp, eff in rxn.thd_body_eff:
             if eff > 1.0:
                 line += ' + {} * '.format(eff - 1.0)
             elif eff < 1.0:
@@ -798,7 +798,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
         file.write(line + utils.line_end[lang])
 
     if rxn.pdep:
-        if rxn.thd_body:
+        if rxn.thd_body_eff:
             line = utils.line_start + 'Pr = conc_temp'
         beta_0minf, E_0minf, k0kinf = get_infs(rxn)
         # finish writing P_ri
@@ -1638,7 +1638,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     pdep_reacs = []
     for i, reac in enumerate(reacs):
-        if reac.thd or reac.pdep:
+        if reac.thd_body or reac.pdep:
             # add reaction index to list
             pdep_reacs.append(i)
     num_pdep = len(pdep_reacs)
@@ -1677,7 +1677,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                  '  \n'
                  '  real(wp) :: T, rho, cp_avg, logT\n'
                  )
-        if any(reacs[rxn].thd for rxn in rev_reacs):
+        if any(reacs[rxn].thd_body for rxn in rev_reacs):
             line += '  real(wp) :: m\n'
         line += ('  real(wp), dimension({}) :: '.format(num_s) +
                  'conc, cp, h, dy\n'
@@ -1787,7 +1787,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write('\n')
 
     # third-body variable needed for reactions
-    if any((rxn.pdep and rxn.pdep_sp == '') or rxn.thd for rxn in reacs):
+    if any((rxn.pdep and rxn.pdep_sp == '') or rxn.thd_body for rxn in reacs):
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -1937,7 +1937,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     rev = True
                 if reacs[ind_next].pdep:
                     pdep = True
-                if reacs[ind_next].thd:
+                if reacs[ind_next].thd_body:
                     thd = True
                 if reacs[ind_next].troe:
                     troe = True
@@ -2468,7 +2468,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initial_state="", num_blocks=8,
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False, initial_state="", num_blocks=8,
                     num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1, force_optimize=False,
                     build_path='./out/'):
     """Create Jacobian subroutine from mechanism.
@@ -2527,14 +2527,19 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
     if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
-        old_spec_order, old_rxn_order = cache.greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize,
-                                                               build_path)
+        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, \
+        spec_rate_order, old_spec_order, \
+        old_rxn_order = cache.greedy_optimizer(lang, specs, reacs,
+                                               multi_thread, force_optimize,
+                                               build_path
+                                               )
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
         rxn_rate_order = range(len(reacs))
-        if any(r.pdep or r.thd for r in reacs):
-            pdep_rate_order = [x for x in range(len(reacs)) if reacs[x].pdep or reacs[x].thd]
+        if any(r.pdep or r.thd_body for r in reacs):
+            pdep_rate_order = [x for x in range(len(reacs))
+                               if reacs[x].pdep or reacs[x].thd_body
+                               ]
         else:
             pdep_rate_order = None
         the_len = len(reacs)
@@ -2546,12 +2551,17 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
         old_rxn_order = range(len(reacs))
 
     if lang == 'cuda':
-        CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads, L1_preferred, no_shared)
+        CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads,
+                                       L1_preferred, no_shared
+                                       )
     smm = None
     if lang == 'cuda' and not no_shared:
-        smm = shared.shared_memory_manager(num_blocks, num_threads, L1_preferred)
+        smm = shared.shared_memory_manager(num_blocks, num_threads,
+                                           L1_preferred
+                                           )
 
-    #reassign the reaction's product / reactant / third body list to integer indexes for speed
+    #reassign the reaction's product / reactant / third body list
+    # to integer indexes for speed
     utils.reassign_species_lists(reacs, specs)
 
     ## now begin writing subroutines
@@ -2561,8 +2571,10 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=True, initi
 
     # if third-body/pressure-dependent reactions,
     # print modification subroutine
-    if next((r for r in reacs if (r.thd or r.pdep)), None):
-        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, pdep_rate_order, smm)
+    if next((r for r in reacs if (r.thd_body or r.pdep)), None):
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs,
+                                    pdep_rate_order, smm
+                                    )
 
     # write species rates subroutine
     rate.write_spec_rates(build_path, lang, specs, reacs, spec_rate_order, smm)

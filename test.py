@@ -127,7 +127,7 @@ def convert_mech(mech_filename, therm_filename=None):
           )
     return mech_filename
 
-def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-16):
+def __write_fd_jacob(file, lang, atol=1.e-14, rtol=1.e-8):
     file.write(
         """
         #define FD_ORD 6
@@ -556,8 +556,8 @@ def write_c_test(build_dir, pmod):
 def eval_jacobian(dydt, order):
     """
     """
-    abs_tol = 1.e-20
-    rel_tol = 1.e-16
+    abs_tol = 1.e-14
+    rel_tol = 1.e-8
 
     y = np.hstack((dydt.gas.T, dydt.gas.Y))
 
@@ -606,6 +606,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
 
     if seed is not None:
         np.random.seed(seed)
+    else:
+        np.random.seed()
 
     test_dir = '.' + os.path.sep + 'test'
     utils.create_dir(test_dir)
@@ -700,13 +702,27 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
     rand_mass = np.random.uniform(0., 1., (num_trials, gas.n_species))
     rand_space = zip(rand_temp, rand_pres, rand_mass)
 
+    state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
+                                    state_data.shape[2]
+                                    )
+    num_trials = len(state_data)
+
     err_dydt = np.zeros(num_trials)
     err_dydt_zero = np.zeros(num_trials)
     err_jac = np.zeros(num_trials)
+    err_jac_ct = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
-    for i, (temp, pres, mass_frac) in enumerate(rand_space):
+    err_eig = np.zeros(num_trials)
+    err_eig_ct = np.zeros(num_trials)
+
+    #for i, (temp, pres, mass_frac) in enumerate(rand_space):
+    for i, state in enumerate(state_data):
         # Normalize mass fractions
-        mass_frac /= sum(mass_frac)
+        #mass_frac /= sum(mass_frac)
+
+        temp = state[1]
+        pres = state[2]
+        mass_frac = state[3:]
 
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
@@ -726,63 +742,67 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         ode = ReactorConstPres(gas)
 
         # Now read output from test program
-        data = np.genfromtxt(os.path.join(test_dir, 'output.txt'))
+        test_data = np.genfromtxt(os.path.join(test_dir, 'output.txt'))
 
-        num = int(data[0])
-        test_conc = data[1: num + 1]
-        data = data[num + 1:]
-        err = abs((test_conc - gas.concentrations) /
-                  gas.concentrations
+        num = int(test_data[0])
+        test_conc = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
+        non_zero = np.where(test_conc != 0.)[0]
+        err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
+                  gas.concentrations[non_zero]
                   )
         max_err = np.max(err)
-        loc = np.argmax(err)
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err, 2) * 100.
-        print('L2 norm error in concentration: {:.2e} %'.format(err))
-        print('Max error in concentration: {:.2e} % @ species {}'
+        print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
+        print('Max error in non-zero concentration: {:.2e} % @ species {}'
             .format(max_err * 100., loc))
 
-        num = int(data[0])
-        test_fwd_rates = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_fwd_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-        num = int(data[0])
-        test_rev_rates = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_rev_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-        num = int(data[0])
-        test_pres_mod = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_pres_mod = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
         test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
 
-        err = abs((test_fwd_rates - gas.forward_rates_of_progress) /
-                  gas.forward_rates_of_progress
+        non_zero = np.where(test_fwd_rates != 0.)[0]
+        err = abs((test_fwd_rates[non_zero] -
+                  gas.forward_rates_of_progress[non_zero]) /
+                  gas.forward_rates_of_progress[non_zero]
                   )
         max_err = np.max(err)
-        loc = np.argmax(err)
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err, 2) * 100.
-        print('L2 norm error in forward reaction rates: {:.2e}%'.format(err))
-        print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
+        print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
+        print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
               format(max_err * 100., loc))
 
         if idx_rev:
-            err = abs((test_rev_rates -
-                      gas.reverse_rates_of_progress[idx_rev]) /
-                      gas.reverse_rates_of_progress[idx_rev]
+            non_zero = np.where(test_rev_rates != 0.)[0]
+            err = abs((test_rev_rates[non_zero] -
+                      (gas.reverse_rates_of_progress[idx_rev])[non_zero]) /
+                      (gas.reverse_rates_of_progress[idx_rev])[non_zero]
                       )
             max_err = np.max(err)
-            loc = np.argmax(err)
+            loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err, 2) * 100.
-            print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
-            print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
+            print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
+            print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
                   format(max_err * 100., loc))
 
         # Species production rates
-        num = int(data[0])
-        test_spec_rates = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_spec_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -804,9 +824,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
             'L2 norm difference of "zero" net production rates: {:.2e}'
             .format(err))
 
-        num = int(data[0])
-        test_dydt = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_dydt = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
         err = abs((test_dydt[non_zero] - ode()[non_zero]) /
@@ -824,50 +844,64 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        num = int(data[0])
-        test_jacob = data[1: num + 1]
-        data = data[num + 1:]
-        non_zero = np.where(test_jacob != 0.)[0]
+        num = int(test_data[0])
+        test_jacob = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
+        #non_zero = np.where(test_jacob != 0.)[0]
+        non_zero = np.where(abs(test_jacob) > 1.e-10)[0]
         zero = np.where(test_jacob == 0.)[0]
+
+        wt, vt = np.linalg.eig(test_jacob.reshape(gas.n_species+1,gas.n_species+1))
         # Calculate "true" Jacobian numerically
         try:
             jacob = eval_jacobian(ode, 6)
-            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                      jacob[non_zero]
-                      )
-            max_err = np.max(err)
-            loc = non_zero[np.argmax(err)]
-            err = np.linalg.norm(err, 2) * 100.
-            #err_jac[i] = err
-            print('L2 norm relative error of non-zero Cantera Jacobian: '
-                  '{:.2e} %'.format(err))
-            print('Max error in non-zero Jacobian: {:.2e}% '
-                  '@ index {}'.format(max_err * 100., loc))
+            #err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+            #          jacob[non_zero]
+            #          )
+            #max_err = np.max(err)
+            #loc = non_zero[np.argmax(err)]
+            #err = np.linalg.norm(err, 2) * 100.
+            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
+            w, v = np.linalg.eig(jacob.reshape(gas.n_species+1,gas.n_species+1))
+
+            nz = np.where(abs(w) > np.linalg.norm(w) / 1.e8)
+            err_eig_ct[i] = np.max( abs(w[nz] - wt[nz]) / abs(w[nz]) )
+            err_jac_ct[i] = err
+            print('L2 norm error of Cantera Jacobian: '
+                  '{:.2e}'.format(err))
+            #print('Max error in non-zero Jacobian: {:.2e}% '
+            #      '@ index {}'.format(max_err * 100., loc))
             err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
-            #err_jac_zero[i] = err
+            err_jac_zero[i] = err
             print('L2 norm difference of "zero" Cantera Jacobian: '
                   '{:.2e}'.format(err))
         except:
             print('Cantera unable to calculate Jacobian. '
                   'Using custom FD only.')
 
-        num = int(data[0])
-        jacob = data[1: num + 1]
-        data = data[num + 1:]
-        non_zero = np.where(test_jacob != 0.)[0]
+        num = int(test_data[0])
+        jacob = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
+        #non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
+        #jac_norm = np.linalg.norm(test_jacob, 2)
+        #non_zero = np.where(abs(test_jacob) > jac_norm / 1.e6)[0]
         # Calculate "true" Jacobian numerically
-        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                  jacob[non_zero]
-                  )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
-        err_jac[i] = err
-        print('L2 norm relative error of our non-zero Jacobian: {:.2e} %'
-              .format(err))
-        print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
+        #err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+        #          jacob[non_zero]
+        #          )
+        #max_err = np.max(err)
+        #loc = non_zero[np.argmax(err)]
+        #err = np.linalg.norm(err, 2) * 100.
+        #err_jac[i] = err
+        err_jac[i] = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
+        w, v = np.linalg.eig(jacob.reshape(gas.n_species+1,gas.n_species+1))
+        nz = np.where(abs(w) > np.linalg.norm(w) / 1.e6)
+        err_eig[i] = np.max( abs(w[nz] - wt[nz]) / abs(w[nz]) )
+        print('L2 norm relative error of our non-zero Jacobian: {:.2e}'
+              .format(err_jac[i]))
+        #print('Max error in non-zero Jacobian: {:.2e}% '
+        #      '@ index {}'.format(max_err * 100., loc))
         err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
         err_jac_zero[i] = err
         print('L2 norm difference of our "zero" Jacobian: {:.2e}'.format(err))

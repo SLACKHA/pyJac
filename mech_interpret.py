@@ -699,7 +699,7 @@ def read_thermo(filename, elems, specs):
             if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
             # skip 'thermo' at beginning
-            if line[0:6].lower() == 'thermo': break
+            if 'thermo' in line.lower(): break
 
         # next line either has common temperature ranges or first species
         last_line = file.tell()

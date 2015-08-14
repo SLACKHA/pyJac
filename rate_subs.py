@@ -257,7 +257,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     num_r = len(reacs)
     rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     num_rev = len(rev_reacs)
-    pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd or rxn.pdep]
+    pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd_body or rxn.pdep]
 
     # first write header file
     if lang == 'c':
@@ -777,14 +777,16 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     troe_flag = False
     sri_flag = False
     for i_rxn, reac in enumerate(reacs):
-        if reac.thd:
+        if reac.thd_body:
             # add reaction index to list
             thd_flag = True
             pdep_reacs.append(i_rxn)
         if reac.pdep:
             # add reaction index to list
             pdep_flag = True
-            if not reac.thd: pdep_reacs.append(i_rxn)
+            
+            ## This may be redundant, since thd_body and pdep are mutually exclusive.
+            if not reac.thd_body: pdep_reacs.append(i_rxn)
 
             if reac.troe and not troe_flag: troe_flag = True
             if reac.sri and not sri_flag: sri_flag = True
@@ -932,10 +934,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         line += utils.line_end[lang]
         file.write(line)
 
-        if reac.thd_body:
+        if reac.thd_body_eff:
             if lang == 'cuda' and smm is not None:
                 the_vars = []
-                indexes = [sp[0] for sp in reac.thd_body]
+                indexes = [sp[0] for sp in reac.thd_body_eff]
                 the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
                 # estimate usages as the number of consecutive reactions
                 usages = []
@@ -943,7 +945,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                     temp = i_rxn + 1
                     while temp < len(ordering):
                         rxn = reacs[ordering[temp]]
-                        if sp_i in set([x[0] for x in rxn.thd_body]):
+                        if sp_i in set([x[0] for x in rxn.thd_body_eff]):
                             temp += 1
                         else:
                             break
@@ -951,11 +953,11 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 smm.load_into_shared(file, the_vars, usages)
 
         # third-body reaction
-        if reac.thd:
+        if reac.thd_body:
 
             line = '  ' + get_array(lang, 'pres_mod', pind) + ' = m'
 
-            for sp in reac.thd_body:
+            for sp in reac.thd_body_eff:
                 if sp[1] == 1.0:
                     continue
                 elif sp[1] > 1.0:
@@ -971,7 +973,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if reac.pdep:
             if reac.pdep_sp == '':
                 line = '  thd = m'
-                for sp in reac.thd_body:
+                for sp in reac.thd_body_eff:
                     if sp[1] == 1.0:
                         continue
                     elif sp[1] > 1.0:
@@ -1116,7 +1118,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if lang == 'cuda' and smm is not None:
             # mark for eviction
             the_vars = []
-            indexes = [sp[0] for sp in reac.thd_body if sp[1] != 1.0]
+            indexes = [sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0]
             the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
             # estimate usages as the number of consecutive reactions
             mark = []
@@ -1124,7 +1126,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 temp = i_rxn + 1
                 while temp < len(ordering):
                     rxn = reacs[ordering[temp]]
-                    if sp_i not in set([x[0] for x in rxn.thd_body if x[1] != 1.0]):
+                    if sp_i not in set([x[0] for x in rxn.thd_body_eff if x[1] != 1.0]):
                         temp += 1
                     else:
                         break
@@ -1186,7 +1188,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     # pressure dependent reactions
     pdep_reacs = []
     for i_rxn, reac in enumerate(reacs):
-        if reac.thd or reac.pdep:
+        if reac.thd_body or reac.pdep:
             # add reaction index to list
             pdep_reacs.append(i_rxn)
 
@@ -1234,7 +1236,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         for spind in i_specs:
             sp = specs[spind]
 
-            line = '  ' + get_array(lang, 'sp_rates', spind) + ' {}= '.format('+' if seen[spind] else '')
+            line = ('  ' + get_array(lang, 'sp_rates', spind) +
+                    ' {}= '.format('+' if seen[spind] else '')
+                    )
             seen[spind] = True
 
             # continuation line
@@ -1244,20 +1248,25 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
             inreac = False
             if lang == 'cuda' and smm is not None:
-                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + (
-                    '' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates',
-                                                                           rev_reacs.index(rind)))
-                            for rind in i_reacs]
-                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
-                            range(len(i_reacs))]
                 the_vars = [
-                    the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' +
-                                                                                              utils.get_array(lang,
-                                                                                                              'pres_mod',
-                                                                                                              pdep_reacs.index(
-                                                                                                                  i_reacs[
-                                                                                                                      i]))
-                    for i in range(len(i_reacs))]
+                    utils.get_array(lang, 'fwd_rates', rind) + (''
+                    if not reacs[rind].rev else ' - ' +
+                    utils.get_array(lang, 'rev_rates', rev_reacs.index(rind)))
+                    for rind in i_reacs
+                    ]
+                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev
+                            else the_vars[i] for i in
+                            range(len(i_reacs))
+                            ]
+                the_vars = [
+                    the_vars[i] if not (reacs[i_reacs[i]].pdep or
+                                        reacs[i_reacs[i]].thd_body)
+                    else the_vars[i] + ' * ' +
+                    utils.get_array(lang, 'pres_mod',
+                                    pdep_reacs.index(i_reacs[i])
+                                    )
+                    for i in range(len(i_reacs))
+                    ]
                 # estimate usages
                 usages = []
                 order_index = ordering.index(order)
@@ -1272,7 +1281,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 rxn = reacs[rind]
 
                 pdep = False
-                if rxn.thd or rxn.pdep: pdep = True
+                if rxn.thd_body or rxn.pdep: pdep = True
 
                 # move to new line if current line is too long
                 if len(line) > 85:
@@ -1418,13 +1427,15 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
                             range(len(i_reacs))]
                 the_vars = [
-                    the_vars[i] if not (reacs[i_reacs[i]].pdep or reacs[i_reacs[i]].thd) else the_vars[i] + ' * ' +
-                                                                                              utils.get_array(lang,
-                                                                                                              'pres_mod',
-                                                                                                              pdep_reacs.index(
-                                                                                                                  i_reacs[
-                                                                                                                      i]))
-                    for i in range(len(i_reacs))]
+                    the_vars[i] if not (reacs[i_reacs[i]].pdep or
+                                        reacs[i_reacs[i]].thd_body
+                                        )
+                    else the_vars[i] + ' * ' +
+                    utils.get_array(lang, 'pres_mod',
+                                    pdep_reacs.index(i_reacs[i])
+                                    )
+                    for i in range(len(i_reacs))
+                    ]
                 # mark for eviction
                 mark = []
                 order_index = ordering.index(order)
@@ -1980,7 +1991,7 @@ def write_derivs(path, lang, specs, reacs):
                )
 
     # reaction pressure dependence
-    num_dep_reacs = sum([rxn.thd or rxn.pdep for rxn in reacs])
+    num_dep_reacs = sum([rxn.thd_body or rxn.pdep for rxn in reacs])
     if num_dep_reacs > 0:
         file.write('  // get pressure modifications to reaction rates\n'
                    '  double pres_mod[{}];\n'.format(num_dep_reacs) +
@@ -2113,7 +2124,7 @@ def write_derivs(path, lang, specs, reacs):
                )
 
     # reaction pressure dependence
-    num_dep_reacs = sum([rxn.thd or rxn.pdep for rxn in reacs])
+    num_dep_reacs = sum([rxn.thd_body or rxn.pdep for rxn in reacs])
     if num_dep_reacs > 0:
         file.write('  // get pressure modifications to reaction rates\n'
                    '  double pres_mod[{}];\n'.format(num_dep_reacs) +
@@ -2526,9 +2537,9 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
     else:
         spec_rate_order = [(range(len(specs)), range(len(reacs)))]
         rxn_rate_order = range(len(reacs))
-        if any(r.pdep or r.thd for r in reacs):
+        if any(r.pdep or r.thd_body for r in reacs):
             pdep_rate_order = [x for x in range(len(reacs))
-                               if reacs[x].pdep or reacs[x].thd
+                               if reacs[x].pdep or reacs[x].thd_body
                                ]
         else:
             pdep_rate_order = None
@@ -2560,7 +2571,7 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
 
     # if third-body/pressure-dependent reactions,
     # print modification subroutine
-    if any([r for r in reacs if r.thd or r.pdep]):
+    if any([r for r in reacs if r.thd_body or r.pdep]):
         write_rxn_pressure_mod(build_path, lang, specs, reacs,
                                pdep_rate_order, smm
                                )

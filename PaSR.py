@@ -26,6 +26,9 @@ try:
 except ImportError:
     print('Warning: YAML must be installed to read input file.')
 
+# Parallel processing for reaction substep
+parallel = False
+#import multiprocessing
 
 class Stream(object):
     def __init__(self, gas, flow):
@@ -184,6 +187,11 @@ class Particle(object):
         self.netw.reinitialize()
         return self
 
+    def react(self, end_time):
+        """Perform reaction timestep by advancing network.
+        """
+        self.netw.advance(end_time)
+
 
 def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     """Calculate the mixture mole fractions from the equivalence ratio.
@@ -289,7 +297,7 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     # Compute how many O atoms are required to oxidize everybody
     num_O_req = (num_C_fuel * C_multiplier +
                  num_H_fuel * H_multiplier - num_O_fuel)
-    O_mult = num_O_req/num_O_oxid
+    O_mult = num_O_req / num_O_oxid
 
     # Find the total number of moles in the fuel + oxidizer mixture
     total_oxid_moles = sum([O_mult * amt for amt in oxidizer.values()])
@@ -345,6 +353,14 @@ def mix_substep(particles, dt, tau_mix):
         particles[particles.index(p2)](comp2)
 
 
+def reaction_worker(part_tup):
+    """
+    """
+    particle, end_time = part_tup
+    particle.react(end_time)
+    return particle()
+
+
 def reaction_substep(particles, end_time):
     """Advance each of the particles in time through reactions.
 
@@ -353,8 +369,19 @@ def reaction_substep(particles, end_time):
     :param dt:
         Time step [s] to increment particles.
     """
-    for p in particles:
-        p.netw.advance(end_time)
+    if not parallel:
+        for p in particles:
+            p.react(end_time)
+    else:
+        pool = multiprocessing.Pool()
+        jobs = []
+        for p in particles:
+            jobs.append([p, end_time])
+        jobs = tuple(jobs)
+        results = pool.map(reaction_worker, jobs)
+
+        pool.close()
+        pool.join()
 
 
 def select_pairs(particles, num_pairs, num_skip=0):
@@ -377,11 +404,7 @@ def select_pairs(particles, num_pairs, num_skip=0):
             temp_comp = particles[i]()
             particles[i](particles[j]())
             particles[j](temp_comp)
-            #particles[i], particles[j] = particles[j], particles[i]
 
-        # Move to end of list
-        #particles.append(particles.pop(i))
-        #particles.append(particles.pop(i))
         # Swap with pair at end of list
         i_last = -2 * (i_pair + num_skip + 1)
         temp_comp = particles[i]()
@@ -391,8 +414,6 @@ def select_pairs(particles, num_pairs, num_skip=0):
         temp_comp = particles[j]()
         particles[j](particles[i_last + 1]())
         particles[i_last + 1](temp_comp)
-        #particles[i], particles[i_last] = particles[i_last], particles[i]
-        #particles[j], particles[i_last+1] = particles[i_last+1], particles[j]
 
 
 def inflow(streams):
@@ -709,8 +730,8 @@ if __name__ == "__main__":
 
     partially_stirred_reactor(args.mech, inputs['case'],
                               inputs['temperature'], inputs['pressure'],
-                              inputs['eq_ratio'], inputs['fuel'],
-                              inputs['oxidizer'], inputs['complete_products'],
+                              inputs['equivalence ratio'], inputs['fuel'],
+                              inputs['oxidizer'], inputs['complete products'],
                               inputs['number of particles'],
                               inputs['residence time'], inputs['mixing time'],
                               inputs['pairing time'],

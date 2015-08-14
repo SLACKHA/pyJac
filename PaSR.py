@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 # Standard libraries
+import sys
 from itertools import product
 from argparse import ArgumentParser
 # More Python 2 compatibility

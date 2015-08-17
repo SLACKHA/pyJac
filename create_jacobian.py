@@ -139,8 +139,8 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                       '{:.6} * '.format(2.0 / math.log(10.0)) +
                       'log10(Pr) * '
                       'log({:.4} * '.format(rxn.sri_par[0]) +
-                      'exp(-{:4} / T) + '.format(rxn.sri_par[1]) +
-                      'exp(-T / {:.4}))'.format(rxn.sri_par[2])
+                      'exp({:4} / T) + '.format(-rxn.sri_par[1]) +
+                      'exp(T / {:.4}))'.format(-rxn.sri_par[2])
                       )
 
         jline += ') * ' + get_net_rate_string(lang, rxn, rind, rev_reacs, get_array)
@@ -813,12 +813,12 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
 def write_troe(file, lang, rxn):
     line = ('  Fcent = '
             '{:.8e} * '.format(1.0 - rxn.troe_par[0]) +
-            'exp(-T / {:.8e})'.format(rxn.troe_par[1]) +
-            ' + {:.8e} * exp(-T / '.format(rxn.troe_par[0]) +
+            'exp(T / {:.8e})'.format(-rxn.troe_par[1]) +
+            ' + {:.8e} * exp(T / '.format(-rxn.troe_par[0]) +
             '{:.8e})'.format(rxn.troe_par[2])
             )
     if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
-        line += ' + exp(-{:.8e} / T)'.format(rxn.troe_par[3])
+        line += ' + exp({:.8e} / T)'.format(-rxn.troe_par[3])
     line += utils.line_end[lang]
     file.write(line)
 
@@ -883,21 +883,21 @@ def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
 def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     jline = (' + X * ((('
              '{:.8} / '.format(rxn.sri_par[0] * rxn.sri_par[1]) +
-             '(T * T)) * exp(-'
-             '{:.8} / T) - '.format(rxn.sri_par[1]) +
+             '(T * T)) * exp('
+             '{:.8} / T) - '.format(-rxn.sri_par[1]) +
              '{:.8e} * '.format(1.0 / rxn.sri_par[2]) +
-             'exp(-T / {:.8})) / '.format(rxn.sri_par[2]) +
+             'exp(T / {:.8})) / '.format(-rxn.sri_par[2]) +
              '({:.8} * '.format(rxn.sri_par[0]) +
-             'exp(-{:.8} / T) + '.format(rxn.sri_par[1]) +
-             'exp(-T / {:.8})) - '.format(rxn.sri_par[2]) +
+             'exp({:.8} / T) + '.format(-rxn.sri_par[1]) +
+             'exp(T / {:.8})) - '.format(-rxn.sri_par[2]) +
              'X * {:.8} * '.format(2.0 / math.log(10.0)) +
              'log10(Pr) * ('
              '{:.8e} + ('.format(beta_0minf) +
              '{:.8e} / T) - 1.0) * '.format(E_0minf) +
              'log({:8} * exp('.format(rxn.sri_par[0]) +
-             '-{:.8} / T) + '.format(rxn.sri_par[1]) +
-             'exp(-T / '
-             '{:8})) / T)'.format(rxn.sri_par[2])
+             '{:.8} / T) + '.format(-rxn.sri_par[1]) +
+             'exp(T / '
+             '{:8})) / T)'.format(-rxn.sri_par[2])
              )
 
     if len(rxn.sri_par) == 5 and rxn.sri_par[4] != 0.0:
@@ -916,17 +916,17 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
              'A) / Fcent)'
              ' * ({:.8e}'.format(-(1.0 - rxn.troe_par[0]) /
                                  rxn.troe_par[1]) +
-             ' * exp(-T / '
-             '{:.8e}) - '.format(rxn.troe_par[1]) +
+             ' * exp(T / '
+             '{:.8e}) - '.format(-rxn.troe_par[1]) +
              '{:.8e} * '.format(rxn.troe_par[0] /
                                 rxn.troe_par[2]) +
-             'exp(-T / '
-             '{:.8e})'.format(rxn.troe_par[2])
+             'exp(T / '
+             '{:.8e})'.format(-rxn.troe_par[2])
              )
     if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
         jline += (' + ({:.8e} / '.format(rxn.troe_par[3]) +
                   '(T * T)) * exp('
-                  '-{:.8e} / T)'.format(rxn.troe_par[3])
+                  '{:.8e} / T)'.format(-rxn.troe_par[3])
                   )
     jline += '))'
 

@@ -784,7 +784,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if reac.pdep:
             # add reaction index to list
             pdep_flag = True
-            
+
             ## This may be redundant, since thd_body and pdep are mutually exclusive.
             if not reac.thd_body: pdep_reacs.append(i_rxn)
 

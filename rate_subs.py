@@ -1270,15 +1270,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 elif spind in rxn.reac:
                     isp = rxn.reac.index(spind)
                     nu = -rxn.reac_nu[isp]
-
-                    if nu > 1:
-                        if utils.is_integer(nu):
-                            line += '{} * '.format(-float(nu))
-                        else:
-                            line += '{:3} * '.format(-nu)
-                    elif nu < 1.0:
-                        line += '{} * '.format(-nu)
-
                 else:
                     continue
 
@@ -1286,6 +1277,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 line = ('  ' + get_array(lang, 'sp_rates', spind) +
                     ' {}= '.format(sign if seen[spind] else '')
                     )
+                nu = abs(nu)
                 if not seen[spind] and nu < 0:
                     line += sign
                 if abs(nu) != 1.0:

@@ -398,7 +398,7 @@ def write_kc(file, lang, specs, rxn):
     sum_nu = 0
     coeffs = {}
     for isp in set(rxn.reac + rxn.prod):
-        spec = specs[isp]
+        sp = specs[isp]
         nu = get_nu(isp, rxn)
 
         if nu == 0:
@@ -406,24 +406,24 @@ def write_kc(file, lang, specs, rxn):
 
         sum_nu += nu
 
-        lo_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
-            spec.lo[6], spec.lo[0], spec.lo[0] - 1.0, spec.lo[1] / 2.0,
-                                    spec.lo[2] / 6.0, spec.lo[3] / 12.0, spec.lo[4] / 20.0,
-            spec.lo[5]]
-                                               ]
+        lo_array = [nu] + [
+                    sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
+                                        sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                    sp.lo[5]]
+
         lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-        hi_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
-            spec.hi[6], spec.hi[0], spec.hi[0] - 1.0, spec.hi[1] / 2.0,
-                                    spec.hi[2] / 6.0, spec.hi[3] / 12.0, spec.hi[4] / 20.0,
-            spec.hi[5]]
-                                               ]
+        hi_array = [nu] + [
+            sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
+                                sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+            sp.hi[5]]
+
         hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
-        if not spec.Trange[1] in coeffs:
-            coeffs[spec.Trange[1]] = lo_array, hi_array
+        if not sp.Trange[1] in coeffs:
+            coeffs[sp.Trange[1]] = lo_array, hi_array
         else:
-            coeffs[spec.Trange[1]] = [lo_array[i] + coeffs[spec.Trange[1]][0][i] for i in range(len(lo_array))], \
-                                     [hi_array[i] + coeffs[spec.Trange[1]][1][i] for i in range(len(hi_array))]
+            coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
+                                     [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
 
     isFirst = True
     for T_mid in coeffs:
@@ -2090,7 +2090,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     continue
 
                 working_temp = ''
-                mw_frac = utils.round_sig(sp_k.mw / sp_j.mw, 9) * float(nu)
+                mw_frac = (sp_k.mw / sp_j.mw)* float(nu)
                 if mw_frac == -1.0:
                     working_temp += ' -'
                 elif mw_frac != 1.0:
@@ -2265,7 +2265,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
                     line += '(' + get_array(lang, 'dy', k_sp + offset)
-                    line += ' * mw_avg * {} * rho_inv)'.format(utils.round_sig(sp_k.mw / sp_j.mw, 9))
+                    line += ' * mw_avg * {} * rho_inv)'.format(sp_k.mw / sp_j.mw)
                     line += utils.line_end[lang]
                     file.write(line)
 

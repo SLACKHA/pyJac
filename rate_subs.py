@@ -549,18 +549,18 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                         sys.exit()
 
                     # put together all our coeffs
-                    lo_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    lo_array = [nu] + [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                                             sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
-                                                               ]
+
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    hi_array = [nu] + [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                                             sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]
-                                                               ]
+
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
@@ -586,18 +586,17 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                               )
                         sys.exit()
 
-                    lo_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    lo_array = [-nu] + [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                         sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
-                        ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    hi_array = [-nu] + [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                         sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]
-                        ]
+
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
@@ -1513,7 +1512,7 @@ def write_chem_utils(path, lang, specs):
                      )
         elif lang in ['fortran', 'matlab']:
             line += ('(mass_frac[{}] * {})'.format(isp + 1,
-                     utils.round_sig(1.0 / sp.mw, 9))
+                     1.0 / sp.mw)
                      )
 
         isfirst = False

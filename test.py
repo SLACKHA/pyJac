@@ -27,6 +27,7 @@ except ImportError:
 # Local imports
 import utils
 from create_jacobian import create_jacobian
+import partially_stirred_reactor as pasr
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -599,8 +600,8 @@ def __is_pdep(rxn):
     isinstance(rxn, ct.ChemicallyActivatedReaction))
 
 
-def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
-         generate_jacob=True, num_trials=10):
+def test(lang, build_dir, mech_filename, therm_filename=None,
+         pasr_input_file='pasr_input.yaml', generate_jacob=True):
     """
     """
 
@@ -697,11 +698,24 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         gas.reaction(idx), ct.ChemicallyActivatedReaction)
     ]
 
-    rand_temp = np.random.uniform(800., 2000., num_trials)
-    rand_pres = np.random.uniform(1., 40., num_trials) * ct.one_atm
-    rand_mass = np.random.uniform(0., 1., (num_trials, gas.n_species))
-    rand_space = zip(rand_temp, rand_pres, rand_mass)
+    # Run PaSR to get data
+    pasr_input = pasr.parse_input_file(pasr_input_file)
+    state_data = pasr.run_simulation(
+                    mech_filename,
+                    pasr_input['temperature'],
+                    pasr_input['pressure'],
+                    pasr_input['equivalence ratio'],
+                    pasr_input['fuel'],
+                    pasr_input['oxidizer'],
+                    pasr_input['complete products'],
+                    pasr_input['number of particles'],
+                    pasr_input['residence time'],
+                    pasr_input['mixing time'],
+                    pasr_input['pairing time'],
+                    pasr_input['number of residence times']
+                    )
 
+    # Reshape array to treat time steps and particles the same
     state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
                                     state_data.shape[2]
                                     )
@@ -709,17 +723,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
 
     err_dydt = np.zeros(num_trials)
     err_dydt_zero = np.zeros(num_trials)
+    err_jac_norm = np.zeros(num_trials)
     err_jac = np.zeros(num_trials)
-    err_jac_ct = np.zeros(num_trials)
+    err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
-    err_eig = np.zeros(num_trials)
-    err_eig_ct = np.zeros(num_trials)
 
-    #for i, (temp, pres, mass_frac) in enumerate(rand_space):
+    err_jac_max_ct = np.zeros(num_trials)
+    err_jac_norm_ct = np.zeros(num_trials)
+    err_jac_ct = np.zeros(num_trials)
+    err_jac_zero_ct = np.zeros(num_trials)
+
     for i, state in enumerate(state_data):
-        # Normalize mass fractions
-        #mass_frac /= sum(mass_frac)
-
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
@@ -747,7 +761,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         num = int(test_data[0])
         test_conc = test_data[1: num + 1]
         test_data = test_data[num + 1:]
-        non_zero = np.where(test_conc != 0.)[0]
+        non_zero = np.where(test_conc > 0.)[0]
         err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
                   gas.concentrations[non_zero]
                   )
@@ -774,7 +788,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         test_fwd_rates[idx_pmod] *= test_pres_mod
         test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
 
-        non_zero = np.where(test_fwd_rates != 0.)[0]
+        non_zero = np.where(test_fwd_rates > 0.)[0]
         err = abs((test_fwd_rates[non_zero] -
                   gas.forward_rates_of_progress[non_zero]) /
                   gas.forward_rates_of_progress[non_zero]
@@ -787,7 +801,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
               format(max_err * 100., loc))
 
         if idx_rev:
-            non_zero = np.where(test_rev_rates != 0.)[0]
+            non_zero = np.where(test_rev_rates > 0.)[0]
             err = abs((test_rev_rates[non_zero] -
                       (gas.reverse_rates_of_progress[idx_rev])[non_zero]) /
                       (gas.reverse_rates_of_progress[idx_rev])[non_zero]
@@ -847,32 +861,33 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         num = int(test_data[0])
         test_jacob = test_data[1: num + 1]
         test_data = test_data[num + 1:]
-        #non_zero = np.where(test_jacob != 0.)[0]
-        non_zero = np.where(abs(test_jacob) > 1.e-10)[0]
+        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob)
+                            / 1.e6)[0]
         zero = np.where(test_jacob == 0.)[0]
 
-        wt, vt = np.linalg.eig(test_jacob.reshape(gas.n_species+1,gas.n_species+1))
         # Calculate "true" Jacobian numerically
         try:
             jacob = eval_jacobian(ode, 6)
-            #err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-            #          jacob[non_zero]
-            #          )
-            #max_err = np.max(err)
-            #loc = non_zero[np.argmax(err)]
-            #err = np.linalg.norm(err, 2) * 100.
-            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-            w, v = np.linalg.eig(jacob.reshape(gas.n_species+1,gas.n_species+1))
-
-            nz = np.where(abs(w) > np.linalg.norm(w) / 1.e8)
-            err_eig_ct[i] = np.max( abs(w[nz] - wt[nz]) / abs(w[nz]) )
+            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                      jacob[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('Max error in non-zero Cantera Jacobian: {:.2e}% '
+                  '@ index {}'.format(max_err * 100., loc))
+            print('L2 norm of relative error of Cantera Jacobian: '
+                  '{:.2e}'.format(err))
+            err_jac_max_ct[i] = max_err
             err_jac_ct[i] = err
+
+            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
+            err_jac_norm_ct[i] = err
             print('L2 norm error of Cantera Jacobian: '
                   '{:.2e}'.format(err))
-            #print('Max error in non-zero Jacobian: {:.2e}% '
-            #      '@ index {}'.format(max_err * 100., loc))
-            err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
-            err_jac_zero[i] = err
+
+            err = np.linalg.norm(test_jacob[zero] - jacob[zero])
+            err_jac_zero_ct[i] = err
             print('L2 norm difference of "zero" Cantera Jacobian: '
                   '{:.2e}'.format(err))
         except:
@@ -882,27 +897,29 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         num = int(test_data[0])
         jacob = test_data[1: num + 1]
         test_data = test_data[num + 1:]
-        #non_zero = np.where(test_jacob != 0.)[0]
         zero = np.where(test_jacob == 0.)[0]
-        #jac_norm = np.linalg.norm(test_jacob, 2)
-        #non_zero = np.where(abs(test_jacob) > jac_norm / 1.e6)[0]
+        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob)
+                            / 1.e6)[0]
+
         # Calculate "true" Jacobian numerically
-        #err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-        #          jacob[non_zero]
-        #          )
-        #max_err = np.max(err)
-        #loc = non_zero[np.argmax(err)]
-        #err = np.linalg.norm(err, 2) * 100.
-        #err_jac[i] = err
-        err_jac[i] = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-        w, v = np.linalg.eig(jacob.reshape(gas.n_species+1,gas.n_species+1))
-        nz = np.where(abs(w) > np.linalg.norm(w) / 1.e6)
-        err_eig[i] = np.max( abs(w[nz] - wt[nz]) / abs(w[nz]) )
+        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                  jacob[non_zero]
+                  )
+        max_err = np.max(err)
+        loc = non_zero[np.argmax(err)]
+        err = np.linalg.norm(err, 2) * 100.
+        print('Max error in non-zero Jacobian: {:.2e}% '
+              '@ index {}'.format(max_err * 100., loc))
+        print('L2 norm of relative error of Jacobian: '
+              '{:.2e}'.format(err))
+        err_jac_max[i] = max_err
+        err_jac[i] = err
+
+        err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
         print('L2 norm relative error of our non-zero Jacobian: {:.2e}'
-              .format(err_jac[i]))
-        #print('Max error in non-zero Jacobian: {:.2e}% '
-        #      '@ index {}'.format(max_err * 100., loc))
-        err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
+              .format(err))
+        err_jac_norm[i] = err
+        err = np.linalg.norm(test_jacob[zero] - jacob[zero])
         err_jac_zero[i] = err
         print('L2 norm difference of our "zero" Jacobian: {:.2e}'.format(err))
         print()
@@ -917,7 +934,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
 if __name__ == '__main__':
     parser = ArgumentParser(
         description='Tests create_jacobian versus a finite difference'
-        ' Cantera jacobian\n')
+        ' Cantera jacobian\n'
+        )
     parser.add_argument('-l', '--lang',
                         type=str,
                         choices=utils.langs,
@@ -929,31 +947,27 @@ if __name__ == '__main__':
                         default='out' + os.path.sep,
                         help='The directory the jacob/rates/tester'
                         ' files will be generated and built in.')
-    parser.add_argument('-i', '--input',
+    parser.add_argument('-m', '--mech',
                         type=str,
                         required=True,
-                        help='Input mechanism filename (e.g., mech.dat).')
+                        help='Mechanism filename (e.g., mech.dat).')
     parser.add_argument('-t', '--thermo',
                         type=str,
                         default=None,
                         help='Thermodynamic database filename (e.g., '
                              'therm.dat), or nothing if in mechanism.')
-    parser.add_argument('-s', '--seed',
-                        type=int,
-                        default=None,
-                        help='Set seed for the random number generator')
+    parser.add_argument('-i', '--input',
+                        type=str,
+                        default='pasr_input.yaml',
+                        help='Perfectly stirred reactor input file for '
+                             'generating test data (e.g, pasr_input.yaml)')
     parser.add_argument('-dng', '--do_not_generate',
                         action='store_false',
                         dest='generate_jacob',
                         default=True,
                         help='Use this option to have the tester utilize'
                         ' the already existant jacobian files')
-    parser.add_argument('-n', '--num_trials',
-                        type=int,
-                        dest='num_trials',
-                        default=10,
-                        help='Numer of random trials.')
     args = parser.parse_args()
-    test(args.lang, args.build_dir, args.input, args.thermo, args.seed,
-         args.generate_jacob, args.num_trials
+    test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
+         args.generate_jacob
          )

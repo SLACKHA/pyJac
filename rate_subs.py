@@ -1232,64 +1232,37 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     for order in ordering:
         i_specs = order[0]
         i_reacs = order[1]
-        # loop through species
-        for spind in i_specs:
-            sp = specs[spind]
-
-            line = ('  ' + get_array(lang, 'sp_rates', spind) +
-                    ' {}= '.format('+' if seen[spind] else '')
-                    )
-            seen[spind] = True
-
-            # continuation line
-            cline = ' ' * (len(line) - 3)
-
-            isfirst = True
-
-            inreac = False
+        #loop through reaction
+        for rind in i_reacs:
+            #get allowed species
+            my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
+            rxn = reacs[rind]
             if lang == 'cuda' and smm is not None:
                 the_vars = [
-                    utils.get_array(lang, 'fwd_rates', rind) + (''
-                    if not reacs[rind].rev else ' - ' +
-                    utils.get_array(lang, 'rev_rates', rev_reacs.index(rind)))
-                    for rind in i_reacs
-                    ]
-                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev
-                            else the_vars[i] for i in
-                            range(len(i_reacs))
-                            ]
-                the_vars = [
-                    the_vars[i] if not (reacs[i_reacs[i]].pdep or
-                                        reacs[i_reacs[i]].thd_body)
-                    else the_vars[i] + ' * ' +
-                    utils.get_array(lang, 'pres_mod',
-                                    pdep_reacs.index(i_reacs[i])
-                                    )
-                    for i in range(len(i_reacs))
+                    utils.get_array(lang, 'sp_rates', sp) for sp in set(rxn.reac + rxn.prod)
                     ]
                 # estimate usages
                 usages = []
                 order_index = ordering.index(order)
-                for rxn in i_reacs:
+                for sp in set(rxn.reac + rxn.prod):
                     temp = order_index + 1
-                    while temp < len(ordering) and rxn in ordering[temp][1]:
+                    while temp < len(ordering) and (sp in reacs[i_reacs[temp]].reac \
+                    or sp in reacs[i_reacs[temp]].prod):
                         temp += 1
                     usages.append(temp - order_index - 1)
                 smm.load_into_shared(file, the_vars, usages)
-            # loop through reactions
-            for rind in i_reacs:
-                rxn = reacs[rind]
+
+            # loop through species
+            for spind in my_specs:
+                sp = specs[spind]
+
+                line = ('  ' + get_array(lang, 'sp_rates', spind) +
+                        ' {}= '.format('+' if seen[spind] else '')
+                        )
+                seen[spind] = True
 
                 pdep = False
                 if rxn.thd_body or rxn.pdep: pdep = True
-
-                # move to new line if current line is too long
-                if len(line) > 85:
-                    line += '\n'
-                    # record position
-                    lastPos = file.tell()
-                    file.write(line)
-                    line = cline
 
                 rxn_out = ''
                 # first check to see if in both products and reactants
@@ -1300,7 +1273,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     inreac = inreac or nu != 0
 
                     if nu > 0.0:
-                        if not isfirst: line += ' + '
                         if nu > 1:
                             if utils.is_integer(nu):
                                 line += '{} * '.format(float(nu))
@@ -1318,18 +1290,13 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                         else:
                             rxn_out = get_array(lang, 'fwd_rates', rind)
                     elif nu < 0.0:
-                        if isfirst:
-                            line += '-'
-                        else:
-                            line += ' - '
-
                         if nu < -1:
                             if utils.is_integer(nu):
-                                line += '{} * '.format(float(abs(nu)))
+                                line += '{} * '.format(float(nu))
                             else:
-                                line += '{:3} * '.format(abs(nu))
+                                line += '{:3} * '.format(nu)
                         elif nu > -1:
-                            line += '{} * '.format(abs(nu))
+                            line += '{} * '.format(nu)
 
                         if rxn.rev:
                             rxn_out = (
@@ -1342,15 +1309,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     else:
                         continue
 
-                    if isfirst: isfirst = False
-
                 # check products
                 elif spind in rxn.prod:
                     inreac = True
                     isp = rxn.prod.index(spind)
                     nu = rxn.prod_nu[isp]
-
-                    if not isfirst: line += ' + '
 
                     if nu > 1:
                         if utils.is_integer(nu):
@@ -1368,8 +1331,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                             )
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
-
-                    if isfirst: isfirst = False
 
                 # check reactants
                 elif spind in rxn.reac:
@@ -1377,18 +1338,13 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     isp = rxn.reac.index(spind)
                     nu = rxn.reac_nu[isp]
 
-                    if isfirst:
-                        line += '-'
-                    else:
-                        line += ' - '
-
                     if nu > 1:
                         if utils.is_integer(nu):
-                            line += '{} * '.format(float(nu))
+                            line += '{} * '.format(-float(nu))
                         else:
-                            line += '{:3} * '.format(nu)
+                            line += '{:3} * '.format(-nu)
                     elif nu < 1.0:
-                        line += '{} * '.format(nu)
+                        line += '{} * '.format(-nu)
 
                     if rxn.rev:
                         rxn_out = (
@@ -1399,7 +1355,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     else:
                         rxn_out = get_array(lang, 'fwd_rates', rind)
 
-                    if isfirst: isfirst = False
                 else:
                     continue
 
@@ -1412,41 +1367,27 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 #    rxn_out = get_array(lang, rxn_out, None, preformed=True)
                 line += rxn_out
 
-            # species not participate in any reactions
-            if not inreac: line += '0.0'
 
-            # done with this species
-            line += utils.line_end[lang] + '\n'
-            file.write(line)
+                # done with this species
+                line += utils.line_end[lang]
+                file.write(line)
 
             if lang == 'cuda' and smm is not None:
-                the_vars = [utils.get_array(lang, 'fwd_rates', rind) + (
-                    '' if not reacs[rind].rev else ' - ' + utils.get_array(lang, 'rev_rates',
-                                                                           rev_reacs.index(rind)))
-                            for rind in i_reacs]
-                the_vars = ['(' + the_vars[i] + ')' if reacs[i_reacs[i]].rev else the_vars[i] for i in
-                            range(len(i_reacs))]
                 the_vars = [
-                    the_vars[i] if not (reacs[i_reacs[i]].pdep or
-                                        reacs[i_reacs[i]].thd_body
-                                        )
-                    else the_vars[i] + ' * ' +
-                    utils.get_array(lang, 'pres_mod',
-                                    pdep_reacs.index(i_reacs[i])
-                                    )
-                    for i in range(len(i_reacs))
+                    utils.get_array(lang, 'sp_rates', sp) for sp in set(rxn.reac + rxn.prod)
                     ]
-                # mark for eviction
-                mark = []
+                # estimate usages
+                usages = []
                 order_index = ordering.index(order)
-                for i, rxn in enumerate(i_reacs):
+                # mark for eviction
+                for sp in set(rxn.reac + rxn.prod):
                     temp = order_index + 1
-                    while temp < len(ordering) and rxn not in ordering[temp][1]:
+                    while temp < len(ordering) and (sp in reacs[i_reacs[temp]].reac \
+                    or sp in reacs[i_reacs[temp]].prod):
                         temp += 1
                         if temp - order_index - 1 > 2:
                             mark.append(the_vars[i])
                 smm.mark_for_eviction(the_vars)
-
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
             file.write('  ' + get_array(lang, 'sp_rates', i) + ' = 0.0' + utils.line_end[lang])

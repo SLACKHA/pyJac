@@ -814,8 +814,8 @@ def write_troe(file, lang, rxn):
     line = ('  Fcent = '
             '{:.8e} * '.format(1.0 - rxn.troe_par[0]) +
             'exp(T / {:.8e})'.format(-rxn.troe_par[1]) +
-            ' + {:.8e} * exp(T / '.format(-rxn.troe_par[0]) +
-            '{:.8e})'.format(rxn.troe_par[2])
+            ' + {:.8e} * exp(T / '.format(rxn.troe_par[0]) +
+            '{:.8e})'.format(-rxn.troe_par[2])
             )
     if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
         line += ' + exp({:.8e} / T)'.format(-rxn.troe_par[3])

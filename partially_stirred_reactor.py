@@ -465,12 +465,11 @@ def save_data(idx, time, particles, data):
         data[idx, i, 3:] = p()[1:]
 
 
-def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
-                              oxidizer, complete_products=['CO2','H2O','N2'],
-                              num_part=100, tau_res=(10./1000.),
-                              tau_mix=(1./1000.), tau_pair=(1./1000.),
-                              num_res=10
-                              ):
+def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
+                   complete_products=['CO2','H2O','N2'],
+                   num_part=100, tau_res=(10./1000.), tau_mix=(1./1000.),
+                   tau_pair=(1./1000.), num_res=10
+                   ):
     """Perform partially stirred reactor (PaSR) simulation.
 
     :param mech:
@@ -651,7 +650,7 @@ def partially_stirred_reactor(mech, case, init_temp, pres, eq_ratio, fuel,
     return particle_data
 
 
-def parse_input(input_file):
+def parse_input_file(input_file):
     """Parse input file for PaSR operating parameters.
 
     :param input_file:
@@ -727,14 +726,11 @@ if __name__ == "__main__":
                         )
     args = parser.parse_args()
 
-    inputs = parse_input(args.input)
-
-    partially_stirred_reactor(args.mech, inputs['case'],
-                              inputs['temperature'], inputs['pressure'],
-                              inputs['equivalence ratio'], inputs['fuel'],
-                              inputs['oxidizer'], inputs['complete products'],
-                              inputs['number of particles'],
-                              inputs['residence time'], inputs['mixing time'],
-                              inputs['pairing time'],
-                              inputs['number of residence times']
-                              )
+    inputs = parse_input_file(args.input)
+    run_simulation(args.mech, inputs['case'], inputs['temperature'],
+                   inputs['pressure'], inputs['equivalence ratio'],
+                   inputs['fuel'], inputs['oxidizer'],
+                   inputs['complete products'], inputs['number of particles'],
+                   inputs['residence time'], inputs['mixing time'],
+                   inputs['pairing time'], inputs['number of residence times']
+                   )

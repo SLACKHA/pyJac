@@ -703,6 +703,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     pasr_input = pasr.parse_input_file(pasr_input_file)
     state_data = pasr.run_simulation(
                     mech_filename,
+                    pasr_input['case'],
                     pasr_input['temperature'],
                     pasr_input['pressure'],
                     pasr_input['equivalence ratio'],

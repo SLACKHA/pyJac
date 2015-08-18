@@ -1255,87 +1255,21 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             for spind in my_specs:
                 sp = specs[spind]
 
-                line = ('  ' + get_array(lang, 'sp_rates', spind) +
-                        ' {}= '.format('+' if seen[spind] else '')
-                        )
-                seen[spind] = True
-
-                pdep = False
-                if rxn.thd_body or rxn.pdep: pdep = True
-
-                rxn_out = ''
-                # first check to see if in both products and reactants
+                #find nu
                 if spind in rxn.prod and spind in rxn.reac:
                     pisp = rxn.prod.index(spind)
                     risp = rxn.reac.index(spind)
                     nu = rxn.prod_nu[pisp] - rxn.reac_nu[risp]
-                    inreac = inreac or nu != 0
-
-                    if nu > 0.0:
-                        if nu > 1:
-                            if utils.is_integer(nu):
-                                line += '{} * '.format(float(nu))
-                            else:
-                                line += '{:3} * '.format(nu)
-                        elif nu < 1.0:
-                            line += '{} * '.format(nu)
-
-                        if rxn.rev:
-                            rxn_out = (
-                                '(' + get_array(lang, 'fwd_rates', rind) +
-                                ' - ' + get_array(lang, 'rev_rates',
-                                            rev_reacs.index(rind)) + ')'
-                                )
-                        else:
-                            rxn_out = get_array(lang, 'fwd_rates', rind)
-                    elif nu < 0.0:
-                        if nu < -1:
-                            if utils.is_integer(nu):
-                                line += '{} * '.format(float(nu))
-                            else:
-                                line += '{:3} * '.format(nu)
-                        elif nu > -1:
-                            line += '{} * '.format(nu)
-
-                        if rxn.rev:
-                            rxn_out = (
-                                '(' + get_array(lang, 'fwd_rates', rind) +
-                                ' - ' + get_array(lang, 'rev_rates',
-                                            rev_reacs.index(rind)) + ')'
-                                )
-                        else:
-                            rxn_out = get_array(lang, 'fwd_rates', rind)
-                    else:
-                        continue
 
                 # check products
                 elif spind in rxn.prod:
-                    inreac = True
                     isp = rxn.prod.index(spind)
                     nu = rxn.prod_nu[isp]
 
-                    if nu > 1:
-                        if utils.is_integer(nu):
-                            line += '{} * '.format(float(nu))
-                        else:
-                            line += '{:3} * '.format(nu)
-                    elif nu < 1.0:
-                        line += '{} * '.format(nu)
-
-                    if rxn.rev:
-                        rxn_out = (
-                            '(' + get_array(lang, 'fwd_rates', rind) +
-                            ' - ' + get_array(lang, 'rev_rates',
-                                        rev_reacs.index(rind)) + ')'
-                            )
-                    else:
-                        rxn_out = get_array(lang, 'fwd_rates', rind)
-
                 # check reactants
                 elif spind in rxn.reac:
-                    inreac = True
                     isp = rxn.reac.index(spind)
-                    nu = rxn.reac_nu[isp]
+                    nu = -rxn.reac_nu[isp]
 
                     if nu > 1:
                         if utils.is_integer(nu):
@@ -1345,17 +1279,33 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     elif nu < 1.0:
                         line += '{} * '.format(-nu)
 
-                    if rxn.rev:
-                        rxn_out = (
-                            '(' + get_array(lang, 'fwd_rates', rind) +
-                            ' - ' + get_array(lang, 'rev_rates',
-                                        rev_reacs.index(rind)) + ')'
-                            )
-                    else:
-                        rxn_out = get_array(lang, 'fwd_rates', rind)
-
                 else:
                     continue
+
+                sign = '-' if nu < 0 else '+'
+                line = ('  ' + get_array(lang, 'sp_rates', spind) +
+                    ' {}= '.format(sign if seen[spind] else '')
+                    )
+                if not seen[spind] and nu < 0:
+                    line += sign
+                if abs(nu) != 1.0:
+                    if utils.is_integer(nu):
+                        line += '{} * '.format(float(nu))
+                    else:
+                        line += '{:3} * '.format(nu)
+                if rxn.rev:
+                    rxn_out = (
+                        '(' + get_array(lang, 'fwd_rates', rind) +
+                        ' - ' + get_array(lang, 'rev_rates',
+                                    rev_reacs.index(rind)) + ')'
+                        )
+                else:
+                    rxn_out = get_array(lang, 'fwd_rates', rind)
+
+                seen[spind] = True
+
+                pdep = False
+                if rxn.thd_body or rxn.pdep: pdep = True
 
                 # pressure dependence modification
                 if pdep:

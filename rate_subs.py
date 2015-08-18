@@ -1277,9 +1277,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 line = ('  ' + get_array(lang, 'sp_rates', spind) +
                     ' {}= '.format(sign if seen[spind] else '')
                     )
-                nu = abs(nu)
                 if not seen[spind] and nu < 0:
                     line += sign
+                nu = abs(nu)    
                 if abs(nu) != 1.0:
                     if utils.is_integer(nu):
                         line += '{} * '.format(float(nu))

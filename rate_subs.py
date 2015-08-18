@@ -1234,9 +1234,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         i_reacs = order[1]
         #loop through reaction
         for rind in i_reacs:
+            rxn = reacs[rind]
             #get allowed species
             my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
-            rxn = reacs[rind]
             if lang == 'cuda' and smm is not None:
                 the_vars = [
                     utils.get_array(lang, 'sp_rates', sp) for sp in set(rxn.reac + rxn.prod)

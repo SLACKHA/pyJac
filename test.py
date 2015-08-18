@@ -601,7 +601,8 @@ def __is_pdep(rxn):
 
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
-         pasr_input_file='pasr_input.yaml', generate_jacob=True):
+         pasr_input_file='pasr_input.yaml', generate_jacob=True,
+         seed=None):
     """
     """
 

@@ -969,7 +969,11 @@ if __name__ == '__main__':
                         default=True,
                         help='Use this option to have the tester utilize'
                         ' the already existant jacobian files')
+    parser.add_argument('-s', '--seed',
+                        type=int,
+                        default=None,
+                        help='The seed to be used for random numbers')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
-         args.generate_jacob
+         args.generate_jacob, args.seed
          )

@@ -908,7 +908,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         print('Max error in non-zero Jacobian: {:.2e}% '
               '@ index {}'.format(max_err * 100., loc))
         print('L2 norm of relative error of Jacobian: '
@@ -917,7 +917,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_jac[i] = err
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-        print('L2 norm relative error of our non-zero Jacobian: {:.2e}'
+        print('L2 norm error of our non-zero Jacobian: {:.2e}'
               .format(err))
         err_jac_norm[i] = err
         err = np.linalg.norm(test_jacob[zero] - jacob[zero])

@@ -462,7 +462,11 @@ def save_data(idx, time, particles, data):
         data[idx, i, 0] = time
         data[idx, i, 1] = p.gas.T
         data[idx, i, 2] = p.gas.P
-        data[idx, i, 3:] = p()[1:]
+
+        mass_frac = p()[1:]
+        # Zero out any negative mass fractions
+        mass_frac[mass_frac < 0.0] = 0.0
+        data[idx, i, 3:] = mass_frac
 
 
 def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,

@@ -79,7 +79,7 @@ def rxn_rate_const(A, b, E):
                     for i in range(b):
                         line += ' * T'
                 else:
-                    line += 'exp({:.8e}'.format(logA)
+                    line += 'exp({:.16e}'.format(logA)
                     if b > 0:
                         line += ' + ' + str(b)
                     else:
@@ -89,7 +89,7 @@ def rxn_rate_const(A, b, E):
             # E != 0
             if not b:
                 # b = 0
-                line += 'exp({:.8e}'.format(logA) + ' - ({:.8e} / T))'.format(E)
+                line += 'exp({:.16e}'.format(logA) + ' - ({:.16e} / T))'.format(E)
             else:
                 # b!= 0
                 line += 'exp({:.16e}'.format(logA)
@@ -113,7 +113,7 @@ def rxn_rate_const(A, b, E):
                     for i in range(int(b)):
                         line += ' * T'
                 else:
-                    line += '{:.8e} * exp('.format(A)
+                    line += '{:.16e} * exp('.format(A)
                     if b > 0:
                         line += str(b)
                     else:
@@ -123,15 +123,15 @@ def rxn_rate_const(A, b, E):
             #E != 0
             if not b:
                 # b = 0
-                line += '{:.8e} * exp(-({:.8e} / T))'.format(A, E)
+                line += '{:.16e} * exp(-({:.16e} / T))'.format(A, E)
             else:
                 # b!= 0
-                line += '{:.8e} * exp('.format(A)
+                line += '{:.16e} * exp('.format(A)
                 if b > 0:
                     line += str(b)
                 else:
                     line += '-' + str(abs(b))
-                line += ' * logT - ({:.8e} / T))'.format(E)
+                line += ' * logT - ({:.16e} / T))'.format(E)
 
     else:
       raise NotImplementedError
@@ -476,8 +476,8 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
                 pres_log_diff = math.log(vals2[0]) - math.log(vals[0])
                 line = ('    kf = exp(kf + (kf2 - kf) * (log(pres) - ' +
-                        '{:.8e}) / '.format(math.log(vals[0])) +
-                        '{:.8e})'.format(pres_log_diff)
+                        '{:.16e}) / '.format(math.log(vals[0])) +
+                        '{:.16e})'.format(pres_log_diff)
                         )
                 file.write(line + utils.line_end[lang])
 
@@ -549,18 +549,18 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                         sys.exit()
 
                     # put together all our coeffs
-                    lo_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    lo_array = [nu] + [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                                             sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
-                                                               ]
+
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [utils.round_sig(nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    hi_array = [nu] + [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                                             sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]
-                                                               ]
+
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
@@ -586,18 +586,17 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                               )
                         sys.exit()
 
-                    lo_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    lo_array = [-nu] + [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
                         sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
                         sp.lo[5]]
-                        ]
                     lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
 
-                    hi_array = [utils.round_sig(-nu, 3)] + [utils.round_sig(x, 9) for x in [
+                    hi_array = [-nu] + [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
                         sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
                         sp.hi[5]]
-                        ]
+
                     hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
@@ -627,14 +626,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                             line = '    Kc += '
                         else:
                             line = '    Kc = Kc + '
-                    line += ('({:.8e} + '.format(lo_array[0]) +
-                             '{:.8e} * '.format(lo_array[1]) +
+                    line += ('({:.16e} + '.format(lo_array[0]) +
+                             '{:.16e} * '.format(lo_array[1]) +
                              'logT + T * ('
-                             '{:.8e} + T * ('.format(lo_array[2]) +
-                             '{:.8e} + T * ('.format(lo_array[3]) +
-                             '{:.8e} + '.format(lo_array[4]) +
-                             '{:.8e} * T))) - '.format(lo_array[5]) +
-                             '{:.8e} / T)'.format(lo_array[6]) +
+                             '{:.16e} + T * ('.format(lo_array[2]) +
+                             '{:.16e} + T * ('.format(lo_array[3]) +
+                             '{:.16e} + '.format(lo_array[4]) +
+                             '{:.16e} * T))) - '.format(lo_array[5]) +
+                             '{:.16e} / T)'.format(lo_array[6]) +
                              utils.line_end[lang]
                              )
                     file.write(line)
@@ -651,14 +650,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                             line = '    Kc += '
                         else:
                             line = '    Kc = Kc + '
-                    line += ('({:.8e} + '.format(hi_array[0]) +
-                             '{:.8e} * '.format(hi_array[1]) +
+                    line += ('({:.16e} + '.format(hi_array[0]) +
+                             '{:.16e} * '.format(hi_array[1]) +
                              'logT + T * ('
-                             '{:.8e} + T * ('.format(hi_array[2]) +
-                             '{:.8e} + T * ('.format(hi_array[3]) +
-                             '{:.8e} + '.format(hi_array[4]) +
-                             '{:.8e} * T))) - '.format(hi_array[5]) +
-                             '{:.8e} / T)'.format(hi_array[6]) +
+                             '{:.16e} + T * ('.format(hi_array[2]) +
+                             '{:.16e} + T * ('.format(hi_array[3]) +
+                             '{:.16e} + '.format(hi_array[4]) +
+                             '{:.16e} * T))) - '.format(hi_array[5]) +
+                             '{:.16e} / T)'.format(hi_array[6]) +
                              utils.line_end[lang]
                              )
                     file.write(line)
@@ -672,7 +671,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     isFirst = False
 
                 line = ('  Kc = '
-                        '{:.8e}'.format((chem.PA / chem.RU) ** sum_nu) +
+                        '{:.16e}'.format((chem.PA / chem.RU) ** sum_nu) +
                         ' * exp(Kc)' +
                         utils.line_end[lang]
                         )
@@ -1256,107 +1255,52 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             for spind in my_specs:
                 sp = specs[spind]
 
-                line = ('  ' + get_array(lang, 'sp_rates', spind) +
-                        ' {}= '.format('+' if seen[spind] else '')
-                        )
-                seen[spind] = True
-
-                pdep = False
-                if rxn.thd_body or rxn.pdep: pdep = True
-
-                rxn_out = ''
-                # first check to see if in both products and reactants
+                #find nu
                 if spind in rxn.prod and spind in rxn.reac:
                     pisp = rxn.prod.index(spind)
                     risp = rxn.reac.index(spind)
                     nu = rxn.prod_nu[pisp] - rxn.reac_nu[risp]
-                    inreac = inreac or nu != 0
-
-                    if nu > 0.0:
-                        if nu > 1:
-                            if utils.is_integer(nu):
-                                line += '{} * '.format(float(nu))
-                            else:
-                                line += '{:3} * '.format(nu)
-                        elif nu < 1.0:
-                            line += '{} * '.format(nu)
-
-                        if rxn.rev:
-                            rxn_out = (
-                                '(' + get_array(lang, 'fwd_rates', rind) +
-                                ' - ' + get_array(lang, 'rev_rates',
-                                            rev_reacs.index(rind)) + ')'
-                                )
-                        else:
-                            rxn_out = get_array(lang, 'fwd_rates', rind)
-                    elif nu < 0.0:
-                        if nu < -1:
-                            if utils.is_integer(nu):
-                                line += '{} * '.format(float(nu))
-                            else:
-                                line += '{:3} * '.format(nu)
-                        elif nu > -1:
-                            line += '{} * '.format(nu)
-
-                        if rxn.rev:
-                            rxn_out = (
-                                '(' + get_array(lang, 'fwd_rates', rind) +
-                                ' - ' + get_array(lang, 'rev_rates',
-                                            rev_reacs.index(rind)) + ')'
-                                )
-                        else:
-                            rxn_out = get_array(lang, 'fwd_rates', rind)
-                    else:
-                        continue
 
                 # check products
                 elif spind in rxn.prod:
-                    inreac = True
                     isp = rxn.prod.index(spind)
                     nu = rxn.prod_nu[isp]
 
-                    if nu > 1:
-                        if utils.is_integer(nu):
-                            line += '{} * '.format(float(nu))
-                        else:
-                            line += '{:3} * '.format(nu)
-                    elif nu < 1.0:
-                        line += '{} * '.format(nu)
-
-                    if rxn.rev:
-                        rxn_out = (
-                            '(' + get_array(lang, 'fwd_rates', rind) +
-                            ' - ' + get_array(lang, 'rev_rates',
-                                        rev_reacs.index(rind)) + ')'
-                            )
-                    else:
-                        rxn_out = get_array(lang, 'fwd_rates', rind)
-
                 # check reactants
                 elif spind in rxn.reac:
-                    inreac = True
                     isp = rxn.reac.index(spind)
-                    nu = rxn.reac_nu[isp]
-
-                    if nu > 1:
-                        if utils.is_integer(nu):
-                            line += '{} * '.format(-float(nu))
-                        else:
-                            line += '{:3} * '.format(-nu)
-                    elif nu < 1.0:
-                        line += '{} * '.format(-nu)
-
-                    if rxn.rev:
-                        rxn_out = (
-                            '(' + get_array(lang, 'fwd_rates', rind) +
-                            ' - ' + get_array(lang, 'rev_rates',
-                                        rev_reacs.index(rind)) + ')'
-                            )
-                    else:
-                        rxn_out = get_array(lang, 'fwd_rates', rind)
-
+                    nu = -rxn.reac_nu[isp]
                 else:
                     continue
+
+                if nu == 0.0:
+                    continue
+
+                sign = '-' if nu < 0 else '+'
+                line = ('  ' + get_array(lang, 'sp_rates', spind) +
+                    ' {}= '.format(sign if seen[spind] else '')
+                    )
+                if not seen[spind] and nu < 0:
+                    line += sign
+                nu = abs(nu)    
+                if abs(nu) != 1.0:
+                    if utils.is_integer(nu):
+                        line += '{} * '.format(float(nu))
+                    else:
+                        line += '{:3} * '.format(nu)
+                if rxn.rev:
+                    rxn_out = (
+                        '(' + get_array(lang, 'fwd_rates', rind) +
+                        ' - ' + get_array(lang, 'rev_rates',
+                                    rev_reacs.index(rind)) + ')'
+                        )
+                else:
+                    rxn_out = get_array(lang, 'fwd_rates', rind)
+
+                seen[spind] = True
+
+                pdep = False
+                if rxn.thd_body or rxn.pdep: pdep = True
 
                 # pressure dependence modification
                 if pdep:
@@ -1513,7 +1457,7 @@ def write_chem_utils(path, lang, specs):
                      )
         elif lang in ['fortran', 'matlab']:
             line += ('(mass_frac[{}] * {})'.format(isp + 1,
-                     utils.round_sig(1.0 / sp.mw, 9))
+                     1.0 / sp.mw)
                      )
 
         isfirst = False
@@ -1578,13 +1522,13 @@ def write_chem_utils(path, lang, specs):
         file.write(line)
 
         line = '    ' + utils.get_array(lang, 'h', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} + T * ('.format(sp.lo[5]) +
-                 '{:.8e} + T * ('.format(sp.lo[0]) +
-                 '{:.8e} + T * ('.format(sp.lo[1] / 2.0) +
-                 '{:.8e} + T * ('.format(sp.lo[2] / 3.0) +
-                 '{:.8e} + '.format(sp.lo[3] / 4.0) +
-                 '{:.8e} * T)))))'.format(sp.lo[4] / 5.0) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} + T * ('.format(sp.lo[5]) +
+                 '{:.16e} + T * ('.format(sp.lo[0]) +
+                 '{:.16e} + T * ('.format(sp.lo[1] / 2.0) +
+                 '{:.16e} + T * ('.format(sp.lo[2] / 3.0) +
+                 '{:.16e} + '.format(sp.lo[3] / 4.0) +
+                 '{:.16e} * T)))))'.format(sp.lo[4] / 5.0) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1595,13 +1539,13 @@ def write_chem_utils(path, lang, specs):
             file.write('  else\n')
 
         line = '    ' + utils.get_array(lang, 'h', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} + T * ('.format(sp.hi[5]) +
-                 '{:.8e} + T * ('.format(sp.hi[0]) +
-                 '{:.8e} + T * ('.format(sp.hi[1] / 2.0) +
-                 '{:.8e} + T * ('.format(sp.hi[2] / 3.0) +
-                 '{:.8e} + '.format(sp.hi[3] / 4.0) +
-                 '{:.8e} * T)))))'.format(sp.hi[4] / 5.0) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} + T * ('.format(sp.hi[5]) +
+                 '{:.16e} + T * ('.format(sp.hi[0]) +
+                 '{:.16e} + T * ('.format(sp.hi[1] / 2.0) +
+                 '{:.16e} + T * ('.format(sp.hi[2] / 3.0) +
+                 '{:.16e} + '.format(sp.hi[3] / 4.0) +
+                 '{:.16e} * T)))))'.format(sp.hi[4] / 5.0) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1649,13 +1593,13 @@ def write_chem_utils(path, lang, specs):
         file.write(line)
 
         line = '    ' + utils.get_array(lang, 'u', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} + T * ('.format(sp.lo[5]) +
-                 '{:.8e} - 1.0 + T * ('.format(sp.lo[0]) +
-                 '{:.8e} + T * ('.format(sp.lo[1] / 2.0) +
-                 '{:.8e} + T * ('.format(sp.lo[2] / 3.0) +
-                 '{:.8e} + '.format(sp.lo[3] / 4.0) +
-                 '{:.8e} * T)))))'.format(sp.lo[4] / 5.0) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} + T * ('.format(sp.lo[5]) +
+                 '{:.16e} - 1.0 + T * ('.format(sp.lo[0]) +
+                 '{:.16e} + T * ('.format(sp.lo[1] / 2.0) +
+                 '{:.16e} + T * ('.format(sp.lo[2] / 3.0) +
+                 '{:.16e} + '.format(sp.lo[3] / 4.0) +
+                 '{:.16e} * T)))))'.format(sp.lo[4] / 5.0) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1666,13 +1610,13 @@ def write_chem_utils(path, lang, specs):
             file.write('  else\n')
 
         line = '    ' + utils.get_array(lang, 'u', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} + T * ('.format(sp.hi[5]) +
-                 '{:.8e} - 1.0 + T * ('.format(sp.hi[0]) +
-                 '{:.8e} + T * ('.format(sp.hi[1] / 2.0) +
-                 '{:.8e} + T * ('.format(sp.hi[2] / 3.0) +
-                 '{:.8e} + '.format(sp.hi[3] / 4.0) +
-                 '{:.8e} * T)))))'.format(sp.hi[4] / 5.0) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} + T * ('.format(sp.hi[5]) +
+                 '{:.16e} - 1.0 + T * ('.format(sp.hi[0]) +
+                 '{:.16e} + T * ('.format(sp.hi[1] / 2.0) +
+                 '{:.16e} + T * ('.format(sp.hi[2] / 3.0) +
+                 '{:.16e} + '.format(sp.hi[3] / 4.0) +
+                 '{:.16e} * T)))))'.format(sp.hi[4] / 5.0) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1720,12 +1664,12 @@ def write_chem_utils(path, lang, specs):
         file.write(line)
 
         line = '    ' + utils.get_array(lang, 'cv', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} - 1.0 + T * ('.format(sp.lo[0]) +
-                 '{:.8e} + T * ('.format(sp.lo[1]) +
-                 '{:.8e} + T * ('.format(sp.lo[2]) +
-                 '{:.8e} + '.format(sp.lo[3]) +
-                 '{:.8e} * T))))'.format(sp.lo[4]) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} - 1.0 + T * ('.format(sp.lo[0]) +
+                 '{:.16e} + T * ('.format(sp.lo[1]) +
+                 '{:.16e} + T * ('.format(sp.lo[2]) +
+                 '{:.16e} + '.format(sp.lo[3]) +
+                 '{:.16e} * T))))'.format(sp.lo[4]) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1736,12 +1680,12 @@ def write_chem_utils(path, lang, specs):
             file.write('  else\n')
 
         line = '    ' + utils.get_array(lang, 'cv', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} - 1.0 + T * ('.format(sp.hi[0]) +
-                 '{:.8e} + T * ('.format(sp.hi[1]) +
-                 '{:.8e} + T * ('.format(sp.hi[2]) +
-                 '{:.8e} + '.format(sp.hi[3]) +
-                 '{:.8e} * T))))'.format(sp.hi[4]) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} - 1.0 + T * ('.format(sp.hi[0]) +
+                 '{:.16e} + T * ('.format(sp.hi[1]) +
+                 '{:.16e} + T * ('.format(sp.hi[2]) +
+                 '{:.16e} + '.format(sp.hi[3]) +
+                 '{:.16e} * T))))'.format(sp.hi[4]) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1789,12 +1733,12 @@ def write_chem_utils(path, lang, specs):
         file.write(line)
 
         line = '    ' + utils.get_array(lang, 'cp', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} + T * ('.format(sp.lo[0]) +
-                 '{:.8e} + T * ('.format(sp.lo[1]) +
-                 '{:.8e} + T * ('.format(sp.lo[2]) +
-                 '{:.8e} + '.format(sp.lo[3]) +
-                 '{:.8e} * T))))'.format(sp.lo[4]) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} + T * ('.format(sp.lo[0]) +
+                 '{:.16e} + T * ('.format(sp.lo[1]) +
+                 '{:.16e} + T * ('.format(sp.lo[2]) +
+                 '{:.16e} + '.format(sp.lo[3]) +
+                 '{:.16e} * T))))'.format(sp.lo[4]) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1805,12 +1749,12 @@ def write_chem_utils(path, lang, specs):
             file.write('  else\n')
 
         line = '    ' + utils.get_array(lang, 'cp', isp)
-        line += (' = {:.8e} * '.format(chem.RU / sp.mw) +
-                 '({:.8e} + T * ('.format(sp.hi[0]) +
-                 '{:.8e} + T * ('.format(sp.hi[1]) +
-                 '{:.8e} + T * ('.format(sp.hi[2]) +
-                 '{:.8e} + '.format(sp.hi[3]) +
-                 '{:.8e} * T))))'.format(sp.hi[4]) +
+        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
+                 '({:.16e} + T * ('.format(sp.hi[0]) +
+                 '{:.16e} + T * ('.format(sp.hi[1]) +
+                 '{:.16e} + T * ('.format(sp.hi[2]) +
+                 '{:.16e} + '.format(sp.hi[3]) +
+                 '{:.16e} * T))))'.format(sp.hi[4]) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1952,8 +1896,7 @@ def write_derivs(path, lang, specs, reacs):
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n'
                '  double cp[{}];\n'.format(len(specs)) +
-               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp);\n'
-                                                               '\n'
+               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp);\n\n'
                )
 
     file.write('  // constant pressure mass-average specific heat\n')
@@ -1992,7 +1935,7 @@ def write_derivs(path, lang, specs, reacs):
         if not isfirst: line += ' + '
 
         line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' + \
-                utils.get_array(lang, 'h', isp) + ' * {})'.format(sp.mw)
+                utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
 
         isfirst = False
 
@@ -2013,8 +1956,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('#elif defined(CONV)\n\n')
 
     file.write(pre + 'void dydt (const double t, const double rho, '
-                     'const double * y, double * dy) {\n'
-                     '\n'
+                     'const double * y, double * dy) {\n\n'
                )
 
     # calculation of pressure
@@ -2030,7 +1972,7 @@ def write_derivs(path, lang, specs, reacs):
             line = '      '
 
         if not isfirst: line += ' + '
-        line += '(' + utils.get_array(lang, 'y', isp + 1) + ' / {})'.format(sp.mw)
+        line += '(' + utils.get_array(lang, 'y', isp + 1) + ' / {:.16e})'.format(sp.mw)
 
         isfirst = False
 
@@ -2121,7 +2063,7 @@ def write_derivs(path, lang, specs, reacs):
             line = '       '
         line += ' + ' if not isfirst else ''
         line += ('(' + utils.get_array(lang, 'dy', idx + 1) + ' * ' +
-                 utils.get_array(lang, 'u', idx) + ' * {})'.format(sp.mw)
+                 utils.get_array(lang, 'u', idx) + ' * {:.16e})'.format(sp.mw)
                  )
 
         isfirst = False
@@ -2133,7 +2075,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // calculate rate of change of species mass fractions\n')
     for isp, sp in enumerate(specs):
         file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                   ' *= ({} / rho);\n'.format(sp.mw)
+                   ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
     file.write('\n')
 
@@ -2232,7 +2174,7 @@ def write_mass_mole(path, lang, specs):
                    )
         for isp, sp in enumerate(specs):
             file.write('  mw_avg += X[{}] * '.format(isp) +
-                       '{};\n'.format(sp.mw)
+                       '{:.16e};\n'.format(sp.mw)
                        )
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n'
@@ -2241,7 +2183,7 @@ def write_mass_mole(path, lang, specs):
         for isp, sp in enumerate(specs):
             file.write('  mw_avg = mw_avg + '
                        'X({}) * '.format(isp + 1) +
-                       '{}\n'.format(sp.mw)
+                       '{:.16e}\n'.format(sp.mw)
                        )
     file.write('\n')
 
@@ -2250,7 +2192,7 @@ def write_mass_mole(path, lang, specs):
         file.write('  // calculate mass fractions\n')
         for isp, sp in enumerate(specs):
             file.write('  Y[{0}] = X[{0}] * '.format(isp) +
-                       '{} / mw_avg;\n'.format(sp.mw)
+                       '{:.16e} / mw_avg;\n'.format(sp.mw)
                        )
         file.write('\n'
                    '} // end mole2mass\n'
@@ -2260,7 +2202,7 @@ def write_mass_mole(path, lang, specs):
         file.write('  ! calculate mass fractions\n')
         for isp, sp in enumerate(specs):
             file.write('  Y({0}) = X({0}) * '.format(isp + 1) +
-                       '{} / mw_avg\n'.format(sp.mw)
+                       '{:.16e} / mw_avg\n'.format(sp.mw)
                        )
         file.write('\n'
                    'end subroutine mole2mass\n'
@@ -2303,7 +2245,7 @@ def write_mass_mole(path, lang, specs):
         file.write('  double mw_avg = 0.0;\n')
         for isp, sp in enumerate(specs):
             file.write('  mw_avg += Y[{}] / '.format(isp) +
-                       '{};\n'.format(sp.mw)
+                       '{:.16e};\n'.format(sp.mw)
                        )
         file.write('  mw_avg = 1.0 / mw_avg;\n')
     elif lang == 'fortran':
@@ -2312,7 +2254,7 @@ def write_mass_mole(path, lang, specs):
         for isp, sp in enumerate(specs):
             file.write('  mw_avg = mw_avg + '
                        'Y({}) / '.format(isp + 1) +
-                       '{}\n'.format(sp.mw)
+                       '{:.16e}\n'.format(sp.mw)
                        )
     file.write('\n')
 
@@ -2321,7 +2263,7 @@ def write_mass_mole(path, lang, specs):
         file.write('  // calculate mass fractions\n')
         for isp, sp in enumerate(specs):
             file.write('  X[{0}] = Y[{0}] * '.format(isp) +
-                       'mw_avg / {};\n'.format(sp.mw)
+                       'mw_avg / {:.16e};\n'.format(sp.mw)
                        )
         file.write('\n'
                    '} // end mass2mole\n'
@@ -2331,7 +2273,7 @@ def write_mass_mole(path, lang, specs):
         file.write('  ! calculate mass fractions\n')
         for isp, sp in enumerate(specs):
             file.write('  X({0}) = Y({0}) * '.format(isp + 1) +
-                       'mw_avg / {}\n'.format(sp.mw)
+                       'mw_avg / {:.16e}\n'.format(sp.mw)
                        )
         file.write('\n'
                    'end subroutine mass2mole\n'
@@ -2348,11 +2290,11 @@ def write_mass_mole(path, lang, specs):
                    ' * \param[in]  pres  pressure\n'
                    ' * \param[in]  X     array of species mole fractions\n'
                    r' * \return     rho  mixture mass density' + '\n'
-                                                                 ' */\n'
-                                                                 'double getDensity (const double temp, const double '
-                                                                 'pres, '
-                                                                 'const double * X) {\n'
-                                                                 '\n'
+                   ' */\n'
+                   'double getDensity (const double temp, const double '
+                   'pres, '
+                   'const double * X) {\n'
+                   '\n'
                    )
     elif lang == 'fortran':
         file.write('!-------------------------------------------------------'
@@ -2362,14 +2304,14 @@ def write_mass_mole(path, lang, specs):
                    '!! @param[in]  pres  pressure\n'
                    '!! @param[in]  X     array of species mole fractions\n'
                    '!! @return     rho   mixture mass density' + '\n'
-                                                                 '!-------------------------------------------------------'
-                                                                 '----------\n'
-                                                                 'function mass2mole (temp, pres, X) result(rho)\n'
-                                                                 '  implicit none\n'
-                                                                 '  double, intent(in) :: temp, pres\n'
-                                                                 '  double, dimension(:), intent(in) :: X\n'
-                                                                 '  double :: mw_avg, rho\n'
-                                                                 '\n'
+                   '!-------------------------------------------------------'
+                   '----------\n'
+                   'function mass2mole (temp, pres, X) result(rho)\n'
+                   '  implicit none\n'
+                   '  double, intent(in) :: temp, pres\n'
+                   '  double, dimension(:), intent(in) :: X\n'
+                   '  double :: mw_avg, rho\n'
+                   '\n'
                    )
 
     # get molecular weight
@@ -2379,7 +2321,7 @@ def write_mass_mole(path, lang, specs):
                    )
         for isp, sp in enumerate(specs):
             file.write('  mw_avg += X[{}] * '.format(isp) +
-                       '{};\n'.format(sp.mw)
+                       '{:.16e};\n'.format(sp.mw)
                        )
         file.write('\n')
     elif lang == 'fortran':
@@ -2389,7 +2331,7 @@ def write_mass_mole(path, lang, specs):
         for isp, sp in enumerate(specs):
             file.write('  mw_avg = mw_avg + '
                        'X({}) * '.format(isp + 1) +
-                       '{}\n'.format(sp.mw)
+                       '{:.16e}\n'.format(sp.mw)
                        )
         file.write('\n')
 

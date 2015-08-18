@@ -342,8 +342,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     rxn_rate_order = range(len(reacs))
     pdep_rate_order = [reacs.index(reac) for reac in pdep_reacs]
     spec_rate_order = []
-    for i in range(len(specs)):
-        spec_rate_order.append(([i], list(sorted(s_to_r[i]))))
+    for i in range(len(reacs)):
+        spec_rate_order.append(list(sorted(r_to_s[i])), [i])
 
     print_spec_order = []
     # finally reorder the spec and rxn orderings to fix for printing

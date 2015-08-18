@@ -43,7 +43,7 @@ flags = dict(c=['-std=c99'],
                    '-dc'],
              fortran='')
 
-libs = dict(c='-lm',
+libs = dict(c=['-lm', '-std=c99'],
             cuda='-arch=sm_20',
             fortran='')
 
@@ -659,7 +659,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             '-I.' + os.path.sep + build_dir,
             '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
             '-o', os.path.join(test_dir, f + '.o')
-        ])
+            ])
         args = [val for val in args if val.strip()]
         try:
             subprocess.check_call(args)
@@ -668,11 +668,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             sys.exit(1)
 
     # Link into executable
-    args = ([cmd_compile[lang]] +
-            [os.path.join(test_dir, f + '.o') for f in files] +
-            [libs[lang]] +
-            ['-o', os.path.join(test_dir, 'test')]
-            )
+    args = [cmd_compile[lang]]
+    args.extend([os.path.join(test_dir, f + '.o') for f in files])
+    args.extend(['-o', os.path.join(test_dir, 'test')])
+    args.extend(libs[lang])
     try:
         subprocess.check_call(args)
     except subprocess.CalledProcessError:

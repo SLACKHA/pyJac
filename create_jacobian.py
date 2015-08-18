@@ -736,9 +736,9 @@ def get_db_dt(lang, specs, rxn):
 
 def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp=None):
     # print lines for necessary pressure-dependent variables
-    line = utils.line_start + '{} = '.format('conc_temp' if rxn.thd_body else 'Pr')
+    line = utils.line_start + '{} = '.format('conc_temp' if rxn.thd_body_eff > 0 else 'Pr')
     conc_temp_log = None
-    if rxn.thd_body:
+    if rxn.thd_body_eff:
         # take care of the conc_temp collapsing
         conc_temp_log = []
     if rxn.pdep_sp != '':
@@ -757,7 +757,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                     conc_temp_log.append((isp, eff - 1.0))
         line += ')'
 
-        if not rxn.thd_body:
+        if not rxn.thd_body_eff:
             # only depends on +m
             conc_temp_log = []
 
@@ -794,7 +794,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
             else:
                 line = ''
 
-    if rxn.thd_body and len(line):
+    if rxn.thd_body_eff and len(line):
         file.write(line + utils.line_end[lang])
 
     if rxn.pdep:

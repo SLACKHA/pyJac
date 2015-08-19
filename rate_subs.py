@@ -1294,11 +1294,8 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
                 seen[spind] = True
 
-                pdep = False
-                if rxn.thd_body or rxn.pdep: pdep = True
-
                 # pressure dependence modification
-                if pdep:
+                if rxn.thd_body or rxn.pdep:
                     pind = pdep_reacs.index(rind)
                     rxn_out += ' * ' + get_array(lang, 'pres_mod', pind)
 

@@ -599,10 +599,32 @@ def __is_pdep(rxn):
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
 
+def run_pasr(pasr_input_file, mech_filename, pasr_input, pasr_output_file):
+    # Run PaSR to get data
+    pasr_input = pasr.parse_input_file(pasr_input_file)
+    state_data = pasr.run_simulation(
+                    mech_filename,
+                    pasr_input['case'],
+                    pasr_input['temperature'],
+                    pasr_input['pressure'],
+                    pasr_input['equivalence ratio'],
+                    pasr_input['fuel'],
+                    pasr_input['oxidizer'],
+                    pasr_input['complete products'],
+                    pasr_input['number of particles'],
+                    pasr_input['residence time'],
+                    pasr_input['mixing time'],
+                    pasr_input['pairing time'],
+                    pasr_input['number of residence times']
+                    )
+    if pasr_output_file:
+        np.save(pasr_output_file, state_data)
+    return state_data
+
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
-         seed=None):
+         seed=None, pasr_output_file=None):
     """
     """
 
@@ -698,28 +720,21 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         gas.reaction(idx), ct.ChemicallyActivatedReaction)
     ]
 
-    # Run PaSR to get data
-    pasr_input = pasr.parse_input_file(pasr_input_file)
-    state_data = pasr.run_simulation(
-                    mech_filename,
-                    pasr_input['case'],
-                    pasr_input['temperature'],
-                    pasr_input['pressure'],
-                    pasr_input['equivalence ratio'],
-                    pasr_input['fuel'],
-                    pasr_input['oxidizer'],
-                    pasr_input['complete products'],
-                    pasr_input['number of particles'],
-                    pasr_input['residence time'],
-                    pasr_input['mixing time'],
-                    pasr_input['pairing time'],
-                    pasr_input['number of residence times']
-                    )
-
+    if pasr_output_file:
+        #load old test data
+        try:
+            state_data = np.load(pasr_output_file)
+        except:
+            # Run PaSR to get data
+            print('Could not load saved pasr data... re-running')
+            state_data = run_pasr(pasr_input_file, mech_filename, pasr_input, pasr_output_file)
+    else:
+        # Run PaSR to get data
+        state_data = run_pasr(pasr_input_file, mech_filename, pasr_input, pasr_output_file)
     # Reshape array to treat time steps and particles the same
     state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
-                                    state_data.shape[2]
-                                    )
+                                state_data.shape[2]
+                                )
     num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)
@@ -972,7 +987,12 @@ if __name__ == '__main__':
                         type=int,
                         default=None,
                         help='The seed to be used for random numbers')
+    parser.add_argument('-p', '--pasr_output',
+                        type=str,
+                        default=None,
+                        help='An optional saved .npy file that has the '
+                             'resulting pasr data (to speed testing)')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
-         args.generate_jacob, args.seed
+         args.generate_jacob, args.seed, args.pasr_output
          )

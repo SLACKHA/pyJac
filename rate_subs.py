@@ -1037,11 +1037,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 if len(reac.troe_par) == 4 and reac.troe_par[3] != 0.0:
                     line += ' + '
                     if reac.troe_par[3] > 0.0:
-                        val = reac.troe_par[3]
-                        line += 'exp(-{:.8e} / T)'.format(val)
+                        line += 'exp(-{:.8e} / T)'.format(reac.troe_par[3])
                     else:
-                        val = abs(reac.troe_par[3])
-                        line += 'exp({:.8e} / T)'.format(val)
+                        line += 'exp({:.8e} / T)'.format(abs(reac.troe_par[3]))
                 line += ', 1.0e-300))' + utils.line_end[lang]
                 file.write(line)
 
@@ -1070,23 +1068,23 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                 file.write(line)
 
                 line = '  ' + get_array(lang, 'pres_mod', pind)
-                line += ' = pow({:4} * '.format(reac.sri_par[0])
+                line += ' = pow({:.6} * '.format(reac.sri_par[0])
                 # Need to check for negative parameters, and
                 # skip "-" sign if so.
                 if reac.sri_par[1] > 0.0:
-                    line += 'exp(-{:.4} / T)'.format(reac.sri_par[1])
+                    line += 'exp(-{:.6} / T)'.format(reac.sri_par[1])
                 else:
-                    line += 'exp({:.4} / T)'.format(abs(reac.sri_par[1]))
+                    line += 'exp({:.6} / T)'.format(abs(reac.sri_par[1]))
 
                 if reac.sri_par[2] > 0.0:
-                    line += ' + exp(-T / {:.4}), X) '.format(reac.sri_par[2])
+                    line += ' + exp(-T / {:.6}), X) '.format(reac.sri_par[2])
                 else:
-                    line += ' + exp(T / {:.4}), X) '.format(abs(reac.sri_par[2]))
+                    line += ' + exp(T / {:.6}), X) '.format(abs(reac.sri_par[2]))
 
                 if (len(reac.sri_par) == 5 and
                         reac.sri_par[3] != 1.0 and reac.sri_par[4] != 0.0):
                     line += ('* {:.8e} * '.format(reac.sri_par[3]) +
-                             'pow(T, {:.4}) '.format(reac.sri_par[4])
+                             'pow(T, {:.6}) '.format(reac.sri_par[4])
                              )
             else:
                 # simple falloff fn (i.e. F = 1)

@@ -768,7 +768,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
         print('Max error in non-zero concentration: {:.2e} % @ species {}'
             .format(max_err * 100., loc))
@@ -796,7 +796,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
         print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
               format(max_err * 100., loc))
@@ -809,7 +809,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                       )
             max_err = np.max(err)
             loc = non_zero[np.argmax(err)]
-            err = np.linalg.norm(err, 2) * 100.
+            err = np.linalg.norm(err) * 100.
             print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
             print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
                   format(max_err * 100., loc))
@@ -826,7 +826,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         print('L2 norm relative error of non-zero net production rates: '
               '{:.2e} %'.format(err)
               )
@@ -834,7 +834,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
               '@ species {}'.format(max_err * 100., loc)
               )
         err = np.linalg.norm(
-            test_spec_rates[zero] - gas.net_production_rates[zero], 2)
+            test_spec_rates[zero] - gas.net_production_rates[zero])
         print(
             'L2 norm difference of "zero" net production rates: {:.2e}'
             .format(err))
@@ -849,13 +849,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         err_dydt[i] = err
         print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
         print('Max error in non-zero dydt: {:.2e}% '
               '@ index {}'.format(max_err * 100., loc)
               )
-        err = np.linalg.norm(test_dydt[zero] - ode()[zero], 2)
+        err = np.linalg.norm(test_dydt[zero] - ode()[zero])
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 

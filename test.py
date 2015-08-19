@@ -909,6 +909,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         except:
             print('Cantera unable to calculate Jacobian. '
                   'Using custom FD only.')
+        #just for safety reset gas state
+        #as it changed during the eval_jacob above
+        gas.TPY = temp, pres, mass_frac
 
         num = int(test_data[0])
         jacob = test_data[1: num + 1]

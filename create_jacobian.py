@@ -192,7 +192,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             if not efficiency in counter:
                 counter[efficiency] = 0
             counter[efficiency] += 1
-        counter[1.0] += (nspec - sum(counter.values()))
+        counter[1.0] += (nspec - len(rxn.thd_body_eff))
         alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
 
     # now handle third body / pdep parts if needed

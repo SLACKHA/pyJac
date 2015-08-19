@@ -196,7 +196,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
 
     # now handle third body / pdep parts if needed
-    if rxn.thd_body and not rxn.pdep:
+    if rxn.thd_body:
         jline += '))'
         if alphaij_hat is not None:
             if alphaij_hat == 1.0:

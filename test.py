@@ -128,7 +128,7 @@ def convert_mech(mech_filename, therm_filename=None):
           )
     return mech_filename
 
-def __write_fd_jacob(file, lang, atol=1.e-14, rtol=1.e-8):
+def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-8):
     file.write(
         """
         #define FD_ORD 6
@@ -557,7 +557,7 @@ def write_c_test(build_dir, pmod):
 def eval_jacobian(dydt, order):
     """
     """
-    abs_tol = 1.e-14
+    abs_tol = 1.e-20
     rel_tol = 1.e-8
 
     y = np.hstack((dydt.gas.T, dydt.gas.Y))

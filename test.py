@@ -564,21 +564,23 @@ def eval_jacobian(dydt, order):
 
     if order == 2:
         x_coeffs = np.array([-1., 1.])
-        x_fwd = np.array([0., 1., 2.])
         y_coeffs = np.array([-0.5, 0.5])
-        y_fwd = np.array([-3. / 2., 2., -.5])
+        x_fwd = np.array([0., 1., 2.])
+        y_fwd = np.array([-3. / 2., 2., -1. / 2.])
     elif order == 4:
         x_coeffs = np.array([-2., -1., 1., 2.])
-        x_fwd = np.array([0., 1., 2., 3., 4.])
         y_coeffs = np.array([1. / 12., -2. / 3., 2. / 3., -1. / 12.])
-        y_fwd = np.array([-25. / 12., 4., -3., 4. / 3., 1. / 4.])
+        x_fwd = np.array([0., 1., 2., 3., 4.])
+        y_fwd = np.array([-25. / 12., 4., -3., 4. / 3., -1. / 4.])
     elif order == 6:
         x_coeffs = np.array([-3., -2., -1., 1., 2., 3.])
-        x_fwd = np.array([0., 1., 2., 3., 4., 5., 6.])
         y_coeffs = np.array([-1. / 60., 3. / 20., -3. / 4.,
                              3. / 4., -3. / 20., 1. / 60.
                              ])
-        y_fwd = np.array([-49. / 20., 6., -15. / 2., 20. / 3., -15. / 4., 6. / 5., -1. / 6.])
+        x_fwd = np.array([0., 1., 2., 3., 4., 5., 6.])
+        y_fwd = np.array([-49. / 20., 6., -15. / 2., 20. / 3., 
+                          -15. / 4., 6. / 5., -1. / 6.
+                         ])
 
     sqrt_rnd = np.sqrt(np.finfo(float).eps)
     err_wt = abs(y) * rel_tol + abs_tol

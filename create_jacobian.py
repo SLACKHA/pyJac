@@ -187,7 +187,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     alphaij_hat = None
     counter = {}
     counter[1.0] = 0
-    if rxn.thd_body:
+    if rxn.thd_body_eff:
         for spec, efficiency in rxn.thd_body_eff:
             if not efficiency in counter:
                 counter[efficiency] = 0

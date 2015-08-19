@@ -2286,7 +2286,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
                     line += '(' + get_array(lang, 'dy', k_sp + offset)
-                    line += ' * mw_avg * {} * rho_inv)'.format(sp_k.mw / sp_j.mw)
+                    line += ' * mw_avg * {:.16e} * rho_inv)'.format(sp_k.mw / sp_j.mw)
                     line += utils.line_end[lang]
                     file.write(line)
 

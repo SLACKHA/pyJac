@@ -565,22 +565,14 @@ def eval_jacobian(dydt, order):
     if order == 2:
         x_coeffs = np.array([-1., 1.])
         y_coeffs = np.array([-0.5, 0.5])
-        x_fwd = np.array([0., 1., 2.])
-        y_fwd = np.array([-3. / 2., 2., -1. / 2.])
     elif order == 4:
         x_coeffs = np.array([-2., -1., 1., 2.])
         y_coeffs = np.array([1. / 12., -2. / 3., 2. / 3., -1. / 12.])
-        x_fwd = np.array([0., 1., 2., 3., 4.])
-        y_fwd = np.array([-25. / 12., 4., -3., 4. / 3., -1. / 4.])
     elif order == 6:
         x_coeffs = np.array([-3., -2., -1., 1., 2., 3.])
         y_coeffs = np.array([-1. / 60., 3. / 20., -3. / 4.,
                              3. / 4., -3. / 20., 1. / 60.
                              ])
-        x_fwd = np.array([0., 1., 2., 3., 4., 5., 6.])
-        y_fwd = np.array([-49. / 20., 6., -15. / 2., 20. / 3., 
-                          -15. / 4., 6. / 5., -1. / 6.
-                         ])
 
     sqrt_rnd = np.sqrt(np.finfo(float).eps)
     err_wt = abs(y) * rel_tol + abs_tol
@@ -594,14 +586,7 @@ def eval_jacobian(dydt, order):
         y_temp = np.copy(y)
         r = max(sqrt_rnd * abs(y_j), r0 / err_wt[j])
 
-        if y[j] == 0:
-            the_x = x_fwd
-            the_y = y_fwd
-        else:
-            the_x = x_coeffs
-            the_y = y_coeffs
-
-        for x_c, y_c in zip(the_x, the_y):
+        for x_c, y_c in zip(x_coeffs, y_coeffs):
             y_temp[j] = y_j + x_c * r
             jacob[np.arange(len(y)) + len(y) * j] += y_c * dydt(y=y_temp)
 

@@ -780,12 +780,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             # add reaction index to list
             thd_flag = True
             pdep_reacs.append(i_rxn)
-        if reac.pdep:
+        elif reac.pdep:
             # add reaction index to list
             pdep_flag = True
-
-            ## This may be redundant, since thd_body and pdep are mutually exclusive.
-            if not reac.thd_body: pdep_reacs.append(i_rxn)
+            pdep_reacs.append(i_rxn)
 
             if reac.troe and not troe_flag: troe_flag = True
             if reac.sri and not sri_flag: sri_flag = True
@@ -862,7 +860,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                            )
         elif lang == 'cuda':
             file.write('  // pressure dependence variable declarations\n')
-            #            if not thd_flag: file.write('  register double thd;\n')
             file.write('  register double k0;\n'
                        '  register double kinf;\n'
                        '  register double Pr;\n'

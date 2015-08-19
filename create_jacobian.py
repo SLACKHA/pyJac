@@ -128,18 +128,18 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += '(-Pr / (1.0 + Pr))'
         if rxn.troe:
             jline += (' - log(Fcent) * 2.0 * A * (B * '
-                      '{:.6}'.format(1.0 / math.log(10.0)) +
+                      '{:.16}'.format(1.0 / math.log(10.0)) +
                       ' + A * '
-                      '{:.6}) / '.format(0.14 / math.log(10.0)) +
+                      '{:.16}) / '.format(0.14 / math.log(10.0)) +
                       '(B * B * B * (1.0 + A * A / (B * B)) '
                       '* (1.0 + A * A / (B * B)))'
                       )
         elif rxn.sri:
             jline += ('- X * X * '
-                      '{:.6} * '.format(2.0 / math.log(10.0)) +
+                      '{:.16} * '.format(2.0 / math.log(10.0)) +
                       'log10(Pr) * '
                       'log({:.4} * '.format(rxn.sri_par[0]) +
-                      'exp({:4} / T) + '.format(-rxn.sri_par[1]) +
+                      'exp({:.4} / T) + '.format(-rxn.sri_par[1]) +
                       'exp(T / {:.4}))'.format(-rxn.sri_par[2])
                       )
 
@@ -254,8 +254,8 @@ def write_rates(file, lang, rxn):
 
             pres_log_diff = math.log(vals2[0]) - math.log(vals[0])
             line = ('    kf = exp(kf + (kf2 - kf) * (log(pres) - ' +
-                    '{:.8e}) / '.format(math.log(vals[0])) +
-                    '{:.8e})'.format(pres_log_diff)
+                    '{:.16e}) / '.format(math.log(vals[0])) +
+                    '{:.16e})'.format(pres_log_diff)
                     )
             file.write(line + utils.line_end[lang])
 
@@ -406,24 +406,32 @@ def write_kc(file, lang, specs, rxn):
 
         sum_nu += nu
 
-        lo_array = [nu] + [
-                    sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
-                                        sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
-                    sp.lo[5]]
+        lo_array = [nu] + [sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
+                           sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                           sp.lo[5]
+                           ]
 
-        lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
+        lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + 
+                    lo_array[3:]
+                    ]
 
-        hi_array = [nu] + [
-            sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
-                                sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
-            sp.hi[5]]
+        hi_array = [nu] + [sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
+                           sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                           sp.hi[5]
+                           ]
 
-        hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
+        hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + 
+                    hi_array[3:]
+                    ]
         if not sp.Trange[1] in coeffs:
             coeffs[sp.Trange[1]] = lo_array, hi_array
         else:
-            coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(lo_array))], \
-                                     [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+            coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] 
+                                    for i in range(len(lo_array))
+                                    ], \
+                                    [hi_array[i] + coeffs[sp.Trange[1]][1][i] 
+                                    for i in range(len(hi_array))
+                                    ]
 
     isFirst = True
     for T_mid in coeffs:
@@ -446,14 +454,14 @@ def write_kc(file, lang, specs, rxn):
                 line = utils.line_start + '  Kc += '
             else:
                 line = utils.line_start + '  Kc = Kc + '
-        line += ('({:.8e} + '.format(lo_array[0]) +
-                 '{:.8e} * '.format(lo_array[1]) +
+        line += ('({:.16e} + '.format(lo_array[0]) +
+                 '{:.16e} * '.format(lo_array[1]) +
                  'logT + T * ('
-                 '{:.8e} + T * ('.format(lo_array[2]) +
-                 '{:.8e} + T * ('.format(lo_array[3]) +
-                 '{:.8e} + '.format(lo_array[4]) +
-                 '{:.8e} * T))) - '.format(lo_array[5]) +
-                 '{:.8e} / T)'.format(lo_array[6]) +
+                 '{:.16e} + T * ('.format(lo_array[2]) +
+                 '{:.16e} + T * ('.format(lo_array[3]) +
+                 '{:.16e} + '.format(lo_array[4]) +
+                 '{:.16e} * T))) - '.format(lo_array[5]) +
+                 '{:.16e} / T)'.format(lo_array[6]) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -470,14 +478,14 @@ def write_kc(file, lang, specs, rxn):
                 line = utils.line_start + '  Kc += '
             else:
                 line = utils.line_start + '  Kc = Kc + '
-        line += ('({:.8e} + '.format(hi_array[0]) +
-                 '{:.8e} * '.format(hi_array[1]) +
+        line += ('({:.16e} + '.format(hi_array[0]) +
+                 '{:.16e} * '.format(hi_array[1]) +
                  'logT + T * ('
-                 '{:.8e} + T * ('.format(hi_array[2]) +
-                 '{:.8e} + T * ('.format(hi_array[3]) +
-                 '{:.8e} + '.format(hi_array[4]) +
-                 '{:.8e} * T))) - '.format(hi_array[5]) +
-                 '{:.8e} / T)'.format(hi_array[6]) +
+                 '{:.16e} + T * ('.format(hi_array[2]) +
+                 '{:.16e} + T * ('.format(hi_array[3]) +
+                 '{:.16e} + '.format(hi_array[4]) +
+                 '{:.16e} * T))) - '.format(hi_array[5]) +
+                 '{:.16e} / T)'.format(hi_array[6]) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -493,7 +501,7 @@ def write_kc(file, lang, specs, rxn):
     line = utils.line_start + 'Kc = '
     if sum_nu != 0:
         num = (chem.PA / chem.RU) ** sum_nu
-        line += '{:.8e} * '.format(num)
+        line += '{:.16e} * '.format(num)
     line += 'exp(Kc)' + utils.line_end[lang]
     file.write(line)
 
@@ -567,20 +575,20 @@ def get_rxn_params_dt(rxn, rev=False):
     if rev:
         if (abs(rxn.rev_par[1]) > 1.0e-90
             and abs(rxn.rev_par[2]) > 1.0e-90):
-            jline += ('{:.8e} + '.format(rxn.rev_par[1]) +
-                      '({:.8e} / T)'.format(rxn.rev_par[2])
+            jline += ('{:.16e} + '.format(rxn.rev_par[1]) +
+                      '({:.16e} / T)'.format(rxn.rev_par[2])
                       )
         elif abs(rxn.rev_par[1]) > 1.0e-90:
-            jline += '{:.8e}'.format(rxn.rev_par[1])
+            jline += '{:.16e}'.format(rxn.rev_par[1])
         elif abs(rxn.rev_par[2]) > 1.0e-90:
-            jline += '({:.8e} / T)'.format(rxn.rev_par[2])
+            jline += '({:.16e} / T)'.format(rxn.rev_par[2])
     else:
         if (abs(rxn.b) > 1.0e-90) and (abs(rxn.E) > 1.0e-90):
-            jline += '{:.8e} + ({:.8e} / T)'.format(rxn.b, rxn.E)
+            jline += '{:.16e} + ({:.16e} / T)'.format(rxn.b, rxn.E)
         elif abs(rxn.b) > 1.0e-90:
-            jline += '{:.8e}'.format(rxn.b)
+            jline += '{:.16e}'.format(rxn.b)
         elif abs(rxn.E) > 1.0e-90:
-            jline += '({:.8e} / T)'.format(rxn.E)
+            jline += '({:.16e} / T)'.format(rxn.E)
     return jline
 
 
@@ -625,12 +633,12 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
             file.write(line)
 
             line = ('    ' + dBdT +
-                    ' = ({:.8e}'.format(specs[sp_ind].lo[0] - 1.0) +
-                    ' + {:.8e} / T) / T'.format(specs[sp_ind].lo[5]) +
-                    ' + {:.8e} + T'.format(specs[sp_ind].lo[1] / 2.0) +
-                    ' * ({:.8e}'.format(specs[sp_ind].lo[2] / 3.0) +
-                    ' + T * ({:.8e}'.format(specs[sp_ind].lo[3] / 4.0) +
-                    ' + {:.8e} * T))'.format(specs[sp_ind].lo[4] / 5.0) +
+                    ' = ({:.16e}'.format(specs[sp_ind].lo[0] - 1.0) +
+                    ' + {:.16e} / T) / T'.format(specs[sp_ind].lo[5]) +
+                    ' + {:.16e} + T'.format(specs[sp_ind].lo[1] / 2.0) +
+                    ' * ({:.16e}'.format(specs[sp_ind].lo[2] / 3.0) +
+                    ' + T * ({:.16e}'.format(specs[sp_ind].lo[3] / 4.0) +
+                    ' + {:.16e} * T))'.format(specs[sp_ind].lo[4] / 5.0) +
                     utils.line_end[lang]
                     )
             file.write(line)
@@ -641,12 +649,12 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
                 file.write('  else\n')
 
             line = ('    ' + dBdT +
-                    ' = ({:.8e}'.format(specs[sp_ind].hi[0] - 1.0) +
-                    ' + {:.8e} / T) / T'.format(specs[sp_ind].hi[5]) +
-                    ' + {:.8e} + T'.format(specs[sp_ind].hi[1] / 2.0) +
-                    ' * ({:.8e}'.format(specs[sp_ind].hi[2] / 3.0) +
-                    ' + T * ({:.8e}'.format(specs[sp_ind].hi[3] / 4.0) +
-                    ' + {:.8e} * T))'.format(specs[sp_ind].hi[4] / 5.0) +
+                    ' = ({:.16e}'.format(specs[sp_ind].hi[0] - 1.0) +
+                    ' + {:.16e} / T) / T'.format(specs[sp_ind].hi[5]) +
+                    ' + {:.16e} + T'.format(specs[sp_ind].hi[1] / 2.0) +
+                    ' * ({:.16e}'.format(specs[sp_ind].hi[2] / 3.0) +
+                    ' + T * ({:.16e}'.format(specs[sp_ind].hi[3] / 4.0) +
+                    ' + {:.16e} * T))'.format(specs[sp_ind].hi[4] / 5.0) +
                     utils.line_end[lang]
                     )
             file.write(line)
@@ -812,13 +820,13 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
 
 def write_troe(file, lang, rxn):
     line = ('  Fcent = '
-            '{:.8e} * '.format(1.0 - rxn.troe_par[0]) +
-            'exp(T / {:.8e})'.format(-rxn.troe_par[1]) +
-            ' + {:.8e} * exp(T / '.format(rxn.troe_par[0]) +
-            '{:.8e})'.format(-rxn.troe_par[2])
+            '{:.16e} * '.format(1.0 - rxn.troe_par[0]) +
+            'exp(T / {:.16e})'.format(-rxn.troe_par[1]) +
+            ' + {:.16e} * exp(T / '.format(rxn.troe_par[0]) +
+            '{:.16e})'.format(-rxn.troe_par[2])
             )
     if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
-        line += ' + exp({:.8e} / T)'.format(-rxn.troe_par[3])
+        line += ' + exp({:.16e} / T)'.format(-rxn.troe_par[3])
     line += utils.line_end[lang]
     file.write(line)
 
@@ -854,7 +862,7 @@ def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
 
     # dPr/dT
     jline += ('({:.4e} + ('.format(beta_0minf) +
-              '{:.8e} / T) - 1.0) / '.format(E_0minf) +
+              '{:.16e} / T) - 1.0) / '.format(E_0minf) +
               '(T * (1.0 + Pr)))'
               )
 
@@ -882,26 +890,26 @@ def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
 
 def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     jline = (' + X * ((('
-             '{:.8} / '.format(rxn.sri_par[0] * rxn.sri_par[1]) +
+             '{:.16} / '.format(rxn.sri_par[0] * rxn.sri_par[1]) +
              '(T * T)) * exp('
-             '{:.8} / T) - '.format(-rxn.sri_par[1]) +
-             '{:.8e} * '.format(1.0 / rxn.sri_par[2]) +
-             'exp(T / {:.8})) / '.format(-rxn.sri_par[2]) +
-             '({:.8} * '.format(rxn.sri_par[0]) +
-             'exp({:.8} / T) + '.format(-rxn.sri_par[1]) +
-             'exp(T / {:.8})) - '.format(-rxn.sri_par[2]) +
-             'X * {:.8} * '.format(2.0 / math.log(10.0)) +
+             '{:.16} / T) - '.format(-rxn.sri_par[1]) +
+             '{:.16e} * '.format(1.0 / rxn.sri_par[2]) +
+             'exp(T / {:.16})) / '.format(-rxn.sri_par[2]) +
+             '({:.16} * '.format(rxn.sri_par[0]) +
+             'exp({:.16} / T) + '.format(-rxn.sri_par[1]) +
+             'exp(T / {:.16})) - '.format(-rxn.sri_par[2]) +
+             'X * {:.16} * '.format(2.0 / math.log(10.0)) +
              'log10(Pr) * ('
-             '{:.8e} + ('.format(beta_0minf) +
-             '{:.8e} / T) - 1.0) * '.format(E_0minf) +
-             'log({:8} * exp('.format(rxn.sri_par[0]) +
-             '{:.8} / T) + '.format(-rxn.sri_par[1]) +
+             '{:.16e} + ('.format(beta_0minf) +
+             '{:.16e} / T) - 1.0) * '.format(E_0minf) +
+             'log({:.16} * exp('.format(rxn.sri_par[0]) +
+             '{:.16} / T) + '.format(-rxn.sri_par[1]) +
              'exp(T / '
-             '{:8})) / T)'.format(-rxn.sri_par[2])
+             '{:.16})) / T)'.format(-rxn.sri_par[2])
              )
 
     if len(rxn.sri_par) == 5 and rxn.sri_par[4] != 0.0:
-        jline += ' + ({:.8} / T)'.format(rxn.sri_par[4])
+        jline += ' + ({:.16} / T)'.format(rxn.sri_par[4])
 
     return jline
 
@@ -910,33 +918,33 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     jline = (' + (((1.0 / '
              '(Fcent * (1.0 + A * A / (B * B)))) - '
              'lnF_AB * ('
-             '-{:.8e}'.format(0.67 / math.log(10.0)) +
+             '-{:.16e}'.format(0.67 / math.log(10.0)) +
              ' * B + '
-             '{:.8e} * '.format(1.1762 / math.log(10.0)) +
+             '{:.16e} * '.format(1.1762 / math.log(10.0)) +
              'A) / Fcent)'
-             ' * ({:.8e}'.format(-(1.0 - rxn.troe_par[0]) /
+             ' * ({:.16e}'.format(-(1.0 - rxn.troe_par[0]) /
                                  rxn.troe_par[1]) +
              ' * exp(T / '
-             '{:.8e}) - '.format(-rxn.troe_par[1]) +
-             '{:.8e} * '.format(rxn.troe_par[0] /
+             '{:.16e}) - '.format(-rxn.troe_par[1]) +
+             '{:.16e} * '.format(rxn.troe_par[0] /
                                 rxn.troe_par[2]) +
              'exp(T / '
-             '{:.8e})'.format(-rxn.troe_par[2])
+             '{:.16e})'.format(-rxn.troe_par[2])
              )
     if len(rxn.troe_par) == 4 and rxn.troe_par[3] != 0.0:
-        jline += (' + ({:.8e} / '.format(rxn.troe_par[3]) +
+        jline += (' + ({:.16e} / '.format(rxn.troe_par[3]) +
                   '(T * T)) * exp('
-                  '{:.8e} / T)'.format(-rxn.troe_par[3])
+                  '{:.16e} / T)'.format(-rxn.troe_par[3])
                   )
     jline += '))'
 
     jline += (' - lnF_AB * ('
-              '{:.8e}'.format(1.0 / math.log(10.0)) +
+              '{:.16e}'.format(1.0 / math.log(10.0)) +
               ' * B + '
-              '{:.8e}'.format(0.14 / math.log(10.0)) +
+              '{:.16e}'.format(0.14 / math.log(10.0)) +
               ' * A) * '
-              '({:.8e} + ('.format(beta_0minf) +
-              '{:.8e} / T) - 1.0) / T'.format(E_0minf)
+              '({:.16e} + ('.format(beta_0minf) +
+              '{:.16e} / T) - 1.0) / T'.format(E_0minf)
               )
 
     return jline
@@ -972,11 +980,11 @@ def write_dcp_dt(file, lang, specs, sparse_indicies):
             if T_mid_buckets[T_mid].index(isp):
                 line += '\n    + '
             line += '(' + utils.get_array(lang, 'y', isp + 1)
-            line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
-                     '{:.8e} + '.format(sp.lo[1]) +
-                     'T * ({:.8e} + '.format(2.0 * sp.lo[2]) +
-                     'T * ({:.8e} + '.format(3.0 * sp.lo[3]) +
-                     '{:.8e} * T)))'.format(4.0 * sp.lo[4]) +
+            line += (' * {:.16e} * ('.format(chem.RU / sp.mw) +
+                     '{:.16e} + '.format(sp.lo[1]) +
+                     'T * ({:.16e} + '.format(2.0 * sp.lo[2]) +
+                     'T * ({:.16e} + '.format(3.0 * sp.lo[3]) +
+                     '{:.16e} * T)))'.format(4.0 * sp.lo[4]) +
                      ')'
                      )
         line += utils.line_end[lang]
@@ -999,11 +1007,11 @@ def write_dcp_dt(file, lang, specs, sparse_indicies):
             if T_mid_buckets[T_mid].index(isp):
                 line += '\n    + '
             line += '(' + utils.get_array(lang, 'y', isp + 1)
-            line += (' * {:.8e} * ('.format(chem.RU / sp.mw) +
-                     '{:.8e} + '.format(sp.hi[1]) +
-                     'T * ({:.8e} + '.format(2.0 * sp.hi[2]) +
-                     'T * ({:.8e} + '.format(3.0 * sp.hi[3]) +
-                     '{:.8e} * T)))'.format(4.0 * sp.hi[4]) +
+            line += (' * {:.16e} * ('.format(chem.RU / sp.mw) +
+                     '{:.16e} + '.format(sp.hi[1]) +
+                     'T * ({:.16e} + '.format(2.0 * sp.hi[2]) +
+                     'T * ({:.16e} + '.format(3.0 * sp.hi[3]) +
+                     '{:.16e} * T)))'.format(4.0 * sp.hi[4]) +
                      ')'
                      )
         line += utils.line_end[lang]
@@ -1130,7 +1138,7 @@ def write_cheb_ut(file, lang, rxn):
     #start pressure dot product
     for i in range(1, rxn.cheb_n_temp):
         line_list.append(utils.get_array(lang, 'dot_prod', i) +
-          '= {:.8e} + Pred * {:.8e}'.format(i * rxn.cheb_par[i, 0],
+          '= {:.16e} + Pred * {:.16e}'.format(i * rxn.cheb_par[i, 0],
             i * rxn.cheb_par[i, 1]))
 
     #finish pressure dot product
@@ -1148,16 +1156,16 @@ def write_cheb_ut(file, lang, rxn):
         line_list.append(line)
         for i in range(1, rxn.cheb_n_temp):
             line_list.append(utils.get_array(lang, 'dot_prod', i)  +
-              ' += {:.8e} * cheb_temp_{}'.format(
+              ' += {:.16e} * cheb_temp_{}'.format(
                 i * rxn.cheb_par[i, j], old))
 
         update_one = not update_one
 
-    line_list.append('cheb_temp_0 = 1')
-    line_list.append('cheb_temp_1 = 2 * Tred')
+    line_list.append('cheb_temp_0 = 1.0')
+    line_list.append('cheb_temp_1 = 2.0 * Tred')
     #finally, do the temperature portion
     line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 1) +
-                     ' + 2 * Tred * ' + utils.get_array(lang, 'dot_prod', 2))
+                     ' + 2.0 * Tred * ' + utils.get_array(lang, 'dot_prod', 2))
 
     update_one = True
     for i in range(3, rxn.cheb_n_temp):
@@ -1168,7 +1176,7 @@ def write_cheb_ut(file, lang, rxn):
             new = 0
             old = 1
         line = 'cheb_temp_{}'.format(old)
-        line += ' = 2 * Tred * cheb_temp_{}'.format(new)
+        line += ' = 2.0 * Tred * cheb_temp_{}'.format(new)
         line += ' - cheb_temp_{}'.format(old)
         line_list.append(line)
         line_list.append('kf += ' + utils.get_array(lang, 'dot_prod', i) +
@@ -1186,7 +1194,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
     tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
     file.write(utils.line_start +
             'Tred = ((2.0 / T) - ' +
-            '{:.8e}) / {:.8e}'.format(tlim_inv_sum, tlim_inv_sub) +
+            '{:.16e}) / {:.16e}'.format(tlim_inv_sum, tlim_inv_sub) +
             utils.line_end[lang]
             )
 
@@ -1198,15 +1206,15 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
                     )
     file.write(utils.line_start +
             'Pred = (2.0 * log10(pres) - ' +
-            '{:.8e}) / {:.8e}'.format(plim_log_sum, plim_log_sub) +
+            '{:.16e}) / {:.16e}'.format(plim_log_sum, plim_log_sub) +
             utils.line_end[lang]
             )
 
     #do U(T) sum
     write_cheb_ut(file, lang, rxn)
 
-    jline += 'kf * ({:.8e} / T)'.format(
-            -2. * math.log(10) / tlim_inv_sub)
+    jline += 'kf * ({:.16e} / T)'.format(
+            -2.0 * math.log(10) / tlim_inv_sub)
 
     jline += ' * (' + get_array(lang, 'fwd_rates', rind)
 
@@ -1263,12 +1271,12 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             #negative A's, so we need to handle the log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
-            jline_p = (jline + '({:.8e} + '.format(b_p1) +
-                       '{:.8e} / T + '.format(E_p1) +
-                       '({:.8e} + '.format(b_p2 - b_p1) +
-                       '{:.8e} / T) * '.format(E_p2 - E_p1) +
-                       '(log(pres) - {:.8e}) /'.format(math.log(p1)) +
-                       ' {:.8e}'.format(math.log(p2) - math.log(p1)) +
+            jline_p = (jline + '({:.16e} + '.format(b_p1) +
+                       '{:.16e} / T + '.format(E_p1) +
+                       '({:.16e} + '.format(b_p2 - b_p1) +
+                       '{:.16e} / T) * '.format(E_p2 - E_p1) +
+                       '(log(pres) - {:.16e}) /'.format(math.log(p1)) +
+                       ' {:.16e}'.format(math.log(p2) - math.log(p1)) +
                        ')'
                        )
 
@@ -1335,14 +1343,14 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offs
 
         if lang in ['c', 'cuda']:
             line += ('' + get_array(lang, 'h', isp) + ' * ('
-                                                      '' + get_array(lang, 'jac', isp + 1 + (num_s + 1) * (k_sp + 1)) +
+                     '' + get_array(lang, 'jac', isp + 1 + (num_s + 1) * (k_sp + 1)) +
                      ' * cp_avg * rho' +
                      ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset) +
                      ' * {:.8e}))'.format(sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
             line += ('' + get_array(lang, 'h', isp) + ' * ('
-                                                      '' + get_array(lang, 'jac', isp + 1, twod=k_sp + 1) +
+                     '' + get_array(lang, 'jac', isp + 1, twod=k_sp + 1) +
                      ' * cp_avg * rho' +
                      ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset) +
                      ' * {:.8e}))'.format(sp.mw)
@@ -1387,10 +1395,15 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += utils.line_start + '  + '
-        line += '' + get_array(lang, 'dy', k_sp + offset) + ' * {:.8e}'.format(sp_k.mw) + ' * '
-        line += '(-working_temp * ' + get_array(lang, 'h', k_sp) + ' / cp_avg + ' + '' + get_array(lang, 'cp',
-                                                                                                   k_sp) + ')'
-        line += ' + ' + get_array(lang, 'jac', k_sp + 1, twod=0) + ' * ' + get_array(lang, 'h', k_sp) + ' * rho'
+        line += ('' + get_array(lang, 'dy', k_sp + offset) + 
+                 ' * {:.8e}'.format(sp_k.mw) + ' * '
+                 )
+        line += ('(-working_temp * ' + get_array(lang, 'h', k_sp) + 
+                 ' / cp_avg + ' + '' + get_array(lang, 'cp', k_sp) + ')'
+                 )
+        line += (' + ' + get_array(lang, 'jac', k_sp + 1, twod=0) + ' * ' + 
+                 get_array(lang, 'h', k_sp) + ' * rho'
+                 )
         if k_sp != len(specs) - 1:
             if lang == 'fortran':
                 line += ' &'
@@ -1401,7 +1414,9 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     file.write(line)
 
 
-def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, this_troe, this_sri, this_cheb, this_plog, no_shared):
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd, 
+                     this_troe, this_sri, this_cheb, this_plog, no_shared
+                     ):
     """
     Writes the header and definitions for of any of the various sub-functions for CUDA
 
@@ -1793,7 +1808,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             line += 'double '
         elif lang == 'cuda':
             line += 'register double '
-        line += ('m = pres / ({:4e} * T)'.format(chem.RU) +
+        line += ('m = pres / ({:.8e} * T)'.format(chem.RU) +
                  utils.line_end[lang]
                  )
         file.write(line)
@@ -1949,12 +1964,16 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     plog = True
             batch_has_thd = thd
             # write the specific evaluator for this reaction
-            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, rate_list, rev, pdep, thd, troe, sri,
-                                    cheb, plog,
-                                    smm is None)
+            file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count, 
+                                    rate_list, rev, pdep, thd, troe, sri,
+                                    cheb, plog, smm is None
+                                    )
 
         if lang == 'cuda' and smm is not None:
-            variable_list, usages = calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs)
+            variable_list, usages = calculate_shared_memory(rind, rxn, specs, 
+                                                            reacs, rev_reacs, 
+                                                            pdep_reacs
+                                                            )
             smm.load_into_shared(file, variable_list, usages)
 
 
@@ -1969,7 +1988,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         pind = None
         if rxn.pdep:
             pind = pdep_reacs.index(rind)
-            last_conc_temp = write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp)
+            last_conc_temp = write_pr(file, lang, specs, reacs, pdep_reacs, 
+                                      rxn, get_array, last_conc_temp
+                                      )
 
             # dF/dT
             if rxn.troe:
@@ -2094,7 +2115,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 if mw_frac == -1.0:
                     working_temp += ' -'
                 elif mw_frac != 1.0:
-                    working_temp += ' {:.8e} * '.format(mw_frac)
+                    working_temp += ' {:.16e} * '.format(mw_frac)
                 else:
                     working_temp += ' '
 
@@ -2285,25 +2306,28 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     if not (1, j_sp + 1) in sparse_indicies:
                         sparse_indicies.append((1, j_sp + 1))
                 if lang in ['fortran', 'matlab']:
-                    line += ' = ' + (
-                        get_array(lang, 'jac', 0, twod=j_sp + 1) + ' +' if touched[lin_index] else '') + ' -('
+                    line += ' = ' + (get_array(lang, 'jac', 0, twod=j_sp + 1) 
+                                     + ' +' if touched[lin_index] else ''
+                                     ) + ' -('
                 else:
                     line += ' {}= -('.format('+' if touched[lin_index] else '')
                 touched[lin_index] = True
 
                 if lang in ['c', 'cuda']:
                     line += ('' + get_array(lang, 'h', k_sp) + ' * ('
-                                                               '' + get_array(lang, 'jac',
-                                                                              k_sp + 1 + (num_s + 1) * (j_sp + 1)) +
+                             '' + get_array(lang, 'jac',
+                             k_sp + 1 + (num_s + 1) * (j_sp + 1)) +
                              ' * cp_avg * rho' +
-                             ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + get_array(lang, 'dy', k_sp + offset) +
+                             ' - (' + get_array(lang, 'cp', j_sp) + 
+                             ' * ' + get_array(lang, 'dy', k_sp + offset) +
                              ' * {:.8e}))'.format(sp_k.mw)
                              )
                 elif lang in ['fortran', 'matlab']:
                     line += ('' + get_array(lang, 'h', k_sp) + ' * ('
-                                                               '' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                             '' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                              ' * cp_avg * rho' +
-                             ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + get_array(lang, 'dy', k_sp + offset) +
+                             ' - (' + get_array(lang, 'cp', j_sp) + ' * ' + 
+                             get_array(lang, 'dy', k_sp + offset) +
                              ' * {:.8e}))'.format(sp_k.mw)
                              )
                 line += ')' + utils.line_end[lang]
@@ -2364,7 +2388,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
 
 def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
-    """Write a subroutine that multiplies the non-zero entries of the Jacobian with a column 'j' of another matrix
+    """Write a subroutine that multiplies the non-zero entries of the 
+    Jacobian with a column 'j' of another matrix.
 
     Parameters
     ----------
@@ -2468,9 +2493,11 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False, initial_state="", num_blocks=8,
-                    num_threads=64, no_shared=False, L1_preferred=True, multi_thread=1, force_optimize=False,
-                    build_path='./out/'):
+def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False, 
+                    initial_state="", num_blocks=8, num_threads=64, 
+                    no_shared=False, L1_preferred=True, multi_thread=1, 
+                    force_optimize=False, build_path='./out/'
+                    ):
     """Create Jacobian subroutine from mechanism.
 
     Parameters

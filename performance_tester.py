@@ -384,7 +384,7 @@ mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml'}
 
 pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]
-premixed = ['premixed', 'non-premixed']
+#premixed = ['premixed', 'non-premixed']
 
 cache_opt = [True, False]
 shared = [True, False]
@@ -415,19 +415,19 @@ for mechanism in mechanism_list:
     index = 0
     for pressure in pressure_list:
         for temperature in temp_list:
-            for premix in premixed:
-                pasr_input['pressure'] = pressure
-                pasr_input['temperature'] = temperature
-                pasr_input['premixed'] = premix
-                state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'], 'pasr_out_{}.npy'.format(index))
-                state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
-                                    state_data.shape[2]
-                                    )
-                with open("data.bin", "ab") as file:
-                    state_data.tofile(file)
-                num_conditions += state_data.shape[0]
-                print(num_conditions)
-                index += 1
+            #for premix in premixed:
+            pasr_input['pressure'] = pressure
+            pasr_input['temperature'] = temperature
+            #pasr_input['premixed'] = premix
+            state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'], 'pasr_out_{}.npy'.format(index))
+            state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
+                                state_data.shape[2]
+                                )
+            with open("data.bin", "ab") as file:
+                state_data.tofile(file)
+            num_conditions += state_data.shape[0]
+            print(num_conditions)
+            index += 1
 
     #do c
     #next we need to start writing the jacobians

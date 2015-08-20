@@ -31,6 +31,11 @@ import utils
 from create_jacobian import create_jacobian
 import partially_stirred_reactor as pasr
 
+def __is_pdep(rxn):
+    return (isinstance(rxn, ct.ThreeBodyReaction) or
+    isinstance(rxn, ct.FalloffReaction) or
+    isinstance(rxn, ct.ChemicallyActivatedReaction))
+
 def run_pasr(pasr_input, mech_filename, pasr_output_file):
     #try to load output file
     try:
@@ -56,11 +61,11 @@ def run_pasr(pasr_input, mech_filename, pasr_output_file):
             np.save(pasr_output_file, state_data)
     return state_data
 
-def write_timer(file):
+def write_timer():
     with open('out/timer.h', 'w') as file:
         file.write(
-        """
-        #ifndef TIMER_H
+"""
+#ifndef TIMER_H
 #define TIMER_H
 
 #include <stdlib.h>
@@ -88,7 +93,7 @@ void StartTimer()
 #ifdef WIN32
     LARGE_INTEGER li;
     if(!QueryPerformanceFrequency(&li))
-        printf("QueryPerformanceFrequency failed!\n");
+        printf("QueryPerformanceFrequency failed!\\n");
 
     PCFreq = (double)li.QuadPart/1000.0;
 
@@ -136,7 +141,7 @@ def write_cuda_reader(file):
     FILE *fp = fopen (filename, "rb");
     if (fp == NULL)
     {
-        fprintf(stderr, "Could not open file: %s\n", filename);
+        fprintf(stderr, "Could not open file: %s\\n", filename);
         exit(1);
     }
     double buffer[NN + 2];
@@ -148,7 +153,7 @@ def write_cuda_reader(file):
         int count = fread(buffer, sizeof(double), NN + 2, fp);
         if (count != (NN + 2))
         {
-            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\n", filename, NN + 1, count);
+            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\\n", filename, NN + 1, count);
             exit(-1);
         }
         //apply mask if necessary
@@ -198,7 +203,7 @@ def write_c_reader(file):
     FILE *fp = fopen (filename, "rb");
     if (fp == NULL)
     {
-        fprintf(stderr, "Could not open file: %s\n", filename);
+        fprintf(stderr, "Could not open file: %s\\\n", filename);
         exit(-1);
     }
     double buffer[NN + 2];
@@ -210,7 +215,7 @@ def write_c_reader(file):
         int count = fread(buffer, sizeof(double), NN + 2, fp);
         if (count != (NN + 2))
         {
-            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\n", filename, NN + 1, count);
+            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\\n", filename, NN + 1, count);
             exit(-1);
         }
         //apply mask if necessary
@@ -247,10 +252,11 @@ def write_c_reader(file):
 def write_c_tester(file):
     file.write(
     """
-    #include "read_initial_conditions.c"
+    void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
     #include "jacob.h"
     #include "timer.h"
     #include "header.h"
+    #include <stdio.h>
     int main (int argc, char *argv[])
     {
         int max_threads = omp_get_max_threads ();
@@ -266,19 +272,19 @@ def write_c_tester(file):
         }
         double* y_host;
         double* var_host;
-        read_initial_conditions(filename, num_odes, &y_host, &var_host);
-        StartTimer()
+        read_initial_conditions("data.bin", num_odes, &y_host, &var_host);
+        StartTimer();
         #pragma omp parallel for shared(y_host, var_host)
         for(int tid = 0; tid < num_odes; ++tid)
         {
-            double y[NN] = {0};
+            double y_local[NN] = {0};
             double jac[NN * NN] = {0};
             #pragma unroll
             for (int i = 0; i < NN; ++i)
             {
-                y_local[i] = y_global[tid + i * num_odes];
+                y_local[i] = y_host[tid + i * num_odes];
             }
-            eval_jacob(0, var_host[i], y, jac);
+            eval_jacob(0, var_host[tid], y_local, jac);
         }
         double runtime = GetTimer();
         free(y_host);
@@ -329,7 +335,7 @@ def write_cuda_tester(file):
     double* y_host;
     double* vaa_device;
     double* var_host;
-    int padded = read_initial_conditions(filename, num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+    int padded = read_initial_conditions("data.bin", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
     dim3 dimGrid (g_num, 1 );
     dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
     StartTimer();
@@ -361,14 +367,14 @@ cmd_compile = dict(c='gcc',
                    )
 
 # Flags based on language
-flags = dict(c=['-std=c99', '-03', '-mtune=native'],
-             cuda=['-arch=sm_20',
+flags = dict(c=['-std=c99', '-O3', '-mtune=native',
+                '-fopenmp'],
+             cuda=['-O3', '-arch=sm_20',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
-                   '-dc',
-                   '-03'])
+                   '-dc'])
 
-libs = dict(c=['-lm', '-std=c99', '-03'],
+libs = dict(c=['-O3', '-lm', '-std=c99', '-fopenmp'],
             cuda=['-arch=sm_20', '-03'])
 
 mechanism_dir = '~/mechs/'
@@ -426,20 +432,17 @@ for mechanism in mechanism_list:
         with open(build_dir + 'test.c', 'w') as file:
             write_c_tester(file)
 
+        write_timer()
+
         #get the cantera object
-        gas = ct.Solution(mech_filename)
+        gas = ct.Solution(mechanism_dir+mechanism['mech'])
         pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
         rev = any(rxn.reversible for rxn in gas.reactions())
 
-        # Write test driver
-        if lang == 'c':
-            write_c_test(build_dir, pmod)
-        elif lang == 'cuda':
-            write_cuda_test(build_dir, rev, pmod)
-
         # Compile generated source code
         files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-                 'rxn_rates', 'test', 'read_initial_conditions'
+                 'rxn_rates', 'test', 'read_initial_conditions',
+                 'mechanism', 'chem_utils'
                  ]
         if pmod:
             files += ['rxn_rates_pres_mod']
@@ -460,10 +463,10 @@ for mechanism in mechanism_list:
                 sys.exit(1)
 
         # Link into executable
-        args = [cmd_compile[lang]]
+        args = [cmd_compile['c']]
         args.extend([os.path.join(test_dir, f + '.o') for f in files])
         args.extend(['-o', os.path.join(test_dir, 'test')])
-        args.extend(libs[lang])
+        args.extend(libs['c'])
         try:
             subprocess.check_call(args)
         except subprocess.CalledProcessError:

@@ -382,10 +382,13 @@ mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml'}
                   {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml'},
                   {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_usc.yaml'}]
 
-pressure_list = [ct.one_atm * x for x in [1, 5, 15, 25]]
+pressure_list = [1, 10, 25]
+temp_list = [400, 600, 800]
+premixed = [True, False]
 
 cache_opt = [True, False]
 shared = [True, False]
+num_threads = [1, 12]
 
 repeats = 1000
 home = os.getcwd() + os.path.sep
@@ -409,73 +412,134 @@ for mechanism in mechanism_list:
 
     num_conditions = 0
     #generate PaSR data for different pressures, and save to binary c file
-    for i, pressure in enumerate(pressure_list):
-        pasr_input['pressure'] = pressure
-        state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'], 'pasr_out_{}.npy'.format(i))
-        state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
-                            state_data.shape[2]
-                            )
-        with open("data.bin", "ab") as file:
-            state_data.tofile(file)
-        num_conditions += state_data.shape[0]
+    index = 0
+    for pressure in pressure_list:
+        for temperature in temp_list:
+            for premix in premixed:
+                pasr_input['pressure'] = pressure
+                pasr_input['temperature'] = temperature
+                pasr_input['premixed'] = premix
+                state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'], 'pasr_out_{}.npy'.format(index))
+                state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
+                                    state_data.shape[2]
+                                    )
+                with open("data.bin", "ab") as file:
+                    state_data.tofile(file)
+                num_conditions += state_data.shape[0]
+                print(num_conditions)
+                index += 1
 
     #do c
     #next we need to start writing the jacobians
     for opt in cache_opt:
-        create_jacobian('c', mechanism_dir+mechanism['mech'],
-                        optimize_cache=opt, multi_thread=12, build_path=build_dir)
+        for thread in num_threads:
+            create_jacobian('c', mechanism_dir+mechanism['mech'],
+                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
 
-        #now we need to write the reader and the tester
-        with open(build_dir + 'read_initial_conditions.c', 'w') as file:
-            write_c_reader(file)
+            #now we need to write the reader and the tester
+            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
+                write_c_reader(file)
 
-        with open(build_dir + 'test.c', 'w') as file:
-            write_c_tester(file)
+            with open(build_dir + 'test.c', 'w') as file:
+                write_c_tester(file)
 
-        write_timer()
+            write_timer()
 
-        #get the cantera object
-        gas = ct.Solution(mechanism_dir+mechanism['mech'])
-        pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-        rev = any(rxn.reversible for rxn in gas.reactions())
+            #get the cantera object
+            gas = ct.Solution(mechanism_dir+mechanism['mech'])
+            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+            rev = any(rxn.reversible for rxn in gas.reactions())
 
-        # Compile generated source code
-        files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-                 'rxn_rates', 'test', 'read_initial_conditions',
-                 'mechanism', 'chem_utils'
-                 ]
-        if pmod:
-            files += ['rxn_rates_pres_mod']
+            # Compile generated source code
+            files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
+                     'rxn_rates', 'test', 'read_initial_conditions',
+                     'mechanism', 'mass_mole'
+                     ]
+            if pmod:
+                files += ['rxn_rates_pres_mod']
 
-        for f in files:
+            for f in files:
+                args = [cmd_compile['c']]
+                args.extend(flags['c'])
+                args.extend([
+                    '-I.' + os.path.sep + build_dir,
+                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
+                    '-o', os.path.join(test_dir, f + '.o')
+                    ])
+                args = [val for val in args if val.strip()]
+                try:
+                    subprocess.check_call(args)
+                except subprocess.CalledProcessError:
+                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
+                    sys.excreate_jacobian('c', mechanism_dir+mechanism['mech'],
+                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
+
+            #now we need to write the reader and the tester
+            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
+                write_c_reader(file)
+
+            with open(build_dir + 'test.c', 'w') as file:
+                write_c_tester(file)
+
+            write_timer()
+
+            #get the cantera object
+            gas = ct.Solution(mechanism_dir+mechanism['mech'])
+            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+            rev = any(rxn.reversible for rxn in gas.reactions())
+
+            # Compile generated source code
+            files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
+                     'rxn_rates', 'test', 'read_initial_conditions',
+                     'mechanism', 'mass_mole'
+                     ]
+            if pmod:
+                files += ['rxn_rates_pres_mod']
+
+            for f in files:
+                args = [cmd_compile['c']]
+                args.extend(flags['c'])
+                args.extend([
+                    '-I.' + os.path.sep + build_dir,
+                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
+                    '-o', os.path.join(test_dir, f + '.o')
+                    ])
+                args = [val for val in args if val.strip()]
+                try:
+                    subprocess.check_call(args)
+                except subprocess.CalledProcessError:
+                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
+                    sys.exit(1)
+
+            # Link into executable
             args = [cmd_compile['c']]
-            args.extend(flags['c'])
-            args.extend([
-                '-I.' + os.path.sep + build_dir,
-                '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-                '-o', os.path.join(test_dir, f + '.o')
-                ])
-            args = [val for val in args if val.strip()]
+            args.extend([os.path.join(test_dir, f + '.o') for f in files])
+            args.extend(['-o', os.path.join(test_dir, 'test')])
+            args.extend(libs['c'])
             try:
                 subprocess.check_call(args)
             except subprocess.CalledProcessError:
-                print('Error: compilation failed for ' + f + utils.file_ext['c'])
+                print('Error: linking of test program failed.')
                 sys.exit(1)
 
-        # Link into executable
-        args = [cmd_compile['c']]
-        args.extend([os.path.join(test_dir, f + '.o') for f in files])
-        args.extend(['-o', os.path.join(test_dir, 'test')])
-        args.extend(libs['c'])
-        try:
-            subprocess.check_call(args)
-        except subprocess.CalledProcessError:
-            print('Error: linking of test program failed.')
-            sys.exit(1)
+            with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
+                for i in range(repeats):
+                    subprocess.check_call([test_dir, 'test', num_threads, num_conditions], stdout=file)
 
-        with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
-            for i in range(repeats):
-                subprocess.check_call([test_dir, 'test', num_threads, num_conditions], stdout=file)
+            # Link into executable
+            args = [cmd_compile['c']]
+            args.extend([os.path.join(test_dir, f + '.o') for f in files])
+            args.extend(['-o', os.path.join(test_dir, 'test')])
+            args.extend(libs['c'])
+            try:
+                subprocess.check_call(args)
+            except subprocess.CalledProcessError:
+                print('Error: linking of test program failed.')
+                sys.exit(1)
+
+            with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
+                for i in range(repeats):
+                    subprocess.check_call([test_dir, 'test', num_threads, num_conditions], stdout=file)
 
 
 

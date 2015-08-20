@@ -510,6 +510,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
     # now the mechanism file
     with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
         file.write('#include <stdio.h>\n'
+                   '#include <string.h>\n'
                    '#include "mass_mole.h"\n'
                    '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
                    '#if defined (RATES_TEST) || defined (PROFILER)\n'

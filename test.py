@@ -8,6 +8,8 @@ import sys
 import subprocess
 from argparse import ArgumentParser
 
+import matplotlib.pyplot as plt
+
 # More Python 2 compatibility
 if sys.version_info.major == 3:
     from itertools import zip
@@ -129,112 +131,6 @@ def convert_mech(mech_filename, therm_filename=None):
           '{}'.format(mech_filename)
           )
     return mech_filename
-
-def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-8):
-    file.write(
-        """
-        #define FD_ORD 6
-
-        void eval_fd_jacob (const double t, const double pres, double * y, double * jac) {
-
-          double ydot[NN] = {0};
-          dydt (t, pres, y, ydot);
-
-          // Finite difference coefficients
-          double x_coeffs[FD_ORD];
-          double y_coeffs[FD_ORD];
-
-          if (FD_ORD == 2) {
-            // 2nd order central difference
-            x_coeffs[0] = -1.0;
-            x_coeffs[1] = 1.0;
-            y_coeffs[0] = -0.5;
-            y_coeffs[1] = 0.5;
-          } else if (FD_ORD == 4) {
-            // 4th order central difference
-            x_coeffs[0] = -2.0;
-            x_coeffs[1] = -1.0;
-            x_coeffs[2] = 1.0;
-            x_coeffs[3] = 2.0;
-            y_coeffs[0] = 1.0 / 12.0;
-            y_coeffs[1] = -2.0 / 3.0;
-            y_coeffs[2] = 2.0 / 3.0;
-            y_coeffs[3] = -1.0 / 12.0;
-          } else {
-            // 6th order central difference
-            x_coeffs[0] = -3.0;
-            x_coeffs[1] = -2.0;
-            x_coeffs[2] = -1.0;
-            x_coeffs[3] = 1.0;
-            x_coeffs[4] = 2.0;
-            x_coeffs[5] = 3.0;
-
-            y_coeffs[0] = -1.0 / 60.0;
-            y_coeffs[1] = 3.0 / 20.0;
-            y_coeffs[2] = -3.0 / 4.0;
-            y_coeffs[3] = 3.0 / 4.0;
-            y_coeffs[4] = -3.0 / 20.0;
-            y_coeffs[5] = 1.0 / 60.0;
-          }
-
-          double ewt[NN];
-          #pragma unroll
-          """
-        )
-    file.write(
-        """
-          for (int i = 0; i < NN; ++i) {{
-            ewt[i] = {} + ({} * fabs(y[i]));
-          }}
-
-          // unit roundoff of machine
-          double srur = sqrt(DBL_EPSILON);
-
-          double sum = 0.0;
-          #pragma unroll
-          for (int i = 0; i < NN; ++i) {{
-            sum += (ewt[i] * ydot[i]) * (ewt[i] * ydot[i]);
-          }}
-          double fac = sqrt(sum / ((double)(NN)));
-          double r0 = 1000.0 * {} * DBL_EPSILON * ((double)(NN)) * fac;
-          """.format(atol, rtol, rtol)
-        )
-    file.write(
-        """
-          double ftemp[NN] = {0};
-
-          #pragma unroll
-          for (int j = 0; j < NN; ++j) {
-            double yj_orig = y[j];
-            double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
-
-            #pragma unroll
-            for (int i = 0; i < NN; ++i) {
-              jac[i + NN*j] = 0.0;
-            }
-
-            #pragma unroll
-            for (int k = 0; k < FD_ORD; ++k) {
-              y[j] = yj_orig + x_coeffs[k] * r;
-              dydt (t, pres, y, ftemp);
-              #pragma unroll
-              for (int i = 0; i < NN; ++i) {
-                jac[i + NN*j] += y_coeffs[k] * ftemp[i];
-              }
-            }
-
-            #pragma unroll
-            for (int i = 0; i < NN; ++i) {
-              jac[i + NN*j] /= r;
-            }
-
-            y[j] = yj_orig;
-          }
-
-        }
-        """
-        )
-
 
 def __write_header_include(file, lang):
     file.write(
@@ -500,7 +396,7 @@ def write_c_test(build_dir, pmod):
     with open(build_dir + os.path.sep + 'test.c', 'w') as f:
         __write_header_include(f, 'c')
         __write_output_methods(f)
-        __write_fd_jacob(f, 'c')
+        #__write_fd_jacob(f, 'c')
         f.write('int main (void) {\n'
                 '\n'
                 '  FILE* fp = fopen ("test/input.txt", "r");\n'
@@ -542,9 +438,9 @@ def write_c_test(build_dir, pmod):
             '\n'
             '  eval_jacob (0.0, pres, y, jacob);\n'
             '  write_jacob (fp, jacob);\n'
-            '  double fd_jacob[NN * NN] = {0};\n'
-            '  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
-            '  write_jacob(fp, fd_jacob);\n'
+            #'  double fd_jacob[NN * NN] = {0};\n'
+            #'  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
+            #'  write_jacob(fp, fd_jacob);\n'
             '\n'
             '  fclose (fp);\n'
             '\n'
@@ -563,43 +459,10 @@ class analytic_eval_jacob:
         self.test_dir = test_dir
 
     def dydt(self, y):
-        with open(os.path.join(self.test_dir, 'input.txt'), 'w') as f:
-            f.write('{:.16e}\n'.format(y[0]))
-            f.write('{:.16e}\n'.format(self.pres))
-            for val in y[1:]:
-                f.write('{:.16e}\n'.format(val))
-
-        # Run testing executable to get output printed to file
-        subprocess.check_call(os.path.join(self.test_dir, 'test'))
-
-        # Now read output from test program
-        test_data = np.genfromtxt(os.path.join(self.test_dir, 'output.txt'))
-
-        num = int(test_data[0])
-        test_conc = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-
-        num = int(test_data[0])
-        test_fwd_rates = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-
-        if self.idx_rev:
-            num = int(test_data[0])
-            test_rev_rates = test_data[1: num + 1]
-            test_data = test_data[num + 1:]
-
-        num = int(test_data[0])
-        test_pres_mod = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-
-        # Species production rates
-        num = int(test_data[0])
-        test_spec_rates = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-       
-        num = int(test_data[0])
-        test_dydt = test_data[1: num + 1]
-        return np.array(test_dydt)
+        import py_dydt
+        dy = np.zeros_like(y)
+        py_dydt.py_dydt(0, self.pres, y, dy)
+        return dy
 
     def eval_jacobian(self, gas, order):
         """
@@ -678,6 +541,15 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
+
+    #write and compile the dydt python wrapper
+    #try:
+    #    os.remove('py_dydt.so')
+    #except:
+    #    pass
+    #doesn't work at the moment
+    #just run python dydt_setup.py build_ext --inplace
+    #subprocess.check_call([os.getcwd() + os.path.sep + 'dydt_setup.py', 'build_ext', '--inplace'])
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
@@ -928,6 +800,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('L2 norm difference of our "zero" Jacobian: '
               '{:.2e}'.format(err))
 
+    plt.semilogy(state_data[:,1], err_jac_norm, 'o')
+    plt.savefig('fig.png')
     # Cleanup all files in test directory.
     for f in os.listdir(test_dir):
         os.remove(os.path.join(test_dir, f))

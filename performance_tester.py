@@ -299,64 +299,93 @@ def write_cuda_tester(file):
     """
     #include <stdlib.h>
     #include <stdio.h>
-    #include <math.h>
     #include <string.h>
+    #include "jacob.cuh"
+
 
     #include <cuda.h>
     #include <cuda_runtime.h>
     #include <helper_cuda.h>
     #include "header.h"
     #include "timer.h"
-    //get our solver stuff
-    #include "solver.cuh"
     #include "gpu_memory.cuh"
-    #include "read_initial_conditions.cuh"
     #include "launch_bounds.cuh"
 
-    omp_set_num_threads (num_threads);
-    int num_odes = 1;
-    if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
+    int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device);
+
+
+
+    #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
+    #define GRID_SIZE (blockDim.x * gridDim.x)
+    __global__ 
+    void jac_driver(double* pres, double* y, double* jac)
     {
-        exit(1);
+        double y_local[NN];
+        double pr_local = pr_global[T_ID];
+        double jac_local[NN * NN];
+
+    #pragma unroll
+        for (int i = 0; i < NN; i++)
+        {
+            y_local[i] = y_global[T_ID + i * GRID_SIZE];
+        }
+
+        eval_jacob (0, pr_local, y_local, jac_local);
+
+    #pragma unroll
+        for (int i = 0; i < NN; i++)
+        {
+            jac[T_ID + i * GRID_SIZE] = jac_local[i];
+        }
     }
 
-    cudaErrorCheck (cudaSetDevice (0) );
-    cudaErrorCheck (cudaGetDeviceProperties(&devProp, 0));
+    int main (int argc, char *argv[])
+    {
+        int num_odes = 1;
+        if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
+        {
+            exit(1);
+        }
 
-    #ifdef PREFERL1
-        cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
-    #endif
+        cudaErrorCheck (cudaSetDevice (0) );
 
-    int g_num = (int)ceil(((double)NUM) / ((double)TARGET_BLOCK_SIZE));
-    if (g_num == 0)
-        g_num = 1;
+        #ifdef PREFERL1
+            cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+        #endif
 
-    double* y_device;
-    double* y_host;
-    double* vaa_device;
-    double* var_host;
-    int padded = read_initial_conditions("data.bin", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
-    dim3 dimGrid (g_num, 1 );
-    dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
-    StartTimer();
-    cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-#ifdef SHARED_SIZE
-        intDriver <<< dimGrid, dimBlock, SHARED_SIZE >>> (NUM, t, t_next, var_device, y_device);
-#else
-        intDriver <<< dimGrid, dimBlock >>> (NUM, t, t_next, var_device, y_device);
-#endif
-    // transfer memory back to CPU
-    cudaErrorCheck( cudaMemcpy (y_host, y_device, padded * NN * sizeof(double), cudaMemcpyDeviceToHost) );
-    double runtime = GetTimer();
-    cudaErrorCheck( cudaPeekAtLastError() );
-    cudaErrorCheck( cudaDeviceSynchronize() );
-    free_gpu_memory(y_device, var_device);
-    free(y_host);
-    free(var_host);
-    cudaErrorCheck( cudaDeviceReset() );
-    printf("%d,%.15le", num_odes, runtime);
-    return 0;
-  }
+        int g_num = (int)ceil(((double)NUM) / ((double)TARGET_BLOCK_SIZE));
+        if (g_num == 0)
+            g_num = 1;
+
+        double* y_device;
+        double* y_host;
+        double* var_device;
+        double* var_host;
+        double* jac_host = (double*) malloc(NN * NN * padded);
+        double* jac_device;
+        cudaErrorCheck(cudaMalloc((void**)jac_device, padded * * NN * NN * sizeof(double)));
+        int padded = read_initial_conditions("data.bin", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+        dim3 dimGrid (g_num, 1 );
+        dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
+        StartTimer();
+        cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
+        #ifdef SHARED_SIZE
+            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (var_device, y_device, jac_device);
+        #else
+            jac_driver <<< dimGrid, dimBlock >>> (var_device, y_device, jac_device);
+        #endif
+        // transfer memory back to CPU
+        cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+        double runtime = GetTimer();
+        cudaErrorCheck( cudaPeekAtLastError() );
+        cudaErrorCheck( cudaDeviceSynchronize() );
+        free_gpu_memory(y_device, var_device);
+        free(y_host);
+        free(var_host);
+        cudaErrorCheck( cudaDeviceReset() );
+        printf("%d,%.15le", num_odes, runtime);
+        return 0;
+    }
     """
     )
 
@@ -410,7 +439,8 @@ for mechanism in mechanism_list:
     with open("test/data.bin", "wb") as file:
         pass
 
-    if any(f.endswith('.txt') for f in os.listdir()):
+    if any(f.endswith('.txt') for f in os.listdir(
+        os.getcwd())):
         raise Exception('Past data found, aborting')
 
     num_conditions = 0
@@ -488,7 +518,7 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
+            with open('cpu_{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
                 for i in range(repeats):
                     print(i, "/", repeats)
                     subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
@@ -532,16 +562,15 @@ for mechanism in mechanism_list:
                 args.extend(flags['cuda'])
                 args.extend([
                     '-I.' + os.path.sep + build_dir,
-                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
+                    '-c', os.path.join(build_dir, f + utils.file_ext['cuda']),
                     '-o', os.path.join(test_dir, f + '.o')
                     ])
                 args = [val for val in args if val.strip()]
                 try:
                     subprocess.check_call(args)
                 except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
-                    sys.excreate_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
+                    print('Error: compilation failed for ' + f + utils.file_ext['cuda'])
+                    sys.exit(-1)
 
             # Link into executable
             args = [cmd_compile['cuda']]

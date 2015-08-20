@@ -501,7 +501,7 @@ for mechanism in mechanism_list:
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, 
                             build_path=build_dir,
-                            num_blocks=8 num_threads=64)
+                            num_blocks=8, num_threads=64)
 
             with open('out/regcount') as file:
                 regcount = int(file.readline())

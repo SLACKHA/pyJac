@@ -1221,6 +1221,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent=2)
+        smm.set_on_eviction(lambda sp, shared: \
+            file.write('  {} = {}'.format(sp, shared) + utils.line_end[lang])
+            )
 
     seen = [False for spec in specs]
     for order in ordering:
@@ -1232,19 +1235,19 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             #get allowed species
             my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
             if lang == 'cuda' and smm is not None:
+                sp_inds = sorted(list(set(rxn.reac + rxn.prod)))
                 the_vars = [
-                    utils.get_array(lang, 'sp_rates', sp) for sp in set(rxn.reac + rxn.prod)
+                    utils.get_array(lang, 'sp_rates', sp) for sp in sp_inds
                     ]
                 # estimate usages
                 usages = []
-                order_index = ordering.index(order)
                 for sp in set(rxn.reac + rxn.prod):
-                    temp = order_index + 1
-                    while temp < len(ordering) and (sp in reacs[i_reacs[temp]].reac \
+                    temp = rind + 1
+                    while temp < len(i_reacs) and (sp in reacs[i_reacs[temp]].reac \
                     or sp in reacs[i_reacs[temp]].prod):
                         temp += 1
-                    usages.append(temp - order_index - 1)
-                smm.load_into_shared(file, the_vars, usages)
+                    usages.append(temp - rind - 1)
+                smm.load_into_shared(file, the_vars, usages, load=[seen[x] for x in sp_inds])
 
             # loop through species
             for spind in my_specs:
@@ -1314,19 +1317,23 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     ]
                 # estimate usages
                 usages = []
-                order_index = ordering.index(order)
                 # mark for eviction
                 for sp in set(rxn.reac + rxn.prod):
-                    temp = order_index + 1
-                    while temp < len(ordering) and (sp in reacs[i_reacs[temp]].reac \
+                    temp = rind + 1
+                    while temp < rind and (sp in reacs[i_reacs[temp]].reac \
                     or sp in reacs[i_reacs[temp]].prod):
                         temp += 1
-                        if temp - order_index - 1 > 2:
+                        if temp - rind - 1 > 2:
                             mark.append(the_vars[i])
                 smm.mark_for_eviction(the_vars)
+
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
             file.write('  ' + get_array(lang, 'sp_rates', i) + ' = 0.0' + utils.line_end[lang])
+
+    if lang == 'cuda' and smm is not None:
+        smm.force_eviction()
+        smm.set_on_eviction(None)
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_spec_rates\n\n')

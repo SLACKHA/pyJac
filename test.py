@@ -599,7 +599,7 @@ def __is_pdep(rxn):
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
 
-def run_pasr(pasr_input_file, mech_filename, pasr_input, pasr_output_file):
+def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
     # Run PaSR to get data
     pasr_input = pasr.parse_input_file(pasr_input_file)
     state_data = pasr.run_simulation(
@@ -719,18 +719,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                     isinstance(
         gas.reaction(idx), ct.ChemicallyActivatedReaction)
     ]
-
     if pasr_output_file:
         #load old test data
         try:
             state_data = np.load(pasr_output_file)
-        except:
+        except Exception, e:
             # Run PaSR to get data
             print('Could not load saved pasr data... re-running')
-            state_data = run_pasr(pasr_input_file, mech_filename, pasr_input, pasr_output_file)
+            state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
     else:
         # Run PaSR to get data
-        state_data = run_pasr(pasr_input_file, mech_filename, pasr_input, pasr_output_file)
+        state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
     # Reshape array to treat time steps and particles the same
     state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
                                 state_data.shape[2]

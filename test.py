@@ -24,6 +24,8 @@ except ImportError:
     print('Error: Cantera must be installed.')
     raise
 
+import numdifftools
+
 # Local imports
 import utils
 from create_jacobian import create_jacobian
@@ -56,7 +58,7 @@ class ReactorConstPres(object):
         self.gas = gas
         self.P = gas.P
 
-    def __call__(self, t=None, y=None):
+    def __call__(self, y=None):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
@@ -83,7 +85,7 @@ class ReactorConstVol(object):
         self.gas = gas
         self.density = gas.density
 
-    def __call__(self, t=None, y=None):
+    def __call__(self, y=None):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
@@ -554,45 +556,63 @@ def write_c_test(build_dir, pmod):
     return None
 
 
-def eval_jacobian(dydt, order):
-    """
-    """
-    abs_tol = 1.e-20
-    rel_tol = 1.e-8
+class analytic_eval_jacob:
+    def __init__(self, pressure, idx_rev, test_dir):
+        self.pres = pressure
+        self.idx_rev = idx_rev
+        self.test_dir = test_dir
 
-    y = np.hstack((dydt.gas.T, dydt.gas.Y))
+    def dydt(self, y):
+        with open(os.path.join(self.test_dir, 'input.txt'), 'w') as f:
+            f.write('{:.16e}\n'.format(y[0]))
+            f.write('{:.16e}\n'.format(self.pres))
+            for val in y[1:]:
+                f.write('{:.16e}\n'.format(val))
 
-    if order == 2:
-        x_coeffs = np.array([-1., 1.])
-        y_coeffs = np.array([-0.5, 0.5])
-    elif order == 4:
-        x_coeffs = np.array([-2., -1., 1., 2.])
-        y_coeffs = np.array([1. / 12., -2. / 3., 2. / 3., -1. / 12.])
-    elif order == 6:
-        x_coeffs = np.array([-3., -2., -1., 1., 2., 3.])
-        y_coeffs = np.array([-1. / 60., 3. / 20., -3. / 4.,
-                             3. / 4., -3. / 20., 1. / 60.
-                             ])
+        # Run testing executable to get output printed to file
+        subprocess.check_call(os.path.join(self.test_dir, 'test'))
 
-    sqrt_rnd = np.sqrt(np.finfo(float).eps)
-    err_wt = abs(y) * rel_tol + abs_tol
+        # Now read output from test program
+        test_data = np.genfromtxt(os.path.join(self.test_dir, 'output.txt'))
 
-    r0 = (1000. * rel_tol * np.finfo(float).eps * len(y) *
-          np.sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
-          )
+        num = int(test_data[0])
+        test_conc = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-    jacob = np.zeros(len(y) ** 2)
-    for j, y_j in enumerate(y):
-        y_temp = np.copy(y)
-        r = max(sqrt_rnd * abs(y_j), r0 / err_wt[j])
+        num = int(test_data[0])
+        test_fwd_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-        for x_c, y_c in zip(x_coeffs, y_coeffs):
-            y_temp[j] = y_j + x_c * r
-            jacob[np.arange(len(y)) + len(y) * j] += y_c * dydt(y=y_temp)
+        if self.idx_rev:
+            num = int(test_data[0])
+            test_rev_rates = test_data[1: num + 1]
+            test_data = test_data[num + 1:]
 
-        jacob[np.arange(len(y)) + len(y) * j] /= r
+        num = int(test_data[0])
+        test_pres_mod = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-    return jacob
+        # Species production rates
+        num = int(test_data[0])
+        test_spec_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
+       
+        num = int(test_data[0])
+        test_dydt = test_data[1: num + 1]
+        return test_dydt
+
+    def eval_jacobian(self, gas, order):
+        """
+        """
+        abs_tol = 1.e-20
+        rel_tol = 1.e-8
+
+        y = np.hstack((gas.T, gas.Y))
+        step = np.array([1e-15 for x in range(len(y))])
+        step[0] = abs_tol
+
+        jacob = numdifftools.Jacobian(self.dydt, order=order, method='central', full_output=True)
+        return jacob(y)
 
 def __is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
@@ -753,6 +773,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pres = state[2]
         mass_frac = state[3:]
 
+        ajac = analytic_eval_jacob(pres, idx_rev, test_dir)
+
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
 
@@ -882,7 +904,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         # Calculate "true" Jacobian numerically
         try:
-            jacob = eval_jacobian(ode, 6)
+            jacob = ajac.eval_jacobian(gas, 6)
             err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                       jacob[non_zero]
                       )
@@ -905,7 +927,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             err_jac_zero_ct[i] = err
             print('L2 norm difference of "zero" Cantera Jacobian: '
                   '{:.2e}'.format(err))
-        except:
+        except Exception, e:
+            raise e
             print('Cantera unable to calculate Jacobian. '
                   'Using custom FD only.')
         #just for safety reset gas state

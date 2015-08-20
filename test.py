@@ -819,6 +819,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     for f in test_files + ['py_dydt.so']:
         os.remove(f)
     os.rmdir(test_dir)
+    
+    # Now clean build directory
+    for root, dirs, files in os.walk('./build', topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir('./build')
 
     return 0
 

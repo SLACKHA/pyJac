@@ -816,7 +816,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     # Cleanup all files in test directory.
     test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
-    for f in test_files + ['py_dydt.so']:
+    for f in test_files + ['py_dydt.so', 'dydt_wrapper.c']:
         os.remove(f)
     os.rmdir(test_dir)
     

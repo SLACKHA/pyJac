@@ -318,24 +318,27 @@ def write_cuda_tester(file):
     #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
     #define GRID_SIZE (blockDim.x * gridDim.x)
     __global__ 
-    void jac_driver(double* pres, double* y, double* jac)
+    void jac_driver(int NUM, double* pres, double* y, double* jac)
     {
-        double y_local[NN];
-        double pr_local = pr_global[T_ID];
-        double jac_local[NN * NN];
-
-    #pragma unroll
-        for (int i = 0; i < NN; i++)
+        if (T_ID < NUM)
         {
-            y_local[i] = y_global[T_ID + i * GRID_SIZE];
-        }
+            double y_local[NN];
+            double pr_local = pres[T_ID];
+            double jac_local[NN * NN];
 
-        eval_jacob (0, pr_local, y_local, jac_local);
+        #pragma unroll
+            for (int i = 0; i < NN; i++)
+            {
+                y_local[i] = y[T_ID + i * GRID_SIZE];
+            }
 
-    #pragma unroll
-        for (int i = 0; i < NN; i++)
-        {
-            jac[T_ID + i * GRID_SIZE] = jac_local[i];
+            eval_jacob (0, pr_local, y_local, jac_local);
+
+        #pragma unroll
+            for (int i = 0; i < NN; i++)
+            {
+                jac[T_ID + i * GRID_SIZE] = jac_local[i];
+            }
         }
     }
 
@@ -353,7 +356,7 @@ def write_cuda_tester(file):
             cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
         #endif
 
-        int g_num = (int)ceil(((double)NUM) / ((double)TARGET_BLOCK_SIZE));
+        int g_num = (int)ceil(((double)num_odes) / ((double)TARGET_BLOCK_SIZE));
         if (g_num == 0)
             g_num = 1;
 
@@ -361,18 +364,18 @@ def write_cuda_tester(file):
         double* y_host;
         double* var_device;
         double* var_host;
-        double* jac_host = (double*) malloc(NN * NN * padded);
-        double* jac_device;
-        cudaErrorCheck(cudaMalloc((void**)jac_device, padded * * NN * NN * sizeof(double)));
         int padded = read_initial_conditions("data.bin", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+        double* jac_host = (double*) malloc(NN * NN * padded);
+        double* jac_device = 0;
+        cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
         StartTimer();
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         #ifdef SHARED_SIZE
-            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (var_device, y_device, jac_device);
+            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, jac_device);
         #else
-            jac_driver <<< dimGrid, dimBlock >>> (var_device, y_device, jac_device);
+            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, jac_device);
         #endif
         // transfer memory back to CPU
         cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
@@ -380,8 +383,10 @@ def write_cuda_tester(file):
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );
         free_gpu_memory(y_device, var_device);
+        cudaErrorCheck( cudaFree(jac_device) );
         free(y_host);
         free(var_host);
+        free(jac_host);
         cudaErrorCheck( cudaDeviceReset() );
         printf("%d,%.15le", num_odes, runtime);
         return 0;
@@ -403,8 +408,8 @@ flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                    '-I/usr/local/cuda/samples/common/inc/',
                    '-dc'])
 
-libs = dict(c=['-O3', '-lm', '-std=c99', '-fopenmp'],
-            cuda=['-arch=sm_20', '-03'])
+libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
+            cuda=['-arch=sm_20'])
 
 mechanism_dir = '~/mechs/'
 mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml'},
@@ -557,12 +562,15 @@ for mechanism in mechanism_list:
             if pmod:
                 files += ['rxn_rates_pres_mod']
 
+            ext = lambda x: utils.file_ext['cuda'] if x != 'mass_mole' else \
+                                utils.file_ext['c']
+
             for f in files:
                 args = [cmd_compile['cuda']]
                 args.extend(flags['cuda'])
                 args.extend([
                     '-I.' + os.path.sep + build_dir,
-                    '-c', os.path.join(build_dir, f + utils.file_ext['cuda']),
+                    '-c', os.path.join(build_dir, f + ext(f)),
                     '-o', os.path.join(test_dir, f + '.o')
                     ])
                 args = [val for val in args if val.strip()]
@@ -589,4 +597,4 @@ for mechanism in mechanism_list:
                 for i in range(repeats):
                     print(i, "/", repeats)
                     subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
-                     str(thread), str(num_conditions)], stdout=file)
+                     str(num_conditions)], stdout=file)

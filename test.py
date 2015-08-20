@@ -599,7 +599,7 @@ class analytic_eval_jacob:
        
         num = int(test_data[0])
         test_dydt = test_data[1: num + 1]
-        return test_dydt
+        return np.array(test_dydt)
 
     def eval_jacobian(self, gas, order):
         """
@@ -612,7 +612,10 @@ class analytic_eval_jacob:
         step[0] = abs_tol
 
         jacob = numdifftools.Jacobian(self.dydt, order=order, method='central', full_output=True)
-        return jacob(y)
+        arr = jacob(y)
+        fd = np.array(arr[0])
+        index = np.array(arr[-1].index)
+        return fd.T.flatten()
 
 def __is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
@@ -898,72 +901,32 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         num = int(test_data[0])
         test_jacob = test_data[1: num + 1]
         test_data = test_data[num + 1:]
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob)
-                            / 1.e6)[0]
+        non_zero = np.where(abs(test_jacob) > 0)[0]
         zero = np.where(test_jacob == 0.)[0]
 
-        # Calculate "true" Jacobian numerically
-        try:
-            jacob = ajac.eval_jacobian(gas, 6)
-            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                      jacob[non_zero]
-                      )
-            max_err = np.max(err)
-            loc = non_zero[np.argmax(err)]
-            err = np.linalg.norm(err) * 100.
-            print('Max error in non-zero Cantera Jacobian: {:.2e}% '
-                  '@ index {}'.format(max_err * 100., loc))
-            print('L2 norm of relative error of Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-            err_jac_max_ct[i] = max_err
-            err_jac_ct[i] = err
-
-            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-            err_jac_norm_ct[i] = err
-            print('L2 norm error of Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-
-            err = np.linalg.norm(test_jacob[zero] - jacob[zero])
-            err_jac_zero_ct[i] = err
-            print('L2 norm difference of "zero" Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-        except Exception, e:
-            raise e
-            print('Cantera unable to calculate Jacobian. '
-                  'Using custom FD only.')
-        #just for safety reset gas state
-        #as it changed during the eval_jacob above
-        gas.TPY = temp, pres, mass_frac
-
-        num = int(test_data[0])
-        jacob = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-        zero = np.where(test_jacob == 0.)[0]
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob)
-                            / 1.e6)[0]
-
-        # Calculate "true" Jacobian numerically
+        jacob = ajac.eval_jacobian(gas, 6)
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
-        print('Max error in non-zero Jacobian: {:.2e}% '
+        print('Max error in non-zero our Jacobian: {:.2e}% '
               '@ index {}'.format(max_err * 100., loc))
-        print('L2 norm of relative error of Jacobian: '
+        print('L2 norm of relative error of our Jacobian: '
               '{:.2e}'.format(err))
-        err_jac_max[i] = max_err
-        err_jac[i] = err
+        err_jac_max_ct[i] = max_err
+        err_jac_ct[i] = err
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-        print('L2 norm error of our non-zero Jacobian: {:.2e}'
-              .format(err))
-        err_jac_norm[i] = err
+        err_jac_norm_ct[i] = err
+        print('L2 norm error of our Jacobian: '
+              '{:.2e}'.format(err))
+
         err = np.linalg.norm(test_jacob[zero] - jacob[zero])
-        err_jac_zero[i] = err
-        print('L2 norm difference of our "zero" Jacobian: {:.2e}'.format(err))
-        print()
+        err_jac_zero_ct[i] = err
+        print('L2 norm difference of our "zero" Jacobian: '
+              '{:.2e}'.format(err))
 
     # Cleanup all files in test directory.
     for f in os.listdir(test_dir):

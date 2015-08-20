@@ -27,7 +27,11 @@ except ImportError:
     print('Error: Cantera must be installed.')
     raise
 
-import numdifftools
+try:
+    import numdifftools
+except ImportError:
+    print('Error: numdifftools must be installed.')
+    raise
 
 # Local imports
 import utils

@@ -9,6 +9,7 @@ import subprocess
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 # More Python 2 compatibility
 if sys.version_info.major == 3:
@@ -453,10 +454,10 @@ def write_c_test(build_dir, pmod):
 
 
 class analytic_eval_jacob:
-    def __init__(self, pressure, idx_rev, test_dir):
+    def __init__(self, pressure):
         self.pres = pressure
-        self.idx_rev = idx_rev
-        self.test_dir = test_dir
+        #self.idx_rev = idx_rev
+        #self.test_dir = test_dir
 
     def dydt(self, y):
         import py_dydt
@@ -543,13 +544,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         mech_filename = convert_mech(mech_filename, therm_filename)
 
     #write and compile the dydt python wrapper
-    #try:
-    #    os.remove('py_dydt.so')
-    #except:
-    #    pass
+    try:
+        os.remove('py_dydt.so')
+    except:
+        pass
     #doesn't work at the moment
     #just run python dydt_setup.py build_ext --inplace
-    #subprocess.check_call([os.getcwd() + os.path.sep + 'dydt_setup.py', 'build_ext', '--inplace'])
+    subprocess.check_call(['python', os.getcwd() + os.path.sep + 'dydt_setup.py', 'build_ext', '--inplace'])
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
@@ -638,17 +639,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
 
-    err_jac_max_ct = np.zeros(num_trials)
-    err_jac_norm_ct = np.zeros(num_trials)
-    err_jac_ct = np.zeros(num_trials)
-    err_jac_zero_ct = np.zeros(num_trials)
-
     for i, state in enumerate(state_data):
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
 
-        ajac = analytic_eval_jacob(pres, idx_rev, test_dir)
+        ajac = analytic_eval_jacob(pres)
 
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
@@ -773,7 +769,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         num = int(test_data[0])
         test_jacob = test_data[1: num + 1]
         test_data = test_data[num + 1:]
-        non_zero = np.where(abs(test_jacob) > 0)[0]
+        #non_zero = np.where(abs(test_jacob) > 0)[0]
+        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
         zero = np.where(test_jacob == 0.)[0]
 
         jacob = ajac.eval_jacobian(gas, 6)
@@ -784,27 +781,43 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
         print('Max error in non-zero our Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
+              '@ index {} %'.format(max_err * 100., loc))
         print('L2 norm of relative error of our Jacobian: '
-              '{:.2e}'.format(err))
-        err_jac_max_ct[i] = max_err
-        err_jac_ct[i] = err
+              '{:.2e} %'.format(err))
+        err_jac_max[i] = max_err
+        err_jac[i] = err
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-        err_jac_norm_ct[i] = err
-        print('L2 norm error of our Jacobian: '
-              '{:.2e}'.format(err))
+        err_jac_norm[i] = err
+        print('L2 norm error of our Jacobian: {:.2e}'.format(err))
 
         err = np.linalg.norm(test_jacob[zero] - jacob[zero])
-        err_jac_zero_ct[i] = err
+        err_jac_zero[i] = err
         print('L2 norm difference of our "zero" Jacobian: '
               '{:.2e}'.format(err))
 
     plt.semilogy(state_data[:,1], err_jac_norm, 'o')
-    plt.savefig('fig.png')
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Jacobian matrix norm error')
+    pp = PdfPages('Jacobian_error_norm.pdf')
+    pp.savefig()
+    pp.close()
+    
+    plt.figure()
+    plt.semilogy(state_data[:,1], err_jac, 'o')
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Jacobian matrix relative error norm [%]')
+    pp = PdfPages('Jacobian_relative_error.pdf')
+    pp.savefig()
+    pp.close()
+    
+    # Save all error arrays
+    np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm, err_jac=err_jac)
+
     # Cleanup all files in test directory.
-    for f in os.listdir(test_dir):
-        os.remove(os.path.join(test_dir, f))
+    test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
+    for f in test_files + ['py_dydt.so']:
+        os.remove(f)
     os.rmdir(test_dir)
 
     return 0

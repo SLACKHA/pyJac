@@ -384,7 +384,7 @@ mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml'}
 
 pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]
-premixed = [True, False]
+premixed = ['premixed', 'non-premixed']
 
 cache_opt = [True, False]
 shared = [True, False]

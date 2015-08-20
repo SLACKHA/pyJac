@@ -407,7 +407,7 @@ for mechanism in mechanism_list:
     #get input
     pasr_input = pasr.parse_input_file(home + mechanism['input'])
     
-    with open("data.bin", "wb") as file:
+    with open("test/data.bin", "wb") as file:
         pass
 
     num_conditions = 0
@@ -423,7 +423,7 @@ for mechanism in mechanism_list:
             state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
                                 state_data.shape[2]
                                 )
-            with open("data.bin", "ab") as file:
+            with open("test/data.bin", "ab") as file:
                 state_data.tofile(file)
             num_conditions += state_data.shape[0]
             print(num_conditions)
@@ -448,7 +448,6 @@ for mechanism in mechanism_list:
             #get the cantera object
             gas = ct.Solution(mechanism_dir+mechanism['mech'])
             pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-            rev = any(rxn.reversible for rxn in gas.reactions())
 
             # Compile generated source code
             files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
@@ -474,31 +473,60 @@ for mechanism in mechanism_list:
                     sys.excreate_jacobian('c', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, build_path=build_dir)
 
-            #now we need to write the reader and the tester
-            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
-                write_c_reader(file)
+            # Link into executable
+            args = [cmd_compile['c']]
+            args.extend([os.path.join(test_dir, f + '.o') for f in files])
+            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+            args.extend(libs['c'])
 
-            with open(build_dir + 'test.c', 'w') as file:
-                write_c_tester(file)
+            try:
+                subprocess.check_call(args)
+            except subprocess.CalledProcessError:
+                print('Error: linking of test program failed.')
+                sys.exit(1)
+
+            with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
+                for i in range(repeats):
+                    print(i, "/", repeats)
+                    subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
+                     str(thread), str(num_conditions)], stdout=file)
+
+    #do cuda
+    #next we need to start writing the jacobians
+    for opt in cache_opt:
+        for smem in shared:
+            create_jacobian('cuda', mechanism_dir+mechanism['mech'],
+                            optimize_cache=opt, multi_thread=12, 
+                            build_path=build_dir,
+                            num_blocks=8 num_threads=64)
+
+            with open('out/regcount') as file:
+                regcount = int(file.readline())
+
+            #now we need to write the reader and the tester
+            with open(build_dir + 'read_initial_conditions.cu', 'w') as file:
+                write_cuda_reader(file)
+
+            with open(build_dir + 'test.cu', 'w') as file:
+                write_cuda_tester(file)
 
             write_timer()
 
             #get the cantera object
             gas = ct.Solution(mechanism_dir+mechanism['mech'])
             pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-            rev = any(rxn.reversible for rxn in gas.reactions())
 
             # Compile generated source code
             files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
                      'rxn_rates', 'test', 'read_initial_conditions',
-                     'mechanism', 'mass_mole'
+                     'mechanism', 'mass_mole', 'gpu_memory'
                      ]
             if pmod:
                 files += ['rxn_rates_pres_mod']
 
             for f in files:
-                args = [cmd_compile['c']]
-                args.extend(flags['c'])
+                args = [cmd_compile['cuda']]
+                args.extend(flags['cuda'])
                 args.extend([
                     '-I.' + os.path.sep + build_dir,
                     '-c', os.path.join(build_dir, f + utils.file_ext['c']),
@@ -509,38 +537,24 @@ for mechanism in mechanism_list:
                     subprocess.check_call(args)
                 except subprocess.CalledProcessError:
                     print('Error: compilation failed for ' + f + utils.file_ext['c'])
-                    sys.exit(1)
+                    sys.excreate_jacobian('c', mechanism_dir+mechanism['mech'],
+                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
 
             # Link into executable
-            args = [cmd_compile['c']]
+            args = [cmd_compile['cuda']]
             args.extend([os.path.join(test_dir, f + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'test')])
-            args.extend(libs['c'])
+            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+            args.extend(libs['cuda'])
+
             try:
                 subprocess.check_call(args)
             except subprocess.CalledProcessError:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
+            with open('gpu_{}_{}_output.txt'.format('co_' if cache_opt else 'nco_',
+                'sm' if smem else 'nsm'), 'w') as file:
                 for i in range(repeats):
-                    subprocess.check_call([test_dir, 'test', num_threads, num_conditions], stdout=file)
-
-            # Link into executable
-            args = [cmd_compile['c']]
-            args.extend([os.path.join(test_dir, f + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'test')])
-            args.extend(libs['c'])
-            try:
-                subprocess.check_call(args)
-            except subprocess.CalledProcessError:
-                print('Error: linking of test program failed.')
-                sys.exit(1)
-
-            with open('{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
-                for i in range(repeats):
-                    subprocess.check_call([test_dir, 'test', num_threads, num_conditions], stdout=file)
-
-
-
-
+                    print(i, "/", repeats)
+                    subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
+                     str(thread), str(num_conditions)], stdout=file)

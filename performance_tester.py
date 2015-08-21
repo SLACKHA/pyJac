@@ -289,7 +289,7 @@ def write_c_tester(file):
         double runtime = GetTimer();
         free(y_host);
         free(var_host);
-        printf("%d,%d,%.15le\n", num_threads, num_odes, runtime);
+        printf("%d,%d,%.15le\\n", num_threads, num_odes, runtime);
         return 0;
     }
     """
@@ -388,7 +388,7 @@ def write_cuda_tester(file):
         free(var_host);
         free(jac_host);
         cudaErrorCheck( cudaDeviceReset() );
-        printf("%d,%.15le\n", num_odes, runtime);
+        printf("%d,%.15le\\n", num_odes, runtime);
         return 0;
     }
     """

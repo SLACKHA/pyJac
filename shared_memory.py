@@ -17,6 +17,18 @@ class shared_memory_manager(object):
         self.shared_per_thread = int(floor(self.shared_per_block / self.num_threads))
         self.shared_indexes = range(self.shared_per_thread)
         self.eviction_marking = [False for i in range(self.shared_per_thread)]
+        self.on_eviction = None
+
+    def force_eviction(self):
+        for index in self.shared_dict[:]:
+            # remove it
+            self.shared_dict.remove(index)
+            self.shared_indexes.append(index[1])
+            if self.on_eviction is not None:
+                self.on_eviction(index[0], self.__get_string(index[1]))
+
+    def set_on_eviction(self, func):
+        self.on_eviction = func
 
     def reset(self):
         self.shared_dict = []
@@ -27,7 +39,7 @@ class shared_memory_manager(object):
         file.write(''.join([' ' for i in range(indent)]) + 'extern __shared__ double ' + self.skeleton.format('') +
                    utils.line_end['cuda'])
 
-    def load_into_shared(self, file, variables, estimated_usage=None, indent=2):
+    def load_into_shared(self, file, variables, estimated_usage=None, indent=2, load=None):
         old_variables = [x[0] for x in self.shared_dict]
         old_index = [x[1] for x in self.shared_dict]
         # simply clear old
@@ -41,6 +53,8 @@ class shared_memory_manager(object):
                     index = next(s for s in self.shared_dict if s[0] == var)
                     self.shared_dict.remove(index)
                     self.shared_indexes.append(index[1])
+                    if self.on_eviction is not None:
+                        self.on_eviction(var, self.__get_string(index[1]))
         if estimated_usage is not None:
             variables = [(x[1], estimated_usage[x[0]]) for x in
                          sorted(enumerate(variables), key=lambda x: estimated_usage[x[0]], reverse=True)]
@@ -61,6 +75,9 @@ class shared_memory_manager(object):
                             stored = next((x for x in self.shared_dict if index == x[1]), None)
                             self.shared_dict.remove(stored)
                             self.shared_dict.append((stored[0], self.shared_indexes.pop(0)))
+                            if self.on_eviction is not None:
+                                print(stored)
+                                self.on_eviction(stored[0], self.__get_string(stored[1]))
                     else:
                         index = self.shared_indexes.pop(0)
                     self.shared_dict.append((var, index))
@@ -73,8 +90,11 @@ class shared_memory_manager(object):
         # need to write loads for any new vars
         for var in self.shared_dict:
             if not var[0] in old_variables:
-                file.write(
-                    ''.join([' ' for i in range(indent)]) + self.__get_string(var[1]) + ' = ' + var[0] + utils.line_end[
+                if load is not None:
+                    index = next(i for i, v in enumerate(variables) if v[0] == var[0])
+                    if not load[index]:
+                        continue
+                file.write(' ' * indent + self.__get_string(var[1]) + ' = ' + var[0] + utils.line_end[
                         'cuda'])
 
     def mark_for_eviction(self, variables):

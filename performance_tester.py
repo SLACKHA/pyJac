@@ -289,7 +289,7 @@ def write_c_tester(file):
         double runtime = GetTimer();
         free(y_host);
         free(var_host);
-        printf("%d,%d,%.15le", num_threads, num_odes, runtime);
+        printf("%d,%d,%.15le\n", num_threads, num_odes, runtime);
         return 0;
     }
     """
@@ -388,7 +388,7 @@ def write_cuda_tester(file):
         free(var_host);
         free(jac_host);
         cudaErrorCheck( cudaDeviceReset() );
-        printf("%d,%.15le", num_odes, runtime);
+        printf("%d,%.15le\n", num_odes, runtime);
         return 0;
     }
     """
@@ -523,7 +523,7 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open('cpu_{}output.txt'.format('co_' if cache_opt else 'nco_'), 'w') as file:
+            with open('cpu_{}output.txt'.format('co_' if opt else 'nco_'), 'w') as file:
                 for i in range(repeats):
                     print(i, "/", repeats)
                     subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
@@ -533,6 +533,7 @@ for mechanism in mechanism_list:
     #next we need to start writing the jacobians
     for opt in cache_opt:
         for smem in shared:
+
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, 
                             build_path=build_dir,
@@ -597,7 +598,7 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open('gpu_{}_{}_output.txt'.format('co_' if cache_opt else 'nco_',
+            with open('gpu_{}_{}_output.txt'.format('co_' if opt else 'nco_',
                 'sm' if smem else 'nsm'), 'w') as file:
                 for i in range(repeats):
                     print(i, "/", repeats)

@@ -365,7 +365,7 @@ def write_cuda_tester(file):
         double* var_device;
         double* var_host;
         int padded = read_initial_conditions("data.bin", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
-        double* jac_host = (double*) malloc(NN * NN * padded);
+        double* jac_host = (double*)malloc(NN * NN * padded * sizeof(double));
         double* jac_device = 0;
         cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));
         dim3 dimGrid (g_num, 1 );

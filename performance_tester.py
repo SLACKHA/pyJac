@@ -559,6 +559,11 @@ for mechanism in mechanism_list:
                      'rxn_rates', 'test', 'read_initial_conditions',
                      'mechanism', 'mass_mole', 'gpu_memory'
                      ]
+            try:
+                with open('out/jacobs/jac_list') as file:
+                    files.extend(file.readline().strip().split(' '))
+            except:
+                pass
             if pmod:
                 files += ['rxn_rates_pres_mod']
 

@@ -8,6 +8,9 @@ import sys
 import subprocess
 from argparse import ArgumentParser
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
 # More Python 2 compatibility
 if sys.version_info.major == 3:
     from itertools import zip
@@ -24,9 +27,16 @@ except ImportError:
     print('Error: Cantera must be installed.')
     raise
 
+try:
+    import numdifftools
+except ImportError:
+    print('Error: numdifftools must be installed.')
+    raise
+
 # Local imports
 import utils
 from create_jacobian import create_jacobian
+import partially_stirred_reactor as pasr
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -42,7 +52,7 @@ flags = dict(c=['-std=c99'],
                    '-dc'],
              fortran='')
 
-libs = dict(c='-lm',
+libs = dict(c=['-lm', '-std=c99'],
             cuda='-arch=sm_20',
             fortran='')
 
@@ -55,7 +65,7 @@ class ReactorConstPres(object):
         self.gas = gas
         self.P = gas.P
 
-    def __call__(self, t=None, y=None):
+    def __call__(self, y=None):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
@@ -82,7 +92,7 @@ class ReactorConstVol(object):
         self.gas = gas
         self.density = gas.density
 
-    def __call__(self, t=None, y=None):
+    def __call__(self, y=None):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
@@ -126,112 +136,6 @@ def convert_mech(mech_filename, therm_filename=None):
           '{}'.format(mech_filename)
           )
     return mech_filename
-
-def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-16):
-    file.write(
-        """
-        #define FD_ORD 6
-
-        void eval_fd_jacob (const double t, const double pres, double * y, double * jac) {
-
-          double ydot[NN] = {0};
-          dydt (t, pres, y, ydot);
-
-          // Finite difference coefficients
-          double x_coeffs[FD_ORD];
-          double y_coeffs[FD_ORD];
-
-          if (FD_ORD == 2) {
-            // 2nd order central difference
-            x_coeffs[0] = -1.0;
-            x_coeffs[1] = 1.0;
-            y_coeffs[0] = -0.5;
-            y_coeffs[1] = 0.5;
-          } else if (FD_ORD == 4) {
-            // 4th order central difference
-            x_coeffs[0] = -2.0;
-            x_coeffs[1] = -1.0;
-            x_coeffs[2] = 1.0;
-            x_coeffs[3] = 2.0;
-            y_coeffs[0] = 1.0 / 12.0;
-            y_coeffs[1] = -2.0 / 3.0;
-            y_coeffs[2] = 2.0 / 3.0;
-            y_coeffs[3] = -1.0 / 12.0;
-          } else {
-            // 6th order central difference
-            x_coeffs[0] = -3.0;
-            x_coeffs[1] = -2.0;
-            x_coeffs[2] = -1.0;
-            x_coeffs[3] = 1.0;
-            x_coeffs[4] = 2.0;
-            x_coeffs[5] = 3.0;
-
-            y_coeffs[0] = -1.0 / 60.0;
-            y_coeffs[1] = 3.0 / 20.0;
-            y_coeffs[2] = -3.0 / 4.0;
-            y_coeffs[3] = 3.0 / 4.0;
-            y_coeffs[4] = -3.0 / 20.0;
-            y_coeffs[5] = 1.0 / 60.0;
-          }
-
-          double ewt[NN];
-          #pragma unroll
-          """
-        )
-    file.write(
-        """
-          for (int i = 0; i < NN; ++i) {{
-            ewt[i] = {} + ({} * fabs(y[i]));
-          }}
-
-          // unit roundoff of machine
-          double srur = sqrt(DBL_EPSILON);
-
-          double sum = 0.0;
-          #pragma unroll
-          for (int i = 0; i < NN; ++i) {{
-            sum += (ewt[i] * ydot[i]) * (ewt[i] * ydot[i]);
-          }}
-          double fac = sqrt(sum / ((double)(NN)));
-          double r0 = 1000.0 * {} * DBL_EPSILON * ((double)(NN)) * fac;
-          """.format(atol, rtol, rtol)
-        )
-    file.write(
-        """
-          double ftemp[NN] = {0};
-
-          #pragma unroll
-          for (int j = 0; j < NN; ++j) {
-            double yj_orig = y[j];
-            double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
-
-            #pragma unroll
-            for (int i = 0; i < NN; ++i) {
-              jac[i + NN*j] = 0.0;
-            }
-
-            #pragma unroll
-            for (int k = 0; k < FD_ORD; ++k) {
-              y[j] = yj_orig + x_coeffs[k] * r;
-              dydt (t, pres, y, ftemp);
-              #pragma unroll
-              for (int i = 0; i < NN; ++i) {
-                jac[i + NN*j] += y_coeffs[k] * ftemp[i];
-              }
-            }
-
-            #pragma unroll
-            for (int i = 0; i < NN; ++i) {
-              jac[i + NN*j] /= r;
-            }
-
-            y[j] = yj_orig;
-          }
-
-        }
-        """
-        )
-
 
 def __write_header_include(file, lang):
     file.write(
@@ -497,7 +401,7 @@ def write_c_test(build_dir, pmod):
     with open(build_dir + os.path.sep + 'test.c', 'w') as f:
         __write_header_include(f, 'c')
         __write_output_methods(f)
-        __write_fd_jacob(f, 'c')
+        #__write_fd_jacob(f, 'c')
         f.write('int main (void) {\n'
                 '\n'
                 '  FILE* fp = fopen ("test/input.txt", "r");\n'
@@ -539,9 +443,9 @@ def write_c_test(build_dir, pmod):
             '\n'
             '  eval_jacob (0.0, pres, y, jacob);\n'
             '  write_jacob (fp, jacob);\n'
-            '  double fd_jacob[NN * NN] = {0};\n'
-            '  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
-            '  write_jacob(fp, fd_jacob);\n'
+            #'  double fd_jacob[NN * NN] = {0};\n'
+            #'  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
+            #'  write_jacob(fp, fd_jacob);\n'
             '\n'
             '  fclose (fp);\n'
             '\n'
@@ -553,59 +457,72 @@ def write_c_test(build_dir, pmod):
     return None
 
 
-def eval_jacobian(dydt, order):
-    """
-    """
-    abs_tol = 1.e-20
-    rel_tol = 1.e-16
+class analytic_eval_jacob:
+    def __init__(self, pressure):
+        self.pres = pressure
+        #self.idx_rev = idx_rev
+        #self.test_dir = test_dir
 
-    y = np.hstack((dydt.gas.T, dydt.gas.Y))
+    def dydt(self, y):
+        import py_dydt
+        dy = np.zeros_like(y)
+        py_dydt.py_dydt(0, self.pres, y, dy)
+        return dy
 
-    if order == 2:
-        x_coeffs = np.array([-1., 1.])
-        y_coeffs = np.array([-0.5, 0.5])
-    elif order == 4:
-        x_coeffs = np.array([-2., -1., 1., 2.])
-        y_coeffs = np.array([1. / 12., -2. / 3., 2. / 3., -1. / 12.])
-    elif order == 6:
-        x_coeffs = np.array([-3., -2., -1., 1., 2., 3.])
-        y_coeffs = np.array([-1. / 60., 3. / 20., -3. / 4.,
-                             3. / 4., -3. / 20., 1. / 60.
-                             ])
+    def eval_jacobian(self, gas, order):
+        """
+        """
+        abs_tol = 1.e-20
+        rel_tol = 1.e-8
 
-    sqrt_rnd = np.sqrt(np.finfo(float).eps)
-    err_wt = abs(y) * rel_tol + abs_tol
+        y = np.hstack((gas.T, gas.Y))
+        step = np.array([1e-15 for x in range(len(y))])
+        step[0] = abs_tol
 
-    r0 = (1000. * rel_tol * np.finfo(float).eps * len(y) *
-          np.sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
-          )
-
-    jacob = np.zeros(len(y) ** 2)
-    for j, y_j in enumerate(y):
-        y_temp = np.copy(y)
-        r = max(sqrt_rnd * abs(y_j), r0 / err_wt[j])
-
-        for x_c, y_c in zip(x_coeffs, y_coeffs):
-            y_temp[j] = y_j + x_c * r
-            jacob[np.arange(len(y)) + len(y) * j] += y_c * dydt(y=y_temp)
-
-        jacob[np.arange(len(y)) + len(y) * j] /= r
-
-    return jacob
+        jacob = numdifftools.Jacobian(self.dydt, order=order, method='central', full_output=True)
+        arr = jacob(y)
+        fd = np.array(arr[0])
+        index = np.array(arr[-1].index)
+        return fd.T.flatten()
 
 def __is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
 
+def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
+    # Run PaSR to get data
+    pasr_input = pasr.parse_input_file(pasr_input_file)
+    state_data = pasr.run_simulation(
+                    mech_filename,
+                    pasr_input['case'],
+                    pasr_input['temperature'],
+                    pasr_input['pressure'],
+                    pasr_input['equivalence ratio'],
+                    pasr_input['fuel'],
+                    pasr_input['oxidizer'],
+                    pasr_input['complete products'],
+                    pasr_input['number of particles'],
+                    pasr_input['residence time'],
+                    pasr_input['mixing time'],
+                    pasr_input['pairing time'],
+                    pasr_input['number of residence times']
+                    )
+    if pasr_output_file:
+        np.save(pasr_output_file, state_data)
+    return state_data
 
-def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
-         generate_jacob=True, num_trials=10):
+
+def test(lang, build_dir, mech_filename, therm_filename=None,
+         pasr_input_file='pasr_input.yaml', generate_jacob=True,
+         seed=None, pasr_output_file=None):
     """
     """
 
     if seed is not None:
         np.random.seed(seed)
+    else:
+        np.random.seed()
 
     test_dir = '.' + os.path.sep + 'test'
     utils.create_dir(test_dir)
@@ -629,6 +546,15 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
     if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
+
+    #write and compile the dydt python wrapper
+    try:
+        os.remove('py_dydt.so')
+    except:
+        pass
+    #doesn't work at the moment
+    #just run python dydt_setup.py build_ext --inplace
+    subprocess.check_call(['python', os.getcwd() + os.path.sep + 'dydt_setup.py', 'build_ext', '--inplace'])
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
@@ -655,7 +581,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
             '-I.' + os.path.sep + build_dir,
             '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
             '-o', os.path.join(test_dir, f + '.o')
-        ])
+            ])
         args = [val for val in args if val.strip()]
         try:
             subprocess.check_call(args)
@@ -664,11 +590,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
             sys.exit(1)
 
     # Link into executable
-    args = ([cmd_compile[lang]] +
-            [os.path.join(test_dir, f + '.o') for f in files] +
-            [libs[lang]] +
-            ['-o', os.path.join(test_dir, 'test')]
-            )
+    args = [cmd_compile[lang]]
+    args.extend([os.path.join(test_dir, f + '.o') for f in files])
+    args.extend(['-o', os.path.join(test_dir, 'test')])
+    args.extend(libs[lang])
     try:
         subprocess.check_call(args)
     except subprocess.CalledProcessError:
@@ -694,19 +619,36 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
                     isinstance(
         gas.reaction(idx), ct.ChemicallyActivatedReaction)
     ]
-
-    rand_temp = np.random.uniform(800., 2000., num_trials)
-    rand_pres = np.random.uniform(1., 40., num_trials) * ct.one_atm
-    rand_mass = np.random.uniform(0., 1., (num_trials, gas.n_species))
-    rand_space = zip(rand_temp, rand_pres, rand_mass)
+    if pasr_output_file:
+        #load old test data
+        try:
+            state_data = np.load(pasr_output_file)
+        except Exception, e:
+            # Run PaSR to get data
+            print('Could not load saved pasr data... re-running')
+            state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
+    else:
+        # Run PaSR to get data
+        state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
+    # Reshape array to treat time steps and particles the same
+    state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
+                                state_data.shape[2]
+                                )
+    num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)
     err_dydt_zero = np.zeros(num_trials)
+    err_jac_norm = np.zeros(num_trials)
     err_jac = np.zeros(num_trials)
+    err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
-    for i, (temp, pres, mass_frac) in enumerate(rand_space):
-        # Normalize mass fractions
-        mass_frac /= sum(mass_frac)
+
+    for i, state in enumerate(state_data):
+        temp = state[1]
+        pres = state[2]
+        mass_frac = state[3:]
+
+        ajac = analytic_eval_jacob(pres)
 
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
@@ -726,63 +668,67 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
         ode = ReactorConstPres(gas)
 
         # Now read output from test program
-        data = np.genfromtxt(os.path.join(test_dir, 'output.txt'))
+        test_data = np.genfromtxt(os.path.join(test_dir, 'output.txt'))
 
-        num = int(data[0])
-        test_conc = data[1: num + 1]
-        data = data[num + 1:]
-        err = abs((test_conc - gas.concentrations) /
-                  gas.concentrations
+        num = int(test_data[0])
+        test_conc = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
+        non_zero = np.where(test_conc > 0.)[0]
+        err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
+                  gas.concentrations[non_zero]
                   )
         max_err = np.max(err)
-        loc = np.argmax(err)
-        err = np.linalg.norm(err, 2) * 100.
-        print('L2 norm error in concentration: {:.2e} %'.format(err))
-        print('Max error in concentration: {:.2e} % @ species {}'
+        loc = non_zero[np.argmax(err)]
+        err = np.linalg.norm(err) * 100.
+        print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
+        print('Max error in non-zero concentration: {:.2e} % @ species {}'
             .format(max_err * 100., loc))
 
-        num = int(data[0])
-        test_fwd_rates = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_fwd_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-        num = int(data[0])
-        test_rev_rates = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_rev_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
-        num = int(data[0])
-        test_pres_mod = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_pres_mod = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
         test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
 
-        err = abs((test_fwd_rates - gas.forward_rates_of_progress) /
-                  gas.forward_rates_of_progress
+        non_zero = np.where(test_fwd_rates > 0.)[0]
+        err = abs((test_fwd_rates[non_zero] -
+                  gas.forward_rates_of_progress[non_zero]) /
+                  gas.forward_rates_of_progress[non_zero]
                   )
         max_err = np.max(err)
-        loc = np.argmax(err)
-        err = np.linalg.norm(err, 2) * 100.
-        print('L2 norm error in forward reaction rates: {:.2e}%'.format(err))
-        print('Max error in forward reaction rates: {:.2e}% @ reaction {}'.
+        loc = non_zero[np.argmax(err)]
+        err = np.linalg.norm(err) * 100.
+        print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
+        print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
               format(max_err * 100., loc))
 
         if idx_rev:
-            err = abs((test_rev_rates -
-                      gas.reverse_rates_of_progress[idx_rev]) /
-                      gas.reverse_rates_of_progress[idx_rev]
+            non_zero = np.where(test_rev_rates > 0.)[0]
+            err = abs((test_rev_rates[non_zero] -
+                      (gas.reverse_rates_of_progress[idx_rev])[non_zero]) /
+                      (gas.reverse_rates_of_progress[idx_rev])[non_zero]
                       )
             max_err = np.max(err)
-            loc = np.argmax(err)
-            err = np.linalg.norm(err, 2) * 100.
-            print('L2 norm error in reverse reaction rates: {:.2e}%'.format(err))
-            print('Max error in reverse reaction rates: {:.2e}% @ reaction {}'.
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
+            print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
                   format(max_err * 100., loc))
 
         # Species production rates
-        num = int(data[0])
-        test_spec_rates = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_spec_rates = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -791,7 +737,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         print('L2 norm relative error of non-zero net production rates: '
               '{:.2e} %'.format(err)
               )
@@ -799,14 +745,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
               '@ species {}'.format(max_err * 100., loc)
               )
         err = np.linalg.norm(
-            test_spec_rates[zero] - gas.net_production_rates[zero], 2)
+            test_spec_rates[zero] - gas.net_production_rates[zero])
         print(
             'L2 norm difference of "zero" net production rates: {:.2e}'
             .format(err))
 
-        num = int(data[0])
-        test_dydt = data[1: num + 1]
-        data = data[num + 1:]
+        num = int(test_data[0])
+        test_dydt = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
         err = abs((test_dydt[non_zero] - ode()[non_zero]) /
@@ -814,76 +760,85 @@ def test(lang, build_dir, mech_filename, therm_filename=None, seed=None,
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
         err_dydt[i] = err
         print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
         print('Max error in non-zero dydt: {:.2e}% '
               '@ index {}'.format(max_err * 100., loc)
               )
-        err = np.linalg.norm(test_dydt[zero] - ode()[zero], 2)
+        err = np.linalg.norm(test_dydt[zero] - ode()[zero])
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        num = int(data[0])
-        test_jacob = data[1: num + 1]
-        data = data[num + 1:]
-        non_zero = np.where(test_jacob != 0.)[0]
+        num = int(test_data[0])
+        test_jacob = test_data[1: num + 1]
+        test_data = test_data[num + 1:]
+        #non_zero = np.where(abs(test_jacob) > 0)[0]
+        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
         zero = np.where(test_jacob == 0.)[0]
-        # Calculate "true" Jacobian numerically
-        try:
-            jacob = eval_jacobian(ode, 6)
-            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                      jacob[non_zero]
-                      )
-            max_err = np.max(err)
-            loc = non_zero[np.argmax(err)]
-            err = np.linalg.norm(err, 2) * 100.
-            #err_jac[i] = err
-            print('L2 norm relative error of non-zero Cantera Jacobian: '
-                  '{:.2e} %'.format(err))
-            print('Max error in non-zero Jacobian: {:.2e}% '
-                  '@ index {}'.format(max_err * 100., loc))
-            err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
-            #err_jac_zero[i] = err
-            print('L2 norm difference of "zero" Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-        except:
-            print('Cantera unable to calculate Jacobian. '
-                  'Using custom FD only.')
 
-        num = int(data[0])
-        jacob = data[1: num + 1]
-        data = data[num + 1:]
-        non_zero = np.where(test_jacob != 0.)[0]
-        zero = np.where(test_jacob == 0.)[0]
-        # Calculate "true" Jacobian numerically
+        jacob = ajac.eval_jacobian(gas, 6)
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err, 2) * 100.
+        err = np.linalg.norm(err) * 100.
+        print('Max error in non-zero our Jacobian: {:.2e}% '
+              '@ index {} %'.format(max_err * 100., loc))
+        print('L2 norm of relative error of our Jacobian: '
+              '{:.2e} %'.format(err))
+        err_jac_max[i] = max_err
         err_jac[i] = err
-        print('L2 norm relative error of our non-zero Jacobian: {:.2e} %'
-              .format(err))
-        print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
-        err = np.linalg.norm(test_jacob[zero] - jacob[zero], 2)
+
+        err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
+        err_jac_norm[i] = err
+        print('L2 norm error of our Jacobian: {:.2e}'.format(err))
+
+        err = np.linalg.norm(test_jacob[zero] - jacob[zero])
         err_jac_zero[i] = err
-        print('L2 norm difference of our "zero" Jacobian: {:.2e}'.format(err))
-        print()
+        print('L2 norm difference of our "zero" Jacobian: '
+              '{:.2e}'.format(err))
+
+    plt.semilogy(state_data[:,1], err_jac_norm, 'o')
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Jacobian matrix norm error')
+    pp = PdfPages('Jacobian_error_norm.pdf')
+    pp.savefig()
+    pp.close()
+    
+    plt.figure()
+    plt.semilogy(state_data[:,1], err_jac, 'o')
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Jacobian matrix relative error norm [%]')
+    pp = PdfPages('Jacobian_relative_error.pdf')
+    pp.savefig()
+    pp.close()
+    
+    # Save all error arrays
+    np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm, err_jac=err_jac)
 
     # Cleanup all files in test directory.
-    for f in os.listdir(test_dir):
-        os.remove(os.path.join(test_dir, f))
+    test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
+    for f in test_files + ['py_dydt.so', 'dydt_wrapper.c']:
+        os.remove(f)
     os.rmdir(test_dir)
+    
+    # Now clean build directory
+    for root, dirs, files in os.walk('./build', topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir('./build')
 
     return 0
 
 if __name__ == '__main__':
     parser = ArgumentParser(
         description='Tests create_jacobian versus a finite difference'
-        ' Cantera jacobian\n')
+        ' Cantera jacobian\n'
+        )
     parser.add_argument('-l', '--lang',
                         type=str,
                         choices=utils.langs,
@@ -895,31 +850,36 @@ if __name__ == '__main__':
                         default='out' + os.path.sep,
                         help='The directory the jacob/rates/tester'
                         ' files will be generated and built in.')
-    parser.add_argument('-i', '--input',
+    parser.add_argument('-m', '--mech',
                         type=str,
                         required=True,
-                        help='Input mechanism filename (e.g., mech.dat).')
+                        help='Mechanism filename (e.g., mech.dat).')
     parser.add_argument('-t', '--thermo',
                         type=str,
                         default=None,
                         help='Thermodynamic database filename (e.g., '
                              'therm.dat), or nothing if in mechanism.')
-    parser.add_argument('-s', '--seed',
-                        type=int,
-                        default=None,
-                        help='Set seed for the random number generator')
+    parser.add_argument('-i', '--input',
+                        type=str,
+                        default='pasr_input.yaml',
+                        help='Perfectly stirred reactor input file for '
+                             'generating test data (e.g, pasr_input.yaml)')
     parser.add_argument('-dng', '--do_not_generate',
                         action='store_false',
                         dest='generate_jacob',
                         default=True,
                         help='Use this option to have the tester utilize'
                         ' the already existant jacobian files')
-    parser.add_argument('-n', '--num_trials',
+    parser.add_argument('-s', '--seed',
                         type=int,
-                        dest='num_trials',
-                        default=10,
-                        help='Numer of random trials.')
+                        default=None,
+                        help='The seed to be used for random numbers')
+    parser.add_argument('-p', '--pasr_output',
+                        type=str,
+                        default=None,
+                        help='An optional saved .npy file that has the '
+                             'resulting pasr data (to speed testing)')
     args = parser.parse_args()
-    test(args.lang, args.build_dir, args.input, args.thermo, args.seed,
-         args.generate_jacob, args.num_trials
+    test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
+         args.generate_jacob, args.seed, args.pasr_output
          )

@@ -31,18 +31,13 @@ line_end = dict(c=';\n', cuda=';\n',
 
 # exp10 functions for various languages
 exp_10_fun = dict(c="pow(10.0, ", cuda='exp10(',
-                  fortran='exp(log(10) * ', matlab='exp(log(10.0) * ')
+                  fortran='exp(log(10) * ', matlab='exp(log(10.0) * '
+                  )
 
 # the characters to format an index into an array per language
 array_chars = dict(c="[{}]", cuda="[{}]",
-                   fortran="({})", matlab="({})")
-
-
-def round_sig(x, sig=8):
-    if x == 0:
-        return 0
-    return round(x, sig - int(floor(log10(abs(x)))) - 1)
-
+                   fortran="({})", matlab="({})"
+                   )
 
 def read_str_num(string, sep=None):
     """Returns a list of floats pulled from a string.

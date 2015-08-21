@@ -15,8 +15,8 @@ __all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',
 
 # universal gas constants, SI units
 RU = 8314.4621  # J/(kmole * K)
-RUC = 1.9858775  # cal/(mole * K)
-RU_JOUL = 8.314510e0
+RU_JOUL = 8.3144621
+RUC = (RU / 4.18400)  # cal/(mole * K)
 
 # Avogadro's number
 AVAG = 6.0221367e23

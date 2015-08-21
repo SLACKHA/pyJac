@@ -8,6 +8,9 @@ import sys
 import subprocess
 from argparse import ArgumentParser
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
+
 # More Python 2 compatibility
 if sys.version_info.major == 3:
     from itertools import zip
@@ -22,6 +25,12 @@ try:
     from cantera import ck2cti
 except ImportError:
     print('Error: Cantera must be installed.')
+    raise
+
+try:
+    import numdifftools
+except ImportError:
+    print('Error: numdifftools must be installed.')
     raise
 
 # Local imports
@@ -56,7 +65,7 @@ class ReactorConstPres(object):
         self.gas = gas
         self.P = gas.P
 
-    def __call__(self, t=None, y=None):
+    def __call__(self, y=None):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
@@ -83,7 +92,7 @@ class ReactorConstVol(object):
         self.gas = gas
         self.density = gas.density
 
-    def __call__(self, t=None, y=None):
+    def __call__(self, y=None):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
@@ -127,112 +136,6 @@ def convert_mech(mech_filename, therm_filename=None):
           '{}'.format(mech_filename)
           )
     return mech_filename
-
-def __write_fd_jacob(file, lang, atol=1.e-20, rtol=1.e-8):
-    file.write(
-        """
-        #define FD_ORD 6
-
-        void eval_fd_jacob (const double t, const double pres, double * y, double * jac) {
-
-          double ydot[NN] = {0};
-          dydt (t, pres, y, ydot);
-
-          // Finite difference coefficients
-          double x_coeffs[FD_ORD];
-          double y_coeffs[FD_ORD];
-
-          if (FD_ORD == 2) {
-            // 2nd order central difference
-            x_coeffs[0] = -1.0;
-            x_coeffs[1] = 1.0;
-            y_coeffs[0] = -0.5;
-            y_coeffs[1] = 0.5;
-          } else if (FD_ORD == 4) {
-            // 4th order central difference
-            x_coeffs[0] = -2.0;
-            x_coeffs[1] = -1.0;
-            x_coeffs[2] = 1.0;
-            x_coeffs[3] = 2.0;
-            y_coeffs[0] = 1.0 / 12.0;
-            y_coeffs[1] = -2.0 / 3.0;
-            y_coeffs[2] = 2.0 / 3.0;
-            y_coeffs[3] = -1.0 / 12.0;
-          } else {
-            // 6th order central difference
-            x_coeffs[0] = -3.0;
-            x_coeffs[1] = -2.0;
-            x_coeffs[2] = -1.0;
-            x_coeffs[3] = 1.0;
-            x_coeffs[4] = 2.0;
-            x_coeffs[5] = 3.0;
-
-            y_coeffs[0] = -1.0 / 60.0;
-            y_coeffs[1] = 3.0 / 20.0;
-            y_coeffs[2] = -3.0 / 4.0;
-            y_coeffs[3] = 3.0 / 4.0;
-            y_coeffs[4] = -3.0 / 20.0;
-            y_coeffs[5] = 1.0 / 60.0;
-          }
-
-          double ewt[NN];
-          #pragma unroll
-          """
-        )
-    file.write(
-        """
-          for (int i = 0; i < NN; ++i) {{
-            ewt[i] = {} + ({} * fabs(y[i]));
-          }}
-
-          // unit roundoff of machine
-          double srur = sqrt(DBL_EPSILON);
-
-          double sum = 0.0;
-          #pragma unroll
-          for (int i = 0; i < NN; ++i) {{
-            sum += (ewt[i] * ydot[i]) * (ewt[i] * ydot[i]);
-          }}
-          double fac = sqrt(sum / ((double)(NN)));
-          double r0 = 1000.0 * {} * DBL_EPSILON * ((double)(NN)) * fac;
-          """.format(atol, rtol, rtol)
-        )
-    file.write(
-        """
-          double ftemp[NN] = {0};
-
-          #pragma unroll
-          for (int j = 0; j < NN; ++j) {
-            double yj_orig = y[j];
-            double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
-
-            #pragma unroll
-            for (int i = 0; i < NN; ++i) {
-              jac[i + NN*j] = 0.0;
-            }
-
-            #pragma unroll
-            for (int k = 0; k < FD_ORD; ++k) {
-              y[j] = yj_orig + x_coeffs[k] * r;
-              dydt (t, pres, y, ftemp);
-              #pragma unroll
-              for (int i = 0; i < NN; ++i) {
-                jac[i + NN*j] += y_coeffs[k] * ftemp[i];
-              }
-            }
-
-            #pragma unroll
-            for (int i = 0; i < NN; ++i) {
-              jac[i + NN*j] /= r;
-            }
-
-            y[j] = yj_orig;
-          }
-
-        }
-        """
-        )
-
 
 def __write_header_include(file, lang):
     file.write(
@@ -498,7 +401,7 @@ def write_c_test(build_dir, pmod):
     with open(build_dir + os.path.sep + 'test.c', 'w') as f:
         __write_header_include(f, 'c')
         __write_output_methods(f)
-        __write_fd_jacob(f, 'c')
+        #__write_fd_jacob(f, 'c')
         f.write('int main (void) {\n'
                 '\n'
                 '  FILE* fp = fopen ("test/input.txt", "r");\n'
@@ -540,9 +443,9 @@ def write_c_test(build_dir, pmod):
             '\n'
             '  eval_jacob (0.0, pres, y, jacob);\n'
             '  write_jacob (fp, jacob);\n'
-            '  double fd_jacob[NN * NN] = {0};\n'
-            '  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
-            '  write_jacob(fp, fd_jacob);\n'
+            #'  double fd_jacob[NN * NN] = {0};\n'
+            #'  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
+            #'  write_jacob(fp, fd_jacob);\n'
             '\n'
             '  fclose (fp);\n'
             '\n'
@@ -554,45 +457,33 @@ def write_c_test(build_dir, pmod):
     return None
 
 
-def eval_jacobian(dydt, order):
-    """
-    """
-    abs_tol = 1.e-20
-    rel_tol = 1.e-8
+class analytic_eval_jacob:
+    def __init__(self, pressure):
+        self.pres = pressure
+        #self.idx_rev = idx_rev
+        #self.test_dir = test_dir
 
-    y = np.hstack((dydt.gas.T, dydt.gas.Y))
+    def dydt(self, y):
+        import py_dydt
+        dy = np.zeros_like(y)
+        py_dydt.py_dydt(0, self.pres, y, dy)
+        return dy
 
-    if order == 2:
-        x_coeffs = np.array([-1., 1.])
-        y_coeffs = np.array([-0.5, 0.5])
-    elif order == 4:
-        x_coeffs = np.array([-2., -1., 1., 2.])
-        y_coeffs = np.array([1. / 12., -2. / 3., 2. / 3., -1. / 12.])
-    elif order == 6:
-        x_coeffs = np.array([-3., -2., -1., 1., 2., 3.])
-        y_coeffs = np.array([-1. / 60., 3. / 20., -3. / 4.,
-                             3. / 4., -3. / 20., 1. / 60.
-                             ])
+    def eval_jacobian(self, gas, order):
+        """
+        """
+        abs_tol = 1.e-20
+        rel_tol = 1.e-8
 
-    sqrt_rnd = np.sqrt(np.finfo(float).eps)
-    err_wt = abs(y) * rel_tol + abs_tol
+        y = np.hstack((gas.T, gas.Y))
+        step = np.array([1e-15 for x in range(len(y))])
+        step[0] = abs_tol
 
-    r0 = (1000. * rel_tol * np.finfo(float).eps * len(y) *
-          np.sqrt(np.sum(np.power(err_wt * dydt(), 2)) / len(y))
-          )
-
-    jacob = np.zeros(len(y) ** 2)
-    for j, y_j in enumerate(y):
-        y_temp = np.copy(y)
-        r = max(sqrt_rnd * abs(y_j), r0 / err_wt[j])
-
-        for x_c, y_c in zip(x_coeffs, y_coeffs):
-            y_temp[j] = y_j + x_c * r
-            jacob[np.arange(len(y)) + len(y) * j] += y_c * dydt(y=y_temp)
-
-        jacob[np.arange(len(y)) + len(y) * j] /= r
-
-    return jacob
+        jacob = numdifftools.Jacobian(self.dydt, order=order, method='central', full_output=True)
+        arr = jacob(y)
+        fd = np.array(arr[0])
+        index = np.array(arr[-1].index)
+        return fd.T.flatten()
 
 def __is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
@@ -655,6 +546,15 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
         mech_filename = convert_mech(mech_filename, therm_filename)
+
+    #write and compile the dydt python wrapper
+    try:
+        os.remove('py_dydt.so')
+    except:
+        pass
+    #doesn't work at the moment
+    #just run python dydt_setup.py build_ext --inplace
+    subprocess.check_call(['python', os.getcwd() + os.path.sep + 'dydt_setup.py', 'build_ext', '--inplace'])
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
@@ -743,15 +643,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
 
-    err_jac_max_ct = np.zeros(num_trials)
-    err_jac_norm_ct = np.zeros(num_trials)
-    err_jac_ct = np.zeros(num_trials)
-    err_jac_zero_ct = np.zeros(num_trials)
-
     for i, state in enumerate(state_data):
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
+
+        ajac = analytic_eval_jacob(pres)
 
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
@@ -876,76 +773,64 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         num = int(test_data[0])
         test_jacob = test_data[1: num + 1]
         test_data = test_data[num + 1:]
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob)
-                            / 1.e6)[0]
+        #non_zero = np.where(abs(test_jacob) > 0)[0]
+        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
         zero = np.where(test_jacob == 0.)[0]
 
-        # Calculate "true" Jacobian numerically
-        try:
-            jacob = eval_jacobian(ode, 6)
-            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                      jacob[non_zero]
-                      )
-            max_err = np.max(err)
-            loc = non_zero[np.argmax(err)]
-            err = np.linalg.norm(err) * 100.
-            print('Max error in non-zero Cantera Jacobian: {:.2e}% '
-                  '@ index {}'.format(max_err * 100., loc))
-            print('L2 norm of relative error of Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-            err_jac_max_ct[i] = max_err
-            err_jac_ct[i] = err
-
-            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-            err_jac_norm_ct[i] = err
-            print('L2 norm error of Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-
-            err = np.linalg.norm(test_jacob[zero] - jacob[zero])
-            err_jac_zero_ct[i] = err
-            print('L2 norm difference of "zero" Cantera Jacobian: '
-                  '{:.2e}'.format(err))
-        except:
-            print('Cantera unable to calculate Jacobian. '
-                  'Using custom FD only.')
-        #just for safety reset gas state
-        #as it changed during the eval_jacob above
-        gas.TPY = temp, pres, mass_frac
-
-        num = int(test_data[0])
-        jacob = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-        zero = np.where(test_jacob == 0.)[0]
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob)
-                            / 1.e6)[0]
-
-        # Calculate "true" Jacobian numerically
+        jacob = ajac.eval_jacobian(gas, 6)
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
-        print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
-        print('L2 norm of relative error of Jacobian: '
-              '{:.2e}'.format(err))
+        print('Max error in non-zero our Jacobian: {:.2e}% '
+              '@ index {} %'.format(max_err * 100., loc))
+        print('L2 norm of relative error of our Jacobian: '
+              '{:.2e} %'.format(err))
         err_jac_max[i] = max_err
         err_jac[i] = err
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-        print('L2 norm error of our non-zero Jacobian: {:.2e}'
-              .format(err))
         err_jac_norm[i] = err
+        print('L2 norm error of our Jacobian: {:.2e}'.format(err))
+
         err = np.linalg.norm(test_jacob[zero] - jacob[zero])
         err_jac_zero[i] = err
-        print('L2 norm difference of our "zero" Jacobian: {:.2e}'.format(err))
-        print()
+        print('L2 norm difference of our "zero" Jacobian: '
+              '{:.2e}'.format(err))
+
+    plt.semilogy(state_data[:,1], err_jac_norm, 'o')
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Jacobian matrix norm error')
+    pp = PdfPages('Jacobian_error_norm.pdf')
+    pp.savefig()
+    pp.close()
+    
+    plt.figure()
+    plt.semilogy(state_data[:,1], err_jac, 'o')
+    plt.xlabel('Temperature [K]')
+    plt.ylabel('Jacobian matrix relative error norm [%]')
+    pp = PdfPages('Jacobian_relative_error.pdf')
+    pp.savefig()
+    pp.close()
+    
+    # Save all error arrays
+    np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm, err_jac=err_jac)
 
     # Cleanup all files in test directory.
-    for f in os.listdir(test_dir):
-        os.remove(os.path.join(test_dir, f))
+    test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
+    for f in test_files + ['py_dydt.so', 'dydt_wrapper.c']:
+        os.remove(f)
     os.rmdir(test_dir)
+    
+    # Now clean build directory
+    for root, dirs, files in os.walk('./build', topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+    os.rmdir('./build')
 
     return 0
 

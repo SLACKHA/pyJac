@@ -443,6 +443,30 @@ home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'
 
+def check_file(filename):
+    #checks file for existing data
+    #and returns number of runs left to do
+    try:
+        with open(filename, 'r') as file:
+            lines = [line.strip() for line in file.readlines()]
+        num_completed = 0
+        if 'gpu' in filename:
+            to_find = 2
+        else:
+            to_find = 3
+        for line in lines:
+            try:
+                vals = line.split(',')
+                if len(vals) == 2:
+                    vals = [float(v) for v in vals]
+                    num_completed += 1
+            except:
+                pass
+        return num_completed
+    except:
+        return 0
+
+
 #make sure the performance directory exists
 subprocess.check_call(['mkdir', '-p', 'performance'])
 
@@ -486,6 +510,10 @@ for mechanism in mechanism_list:
     #next we need to start writing the jacobians
     for opt in cache_opt:
         for thread in num_threads:
+            data_output = 'cpu_{}output.txt'.format('co_' if opt else 'nco_')
+            num_completed = check_file(data_output)
+            if num_completed >= repeats:
+                continue
             create_jacobian('c', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, build_path=build_dir)
 
@@ -537,9 +565,9 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open('cpu_{}output.txt'.format('co_' if opt else 'nco_'), 'w') as file:
-                for i in range(repeats):
-                    print(i, "/", repeats)
+            with open(data_output, 'a+') as file:
+                for i in range(repeats - num_completed):
+                    print(i, "/", repeats - num_completed)
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(thread), str(num_conditions)], stdout=file)
 
@@ -547,6 +575,12 @@ for mechanism in mechanism_list:
     #next we need to start writing the jacobians
     for opt in cache_opt:
         for smem in shared:
+
+            data_output = 'gpu_{}_{}_output.txt'.format('co_' if opt else 'nco_',
+                'sm' if smem else 'nsm')
+            num_completed = check_file(data_output)
+            if num_completed >= repeats:
+                continue
 
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, 
@@ -612,9 +646,8 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open('gpu_{}_{}_output.txt'.format('co_' if opt else 'nco_',
-                'sm' if smem else 'nsm'), 'w') as file:
-                for i in range(repeats):
-                    print(i, "/", repeats)
+            with open(data_output, 'w') as file:
+                for i in range(repeats - num_completed):
+                    print(i, "/", repeats - num_completed)
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(num_conditions)], stdout=file)

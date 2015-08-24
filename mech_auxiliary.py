@@ -787,7 +787,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                 line += ')'
             else:
                 line += 'rates[rxn_ord[{}]]'
-            if have_pdep_rxns and reac in pdep_reacs:
+            if have_pdep_rxns and reac.pdep:
                 line += ' * pres_mod_host[{}]'.format(pdep_count)
                 pdep_count += 1
             line += ')'

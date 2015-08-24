@@ -27,15 +27,18 @@ PA = 101325.0
 
 class CommonEqualityMixin(object):
     def __eq__(self, other):
-        for key, value in self.__dict__.iteritems():
-            if not key in other.__dict__:
-                return False
-            if isinstance(value, np.ndarray) and not \
-                np.array_equal(value, other.__dict__[key]):
-                return False
-            elif value != other.__dict__[key]:
-                return False
-        return True
+        try:
+            for key, value in self.__dict__.iteritems():
+                if not key in other.__dict__:
+                    return False
+                if isinstance(value, np.ndarray):
+                    if not np.array_equal(value, other.__dict__[key]):
+                        return False
+                elif value != other.__dict__[key]:
+                    return False
+            return True
+        except Exception, e:
+            return False
 
     def __ne__(self, other):
         return not self.__eq__(other)

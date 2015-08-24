@@ -457,7 +457,7 @@ def check_file(filename):
         for line in lines:
             try:
                 vals = line.split(',')
-                if len(vals) == 2:
+                if len(vals) == to_find:
                     vals = [float(v) for v in vals]
                     num_completed += 1
             except:
@@ -507,6 +507,7 @@ for mechanism in mechanism_list:
     for opt in cache_opt:
         for thread in num_threads:
             data_output = 'cpu_{}output.txt'.format('co_' if opt else 'nco_')
+            data_output = os.path.join(os.getcwd(), data_output)
             num_completed = check_file(data_output)
             if num_completed >= repeats:
                 continue
@@ -574,6 +575,7 @@ for mechanism in mechanism_list:
 
             data_output = 'gpu_{}_{}_output.txt'.format('co_' if opt else 'nco_',
                 'sm' if smem else 'nsm')
+            data_output = os.path.join(os.getcwd(), data_output)
             num_completed = check_file(data_output)
             if num_completed >= repeats:
                 continue

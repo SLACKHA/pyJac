@@ -249,7 +249,8 @@ def write_c_reader(file):
     """
     )
 
-def write_c_tester(file):
+def write_c_tester(file, path):
+    the_file = path + "data.bin"
     file.write(
     """
     void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
@@ -272,7 +273,13 @@ def write_c_tester(file):
         }
         double* y_host;
         double* var_host;
-        read_initial_conditions("data.bin", num_odes, &y_host, &var_host);
+    """
+    )
+    file.write("""
+        read_initial_conditions("{}", num_odes, &y_host, &var_host);
+        """.format(the_file))
+    file.write(
+    """
         StartTimer();
         #pragma omp parallel for shared(y_host, var_host)
         for(int tid = 0; tid < num_odes; ++tid)
@@ -294,7 +301,8 @@ def write_c_tester(file):
     }
     """
         )
-def write_cuda_tester(file):
+def write_cuda_tester(file, path):
+    the_file = path + "data.bin"
     file.write(
     """
     #include <stdlib.h>
@@ -364,7 +372,13 @@ def write_cuda_tester(file):
         double* y_host;
         double* var_device;
         double* var_host;
-        int padded = read_initial_conditions("data.bin", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+            """
+    )
+    file.write("""
+        int padded = read_initial_conditions("{}", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+        """.format(the_file))
+    file.write(
+    """
         double* jac_host = (double*)malloc(NN * NN * padded * sizeof(double));
         double* jac_device = 0;
         cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));
@@ -424,7 +438,7 @@ cache_opt = [True, False]
 shared = [True, False]
 num_threads = [1, 12]
 
-repeats = 1000
+repeats = 50
 home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'
@@ -467,6 +481,7 @@ for mechanism in mechanism_list:
             print(num_conditions)
             index += 1
 
+    the_path = os.path.join(os.getcwd(), test_dir)
     #do c
     #next we need to start writing the jacobians
     for opt in cache_opt:
@@ -479,7 +494,7 @@ for mechanism in mechanism_list:
                 write_c_reader(file)
 
             with open(build_dir + 'test.c', 'w') as file:
-                write_c_tester(file)
+                write_c_tester(file, the_path)
 
             write_timer()
 
@@ -508,8 +523,7 @@ for mechanism in mechanism_list:
                     subprocess.check_call(args)
                 except subprocess.CalledProcessError:
                     print('Error: compilation failed for ' + f + utils.file_ext['c'])
-                    sys.excreate_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
+                    sys.exit(-1)
 
             # Link into executable
             args = [cmd_compile['c']]
@@ -526,7 +540,7 @@ for mechanism in mechanism_list:
             with open('cpu_{}output.txt'.format('co_' if opt else 'nco_'), 'w') as file:
                 for i in range(repeats):
                     print(i, "/", repeats)
-                    subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
+                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(thread), str(num_conditions)], stdout=file)
 
     #do cuda
@@ -547,7 +561,7 @@ for mechanism in mechanism_list:
                 write_cuda_reader(file)
 
             with open(build_dir + 'test.cu', 'w') as file:
-                write_cuda_tester(file)
+                write_cuda_tester(file, the_path)
 
             write_timer()
 
@@ -602,5 +616,5 @@ for mechanism in mechanism_list:
                 'sm' if smem else 'nsm'), 'w') as file:
                 for i in range(repeats):
                     print(i, "/", repeats)
-                    subprocess.check_call([os.path.join(os.path.join(os.getcwd(), test_dir), 'speedtest'),
+                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(num_conditions)], stdout=file)

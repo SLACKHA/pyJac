@@ -482,10 +482,6 @@ for mechanism in mechanism_list:
     with open("test/data.bin", "wb") as file:
         pass
 
-    if any(f.endswith('.txt') for f in os.listdir(
-        os.getcwd())):
-        raise Exception('Past data found, aborting')
-
     num_conditions = 0
     #generate PaSR data for different pressures, and save to binary c file
     index = 0

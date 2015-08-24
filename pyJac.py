@@ -1842,13 +1842,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
-    line = utils.line_start
-    if lang == 'c':
-        line += 'double '
-    elif lang == 'cuda':
-        line += 'register double '
-    line += 'kf = 0.0' + utils.line_end[lang]
-    file.write(line)
+    if not (lang == 'cuda' and do_unroll)
+        line = utils.line_start
+        if lang == 'c':
+            line += 'double '
+        elif lang == 'cuda':
+            line += 'register double '
+        line += 'kf = 0.0' + utils.line_end[lang]
+        file.write(line)
 
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = utils.line_start

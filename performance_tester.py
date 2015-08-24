@@ -610,7 +610,9 @@ for mechanism in mechanism_list:
                      ]
             try:
                 with open('out/jacobs/jac_list') as file:
-                    files.extend(file.readline().strip().split(' '))
+                    vals = file.readline().strip().split(' ')
+                    vals = ['out/jacobs' + f[:f.index('.cu')] for f in vals]
+                    files.extend(vals)
             except:
                 pass
             if pmod:

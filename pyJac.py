@@ -2630,7 +2630,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
 
 if __name__ == "__main__":
     # command line arguments
-    parser = ArgumentParser(description='Generates source code '
+    parser = ArgumentParser(description='pyJac: Generates source code '
                                         'for analytical Jacobian.')
     parser.add_argument('-l', '--lang',
                         type=str,

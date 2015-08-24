@@ -35,7 +35,7 @@ except ImportError:
 
 # Local imports
 import utils
-from create_jacobian import create_jacobian
+from pyJac import create_jacobian
 import partially_stirred_reactor as pasr
 
 # Compiler based on language
@@ -836,8 +836,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
 if __name__ == '__main__':
     parser = ArgumentParser(
-        description='Tests create_jacobian versus a finite difference'
-        ' Cantera jacobian\n'
+        description='Tests pyJac versus a finite difference'
+                    ' Cantera jacobian\n'
         )
     parser.add_argument('-l', '--lang',
                         type=str,

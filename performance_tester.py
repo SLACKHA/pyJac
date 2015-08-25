@@ -417,7 +417,7 @@ cmd_compile = dict(c='gcc',
 # Flags based on language
 flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                 '-fopenmp'],
-             cuda=['-O0', '-g', '-G', '--compiler-options', '-Wall', '-arch=sm_20',
+             cuda=['-O3', '-arch=sm_20',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
                    '-dc'])

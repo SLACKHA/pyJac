@@ -1432,7 +1432,7 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_pdep_has
         file.write('const double, const double*')
         for rate in rate_list:
             file.write(', const double*')
-        if this_thd:
+        if this_pdep and this_pdep_has_thd_eff:
             file.write(', const double')
         file.write(', const double, const double, const double*, const double, double*'
                    ');\n'
@@ -1968,7 +1968,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     cheb = True
                 if reacs[ind_next].plog:
                     plog = True
-            batch_has_thd = thd
+            batch_has_m = pdep and pdep_thd_eff
 
             dim = None
             if cheb:
@@ -2171,7 +2171,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             line = ('pres, conc')
             for rate in rate_list:
                 line += ', ' + rate
-            if batch_has_thd:
+            if batch_has_m:
                 line += ', m'
             line += ', mw_avg, rho, dBdT, T, jac)'
             file.write(line + utils.line_end[lang])

@@ -1412,7 +1412,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     file.write(line)
 
 
-def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
+def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_pdep_has_thd_eff, this_thd,
                      this_troe, this_sri, this_cheb, cheb_dim, this_plog, no_shared
                      ):
     """
@@ -1451,7 +1451,7 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
              'const double * conc')
     for rate in rate_list:
         line += ', const double* ' + rate
-    if this_thd:
+    if this_pdep and this_pdep_has_thd_eff:
         line += ', const double m'
     line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac) {'
     file.write(line + '\n')
@@ -1459,7 +1459,7 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
     if not no_shared:
         file.write(utils.line_start + 'extern __shared__ double shared_temp[]' + utils.line_end[lang])
         # third-body variable needed for reactions
-    if this_pdep and this_thd:
+    if this_pdep and this_pdep_has_thd_eff:
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -1950,11 +1950,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             sri = False
             cheb = False
             plog = False
+            pdep_thd_eff = False
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
                 if reacs[ind_next].pdep:
                     pdep = True
+                    if reacs[ind_next].thd_body_eff:
+                        pdep_thd_eff = True
                 if reacs[ind_next].thd_body:
                     thd = True
                 if reacs[ind_next].troe:
@@ -1972,7 +1975,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
             file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count,
-                                    rate_list, rev, pdep, thd, troe, sri,
+                                    rate_list, rev, pdep, pdep_thd_eff, 
+                                    thd, troe, sri,
                                     cheb, dim, plog, smm is None
                                     )
 

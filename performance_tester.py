@@ -606,11 +606,13 @@ for mechanism in mechanism_list:
                      'rxn_rates', 'test', 'read_initial_conditions',
                      'mechanism', 'mass_mole', 'gpu_memory'
                      ]
+            i_dirs = [os.path.sep + build_dir]
             try:
                 with open('out/jacobs/jac_list') as file:
                     vals = file.readline().strip().split(' ')
                     vals = ['jacobs/' + f[:f.index('.cu')] for f in vals]
                     files.extend(vals)
+                    i_dirs.append('out/jacobs/')
             except:
                 pass
             if pmod:
@@ -618,14 +620,17 @@ for mechanism in mechanism_list:
 
             ext = lambda x: utils.file_ext['cuda'] if x != 'mass_mole' else \
                                 utils.file_ext['c']
+            getf = lambda x: x[x.index('jacobs/')+ len('jacobs/'):] \
+                                if 'jacobs/' in x else x
 
             for f in files:
                 args = [cmd_compile['cuda']]
                 args.extend(flags['cuda'])
+                include = ' '.join(['-I' + d for d in i_dirs])
                 args.extend([
-                    '-I.' + os.path.sep + build_dir,
+                    include,
                     '-c', os.path.join(build_dir, f + ext(f)),
-                    '-o', os.path.join(test_dir, f + '.o')
+                    '-o', os.path.join(test_dir, getf(f) + '.o')
                     ])
                 args = [val for val in args if val.strip()]
                 try:

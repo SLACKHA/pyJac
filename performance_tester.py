@@ -620,7 +620,7 @@ for mechanism in mechanism_list:
 
             ext = lambda x: utils.file_ext['cuda'] if x != 'mass_mole' else \
                                 utils.file_ext['c']
-            getf = lambda x: x[x.index('jacobs/')+ len('jacobs/'):] \
+            getf = lambda x: x[x.index('/') + 1:] \
                                 if 'jacobs/' in x else x
 
             for f in files:
@@ -641,7 +641,7 @@ for mechanism in mechanism_list:
 
             # Link into executable
             args = [cmd_compile['cuda']]
-            args.extend([os.path.join(test_dir, f + '.o') for f in files])
+            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
             args.extend(['-o', os.path.join(test_dir, 'speedtest')])
             args.extend(libs['cuda'])
 

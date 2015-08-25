@@ -461,6 +461,31 @@ home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'
 
+def check_step_file(steplist, filename):
+    #checks file for existing data
+    #and returns number of runs left to do 
+    #for each # of does in steplist
+    runs = {}
+    for step in steplist:
+        runs[step] = 0
+    if not 'gpu' in filename:
+        raise Exception
+
+    try:
+        with open(filename, 'r') as file:
+            lines = [line.strip() for line in file.readlines()]
+        for line in lines:
+            try:
+                vals = line.split(',')
+                if len(vals) == 2:
+                    vals = [float(v) for v in vals]
+                    runs[vals[0]] += 1
+            except:
+                pass
+        return runs
+    except:
+        return runs
+
 def check_file(filename):
     #checks file for existing data
     #and returns number of runs left to do
@@ -524,7 +549,7 @@ for mechanism in mechanism_list:
     #next we need to start writing the jacobians
     for opt in cache_opt:
         for thread in num_threads:
-            data_output = 'cpu_{}output.txt'.format('co_' if opt else 'nco_')
+            data_output = 'cpu_{}_output.txt'.format('co' if opt else 'nco')
             data_output = os.path.join(os.getcwd(), data_output)
             num_completed = check_file(data_output)
             if num_completed >= repeats:
@@ -591,7 +616,7 @@ for mechanism in mechanism_list:
     for opt in cache_opt:
         for smem in shared:
 
-            data_output = 'gpu_{}_{}_output.txt'.format('co_' if opt else 'nco_',
+            data_output = 'gpu_{}_{}_output.txt'.format('co' if opt else 'nco',
                 'sm' if smem else 'nsm')
             data_output = os.path.join(os.getcwd(), data_output)
             num_completed = check_file(data_output)
@@ -671,8 +696,27 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open(data_output, 'w') as file:
+            with open(data_output, 'a+') as file:
                 for i in range(repeats - num_completed):
                     print(i, "/", repeats - num_completed)
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(num_conditions)], stdout=file)
+
+            #do steps
+            step_size = 1
+            steplist = []
+            while step_size < num_conditions:
+                steplist.append(step_size)
+                step_size *= 2
+
+            data_output = 'gpu_{}_{}_output_steps.txt'.format('co' if opt else 'nco',
+                'sm' if smem else 'nsm')
+            data_output = os.path.join(os.getcwd(), data_output)
+            num_completed = check_file(data_output)
+            todo = check_step_file(data_output, steplist)
+            with open(data_output, 'a+') as file:
+                for stepsize in todo:
+                    for i in range(repeats - todo[stepsize]):
+                        print(i, "/", repeats - todo[stepsize])
+                        subprocess.check_call([os.path.join(the_path, 'speedtest'),
+                         str(stepsize)], stdout=file)

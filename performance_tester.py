@@ -379,20 +379,37 @@ def write_cuda_tester(file, path):
         """.format(the_file))
     file.write(
     """
+        int iters = 1;
+        long long int max_mem_size = 4 * 1073741824 / 8; //4 GiB
+        while ((long long int)padded * NN * NN > max_mem_size)
+        {
+            iters++;
+            padded /= 2;
+        }
         double* jac_host = (double*)malloc(NN * NN * padded * sizeof(double));
         double* jac_device = 0;
         cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));
+        g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
+        if (g_num == 0)
+            g_num = 1;
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
+        int num = 0;
         StartTimer();
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-        #ifdef SHARED_SIZE
-            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, jac_device);
-        #else
-            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, jac_device);
-        #endif
-        // transfer memory back to CPU
-        cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+        cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
+        for(int i = 0; i < iters; ++i)
+        {
+            num += padded;
+            num = num > num_odes ? num_odes : num;
+            #ifdef SHARED_SIZE
+                jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num, &var_device[num], &y_device[num * NN], jac_device);
+            #else
+                jac_driver <<< dimGrid, dimBlock >>> (num, &var_device[num], &y_device[num * NN], jac_device);
+            #endif
+            // transfer memory back to CPU
+            cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+        }
         double runtime = GetTimer();
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );

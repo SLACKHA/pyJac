@@ -614,7 +614,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
 
     while time < time_end:
-        if i_step >= num_steps:
+        if i_step + 1 >= num_steps:
             #need to resize arrays
             times = np.hstack((times, np.zeros(num_steps + 1)))
             temp_mean = np.hstack((temp_mean, np.zeros(num_steps + 1)))

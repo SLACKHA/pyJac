@@ -549,7 +549,7 @@ for mechanism in mechanism_list:
     #next we need to start writing the jacobians
     for opt in cache_opt:
         for thread in num_threads:
-            data_output = 'cpu_{}_output.txt'.format('co' if opt else 'nco')
+            data_output = 'cpu_{}_{}_output.txt'.format('co' if opt else 'nco', thread)
             data_output = os.path.join(os.getcwd(), data_output)
             num_completed = check_file(data_output)
             if num_completed >= repeats:

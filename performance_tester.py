@@ -454,14 +454,14 @@ temp_list = [400, 600, 800]
 
 cache_opt = [True, False]
 shared = [True, False]
-num_threads = [1, 12]
+num_threads = [12]#[1, 12]
 
 repeats = 50
 home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'
 
-def check_step_file(steplist, filename):
+def check_step_file(filename, steplist):
     #checks file for existing data
     #and returns number of runs left to do 
     #for each # of does in steplist

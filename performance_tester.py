@@ -705,15 +705,6 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            #do steps
-            step_size = 1
-            steplist = []
-            while step_size < num_conditions:
-                steplist.append(step_size)
-                step_size *= 2
-            if stepsize / 2 != num_conditions:
-                steplist.append(num_conditions)
-
             with open(data_output, 'a+') as file:
                 for stepsize in todo:
                     for i in range(repeats - todo[stepsize]):

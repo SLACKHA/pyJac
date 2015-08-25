@@ -386,7 +386,6 @@ def write_cuda_tester(file, path):
             iters++;
             padded /= 2;
         }
-        printf("%d\\t%d\\n", iters, padded);
         double* jac_host = (double*)malloc(NN * NN * padded * sizeof(double));
         double* jac_device = 0;
         cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));

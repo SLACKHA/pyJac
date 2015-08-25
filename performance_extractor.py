@@ -40,14 +40,16 @@ for directory in dirs:
 				if not '_co_' in filename:
 					basename += '('
 				basename == 'shared-mem)'
-			mydict = step_data if '_steps' in filename else data
-			#format is num_odes, runtime (ms)
-			for line in lines:
-				vals = [float(f) for f in line.split(',')]
-				if not name in mydict[directory]:
-					mydict[directory][name] = []
-				mydict[directory][name].append(vals[1] / vals[0])
-
+			if '_steps' in filename:
+				#format is num_odes, runtime (ms)
+				for line in lines:
+					vals = [float(f) for f in line.split(',')]
+					if not name in step_data[directory]:
+						step_data[directory][name] = {}
+					if not vals[0] in step_data[directory][name]:
+						step_data[directory][name][vals[0]] = []
+					step_data[directory][name][vals[0]].append(vals[1])
+			
 for thedir in data:
 	for name in data[thedir]:
 		avg = np.mean(data[thedir][name])
@@ -62,3 +64,4 @@ for thedir in step_data:
 
 print data
 print step_data
+

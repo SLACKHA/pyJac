@@ -616,11 +616,20 @@ for mechanism in mechanism_list:
     for opt in cache_opt:
         for smem in shared:
 
-            data_output = 'gpu_{}_{}_output.txt'.format('co' if opt else 'nco',
+            #do steps
+            step_size = 1
+            steplist = []
+            while step_size < num_conditions:
+                steplist.append(step_size)
+                step_size *= 2
+            if stepsize / 2 != num_conditions:
+                steplist.append(num_conditions)
+
+            data_output = 'gpu_{}_{}_output_steps.txt'.format('co' if opt else 'nco',
                 'sm' if smem else 'nsm')
             data_output = os.path.join(os.getcwd(), data_output)
-            num_completed = check_file(data_output)
-            if num_completed >= repeats:
+            todo = check_step_file(data_output, steplist)
+            if all(todo[x] >= repeats for x in todo):
                 continue
 
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
@@ -696,12 +705,6 @@ for mechanism in mechanism_list:
                 print('Error: linking of test program failed.')
                 sys.exit(1)
 
-            with open(data_output, 'a+') as file:
-                for i in range(repeats - num_completed):
-                    print(i, "/", repeats - num_completed)
-                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                     str(num_conditions)], stdout=file)
-
             #do steps
             step_size = 1
             steplist = []
@@ -711,11 +714,6 @@ for mechanism in mechanism_list:
             if stepsize / 2 != num_conditions:
                 steplist.append(num_conditions)
 
-            data_output = 'gpu_{}_{}_output_steps.txt'.format('co' if opt else 'nco',
-                'sm' if smem else 'nsm')
-            data_output = os.path.join(os.getcwd(), data_output)
-            num_completed = check_file(data_output)
-            todo = check_step_file(data_output, steplist)
             with open(data_output, 'a+') as file:
                 for stepsize in todo:
                     for i in range(repeats - todo[stepsize]):

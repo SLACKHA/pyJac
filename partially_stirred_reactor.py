@@ -530,7 +530,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     num_substeps = 1 + int(dt_max / dt_sub)
 
     time_end = num_res * tau_res
-    num_steps = int(time_end / dt_avg)
+    num_steps = int(np.ceil(time_end / dt_avg))
 
     # Set initial conditions
     gas = ct.Solution(mech)

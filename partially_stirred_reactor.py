@@ -28,8 +28,12 @@ except ImportError:
     print('Warning: YAML must be installed to read input file.')
 
 # Parallel processing for reaction substep
-parallel = False
-#import multiprocessing
+parallel = True
+try:
+    import multiprocessing
+except ImportError:
+    print('Warning: multiprocessing not installed')
+    parallel = False
 
 class Stream(object):
     def __init__(self, gas, flow):
@@ -188,10 +192,10 @@ class Particle(object):
         self.netw.reinitialize()
         return self
 
-    def react(self, end_time):
+    def react(self, dt):
         """Perform reaction timestep by advancing network.
         """
-        self.netw.advance(end_time)
+        self.netw.advance(self.netw.time + dt)
 
 
 def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
@@ -357,12 +361,15 @@ def mix_substep(particles, dt, tau_mix):
 def reaction_worker(part_tup):
     """
     """
-    particle, end_time = part_tup
-    particle.react(end_time)
-    return particle()
+    mech, T, P, Y, dt = part_tup
+    gas = ct.Solution(mech)
+    gas.TPY = T,P,Y
+    p = Particle(gas)
+    p.react(dt)
+    return p()
 
 
-def reaction_substep(particles, end_time):
+def reaction_substep(particles, dt, mech):
     """Advance each of the particles in time through reactions.
 
     :param particles:
@@ -372,17 +379,23 @@ def reaction_substep(particles, end_time):
     """
     if not parallel:
         for p in particles:
-            p.react(end_time)
+            p.react(dt)
     else:
         pool = multiprocessing.Pool()
         jobs = []
+
+        #set up a new particle runner for each
         for p in particles:
-            jobs.append([p, end_time])
+            jobs.append([mech, p.gas.T, p.gas.P, p.gas.Y, dt])
         jobs = tuple(jobs)
         results = pool.map(reaction_worker, jobs)
 
         pool.close()
         pool.join()
+        #and finally update the states of our particles on the main
+        #thread
+        for i, p in enumerate(particles):
+            p(comp=results[i])
 
 
 def select_pairs(particles, num_pairs, num_skip=0):
@@ -637,7 +650,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
         dt_sub = dt / num_substeps
         for i in range(num_substeps):
             mix_substep(particles, dt_sub, tau_mix)
-            reaction_substep(particles, time + dt_sub * (i + 1))
+            reaction_substep(particles, dt_sub, mech)
 
         time += dt
         i_step += 1

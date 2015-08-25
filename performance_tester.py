@@ -380,12 +380,13 @@ def write_cuda_tester(file, path):
     file.write(
     """
         int iters = 1;
-        long long int max_mem_size = 4 * 1073741824 / 8; //4 GiB
-        while ((long long int)padded * NN * NN > max_mem_size)
+        __uint128_t max_mem_size = (1073741824 / (8 * NN * NN)); //1 GiB
+        while (padded > max_mem_size)
         {
             iters++;
             padded /= 2;
         }
+        printf("%d\\t%d\\n", iters, padded);
         double* jac_host = (double*)malloc(NN * NN * padded * sizeof(double));
         double* jac_device = 0;
         cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));

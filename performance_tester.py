@@ -446,7 +446,7 @@ libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
 mechanism_dir = '~/mechs/'
 mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml'},
                   {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml'},
-                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_usc.yaml'}]
+                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml'}]
 
 pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]

@@ -456,7 +456,7 @@ cache_opt = [True, False]
 shared = [True, False]
 num_threads = [12]#[1, 12]
 
-repeats = 50
+repeats = 10
 home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'

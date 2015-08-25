@@ -28,7 +28,7 @@ except ImportError:
 
 # Local imports
 import utils
-from create_jacobian import create_jacobian
+from pyJac import create_jacobian
 import partially_stirred_reactor as pasr
 
 def __is_pdep(rxn):

@@ -622,7 +622,7 @@ for mechanism in mechanism_list:
             while step_size < num_conditions:
                 steplist.append(step_size)
                 step_size *= 2
-            if stepsize / 2 != num_conditions:
+            if step_size / 2 != num_conditions:
                 steplist.append(num_conditions)
 
             data_output = 'gpu_{}_{}_output_steps.txt'.format('co' if opt else 'nco',

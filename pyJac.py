@@ -1949,7 +1949,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             troe = False
             sri = False
             cheb = False
-            plog = True
+            plog = False
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True

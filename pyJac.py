@@ -1508,15 +1508,6 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
         line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if this_thd:
-        line = utils.line_start
-        if lang == 'c':
-            line += 'double '
-        elif lang == 'cuda':
-            line += 'register double '
-        line += 'thd_temp = 0.0' + utils.line_end[lang]
-        file.write(line)
-
     # if any reverse reactions, will need Kc
     if this_rev:
         line = utils.line_start
@@ -1524,8 +1515,8 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
             line += 'double '
         elif lang == 'cuda':
             line += 'register double '
-        file.write('Kc = 0.0' + utils.line_end[lang])
-        file.write('kr = 0.0' + utils.line_end[lang])
+        file.write(line + 'Kc = 0.0' + utils.line_end[lang])
+        file.write(line + 'kr = 0.0' + utils.line_end[lang])
 
     # pressure-dependence variables
     if this_pdep:
@@ -1552,6 +1543,8 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
 
     if this_plog:
         file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
+
+    file.write(utils.line_start + 'register double rho_inv = 1.0 / rho' + utils.line_end['cuda'])
 
     return file
 
@@ -1857,7 +1850,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         line += 'register double '
     line += 'kf = 0.0' + utils.line_end[lang]
     if not (lang == 'cuda' and do_unroll):
+        print(lang == 'cuda', do_unroll)
         file.write(line)
+    else:
+        line = ''
 
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
         line = utils.line_start

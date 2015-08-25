@@ -530,7 +530,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     num_substeps = 1 + int(dt_max / dt_sub)
 
     time_end = num_res * tau_res
-    num_steps = int(np.ceil(time_end / dt_avg))
+    num_steps = (time_end / dt_avg)
 
     # Set initial conditions
     gas = ct.Solution(mech)
@@ -614,6 +614,15 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
 
     while time < time_end:
+        if i_step >= num_steps:
+            #need to resize arrays
+            times = np.hstack((times, np.zeros(num_steps + 1)))
+            temp_mean = np.hstack((temp_mean, np.zeros(num_steps + 1)))
+            particle_data = np.concatenate((particle_data,
+                np.empty([num_steps + 1, num_part, gas.n_species + 3])),
+                axis=0)
+            num_steps *= 2
+
         if (time + dt_max) > time_end:
             dt = time_end - time
         else:
@@ -664,6 +673,9 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 
         print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
 
+    times = times[:i_step + 1]
+    temp_mean = temp_mean[:i_step + 1]
+    particle_data = particle_data[:i_step + 1, :, :]i
     return particle_data
 
 

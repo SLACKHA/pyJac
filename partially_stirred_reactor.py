@@ -675,7 +675,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 
     times = times[:i_step + 1]
     temp_mean = temp_mean[:i_step + 1]
-    particle_data = particle_data[:i_step + 1, :, :]i
+    particle_data = particle_data[:i_step + 1, :, :]
     return particle_data
 
 

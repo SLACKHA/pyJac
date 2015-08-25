@@ -1413,7 +1413,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
 
 
 def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
-                     this_troe, this_sri, this_cheb, this_plog, no_shared
+                     this_troe, this_sri, this_cheb, cheb_dim, this_plog, no_shared
                      ):
     """
     Writes the header and definitions for of any of the various sub-functions for CUDA
@@ -1487,6 +1487,15 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
         line += 'double '
     elif lang == 'cuda':
         line += 'register double '
+    line += 'kf = 0.0' + utils.line_end[lang]
+    file.write(line)
+
+
+    line = utils.line_start
+    if lang == 'c':
+        line += 'double '
+    elif lang == 'cuda':
+        line += 'register double '
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
@@ -1515,8 +1524,8 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
             line += 'double '
         elif lang == 'cuda':
             line += 'register double '
-        line += 'Kc = 0.0' + utils.line_end[lang]
-        file.write(line)
+        file.write('Kc = 0.0' + utils.line_end[lang])
+        file.write('kr = 0.0' + utils.line_end[lang])
 
     # pressure-dependence variables
     if this_pdep:
@@ -1539,8 +1548,7 @@ def write_cuda_intro(path, number, rate_list, this_rev, this_pdep, this_thd,
     if this_cheb:
         file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
         file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
-        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-        file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+        file.write(utils.line_start + 'double dot_prod[{}]'.format(cheb_dim) + utils.line_end[lang])
 
     if this_plog:
         file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
@@ -1842,13 +1850,13 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
+    line = utils.line_start
+    if lang == 'c':
+        line += 'double '
+    elif lang == 'cuda':
+        line += 'register double '
+    line += 'kf = 0.0' + utils.line_end[lang]
     if not (lang == 'cuda' and do_unroll):
-        line = utils.line_start
-        if lang == 'c':
-            line += 'double '
-        elif lang == 'cuda':
-            line += 'register double '
-        line += 'kf = 0.0' + utils.line_end[lang]
         file.write(line)
 
     if any(rxn.pdep for rxn in reacs) and not (lang == 'cuda' and do_unroll):
@@ -1962,10 +1970,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 if reacs[ind_next].plog:
                     plog = True
             batch_has_thd = thd
+
+            dim = None
+            if cheb:
+                dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
             file = write_cuda_intro(os.path.join(path, 'jacobs'), jac_count,
                                     rate_list, rev, pdep, thd, troe, sri,
-                                    cheb, plog, smm is None
+                                    cheb, dim, plog, smm is None
                                     )
 
         if lang == 'cuda' and smm is not None:

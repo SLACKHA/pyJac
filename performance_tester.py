@@ -417,7 +417,7 @@ cmd_compile = dict(c='gcc',
 # Flags based on language
 flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                 '-fopenmp'],
-             cuda=['-O3', '-arch=sm_20',
+             cuda=['-O0', '-g', '-G', '--compiler-options', '-Wall', '-arch=sm_20',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
                    '-dc'])
@@ -606,12 +606,12 @@ for mechanism in mechanism_list:
                      'rxn_rates', 'test', 'read_initial_conditions',
                      'mechanism', 'mass_mole', 'gpu_memory'
                      ]
-            i_dirs = [os.path.sep + build_dir]
+            i_dirs = [build_dir]
             try:
                 with open('out/jacobs/jac_list') as file:
                     vals = file.readline().strip().split(' ')
                     vals = ['jacobs/' + f[:f.index('.cu')] for f in vals]
-                    files.extend(vals)
+                    files = vals + files
                     i_dirs.append('out/jacobs/')
             except:
                 pass
@@ -625,12 +625,14 @@ for mechanism in mechanism_list:
 
             for f in files:
                 args = [cmd_compile['cuda']]
+                args.extend(['-maxrregcount', str(regcount)])
                 args.extend(flags['cuda'])
-                include = ' '.join(['-I' + d for d in i_dirs])
+                include = ['-I./' + d for d in i_dirs]
+                for i in include:
+                    args.insert(-1, i)
                 args.extend([
-                    include,
-                    '-c', os.path.join(build_dir, f + ext(f)),
-                    '-o', os.path.join(test_dir, getf(f) + '.o')
+                    '-o', os.path.join(test_dir, getf(f)) + '.o',
+                    os.path.join(build_dir, f + ext(f))
                     ])
                 args = [val for val in args if val.strip()]
                 try:
@@ -641,7 +643,7 @@ for mechanism in mechanism_list:
 
             # Link into executable
             args = [cmd_compile['cuda']]
-            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
+            args.extend([os.path.join(os.getcwd(), test_dir, getf(f) + '.o') for f in files])
             args.extend(['-o', os.path.join(test_dir, 'speedtest')])
             args.extend(libs['cuda'])
 

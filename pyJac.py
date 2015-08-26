@@ -624,7 +624,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
             elif lang in ['fortran', 'matlab']:
                 dBdT = template.format(sp_ind + 1)
             # declare dBdT
-            if lang != 'cuda':
+            if not do_unroll:
                 file.write('  double ' + dBdT + utils.line_end[lang])
 
             # dB/dT evaluation (with temperature conditional)
@@ -1643,7 +1643,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    '#define JACOB_HEAD\n'
                    '\n'
                    '#include "header.h"\n' +
-                   ('#include "jacobs/jac_include.h"\n' if
+                   ('#include "jacobs/jac_include.cuh"\n' if
                     do_unroll else '') +
                    '#include "chem_utils.cuh"\n'
                    '#include "rates.cuh"\n'
@@ -2396,7 +2396,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     sparse_indicies = list(set(sparse_indicies))
 
     # create include file
-    if lang == do_unroll:
+    if do_unroll:
         with open(os.path.join(path, 'jacobs', 'jac_include' + utils.header_ext[lang]), 'w') as tempfile:
             tempfile.write('#ifndef JAC_INCLUDE_H\n'
                            '#define JAC_INCLUDE_H\n')

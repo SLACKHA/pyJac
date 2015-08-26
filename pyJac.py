@@ -1985,7 +1985,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             if cheb:
                 dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
-            file = write_sub_intro(os.path.join(lang, path, 'jacobs'), jac_count,
+            file = write_sub_intro(lang, os.path.join(lang, path, 'jacobs'), jac_count,
                                     rate_list, rev, pdep, pdep_thd_eff, 
                                     thd, troe, sri,
                                     cheb, dim, plog, smm is None

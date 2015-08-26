@@ -9,6 +9,7 @@ import os
 import sys
 import subprocess
 from argparse import ArgumentParser
+import multiprocessing
 
 # More Python 2 compatibility
 if sys.version_info.major == 3:
@@ -598,7 +599,7 @@ for mechanism in mechanism_list:
             getf = lambda x: x[x.index('/') + 1:] \
                                 if 'jacobs/' in x else x
 
-            for f in files:
+            def compiler(f):
                 args = [cmd_compile['c']]
                 args.extend(flags['c'])
                 include = ['-I./' + d for d in i_dirs]
@@ -613,7 +614,13 @@ for mechanism in mechanism_list:
                     subprocess.check_call(args)
                 except subprocess.CalledProcessError:
                     print('Error: compilation failed for ' + f + utils.file_ext['c'])
-                    sys.exit(-1)
+                    return -1
+                return 0
+
+            pool = multiprocessing.Pool()
+            results = pool.map(compiler, files)
+            if any(r == -1 for r in results):
+                sys.exit(-1)
 
             # Link into executable
             args = [cmd_compile['c']]
@@ -696,7 +703,7 @@ for mechanism in mechanism_list:
             getf = lambda x: x[x.index('/') + 1:] \
                                 if 'jacobs/' in x else x
 
-            for f in files:
+            def compiler(f):
                 args = [cmd_compile['cuda']]
                 args.extend(['-maxrregcount', str(regcount)])
                 args.extend(flags['cuda'])
@@ -712,7 +719,13 @@ for mechanism in mechanism_list:
                     subprocess.check_call(args)
                 except subprocess.CalledProcessError:
                     print('Error: compilation failed for ' + f + utils.file_ext['cuda'])
-                    sys.exit(-1)
+                    return -1
+                return 0
+            
+            pool = multiprocessing.Pool()
+            results = pool.map(compiler, files)
+            if any(r == -1 for r in results):
+                sys.exit(-1)                
 
             # Link into executable
             args = [cmd_compile['cuda']]

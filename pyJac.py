@@ -627,7 +627,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
             elif lang in ['fortran', 'matlab']:
                 dBdT = template.format(sp_ind + 1)
             # declare dBdT
-            if not do_unroll:
+            if not (lang == 'cuda' or do_unroll):
                 file.write('  double ' + dBdT + utils.line_end[lang])
 
             # dB/dT evaluation (with temperature conditional)

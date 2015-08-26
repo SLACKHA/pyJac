@@ -418,7 +418,7 @@ def write_cuda_tester(file, path):
         cudaEventSynchronize(stop);
         float runtime = 0;
         cudaEventElapsedTime(&runtime, start, stop);
-        printf("%d,%.15le", num_odes, runtime);
+        printf("%d,%.15le\\n", num_odes, runtime);
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );
         free_gpu_memory(y_device, var_device);
@@ -628,8 +628,9 @@ for mechanism in mechanism_list:
                 sys.exit(1)
 
             with open(data_output, 'a+') as file:
-                subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                 str(thread), str(num_conditions)], stdout=file)
+                for i in range(repeats - num_completed):
+                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
+                     str(thread), str(num_conditions)], stdout=file)
 
     #do cuda
     #next we need to start writing the jacobians

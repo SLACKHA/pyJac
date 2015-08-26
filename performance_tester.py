@@ -372,21 +372,18 @@ def write_cuda_tester(file, path):
         """.format(the_file))
     file.write(
     """
-        cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));
         g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
         if (g_num == 0)
             g_num = 1;
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
-        int num = 0;
-        cudaEvent_t start, stop;
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
         StartTimer();
         #ifdef SHARED_SIZE
-            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, jac_device);
+            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device);
         #else
-            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, jac_device);
+            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device);
         #endif
         cudaDeviceSynchronize();
         double runtime = GetTimer();
@@ -397,7 +394,6 @@ def write_cuda_tester(file, path):
         cudaErrorCheck( cudaFree(jac_device) );
         free(y_host);
         free(var_host);
-        free(jac_host);
         cudaErrorCheck( cudaDeviceReset() );
         return 0;
     }
@@ -432,7 +428,7 @@ temp_list = [400, 600, 800]
 
 cache_opt = [True, False]
 shared = [True, False]
-num_threads = [12]#[1, 12]
+num_threads = [1]#[1, 12]
 
 repeats = 20
 home = os.getcwd() + os.path.sep

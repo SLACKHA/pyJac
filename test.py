@@ -642,6 +642,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_dydt_zero = np.zeros(num_trials)
     err_jac_norm = np.zeros(num_trials)
     err_jac = np.zeros(num_trials)
+    err_jac_thr = np.zeros(num_trials)
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
 
@@ -672,7 +673,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         # Derivative source term
         ode = ReactorConstPres(gas)
-        
+
         mw_avg = 0
         rho = 0
         #get conc
@@ -764,9 +765,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
-        #non_zero = np.where(abs(test_jacob) > 0)[0]
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
+        pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
+        non_zero = np.where(abs(test_jacob) > 0)[0]
         zero = np.where(test_jacob == 0.)[0]
 
         jacob = ajac.eval_jacobian(gas, 6)
@@ -776,20 +776,30 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
-        print('Max error in non-zero our Jacobian: {:.2e}% '
+        print('Max error in non-zero Jacobian: {:.2e}% '
               '@ index {} %'.format(max_err * 100., loc))
-        print('L2 norm of relative error of our Jacobian: '
+        print('L2 norm of relative error of Jacobian: '
               '{:.2e} %'.format(err))
         err_jac_max[i] = max_err
         err_jac[i] = err
 
+        # Thresholded error
+        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
+        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                  jacob[non_zero]
+                  )
+        err = np.linalg.norm(err) * 100.
+        err_jac_thr[i] = err
+        print('L2 norm of thresholded relative error of Jacobian: '
+              '{:.2e} %'.format(err))
+
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
         err_jac_norm[i] = err
-        print('L2 norm error of our Jacobian: {:.2e}'.format(err))
+        print('L2 norm error of Jacobian: {:.2e}'.format(err))
 
         err = np.linalg.norm(test_jacob[zero] - jacob[zero])
         err_jac_zero[i] = err
-        print('L2 norm difference of our "zero" Jacobian: '
+        print('L2 norm difference of "zero" Jacobian: '
               '{:.2e}'.format(err))
 
     plt.semilogy(state_data[:,1], err_jac_norm, 'o')
@@ -798,7 +808,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     pp = PdfPages('Jacobian_error_norm.pdf')
     pp.savefig()
     pp.close()
-    
+
     plt.figure()
     plt.semilogy(state_data[:,1], err_jac, 'o')
     plt.xlabel('Temperature [K]')
@@ -806,16 +816,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     pp = PdfPages('Jacobian_relative_error.pdf')
     pp.savefig()
     pp.close()
-    
+
     # Save all error arrays
-    np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm, err_jac=err_jac)
+    np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm,
+              err_jac=err_jac, err_jac_thr=err_jac_thr)
 
     # Cleanup all files in test directory.
     test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
     for f in test_files + ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
     os.rmdir(test_dir)
-    
+
     # Now clean build directory
     for root, dirs, files in os.walk('./build', topdown=False):
         for name in files:

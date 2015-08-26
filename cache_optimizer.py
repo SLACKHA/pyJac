@@ -223,10 +223,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     Returns
     _______
-    splittings : list of int
-
-        The reaction splitings to be used in Jacobian creation (for CUDA) as a list
-        i.e. [10, 20, 20] would correspond to 10 reactions in jacob_0.cu, 20 in jacob_1.cu...
 
     specs : list of SpecInfo
         The reordered list of species in the mechanism
@@ -256,7 +252,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         try:
             same_mech = False
             with open(build_path + 'optimized.pickle', 'rb') as file:
-                splittings = pickle.load(file)
                 old_specs = pickle.load(file)
                 old_reacs = pickle.load(file)
                 rxn_rate_order = pickle.load(file)
@@ -350,7 +345,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     # save to avoid reoptimization if possible
     with open(build_path + 'optimized.pickle', 'wb') as file:
-        pickle.dump(splittings, file)
         pickle.dump(specs, file)
         pickle.dump(reacs, file)
         pickle.dump(rxn_rate_order, file)
@@ -360,4 +354,4 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(print_rxn_order, file)
 
     # complete, so now return
-    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order
+    return specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order

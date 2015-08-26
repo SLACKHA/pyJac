@@ -2577,7 +2577,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
     if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, \
+        specs, reacs, rxn_rate_order, pdep_rate_order, \
         spec_rate_order, old_spec_order, \
         old_rxn_order = cache.greedy_optimizer(lang, specs, reacs,
                                                multi_thread, force_optimize,
@@ -2592,14 +2592,15 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                                ]
         else:
             pdep_rate_order = None
-        the_len = len(reacs)
-        splittings = []
-        unroll_len = C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
-        while the_len > 0:
-            splittings.append(min(unroll_len, the_len))
-            the_len -= unroll_len
         old_spec_order = range(len(specs))
         old_rxn_order = range(len(reacs))
+
+    the_len = len(reacs)
+    splittings = []
+    unroll_len = C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
+    while the_len > 0:
+        splittings.append(min(unroll_len, the_len))
+        the_len -= unroll_len
 
     if lang == 'cuda':
         CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads,

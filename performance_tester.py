@@ -414,7 +414,8 @@ def write_cuda_tester(file, path):
             cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
         }
         cudaEventRecord(stop);
-        double runtime = cudaEventElapsedTime(&runtime, start, stop);
+        float runtime = 0;
+        cudaEventElapsedTime(&runtime, start, stop);
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );
         free_gpu_memory(y_device, var_device);

@@ -430,6 +430,7 @@ def write_cuda_tester(file, path):
                 num += padded;
             }
             cudaEventRecord(stop);
+            cudaEventSynchronize(stop);
             float runtime = 0;
             cudaEventElapsedTime(&runtime, start, stop);
             printf("%d,%.15le\\n", num_odes, runtime);

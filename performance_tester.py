@@ -360,9 +360,7 @@ def write_cuda_tester(file, path):
 
         cudaErrorCheck (cudaSetDevice (0) );
 
-        #ifdef PREFERL1
-            cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
-        #endif
+        cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
 
         int g_num = (int)ceil(((double)num_odes) / ((double)TARGET_BLOCK_SIZE));
         if (g_num == 0)
@@ -396,7 +394,11 @@ def write_cuda_tester(file, path):
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
         int num = 0;
-        StartTimer();
+        cudaEvent_t start, stop;
+        cudaEventCreate(&start);
+        cudaEventCreate(&stop);
+
+        cudaEventRecord(start);
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
         for(int i = 0; i < iters; ++i)
@@ -411,7 +413,8 @@ def write_cuda_tester(file, path):
             // transfer memory back to CPU
             cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
         }
-        double runtime = GetTimer();
+        cudaEventRecord(stop);
+        double runtime = cudaEventElapsedTime(&runtime, start, stop);
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );
         free_gpu_memory(y_device, var_device);

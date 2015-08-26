@@ -139,7 +139,6 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += ')'
         else:
             jline += get_array(lang, 'fwd_rates', rind)
-        jline += ' * ' + get_array(lang, 'pres_mod', pind)
         file.write(jline + utils.line_end[lang])
 
     file.write('  j_temp = -mw_avg * rho_inv * (')

@@ -426,7 +426,7 @@ def write_cuda_tester(file, path):
                     jac_driver <<< dimGrid, dimBlock >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
                 #endif
                 // transfer memory back to CPU
-                cudaErrorCheck( cudaMemcpy (&jac_host[num * NN * NN], &jac_device[num * NN * NN], padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+                cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
                 num += padded;
             }
             cudaEventRecord(stop);

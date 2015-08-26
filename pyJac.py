@@ -1107,6 +1107,8 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array, do_unroll)
 
         if jline:
             jline += ' - '
+        else:
+            jline += '-'
         jline += get_array(lang, 'rev_rates', rev_idx)
         jline += ' * ('
         # product nu sum

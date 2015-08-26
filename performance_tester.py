@@ -407,13 +407,13 @@ def write_cuda_tester(file, path):
             g_num = 1;
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
-        cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-
         for (int r = 0; r < repeats; r++)
         {
             int num = 0;
+            cudaEvent_t start, stop;
+            cudaEventCreate(&start);
+            cudaEventCreate(&stop);
+
             cudaEventRecord(start);
             cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
             cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
@@ -742,5 +742,7 @@ for mechanism in mechanism_list:
 
             with open(data_output, 'a+') as file:
                 for stepsize in todo:
+                    if repeats < todo[stepsize]:
+                        continue 
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(stepsize), str(repeats - todo[stepsize])], stdout=file)

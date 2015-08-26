@@ -419,7 +419,7 @@ def write_cuda_tester(file, path):
             cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
             for(int i = 0; i < iters; ++i)
             {
-                int endnum = num > num_odes ? num_odes : num;
+                int endnum = (num + padded) > num_odes ? num_odes : (num + padded);
                 #ifdef SHARED_SIZE
                     jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
                 #else

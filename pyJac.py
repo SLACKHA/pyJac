@@ -1850,7 +1850,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         line += 'register double '
     line += 'kf = 0.0' + utils.line_end[lang]
     if not (lang == 'cuda' and do_unroll):
-        print(lang == 'cuda', do_unroll)
         file.write(line)
     else:
         line = ''

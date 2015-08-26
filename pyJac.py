@@ -792,8 +792,9 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
             use_conc = new_conc_temp if len(new_conc_temp) < len(conc_temp_log) else conc_temp_log
             if len(use_conc):
                 # remake the line with the updated numbers
-                line = utils.line_start + 'conc_temp {}= ('.format(
-                    '+' if use_conc == new_conc_temp else '')
+                line = utils.line_start + 'conc_temp {}= ({}'.format(
+                    '+' if use_conc == new_conc_temp else '',
+                    'm + ' if use_conc == new_conc_temp else '')
 
                 for i, thd_sp in enumerate(use_conc):
                     isp = thd_sp[0]

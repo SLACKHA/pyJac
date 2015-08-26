@@ -21,10 +21,11 @@ for directory in dirs:
 	for filename in files:
 		with open(filename) as file:
 			lines = [l.strip() for l in file.readlines() if l.strip()]
+		print filename
 		if 'cpu' in filename:
 			#format is num_threads, num_odes, runtime (ms)
 			basename = 'CPU'
-			if '_co_output' in filename:
+			if '_co_' in filename:
 				basename += ' (cache-opt)'
 			for line in lines:
 				vals = [float(f) for f in line.split(',')]
@@ -33,13 +34,17 @@ for directory in dirs:
 					data[directory][name] = []
 				data[directory][name].append(vals[2] / vals[1])
 		else:
-			basename = 'GPU'
+			name = 'GPU'
 			if '_co_' in filename:
-				basename += '(cache-opt, '
+				name += '(cache-opt'
 			if '_sm_' in filename:
 				if not '_co_' in filename:
-					basename += '('
-				basename == 'shared-mem)'
+					name += '('
+				else:
+					name += ', '
+				name += 'shared-mem)'
+			elif '_co_' in filename:
+				name += ')'
 			#format is num_odes, runtime (ms)
 			for line in lines:
 				vals = [float(f) for f in line.split(',')]
@@ -54,24 +59,17 @@ for thedir in data:
 		avg = np.mean(data[thedir][name])
 		dev = np.std(data[thedir][name])
 		data[thedir][name] = (avg, dev)
-	data[thedir][name] = zip(*data[thedir][name])
 
 gpu_data = {}
 for thedir in step_data:
 	gpu_data[thedir] = {}
 	for name in step_data[thedir]:
-		gpu_data[thedir][name] = []
+		thelist = []
 		for point in step_data[thedir][name]:
 			avg = np.mean(step_data[thedir][name][point])
 			dev = np.std(step_data[thedir][name][point])
-			gpu_data[thedir][name].append(point, avg, dev)
-	gpu_data[thedir][name] = zip(*gpu_data[thedir][name])
-
-print data
-print gpu_data
-
-barplot(data)
-line_plot(gpu_data)
+			thelist.append((point, avg, dev))
+		gpu_data[thedir][name] = zip(*thelist)
 
 def barplot(data):
 	N = len(data)
@@ -85,45 +83,55 @@ def barplot(data):
 	name_count = None
 	name_list = [thedir for thedir in data]
 	legend_list = [thename for thename in data[thedir]]
+	count = 0
+	color_wheel = ['r', 'b']
 	for thedir in data:
 		if name_count is None:
 			name_count = len(data[thedir])
+		name_count = 0
 		for name in data[thedir]:
 			means, devs = data[thedir][name]
-			rects.append(ax.bar(ind + offset, means, width, yerr=devs, label=name))
+			rects.extend(ax.bar(ind[count] + offset, means, width, color=color_wheel[name_count], yerr=devs, label=name))
 			offset += width
+			name_count += 1
+		count += 1
 
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaulation time per condition (ms / condition)')
 	ax.set_title('CPU Jacobian Evaluation Performance')
-	ax.set_xticks(ind+(name_count / 2) * width)
+	ax.set_xticks(ind*name_count + (name_count / 2) * width)
 	ax.set_xticklabels( name_list )
 
-	ax.legend( reacs[:len(legend_list)], legend_list )
-	for rect in rects:
-		autolabel(rects)
-
+	ax.legend( rects[:len(legend_list)], legend_list )
 	def autolabel(rects):
 	    # attach some text labels
 	    for rect in rects:
 	        height = rect.get_height()
 	        ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
 	                ha='center', va='bottom')
-	plt.save('cpu.png')
+	#autolabel(rects)
+	plt.savefig('cpu.png')
 	plt.close()
 
 def line_plot(data):
 	for thedir in data:
 		fig, ax = plt.subplots()
-		legend_list = [thename for thename in data[thedir]]
 		for name in data[thedir]:
+			print thedir, name
 			x, y, z = data[thedir][name]
-			plt.plot(x, y, yerr=z, label=name)
+			order, x = zip(*sorted(enumerate(x), key=lambda k:k[1]))
+			order = list(order)
+			y = np.array(y)[order]
+			z = np.array(z)[order]
+			plt.errorbar(x, y, yerr=z, label=name)
 
 		# add some text for labels, title and axes ticks
 		ax.set_ylabel('Mean evaluation time (ms)')
 		ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
 		ax.set_xlabel('# of conditions')
-		ax.legend(legend_list, loc=0)
-		plt.save('gpu_{}.png'.format(thedir))
-		plt.close()	
+		ax.legend(loc=0)
+		plt.savefig('gpu_{}.png'.format(thedir))
+		plt.close()
+
+barplot(data)
+line_plot(gpu_data)	

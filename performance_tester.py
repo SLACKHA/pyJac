@@ -382,7 +382,6 @@ def write_cuda_tester(file, path):
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );
         free_gpu_memory(y_device, var_device);
-        cudaErrorCheck( cudaFree(jac_device) );
         free(y_host);
         free(var_host);
         cudaErrorCheck( cudaDeviceReset() );

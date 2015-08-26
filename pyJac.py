@@ -2173,7 +2173,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         if lang == 'cuda' and smm is not None:
             smm.mark_for_eviction(variable_list)
 
-        if lang == do_unroll and (rind == next_fn_index - 1 or rind == len(reacs) - 1):
+        if do_unroll and (rind == next_fn_index - 1 or rind == len(reacs) - 1):
             # switch back
             file.write('}\n\n')
             file = file_store

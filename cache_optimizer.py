@@ -7,7 +7,7 @@
 from __future__ import division
 from __future__ import print_function
 from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
-from pyJac import C_Jacob_Unroll
+from CParams import C_Jacob_Unroll
 import multiprocessing
 import pickle
 

@@ -19,10 +19,9 @@ import rate_subs as rate
 import utils
 import mech_auxiliary as aux
 import CUDAParams
+import CParams
 import cache_optimizer as cache
 import shared_memory as shared
-
-C_Jacob_Unroll = 60
 
 
 def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
@@ -1615,7 +1614,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang == 'cuda':
         do_unroll = len(specs) > CUDAParams.Jacob_Unroll
     elif lang == 'c':
-        do_unroll = len(specs) > C_Jacob_Unroll
+        do_unroll = len(specs) > CParams.C_Jacob_Unroll
     if do_unroll:
         # make paths for separate jacobian files
         utils.create_dir(os.path.join(path, 'jacobs'))
@@ -2597,7 +2596,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
 
     the_len = len(reacs)
     splittings = []
-    unroll_len = C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
+    unroll_len = CParams.C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
     while the_len > 0:
         splittings.append(min(unroll_len, the_len))
         the_len -= unroll_len

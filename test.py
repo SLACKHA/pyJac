@@ -464,9 +464,9 @@ class analytic_eval_jacob:
         #self.test_dir = test_dir
 
     def dydt(self, y):
-        import py_dydt
+        import pyjacob
         dy = np.zeros_like(y)
-        py_dydt.py_dydt(0, self.pres, y, dy)
+        pyjacob.py_dydt(0, self.pres, y, dy)
         return dy
 
     def eval_jacobian(self, gas, order):
@@ -644,20 +644,24 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_zero = np.zeros(num_trials)
 
     for i, state in enumerate(state_data):
+        import pyjacob
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
 
         ajac = analytic_eval_jacob(pres)
 
+        #init vectors
+        test_conc = np.zeros(gas.n_species)
+        test_fwd_rates = np.zeros(gas.n_reactions)
+        test_rev_rates = np.zeros(idx_rev)
+        test_pres_mod = np.zeros(idx_pmod)
+        test_spec_rates = np.zeros(gas.n_species)
+        test_dydt = np.zeros(gas.n_species + 1)
+        test_jacob = np.zeros((gas.n_species + 1) * (gas.n_species + 1))
+
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
-
-        with open(os.path.join(test_dir, 'input.txt'), 'w') as f:
-            f.write('{:.16e}\n'.format(temp))
-            f.write('{:.16e}\n'.format(pres))
-            for val in mass_frac:
-                f.write('{:.16e}\n'.format(val))
 
         # Run testing executable to get output printed to file
         subprocess.check_call(os.path.join(test_dir, 'test'))
@@ -666,13 +670,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         # Derivative source term
         ode = ReactorConstPres(gas)
+        
+        mw_avg = 0
+        rho = 0
+        #get conc
+        pyjacob.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
 
-        # Now read output from test program
-        test_data = np.genfromtxt(os.path.join(test_dir, 'output.txt'))
-
-        num = int(test_data[0])
-        test_conc = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
         non_zero = np.where(test_conc > 0.)[0]
         err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
                   gas.concentrations[non_zero]
@@ -684,17 +687,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Max error in non-zero concentration: {:.2e} % @ species {}'
             .format(max_err * 100., loc))
 
-        num = int(test_data[0])
-        test_fwd_rates = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-
-        num = int(test_data[0])
-        test_rev_rates = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
-
-        num = int(test_data[0])
-        test_pres_mod = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
+        #get rates
+        pyjacob.py_eval_rxn_rates(temp, pres, conc, test_fwd_rates, test_rev_rates)
+        pyjacob.py_get_rxn_pres_mod(temp, pres, conc, test_pres_mod)
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
@@ -726,9 +721,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   format(max_err * 100., loc))
 
         # Species production rates
-        num = int(test_data[0])
-        test_spec_rates = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
+        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -750,9 +743,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             'L2 norm difference of "zero" net production rates: {:.2e}'
             .format(err))
 
-        num = int(test_data[0])
-        test_dydt = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
+        y_dummy = np.hstack((temp, mass_frac))
+        pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
         err = abs((test_dydt[non_zero] - ode()[non_zero]) /
@@ -770,9 +762,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        num = int(test_data[0])
-        test_jacob = test_data[1: num + 1]
-        test_data = test_data[num + 1:]
+        pyjacob.eval_jacobian(0, ptes, y_dummy, test_jacob)
         #non_zero = np.where(abs(test_jacob) > 0)[0]
         non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
         zero = np.where(test_jacob == 0.)[0]
@@ -820,7 +810,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     # Cleanup all files in test directory.
     test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
-    for f in test_files + ['py_dydt.so', 'dydt_wrapper.c']:
+    for f in test_files + ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
     os.rmdir(test_dir)
     

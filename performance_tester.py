@@ -327,11 +327,11 @@ def write_cuda_tester(file, path):
     #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
     #define GRID_SIZE (blockDim.x * gridDim.x)
     __global__ 
-    void jac_driver(int NUM, double* pres, double* y, double* jac)
+    void jac_driver(int NUM, double* pres, double* y)
     {
         if (T_ID < NUM)
         {
-            double y_local[NN] = {0};
+            double y_local[NN];
             double pr_local = pres[T_ID];
             double jac_local[NN * NN] = {0};
 
@@ -342,12 +342,6 @@ def write_cuda_tester(file, path):
             }
 
             eval_jacob (0, pr_local, y_local, jac_local);
-
-        #pragma unroll
-            for (int i = 0; i < NN; i++)
-            {
-                jac[T_ID + i * GRID_SIZE] = jac_local[i];
-            }
         }
     }
 
@@ -378,16 +372,6 @@ def write_cuda_tester(file, path):
         """.format(the_file))
     file.write(
     """
-        int iters = 0;
-        __uint128_t max_mem_size = (1073741824 / (8 * NN * NN)); //1 GiB
-        while (padded > max_mem_size)
-        {
-            iters++;
-            padded /= 2;
-        }
-        iters = 1 << iters;
-        double* jac_host = (double*)malloc(NN * NN * padded * sizeof(double));
-        double* jac_device = 0;
         cudaErrorCheck(cudaMalloc((void**)&jac_device, padded * NN * NN * sizeof(double)));
         g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
         if (g_num == 0)
@@ -396,29 +380,16 @@ def write_cuda_tester(file, path):
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
         int num = 0;
         cudaEvent_t start, stop;
-        cudaEventCreate(&start);
-        cudaEventCreate(&stop);
-
-        cudaEventRecord(start);
-        cudaEventRecord(start);
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
-        for(int i = 0; i < iters; ++i)
-        {
-            int endnum = (num + padded) > num_odes ? num_odes : (num + padded);
-            #ifdef SHARED_SIZE
-                jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
-            #else
-                jac_driver <<< dimGrid, dimBlock >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
-            #endif
-            // transfer memory back to CPU
-            cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
-            num += padded;
-        }
-        cudaEventRecord(stop);
-        cudaEventSynchronize(stop);
-        float runtime = 0;
-        cudaEventElapsedTime(&runtime, start, stop);
+        StartTimer();
+        #ifdef SHARED_SIZE
+            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, jac_device);
+        #else
+            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, jac_device);
+        #endif
+        cudaDeviceSynchronize();
+        double runtime = GetTimer();
         printf("%d,%.15le\\n", num_odes, runtime);
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );

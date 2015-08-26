@@ -267,10 +267,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             same_mech = False
         if same_mech:
             # we have to do the spec_rate_order each time
-            return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
+            return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
                    rxn_ordering
-
-    splittings = []
 
     # First find pdep reacs
     pdep_reacs = []
@@ -296,7 +294,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             order = order[1:]
         rxn_ordering.extend([reacs.index(reac) for reac in order])
         reac_list = [reac for reac in reac_list if not reac in order]
-        splittings.append(len(order))
 
     # the reactions order is now determined, so let's reorder them
     temp = reacs[:]

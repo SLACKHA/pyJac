@@ -600,7 +600,7 @@ def get_rxn_params_dt(rxn, rev=False):
     return jline
 
 
-def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag):
+def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
     if lang == 'cuda' or do_unroll:
         if len(rev_reacs):
             file.write('  double dBdT[{}]'.format(len(specs)) + utils.line_end[lang])
@@ -1928,7 +1928,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     dBdT_flag = [False for sp in specs]
 
     # define dB/dT's
-    write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_)
+    write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll)
 
     line = ''
 

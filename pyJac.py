@@ -310,14 +310,16 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                     jline += ' - '
                 else:
                     jline += ' + {} * '.format(diff)
+            else:
+                jline += ' + '
 
-                if rxn.rev:
-                    jline += '(' + get_array(lang, 'fwd_rates', rind)
-                    jline += ' - ' + \
-                             get_array(lang, 'rev_rates', rev_reacs.index(rind))
-                    jline += ')'
-                else:
-                    jline += get_array(lang, 'fwd_rates', rind)
+            if rxn.rev:
+                jline += '(' + get_array(lang, 'fwd_rates', rind)
+                jline += ' - ' + \
+                         get_array(lang, 'rev_rates', rev_reacs.index(rind))
+                jline += ')'
+            else:
+                jline += get_array(lang, 'fwd_rates', rind)
     if (rxn.pdep or rxn.thd_body) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
         jline += ' * '

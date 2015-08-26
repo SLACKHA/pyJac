@@ -603,6 +603,7 @@ for mechanism in mechanism_list:
 
             with open(data_output, 'a+') as file:
                 for i in range(repeats - num_completed):
+                    print(i, '/', repeats - num_completed)
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                      str(thread), str(num_conditions)], stdout=file)
 

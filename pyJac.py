@@ -318,9 +318,6 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                     jline += ')'
                 else:
                     jline += get_array(lang, 'fwd_rates', rind)
-
-            else:
-                jline += ' + '
     if (rxn.pdep or rxn.thd_body) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
         jline += ' * '

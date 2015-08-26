@@ -262,7 +262,7 @@ def write_c_tester(file, path):
     int main (int argc, char *argv[])
     {
         int num_odes = 1;
-        if (sscanf(argv[2], "%i", &num_odes) !=1 || (num_odes <= 0))
+        if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
         {
             exit(-1);
         }
@@ -278,7 +278,7 @@ def write_c_tester(file, path):
         StartTimer();
         for(int tid = 0; tid < num_odes; ++tid)
         {
-            double y_local[NN] = {0};
+            double y_local[NN];
             double jac[NN * NN] = {0};
             #pragma unroll
             for (int i = 0; i < NN; ++i)
@@ -314,8 +314,6 @@ def write_cuda_tester(file, path):
     #include "launch_bounds.cuh"
 
     int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device);
-
-
 
     #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
     #define GRID_SIZE (blockDim.x * gridDim.x)

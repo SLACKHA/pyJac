@@ -338,9 +338,9 @@ def write_cuda_tester(file, path):
     {
         if (T_ID < NUM)
         {
-            double y_local[NN];
+            double y_local[NN] = {0};
             double pr_local = pres[T_ID];
-            double jac_local[NN * NN];
+            double jac_local[NN * NN] = {0};
 
         #pragma unroll
             for (int i = 0; i < NN; i++)

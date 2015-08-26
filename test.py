@@ -524,9 +524,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     else:
         np.random.seed()
 
-    test_dir = '.' + os.path.sep + 'test'
-    utils.create_dir(test_dir)
-
     # First check for appropriate Compiler
     try:
         subprocess.check_call(['which', cmd_compile[lang]])
@@ -549,7 +546,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     #write and compile the dydt python wrapper
     try:
-        os.remove('py_dydt.so')
+        os.remove('py_jacob.so')
     except:
         pass
     #doesn't work at the moment
@@ -560,47 +557,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     gas = ct.Solution(mech_filename)
     pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
-
-    """
-    # Write test driver
-    if lang == 'c':
-        write_c_test(build_dir, pmod)
-    elif lang == 'cuda':
-        write_cuda_test(build_dir, rev, pmod)
-
-    # Compile generated source code
-    files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-             'rxn_rates', 'test'
-             ]
-    if pmod:
-        files += ['rxn_rates_pres_mod']
-
-    for f in files:
-        args = [cmd_compile[lang]]
-        args.extend(flags[lang])
-        args.extend([
-            '-I.' + os.path.sep + build_dir,
-            '-c', os.path.join(build_dir, f + utils.file_ext[lang]),
-            '-o', os.path.join(test_dir, f + '.o')
-            ])
-        args = [val for val in args if val.strip()]
-        try:
-            subprocess.check_call(args)
-        except subprocess.CalledProcessError:
-            print('Error: compilation failed for ' + f + utils.file_ext[lang])
-            sys.exit(1)
-
-    # Link into executable
-    args = [cmd_compile[lang]]
-    args.extend([os.path.join(test_dir, f + '.o') for f in files])
-    args.extend(['-o', os.path.join(test_dir, 'test')])
-    args.extend(libs[lang])
-    try:
-        subprocess.check_call(args)
-    except subprocess.CalledProcessError:
-        print('Error: linking of test program failed.')
-        sys.exit(1)
-    """
 
     # Now generate data and check results
 
@@ -621,6 +577,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                     isinstance(
         gas.reaction(idx), ct.ChemicallyActivatedReaction)
     ]
+
     if pasr_output_file:
         #load old test data
         try:
@@ -634,8 +591,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
     # Reshape array to treat time steps and particles the same
     state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
-                                state_data.shape[2]
-                                )
+                                    state_data.shape[2]
+                                    )
     num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)

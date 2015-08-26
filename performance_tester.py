@@ -611,7 +611,7 @@ for mechanism in mechanism_list:
 
             # Link into executable
             args = [cmd_compile['c']]
-            args.extend([os.path.join(test_dir, f + '.o') for f in files])
+            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
             args.extend(['-o', os.path.join(test_dir, 'speedtest')])
             args.extend(libs['c'])
 

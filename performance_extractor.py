@@ -101,7 +101,6 @@ def barplot(data):
 	x_loc = [ind[0] + (name_count / 2) * width]
 	for i in range(1, name_count + 1):
 		x_loc.append(ind[i] + (name_count / 2) * width + 2 * i * width)
-	print x_loc
 	ax.set_xticks(x_loc)
 	ax.set_xticklabels( name_list )
 

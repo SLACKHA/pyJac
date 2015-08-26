@@ -413,8 +413,8 @@ def write_cuda_tester(file, path):
             cudaEvent_t start, stop;
             cudaEventCreate(&start);
             cudaEventCreate(&stop);
-
             cudaEventRecord(start);
+            cudaEventSynchronize(start);
             cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
             cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
             for(int i = 0; i < iters; ++i)

@@ -263,13 +263,13 @@ def write_c_tester(file, path):
         int max_threads = omp_get_max_threads ();
         int num_threads = 1;
         if (sscanf(argv[1], "%i", &num_threads) !=1 || (num_threads <= 0) || (num_threads > max_threads)) {
-                exit(1);
+            exit(-1);
         }
         omp_set_num_threads (num_threads);
         int num_odes = 1;
         if (sscanf(argv[2], "%i", &num_odes) !=1 || (num_odes <= 0))
         {
-                exit(1);
+            exit(-1);
         }
         double* y_host;
         double* var_host;
@@ -294,9 +294,9 @@ def write_c_tester(file, path):
             eval_jacob(0, var_host[tid], y_local, jac);
         }
         double runtime = GetTimer();
+        printf("%d,%d,%.15le\\n", num_threads, num_odes, runtime);
         free(y_host);
         free(var_host);
-        printf("%d,%d,%.15le\\n", num_threads, num_odes, runtime);
         return 0;
     }
     """
@@ -330,9 +330,9 @@ def write_cuda_tester(file, path):
     {
         if (T_ID < NUM)
         {
-            double y_local[NN];
+            double y_local[NN] = {0};
             double pr_local = pres[T_ID];
-            double jac_local[NN * NN];
+            double jac_local[NN * NN] = {0};
 
         #pragma unroll
             for (int i = 0; i < NN; i++)
@@ -399,40 +399,26 @@ def write_cuda_tester(file, path):
         cudaEventCreate(&stop);
 
         cudaEventRecord(start);
+        cudaEventRecord(start);
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
         for(int i = 0; i < iters; ++i)
         {
-            int num = 0;
-            cudaEvent_t start, stop;
-            cudaEventCreate(&start);
-            cudaEventCreate(&stop);
-
-            cudaEventRecord(start);
-            cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-            cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
-            for(int i = 0; i < iters; ++i)
-            {
-                int endnum = (num + padded) > num_odes ? num_odes : (num + padded);
-                #ifdef SHARED_SIZE
-                    jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
-                #else
-                    jac_driver <<< dimGrid, dimBlock >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
-                #endif
-                // transfer memory back to CPU
-                cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
-                num += padded;
-            }
-            cudaEventRecord(stop);
-            cudaEventSynchronize(stop);
-            float runtime = 0;
-            cudaEventElapsedTime(&runtime, start, stop);
-            printf("%d,%.15le\\n", num_odes, runtime);
+            int endnum = (num + padded) > num_odes ? num_odes : (num + padded);
+            #ifdef SHARED_SIZE
+                jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
+            #else
+                jac_driver <<< dimGrid, dimBlock >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
+            #endif
+            // transfer memory back to CPU
+            cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+            num += padded;
         }
         cudaEventRecord(stop);
         cudaEventSynchronize(stop);
         float runtime = 0;
         cudaEventElapsedTime(&runtime, start, stop);
+        printf("%d,%.15le", num_odes, runtime);
         cudaErrorCheck( cudaPeekAtLastError() );
         cudaErrorCheck( cudaDeviceSynchronize() );
         free_gpu_memory(y_device, var_device);
@@ -441,7 +427,6 @@ def write_cuda_tester(file, path):
         free(var_host);
         free(jac_host);
         cudaErrorCheck( cudaDeviceReset() );
-        printf("%d,%.15le\\n", num_odes, runtime);
         return 0;
     }
     """
@@ -643,10 +628,8 @@ for mechanism in mechanism_list:
                 sys.exit(1)
 
             with open(data_output, 'a+') as file:
-                for i in range(repeats - num_completed):
-                    print(i, "/", repeats - num_completed)
-                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                     str(thread), str(num_conditions)], stdout=file)
+                subprocess.check_call([os.path.join(the_path, 'speedtest'),
+                 str(thread), str(num_conditions)], stdout=file)
 
     #do cuda
     #next we need to start writing the jacobians

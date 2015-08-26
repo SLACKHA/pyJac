@@ -2288,9 +2288,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)
     for k_sp, sp_k in enumerate(specs):
-        if lang == do_unroll and k_sp == next_fn_index:
+        if do_unroll and k_sp == next_fn_index:
             store_file = file
             file = write_dy_intros(os.path.join(path, 'jacobs'), lang, jac_count)
+            unroll_len = CParams.C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
             next_fn_index += min(unroll_len, len(specs) - k_sp)
 
         for j_sp, sp_j in enumerate(specs):
@@ -2358,7 +2359,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 line += ')' + utils.line_end[lang]
                 file.write(line)
 
-        if lang == do_unroll and k_sp == next_fn_index - 1:
+        if do_unroll and k_sp == next_fn_index - 1:
             # switch back
             file.write('}\n\n')
             file = file_store

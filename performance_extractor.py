@@ -107,7 +107,7 @@ def barplot(data):
 
 	ax.legend(rects[:len(legend_list)], legend_list, loc=0)
 	#autolabel(rects)
-	plt.savefig('cpu.png')
+	plt.savefig('cpu.pdf')
 	plt.close()
 
 def line_plot(data):
@@ -126,7 +126,7 @@ def line_plot(data):
 		ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
 		ax.set_xlabel('# of conditions')
 		ax.legend(loc=0)
-		plt.savefig('gpu_{}.png'.format(thedir))
+		plt.savefig('gpu_{}.pdf'.format(thedir))
 		plt.close()
 
 barplot(data)

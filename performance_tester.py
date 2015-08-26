@@ -579,6 +579,8 @@ for mechanism in mechanism_list:
 
             pool = multiprocessing.Pool()
             results = pool.map(compiler, files)
+            pool.close()
+            pool.join()
             if any(r == -1 for r in results):
                 sys.exit(-1)
 
@@ -685,8 +687,10 @@ for mechanism in mechanism_list:
             
             pool = multiprocessing.Pool()
             results = pool.map(compiler, files)
+            pool.close()
+            pool.join()
             if any(r == -1 for r in results):
-                sys.exit(-1)                
+                sys.exit(-1)
 
             # Link into executable
             args = [cmd_compile['cuda']]

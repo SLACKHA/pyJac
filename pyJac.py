@@ -22,9 +22,7 @@ import CUDAParams
 import cache_optimizer as cache
 import shared_memory as shared
 
-# methane w/ 325 rxns
-# known to compile
-C_Jacob_Unroll = 326
+C_Jacob_Unroll = 60
 
 
 def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):

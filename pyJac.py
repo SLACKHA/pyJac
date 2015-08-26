@@ -671,8 +671,8 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
             elif lang == 'matlab':
                 file.write('  end\n\n')
 
-def get_db_dt(lang, specs, rxn):
-    if lang == 'cuda':
+def get_db_dt(lang, specs, rxn, do_unroll):
+    if lang == 'cuda' or do_unroll:
         template = 'dBdT[{}]'
     else:
         template = 'dBdT_{}'
@@ -1113,7 +1113,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
         jline += '-T * ('
 
         # product nu sum
-        jline += get_db_dt(lang, specs, rxn)
+        jline += get_db_dt(lang, specs, rxn, do_unroll)
         jline += '))'
     else:
         #forward only, combine dk/dt and nu sum
@@ -1238,7 +1238,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         nu = sum(rxn.prod_nu)
         if nu != 1.0:
             jline += '{} + '.format(1. - float(nu))
-        jline += '-T * (' + get_db_dt(lang, specs, rxn)
+        jline += '-T * (' + get_db_dt(lang, specs, rxn, do_unroll)
         jline += '))'
 
     jline += ')) * rho_inv'
@@ -1303,7 +1303,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             nu = sum(rxn.prod_nu)
             if nu != 1.0:
                 jline_p+= '{} + '.format(1. - nu)
-            jline_p += '-T * (' + get_db_dt(lang, specs, rxn)
+            jline_p += '-T * (' + get_db_dt(lang, specs, rxn, do_unroll)
             jline_p += '))'
 
         jline_p += ')) * rho_inv'

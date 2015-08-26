@@ -102,20 +102,6 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     return variable_list, usages
 
 
-def get_net_rate_string(lang, rxn, rind, pind, rev_reacs, get_array):
-    jline = ''
-    if rxn.rev:
-        jline += '(' + get_array(lang, 'fwd_rates', rind)
-        jline += ' - ' + \
-                 get_array(lang, 'rev_rates', rev_reacs.index(rind))
-        jline += ')'
-    else:
-        jline += get_array(lang, 'fwd_rates', rind)
-    if rxn.pdep or rxn.thd_body:
-        jline += ' * ' + get_array(lang, 'pres_mod', pind)
-    return jline
-
-
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     # write the T_Pr and T_Fi terms if needed
     if rxn.pdep:
@@ -145,7 +131,15 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                       'exp(T / {:.4}))'.format(-rxn.sri_par[2])
                       )
 
-        jline += ') * ' + get_net_rate_string(lang, rxn, rind, pind, rev_reacs, get_array)
+        jline += ') * '
+        if rxn.rev:
+            jline += '(' + get_array(lang, 'fwd_rates', rind)
+            jline += ' - ' + \
+                     get_array(lang, 'rev_rates', rev_reacs.index(rind))
+            jline += ')'
+        else:
+            jline += get_array(lang, 'fwd_rates', rind)
+        jline += ' * ' + get_array(lang, 'pres_mod', pind)
         file.write(jline + utils.line_end[lang])
 
     file.write('  j_temp = -mw_avg * rho_inv * (')
@@ -207,7 +201,14 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                 jline += ' - '
             else:
                 jline += ' + {} * '.format(alphaij_hat)
-            jline += get_net_rate_string(lang, rxn, rind, pind, rev_reacs, get_array)
+            if rxn.rev:
+                jline += '(' + get_array(lang, 'fwd_rates', rind)
+                jline += ' - ' + \
+                         get_array(lang, 'rev_rates', rev_reacs.index(rind))
+                jline += ')'
+            else:
+                jline += get_array(lang, 'fwd_rates', rind)
+        file.write(jline + utils.line_end[lang])
     elif rxn.pdep:
         jline += ') + pres_mod_temp'
         jline += ')'
@@ -310,10 +311,17 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                     jline += ' - '
                 else:
                     jline += ' + {} * '.format(diff)
+
+                if rxn.rev:
+                    jline += '(' + get_array(lang, 'fwd_rates', rind)
+                    jline += ' - ' + \
+                             get_array(lang, 'rev_rates', rev_reacs.index(rind))
+                    jline += ')'
+                else:
+                    jline += get_array(lang, 'fwd_rates', rind)
+
             else:
                 jline += ' + '
-            jline += get_net_rate_string(lang, rxn, rind, pind, rev_reacs, get_array)
-
     if (rxn.pdep or rxn.thd_body) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
         jline += ' + ' + get_array(lang, 'pres_mod', pind)
         jline += ' * '

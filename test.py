@@ -546,7 +546,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     #write and compile the dydt python wrapper
     try:
-        os.remove('py_jacob.so')
+        os.remove('pyjacob.so')
     except:
         pass
     #doesn't work at the moment

@@ -21,7 +21,6 @@ for directory in dirs:
 	for filename in files:
 		with open(filename) as file:
 			lines = [l.strip() for l in file.readlines() if l.strip()]
-		print filename
 		if 'cpu' in filename:
 			#format is num_threads, num_odes, runtime (ms)
 			basename = 'CPU'
@@ -117,7 +116,6 @@ def line_plot(data):
 	for thedir in data:
 		fig, ax = plt.subplots()
 		for name in data[thedir]:
-			print thedir, name
 			x, y, z = data[thedir][name]
 			order, x = zip(*sorted(enumerate(x), key=lambda k:k[1]))
 			order = list(order)

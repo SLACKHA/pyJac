@@ -3,8 +3,8 @@ from distutils.core import setup, Extension
 
 from Cython.Distutils import build_ext
 import numpy
-ext_modules=[Extension("py_dydt", 
-	sources=["dydt_wrapper.pyx", 
+ext_modules=[Extension("pyjacob", 
+	sources=["pyjacob_wrapper.pyx", 
 			'out/dydt.c', 
 			'out/rxn_rates.c',
 			'out/rxn_rates_pres_mod.c',
@@ -15,7 +15,7 @@ ext_modules=[Extension("py_dydt",
     )]
 
 setup(
-	name='py_dydt',
+	name='pyjacob',
 	ext_modules=ext_modules,
     cmdclass={'build_ext': build_ext}
 )

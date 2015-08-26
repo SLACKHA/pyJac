@@ -7,6 +7,7 @@
 from __future__ import division
 from __future__ import print_function
 from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
+from CParams import C_Jacob_Unroll
 import multiprocessing
 import pickle
 
@@ -177,18 +178,6 @@ def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s)
     return val_1
 
 
-def __update_split(the_len, splittings):
-    if the_len == 0:
-        return
-    while the_len > Jacob_Unroll:
-        splittings.append(min(Jacob_Unroll, the_len))
-        the_len -= Jacob_Unroll
-    if len(splittings):
-        splittings[-1] += the_len
-    else:
-        splittings.append(the_len)
-
-
 def __get_max_rxn(the_list, reacs, spec_scores, reac_scores):
     reac_inds = [reacs.index(reac) for reac in the_list]
     max_score = None
@@ -234,10 +223,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     Returns
     _______
-    splittings : list of int
-
-        The reaction splitings to be used in Jacobian creation (for CUDA) as a list
-        i.e. [10, 20, 20] would correspond to 10 reactions in jacob_0.cu, 20 in jacob_1.cu...
 
     specs : list of SpecInfo
         The reordered list of species in the mechanism
@@ -261,12 +246,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
 
+    unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
     if not force_optimize:
         try:
             same_mech = False
             with open(build_path + 'optimized.pickle', 'rb') as file:
-                splittings = pickle.load(file)
                 old_specs = pickle.load(file)
                 old_reacs = pickle.load(file)
                 rxn_rate_order = pickle.load(file)
@@ -282,10 +267,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             same_mech = False
         if same_mech:
             # we have to do the spec_rate_order each time
-            return splittings, old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
+            return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
                    rxn_ordering
-
-    splittings = []
 
     # First find pdep reacs
     pdep_reacs = []
@@ -304,14 +287,13 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             max_rxn = reacs[rxn_ordering[-1]]
         else:
             max_rxn = __get_max_rxn(reac_list, reacs, s_to_r, r_to_s)
-        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=Jacob_Unroll,
+        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=unroll_len,
                               multi_thread=multi_thread)
         # remove the seed, it was already added
         if len(rxn_ordering) and not ResetOnJacUnroll:
             order = order[1:]
         rxn_ordering.extend([reacs.index(reac) for reac in order])
         reac_list = [reac for reac in reac_list if not reac in order]
-        splittings.append(len(order))
 
     # the reactions order is now determined, so let's reorder them
     temp = reacs[:]
@@ -360,7 +342,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     # save to avoid reoptimization if possible
     with open(build_path + 'optimized.pickle', 'wb') as file:
-        pickle.dump(splittings, file)
         pickle.dump(specs, file)
         pickle.dump(reacs, file)
         pickle.dump(rxn_rate_order, file)
@@ -370,4 +351,4 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         pickle.dump(print_rxn_order, file)
 
     # complete, so now return
-    return splittings, specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order
+    return specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order

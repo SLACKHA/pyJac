@@ -578,13 +578,29 @@ for mechanism in mechanism_list:
             if pmod:
                 files += ['rxn_rates_pres_mod']
 
+            i_dirs = [build_dir]
+            try:
+                with open('out/jacobs/jac_list_c') as file:
+                    vals = file.readline().strip().split(' ')
+                    vals = ['jacobs/' + f[:f.index('.c')] for f in vals]
+                    files = vals + files
+                    i_dirs.append('out/jacobs/')
+            except:
+                pass
+
+
+            getf = lambda x: x[x.index('/') + 1:] \
+                                if 'jacobs/' in x else x
+
             for f in files:
                 args = [cmd_compile['c']]
                 args.extend(flags['c'])
+                include = ['-I./' + d for d in i_dirs]
+                args.extend(include)
                 args.extend([
                     '-I.' + os.path.sep + build_dir,
                     '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-                    '-o', os.path.join(test_dir, f + '.o')
+                    '-o', os.path.join(test_dir, getf(f) + '.o')
                     ])
                 args = [val for val in args if val.strip()]
                 try:
@@ -595,7 +611,7 @@ for mechanism in mechanism_list:
 
             # Link into executable
             args = [cmd_compile['c']]
-            args.extend([os.path.join(test_dir, f + '.o') for f in files])
+            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
             args.extend(['-o', os.path.join(test_dir, 'speedtest')])
             args.extend(libs['c'])
 
@@ -660,7 +676,7 @@ for mechanism in mechanism_list:
                      ]
             i_dirs = [build_dir]
             try:
-                with open('out/jacobs/jac_list') as file:
+                with open('out/jacobs/jac_list_cuda') as file:
                     vals = file.readline().strip().split(' ')
                     vals = ['jacobs/' + f[:f.index('.cu')] for f in vals]
                     files = vals + files

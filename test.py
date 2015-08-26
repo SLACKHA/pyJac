@@ -554,13 +554,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pass
     #doesn't work at the moment
     #just run python dydt_setup.py build_ext --inplace
-    subprocess.check_call(['python', os.getcwd() + os.path.sep + 'dydt_setup.py', 'build_ext', '--inplace'])
+    subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 'pyjacob_setup.py', 'build_ext', '--inplace'])
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
     pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
 
+    """
     # Write test driver
     if lang == 'c':
         write_c_test(build_dir, pmod)
@@ -599,6 +600,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     except subprocess.CalledProcessError:
         print('Error: linking of test program failed.')
         sys.exit(1)
+    """
 
     # Now generate data and check results
 
@@ -654,8 +656,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         #init vectors
         test_conc = np.zeros(gas.n_species)
         test_fwd_rates = np.zeros(gas.n_reactions)
-        test_rev_rates = np.zeros(idx_rev)
-        test_pres_mod = np.zeros(idx_pmod)
+        test_rev_rates = np.zeros(len(idx_rev))
+        test_pres_mod = np.zeros(len(idx_pmod))
         test_spec_rates = np.zeros(gas.n_species)
         test_dydt = np.zeros(gas.n_species + 1)
         test_jacob = np.zeros((gas.n_species + 1) * (gas.n_species + 1))
@@ -664,7 +666,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Testing condition {} / {}'.format(i + 1, num_trials))
 
         # Run testing executable to get output printed to file
-        subprocess.check_call(os.path.join(test_dir, 'test'))
+        #subprocess.check_call(os.path.join(test_dir, 'test'))
 
         gas.TPY = temp, pres, mass_frac
 
@@ -688,8 +690,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             .format(max_err * 100., loc))
 
         #get rates
-        pyjacob.py_eval_rxn_rates(temp, pres, conc, test_fwd_rates, test_rev_rates)
-        pyjacob.py_get_rxn_pres_mod(temp, pres, conc, test_pres_mod)
+        pyjacob.py_eval_rxn_rates(temp, pres, test_conc, test_fwd_rates, test_rev_rates)
+        pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
@@ -762,7 +764,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        pyjacob.eval_jacobian(0, ptes, y_dummy, test_jacob)
+        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
         #non_zero = np.where(abs(test_jacob) > 0)[0]
         non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
         zero = np.where(test_jacob == 0.)[0]

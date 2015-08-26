@@ -23,7 +23,7 @@ def py_dydt(np.double_t t,
             np.ndarray[np.double_t] dy):
     dydt(t, pres, &y[0], &dy[0])
 
-def py_eval_jacob(np.double_t t,
+def py_eval_jacobian(np.double_t t,
             np.double_t pres,
             np.ndarray[np.double_t] y,
             np.ndarray[np.double_t] jac):

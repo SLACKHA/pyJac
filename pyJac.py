@@ -2079,7 +2079,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 continue
             if lang in ['c', 'cuda']:
                 line += (get_array(lang, 'jac', k_sp + 1) +
-                         ' {}= {}j_temp{} * {:.8e}'.format('+' if touched[k_sp + 1] else '',
+                         ' {}= {}j_temp{} * {:.16e}'.format('+' if touched[k_sp + 1] else '',
                                                            '' if nu == 1 else ('-' if nu == -1 else ''),
                                                            ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
                                                            sp_k.mw)
@@ -2090,7 +2090,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 # indexed)
                 line += (get_array(lang, 'jac', k_sp + 1, twod=0) + ' = ' +
                          (get_array(lang, 'jac', k_sp + 1, twod=0) + ' + ' if touched[k_sp + 1] else '') +
-                         ' {}j_temp{} * {:.8e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
+                         ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
                                                        ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
                                                        sp_k.mw)
                          )

@@ -1566,7 +1566,7 @@ def write_dy_intros(path, lang, number):
                    '\n'
                    '#include "../header.h"\n'
                    '\n' +
-                   ('__device__' if lang == 'cuda' else '') +
+                   ('__device__ ' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
                    )
         file.write('const double, const double, const double, const double*, const double*, const double*, double*);\n'
@@ -1578,7 +1578,7 @@ def write_dy_intros(path, lang, number):
                '\n'
                )
 
-    line = '__device__' if lang == 'cuda' else ''
+    line = '__device__ ' if lang == 'cuda' else ''
 
     line += (
         'void eval_jacob_{} (const double mw_avg, const double rho, const double cp_avg, const double* dy, '
@@ -1587,7 +1587,7 @@ def write_dy_intros(path, lang, number):
     line += '{\n'
     line += utils.line_start
     if lang == 'cuda':
-        line += 'register'
+        line += 'register '
     line += 'double rho_inv = 1.0 / rho;'
     file.write(line + utils.line_end[lang])
     return file

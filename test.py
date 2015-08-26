@@ -765,7 +765,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
+        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
         non_zero = np.where(abs(test_jacob) > 0)[0]
         zero = np.where(test_jacob == 0.)[0]
 

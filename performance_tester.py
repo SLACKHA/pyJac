@@ -261,12 +261,6 @@ def write_c_tester(file, path):
     #include <stdio.h>
     int main (int argc, char *argv[])
     {
-        int max_threads = omp_get_max_threads ();
-        int num_threads = 1;
-        if (sscanf(argv[1], "%i", &num_threads) !=1 || (num_threads <= 0) || (num_threads > max_threads)) {
-            exit(-1);
-        }
-        omp_set_num_threads (num_threads);
         int num_odes = 1;
         if (sscanf(argv[2], "%i", &num_odes) !=1 || (num_odes <= 0))
         {
@@ -282,7 +276,6 @@ def write_c_tester(file, path):
     file.write(
     """
         StartTimer();
-        #pragma omp parallel for shared(y_host, var_host)
         for(int tid = 0; tid < num_odes; ++tid)
         {
             double y_local[NN] = {0};
@@ -295,7 +288,7 @@ def write_c_tester(file, path):
             eval_jacob(0, var_host[tid], y_local, jac);
         }
         double runtime = GetTimer();
-        printf("%d,%d,%.15le\\n", num_threads, num_odes, runtime);
+        printf("%d,%d,%.15le\\n", num_odes, runtime);
         free(y_host);
         free(var_host);
         return 0;

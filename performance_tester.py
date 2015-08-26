@@ -407,13 +407,13 @@ def write_cuda_tester(file, path):
             g_num = 1;
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
-        int num = 0;
         cudaEvent_t start, stop;
         cudaEventCreate(&start);
         cudaEventCreate(&stop);
 
         for (int r = 0; r < repeats; r++)
         {
+            int num = 0;
             cudaEventRecord(start);
             cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
             cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));

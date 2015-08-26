@@ -600,7 +600,7 @@ for mechanism in mechanism_list:
                 for i in range(repeats - num_completed):
                     print(i, '/', repeats - num_completed)
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                     str(thread), str(num_conditions)], stdout=file)
+                     str(num_conditions)], stdout=file)
 
     #do cuda
     #next we need to start writing the jacobians

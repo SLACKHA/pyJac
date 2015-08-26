@@ -2594,9 +2594,10 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
             pdep_rate_order = None
         the_len = len(reacs)
         splittings = []
+        unroll_len = C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
         while the_len > 0:
-            splittings.append(min(CUDAParams.Jacob_Unroll, the_len))
-            the_len -= CUDAParams.Jacob_Unroll
+            splittings.append(min(unroll_len, the_len))
+            the_len -= unroll_len
         old_spec_order = range(len(specs))
         old_rxn_order = range(len(reacs))
 

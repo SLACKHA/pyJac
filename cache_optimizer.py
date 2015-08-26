@@ -7,6 +7,7 @@
 from __future__ import division
 from __future__ import print_function
 from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
+from pyJac import C_Jacob_Unroll
 import multiprocessing
 import pickle
 
@@ -177,18 +178,6 @@ def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s)
     return val_1
 
 
-def __update_split(the_len, splittings):
-    if the_len == 0:
-        return
-    while the_len > Jacob_Unroll:
-        splittings.append(min(Jacob_Unroll, the_len))
-        the_len -= Jacob_Unroll
-    if len(splittings):
-        splittings[-1] += the_len
-    else:
-        splittings.append(the_len)
-
-
 def __get_max_rxn(the_list, reacs, spec_scores, reac_scores):
     reac_inds = [reacs.index(reac) for reac in the_list]
     max_score = None
@@ -261,6 +250,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
 
+    unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
     if not force_optimize:
         try:
@@ -304,7 +294,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             max_rxn = reacs[rxn_ordering[-1]]
         else:
             max_rxn = __get_max_rxn(reac_list, reacs, s_to_r, r_to_s)
-        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=Jacob_Unroll,
+        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=unroll_len,
                               multi_thread=multi_thread)
         # remove the seed, it was already added
         if len(rxn_ordering) and not ResetOnJacUnroll:

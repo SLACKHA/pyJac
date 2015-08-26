@@ -403,15 +403,31 @@ def write_cuda_tester(file, path):
         cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
         for(int i = 0; i < iters; ++i)
         {
-            num += padded;
-            num = num > num_odes ? num_odes : num;
-            #ifdef SHARED_SIZE
-                jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num, &var_device[num], &y_device[num * NN], jac_device);
-            #else
-                jac_driver <<< dimGrid, dimBlock >>> (num, &var_device[num], &y_device[num * NN], jac_device);
-            #endif
-            // transfer memory back to CPU
-            cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+            int num = 0;
+            cudaEvent_t start, stop;
+            cudaEventCreate(&start);
+            cudaEventCreate(&stop);
+
+            cudaEventRecord(start);
+            cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
+            cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
+            for(int i = 0; i < iters; ++i)
+            {
+                int endnum = (num + padded) > num_odes ? num_odes : (num + padded);
+                #ifdef SHARED_SIZE
+                    jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
+                #else
+                    jac_driver <<< dimGrid, dimBlock >>> (endnum, &var_device[num], &y_device[num * NN], jac_device);
+                #endif
+                // transfer memory back to CPU
+                cudaErrorCheck( cudaMemcpy (jac_host, jac_device, padded * NN * NN * sizeof(double), cudaMemcpyDeviceToHost) );
+                num += padded;
+            }
+            cudaEventRecord(stop);
+            cudaEventSynchronize(stop);
+            float runtime = 0;
+            cudaEventElapsedTime(&runtime, start, stop);
+            printf("%d,%.15le\\n", num_odes, runtime);
         }
         cudaEventRecord(stop);
         float runtime = 0;

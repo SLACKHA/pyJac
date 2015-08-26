@@ -208,7 +208,6 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                 jline += ')'
             else:
                 jline += get_array(lang, 'fwd_rates', rind)
-        file.write(jline + utils.line_end[lang])
     elif rxn.pdep:
         jline += ') + pres_mod_temp'
         jline += ')'

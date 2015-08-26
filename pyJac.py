@@ -671,8 +671,8 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
             elif lang == 'matlab':
                 file.write('  end\n\n')
 
-def get_db_dt(lang, specs, rxn):
-    if lang == 'cuda':
+def get_db_dt(lang, specs, rxn, do_unroll):
+    if lang == 'cuda' or do_unroll:
         template = 'dBdT[{}]'
     else:
         template = 'dBdT_{}'
@@ -1032,7 +1032,7 @@ def write_dcp_dt(file, lang, specs, sparse_indicies):
 
         first = False
 
-def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
+def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array, do_unroll):
     """Write contribution from temperature derivative of reaction rate for
     elementary reaction.
 
@@ -1113,7 +1113,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array):
         jline += '-T * ('
 
         # product nu sum
-        jline += get_db_dt(lang, specs, rxn)
+        jline += get_db_dt(lang, specs, rxn, do_unroll)
         jline += '))'
     else:
         #forward only, combine dk/dt and nu sum
@@ -1194,7 +1194,7 @@ def write_cheb_ut(file, lang, rxn):
                   line in line_list]
     file.write(''.join(line_list))
 
-def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
+def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array, do_unroll):
     # Chebyshev reaction
     tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
     tlim_inv_sub = 1.0 / rxn.cheb_tlim[1] - 1.0 / rxn.cheb_tlim[0]
@@ -1238,14 +1238,14 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array):
         nu = sum(rxn.prod_nu)
         if nu != 1.0:
             jline += '{} + '.format(1. - float(nu))
-        jline += '-T * (' + get_db_dt(lang, specs, rxn)
+        jline += '-T * (' + get_db_dt(lang, specs, rxn, do_unroll)
         jline += '))'
 
     jline += ')) * rho_inv'
     # print line for reaction
     file.write(jline + utils.line_end[lang])
 
-def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
+def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, do_unroll):
     # Plog reactions have conditional contribution,
     # depends on pressure range
 
@@ -1261,7 +1261,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                           A_p1, b_p1, E_p1
                           )
 
-    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
+    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array, do_unroll))
 
     for idx, vals in enumerate(rxn.plog_par[:-1]):
         (p1, A_p1, b_p1, E_p1) = vals
@@ -1303,7 +1303,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
             nu = sum(rxn.prod_nu)
             if nu != 1.0:
                 jline_p+= '{} + '.format(1. - nu)
-            jline_p += '-T * (' + get_db_dt(lang, specs, rxn)
+            jline_p += '-T * (' + get_db_dt(lang, specs, rxn, do_unroll)
             jline_p += '))'
 
         jline_p += ')) * rho_inv'
@@ -1323,7 +1323,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array):
                           A_pn, b_pn, E_pn
                           )
 
-    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array))
+    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array, do_unroll))
 
     file.write(utils.line_start + '}\n')
 
@@ -2052,16 +2052,16 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         if rxn.plog:
 
             write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
-                rev_reacs.index(rind) if rxn.rev else None, get_array)
+                rev_reacs.index(rind) if rxn.rev else None, get_array, do_unroll)
 
         elif rxn.cheb:
             write_cheb_rxn_dt(file, lang, jline, rxn, rind,
                 rev_reacs.index(rind) if rxn.rev else None,
-                specs, get_array)
+                specs, get_array, do_unroll)
 
         else:
             jline += get_elementary_rxn_dt(lang, specs, rxn, rind,
-                rev_reacs.index(rind) if rxn.rev else None, get_array)
+                rev_reacs.index(rind) if rxn.rev else None, get_array, do_unroll)
             file.write(jline)
 
 

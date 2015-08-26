@@ -369,7 +369,7 @@ def write_cuda_tester(file, path):
         int repeats = 1;
         if (sscanf(argv[2], "%i", &repeats) != 1 || (repeats <= 0))
         {
-            exit(-1)
+            exit(-1);
         }
 
         cudaErrorCheck (cudaSetDevice (0) );

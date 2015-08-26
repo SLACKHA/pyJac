@@ -1563,7 +1563,7 @@ def write_dy_intros(path, lang, number):
                    '\n'
                    '#include "../header.h"\n'
                    '\n' +
-                   ('__device__' if lang == 'cuda' else '')
+                   ('__device__' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
                    )
         file.write('const double, const double, const double, const double*, const double*, const double*, double*);\n'

@@ -127,7 +127,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             # chem-activated bimolecular
             jline += '(-Pr / (1.0 + Pr))'
         if rxn.troe:
-            jline += (' - Pr * log(Fcent) * 2.0 * A * (B * '
+            jline += (' - log(Fcent) * 2.0 * A * (B * '
                       '{:.16}'.format(1.0 / math.log(10.0)) +
                       ' + A * '
                       '{:.16}) / '.format(0.14 / math.log(10.0)) +
@@ -135,7 +135,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                       '* (1.0 + A * A / (B * B)))'
                       )
         elif rxn.sri:
-            jline += ('- Pr * X * X * '
+            jline += ('- X * X * '
                       '{:.16} * '.format(2.0 / math.log(10.0)) +
                       'log10(Pr) * '
                       'log({:.4} * '.format(rxn.sri_par[0]) +

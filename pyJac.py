@@ -1419,7 +1419,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     file.write(line)
 
 
-def write_sub_intro(lang, path, number, rate_list, this_rev, this_pdep, this_pdep_has_thd_eff, this_thd,
+def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pdep_has_thd_eff, this_thd,
                      this_troe, this_sri, this_cheb, cheb_dim, this_plog, no_shared
                      ):
     """
@@ -1556,15 +1556,15 @@ def write_sub_intro(lang, path, number, rate_list, this_rev, this_pdep, this_pde
     return file
 
 
-def write_dy_intros(path, number):
-    lang = 'cuda'
-    with open(os.path.join(path, 'jacob_' + str(number) + '.h'), 'w') as file:
+def write_dy_intros(path, lang, number):
+    with open(os.path.join(path, 'jacob_' + str(number) + utils.header_ext[lang]), 'w') as file:
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
                    '#include "../header.h"\n'
-                   '\n'
-                   '__device__ void eval_jacob_{} ('.format(number)
+                   '\n' +
+                   ('__device__' if lang == 'cuda' else '')
+                   'void eval_jacob_{} ('.format(number)
                    )
         file.write('const double, const double, const double, const double*, const double*, const double*, double*);\n'
                    '\n'
@@ -1575,15 +1575,18 @@ def write_dy_intros(path, number):
                '\n'
                )
 
-    line = '__device__ '
+    line = '__device__' if lang == 'cuda' else ''
 
     line += (
         'void eval_jacob_{} (const double mw_avg, const double rho, const double cp_avg, const double* dy, '
         'const double* h, const double* cp, double* jac) '.format(
             number))
     line += '{\n'
-    line += utils.line_start + 'register double rho_inv = 1.0 / rho;'
-    file.write(line + utils.line_end['cuda'])
+    line += utils.line_start
+    if lang == 'cuda':
+        line += 'register'
+    line += 'double rho_inv = 1.0 / rho;'
+    file.write(line + utils.line_end[lang])
     return file
 
 
@@ -1985,7 +1988,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             if cheb:
                 dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
-            file = write_sub_intro(lang, os.path.join(path, 'jacobs'), jac_count,
+            file = write_sub_intro(os.path.join(path, 'jacobs'), lang, jac_count,
                                     rate_list, rev, pdep, pdep_thd_eff, 
                                     thd, troe, sri,
                                     cheb, dim, plog, smm is None
@@ -2287,8 +2290,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     for k_sp, sp_k in enumerate(specs):
         if lang == do_unroll and k_sp == next_fn_index:
             store_file = file
-            file = write_dy_intros(os.path.join(path, 'jacobs'), jac_count)
-            next_fn_index += min(10, len(specs) - k_sp)
+            file = write_dy_intros(os.path.join(path, 'jacobs'), lang, jac_count)
+            next_fn_index += min(unroll_len, len(specs) - k_sp)
 
         for j_sp, sp_j in enumerate(specs):
             lin_index = k_sp + 1 + (num_s + 1) * (j_sp + 1)

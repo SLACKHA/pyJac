@@ -98,16 +98,14 @@ def barplot(data):
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaulation time per condition (ms / condition)')
 	ax.set_title('CPU Jacobian Evaluation Performance')
-	ax.set_xticks(ind*name_count + (name_count / 2) * width)
+	x_loc = [ind[0] + (name_count / 2) * width]
+	for i in range(1, name_count + 1):
+		x_loc.append(ind[i] + (name_count / 2) * width + 2 * i * width)
+	print x_loc
+	ax.set_xticks(x_loc)
 	ax.set_xticklabels( name_list )
 
-	ax.legend( rects[:len(legend_list)], legend_list )
-	def autolabel(rects):
-	    # attach some text labels
-	    for rect in rects:
-	        height = rect.get_height()
-	        ax.text(rect.get_x()+rect.get_width()/2., 1.05*height, '%d'%int(height),
-	                ha='center', va='bottom')
+	ax.legend(rects[:len(legend_list)], legend_list, loc=0)
 	#autolabel(rects)
 	plt.savefig('cpu.png')
 	plt.close()

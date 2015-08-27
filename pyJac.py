@@ -152,7 +152,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
 
     reac_nu = 0
     prod_nu = 0
-    if rxn.thd_body_eff or rxn.pdep:
+    if rxn.thd_body_eff and not rxn.pdep:
         reac_nu = 1
         if rxn.rev:
             prod_nu = 1

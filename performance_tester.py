@@ -421,6 +421,7 @@ shared = [True, False]
 num_threads = [1]#[1, 12]
 
 repeats = 20
+gpu_repeats = 100
 home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'
@@ -617,7 +618,7 @@ for mechanism in mechanism_list:
                 'sm' if smem else 'nsm')
             data_output = os.path.join(os.getcwd(), data_output)
             todo = check_step_file(data_output, steplist)
-            if all(todo[x] >= repeats for x in todo):
+            if all(todo[x] >= gpu_repeats for x in todo):
                 continue
 
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
@@ -703,7 +704,7 @@ for mechanism in mechanism_list:
 
             with open(data_output, 'a+') as file:
                 for stepsize in todo:
-                    for i in range(repeats - todo[stepsize]):
-                        print(i, "/", repeats - todo[stepsize])
+                    for i in range(gpu_repeats - todo[stepsize]):
+                        print(i, "/", gpu_repeats - todo[stepsize])
                         subprocess.check_call([os.path.join(the_path, 'speedtest'),
                          str(stepsize)], stdout=file)

@@ -288,7 +288,7 @@ def write_c_tester(file, path):
             eval_jacob(0, var_host[tid], y_local, jac);
         }
         double runtime = GetTimer();
-        printf("%d,%d,%.15le\\n", num_odes, runtime);
+        printf("%d,%.15le\\n", num_odes, runtime);
         free(y_host);
         free(var_host);
         return 0;

@@ -26,12 +26,13 @@ for directory in dirs:
 			basename = 'CPU'
 			if '_co_' in filename:
 				basename += ' (cache-opt)'
+			elif '_nco_' not in filename:
+				raise Exception
 			for line in lines:
 				vals = [float(f) for f in line.split(',')]
-				name = basename + ' {:d} thread(s)'.format(int(vals[0]))
-				if not name in data[directory]:
-					data[directory][name] = []
-				data[directory][name].append(vals[2] / vals[1])
+				if not basename in data[directory]:
+					data[directory][basename] = []
+				data[directory][basename].append(vals[2] / vals[1])
 		else:
 			name = 'GPU'
 			if '_co_' in filename:

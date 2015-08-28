@@ -137,331 +137,10 @@ def convert_mech(mech_filename, therm_filename=None):
           )
     return mech_filename
 
-def __write_header_include(file, lang):
-    file.write(
-        '#include <stdlib.h>\n'
-        '#include <stdio.h>\n'
-        '\n'
-        )
-
-    file_list = ['mechanism', 'chem_utils', 'rates', 'dydt', 'jacob']
-    file.write('\n'.join(['#include "header.h"'] +
-                         ['#include "{}.{}"'.format(
-                             the_file, 'h' if lang == 'c' else 'cuh')
-                          for the_file in file_list]) + '\n'
-               )
-
-    if lang == 'cuda':
-        file.write('#include <cuda.h>\n'
-                   '#include <cuda_runtime.h>\n'
-                   '#include <helper_cuda.h>\n'
-                   '#include "launch_bounds.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
-                   '#include "gpu_memory.cuh"\n\n'
-                   )
-
-
-def __write_output_methods(file):
-    file.write(
-        'void write_conc (FILE* fp, const double* conc) {\n'
-        '  fprintf(fp, "%d\\n", NSP);\n'
-        '  for(int i = 0; i < NSP; ++i) {\n'
-        '    fprintf(fp, "%.15e\\n", conc[i]);\n'
-        '  }\n'
-        '}\n'
-        '\n'
-        'void write_rates (FILE* fp, const double* fwd_rates, '
-        'const double* rev_rates,\n'
-        '                  const double* pres_mod, '
-        'const double* sp_rates, const double* dy) {\n'
-        '\n'
-        '  fprintf(fp, "%d\\n", FWD_RATES);\n'
-        '  for(int i = 0; i < FWD_RATES; ++i) {\n'
-        '      fprintf(fp, "%.15e\\n", fwd_rates[i]);\n'
-        '  }\n'
-        '\n'
-        '  fprintf(fp, "%d\\n", REV_RATES);\n'
-        '  for(int i = 0; i < REV_RATES; ++i) {\n'
-        '      fprintf(fp, "%.15e\\n", rev_rates[i]);\n'
-        '  }\n'
-        '\n'
-        '  fprintf(fp, "%d\\n", PRES_MOD_RATES);\n'
-        '  for(int i = 0; i < PRES_MOD_RATES; i++) {\n'
-        '      fprintf(fp, "%.15e\\n", pres_mod[i]);\n'
-        '  }\n'
-        '\n'
-        '  fprintf(fp, "%d\\n", NSP);\n'
-        '  for(int i = 0; i < NSP; i++) {\n'
-        '       fprintf(fp, "%.15e\\n", sp_rates[i]);\n'
-        '  }\n'
-        '\n'
-        '  fprintf(fp, "%d\\n", NN);\n'
-        '  for(int i = 0; i < NN; i++) {\n'
-        '      fprintf(fp, "%.15e\\n", dy[i]);\n'
-        '  }\n'
-        '\n'
-        '  return;\n'
-        '}\n'
-        '\n'
-        '\n'
-        'void write_jacob (FILE* fp, const double* jacob) {\n'
-        '\n'
-        '  fprintf(fp, "%d\\n", NN * NN);\n'
-        '  for (int i = 0; i < NN * NN; ++i) {\n'
-        '      fprintf(fp, "%.15e\\n", jacob[i]);\n'
-        '  }\n'
-        '\n'
-        '  return;\n'
-        '}\n'
-        '\n'
-        '\n'
-        )
-
-
-def __write_condition_reader(file):
-    file.write(
-        '  int buff_size = 1024;\n'
-        '  char buffer [buff_size];\n'
-        '  double data[NN + 1];\n'
-        '  for (int i = 0; i < NN + 1; ++i) {\n'
-        '    if (fgets (buffer, buff_size, fp) != NULL) {\n'
-        '      data[i] = strtod(buffer, NULL);\n'
-        '    }\n'
-        '  }\n'
-        '  fclose (fp);\n'
-        '\n'
-        '  y[0] = data[0];\n'
-        '  pres = data[1];\n'
-        '  for (int i = 0; i < NSP; ++i) {\n'
-        '    y[i + 1] = data[i + 2];\n'
-        '  }\n'
-        )
-
-
-def __write_kernels(file, pmod):
-    file.write(
-        '  __global__\n'
-        'void k_eval_conc(const double* y, double pres, double* conc) {\n'
-        '   double rho, mw_avg;\n'
-        '   eval_conc(y[0], pres, &y[1], &mw_avg, &rho, conc);\n'
-        '}\n\n'
-        )
-    file.write(
-        '  __global__\n'
-        'void k_eval_rxn_rates(const double* y, double pres, '
-        'const double* conc, double* fwd_rates,'
-        ' double* rev_rates) {\n'
-        '   eval_rxn_rates(y[0], pres, conc, fwd_rates, rev_rates);\n'
-        '}\n\n'
-        )
-    if pmod:
-        file.write(
-            '  __global__\n'
-            'void k_get_rxn_pres_mod(const double* y, double pres,'
-            ' const double* conc, double* pres_mod) {\n'
-            '   get_rxn_pres_mod(y[0], pres, conc, pres_mod);\n'
-            '}\n\n'
-        )
-    file.write(
-        '  __global__\n'
-        'void k_eval_spec_rates(const double* fwd_rates,'
-        ' const double* rev_rates, const double* pres_mod'
-        ', double* sp_rates) {\n'
-        '   eval_spec_rates(fwd_rates, rev_rates, pres_mod, sp_rates);\n'
-        '}\n\n'
-        )
-    file.write(
-        '  __global__\n'
-        'void k_eval_dy_dt(double pres, const double* y, double* dy) {\n'
-        '   dydt(0, pres, y, dy);\n'
-        '}\n\n'
-        )
-    file.write(
-        '  __global__\n'
-        'void k_eval_jacob(double pres, const double* y, double* jacob) {\n'
-        '   eval_jacob(0, pres, y, jacob);\n'
-        '}\n\n'
-        )
-
-
-def write_cuda_test(build_dir, rev, pmod):
-    with open(build_dir + os.path.sep + 'test.cu', 'w') as f:
-        __write_header_include(f, 'cuda')
-        f.write(
-            '#ifndef SHARED_SIZE\n'
-            '  #define SHARED_SIZE (0)\n'
-            '#endif\n\n'
-        )
-        __write_output_methods(f)
-        __write_kernels(f, pmod)
-        f.write('int main (void) {\n'
-                '\n'
-                '  FILE* fp = fopen ("test/input.txt", "r");\n'
-                '  double y[NN], pres;\n'
-                '\n'
-                )
-
-        __write_condition_reader(f)
-
-        the_arrays = {}
-        the_arrays['NN'] = ['d_y', 'd_dy']
-        the_arrays['NSP'] = ['d_conc', 'd_spec_rates']
-        the_arrays['FWD_RATES'] = ['d_fwd_rates']
-        the_arrays['REV_RATES'] = ['d_rev_rates']
-        the_arrays['PRES_MOD_RATES'] = ['d_pres_mod_rates']
-        the_arrays['NN * NN'] = ['d_jacob']
-        f.write(
-            '  double conc[NSP] = {0};\n'
-            '  double fwd_rates[FWD_RATES] = {0};\n'
-            )
-        f.write(
-            '  double rev_rates[REV_RATES]= {0};\n' if rev
-            else '  double* rev_rates = 0;\n'
-        )
-        f.write(
-            '  double pres_mod[PRES_MOD_RATES] = {0};\n' if pmod
-            else '  double* pres_mod = 0;\n'
-        )
-        f.write(
-            '  double spec_rates[NSP] = {0};\n'
-            '  double dy[NN] = {0};\n'
-            '  double jacob[NN * NN] = {0};\n'
-            '\n'
-            '  fp = fopen ("test/output.txt", "w");\n'
-            '\n'
-            '  cudaErrorCheck(cudaSetDevice(0));\n'
-            '  cudaErrorCheck(cudaDeviceSetCacheConfig('
-            'cudaFuncCachePreferL1));\n'
-            '  //initialize cuda variables\n'
-        )
-        for size in the_arrays:
-            for array in the_arrays[size]:
-                f.write('  double* {} = 0;\n'.format(array))
-                f.write('  cudaErrorCheck(cudaMalloc((void**)&'
-                        '{}, {} * sizeof(double)));\n'.format(array, size))
-                f.write('  cudaErrorCheck(cudaMemset({}, 0, '.format(array) +
-                        '{} * sizeof(double)));\n'.format(size))
-        f.write(
-            '  //copy mass fractions\n'
-            '  cudaErrorCheck(cudaMemcpy(d_y, y, NN * sizeof(double),'
-            ' cudaMemcpyHostToDevice));\n'
-            '  k_eval_conc<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc);\n'
-            '  k_eval_rxn_rates<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc,'
-            ' d_fwd_rates, d_rev_rates);\n'
-            )
-        if pmod:
-            f.write(
-            '  k_get_rxn_pres_mod<<<1, 1, SHARED_SIZE>>>(d_y, pres, d_conc,'
-            ' d_pres_mod_rates);\n'
-            )
-        f.write(
-            '  k_eval_spec_rates<<<1, 1, SHARED_SIZE>>>'
-            '(d_fwd_rates, d_rev_rates, d_pres_mod_rates, d_spec_rates);\n'
-            '  k_eval_dy_dt<<<1, 1, SHARED_SIZE>>>(pres, d_y, d_dy);\n'
-            '  k_eval_jacob<<<1, 1, SHARED_SIZE>>>(pres, d_y, d_jacob);\n'
-            '  //copy back\n'
-            '  cudaErrorCheck(cudaMemcpy(conc, d_conc,'
-            ' NSP * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  cudaErrorCheck(cudaMemcpy(fwd_rates, d_fwd_rates,'
-            ' FWD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  cudaErrorCheck(cudaMemcpy(rev_rates, d_rev_rates,'
-            ' REV_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  cudaErrorCheck(cudaMemcpy(pres_mod, d_pres_mod_rates,'
-            ' PRES_MOD_RATES * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  cudaErrorCheck(cudaMemcpy(dy, d_dy,'
-            ' NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  cudaErrorCheck(cudaMemcpy(spec_rates, d_spec_rates,'
-            ' NSP * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  cudaErrorCheck(cudaMemcpy(jacob, d_jacob,'
-            ' NN * NN * sizeof(double), cudaMemcpyDeviceToHost));\n'
-            '  //write\n'
-            '  write_conc (fp, conc);\n'
-            '  write_rates (fp, fwd_rates, rev_rates, '
-            'pres_mod, spec_rates, dy);\n'
-            '  write_jacob (fp, jacob);\n'
-            '\n'
-            '  fclose (fp);\n'
-            '\n'
-            '  //finally free cuda variables\n'
-            '  cudaErrorCheck(cudaFree(d_y));\n'
-            '  cudaErrorCheck(cudaFree(d_conc));\n'
-            '  cudaErrorCheck(cudaFree(d_fwd_rates));\n'
-            '  cudaErrorCheck(cudaFree(d_rev_rates));\n'
-            '  cudaErrorCheck(cudaFree(d_pres_mod_rates));\n'
-            '  cudaErrorCheck(cudaFree(d_dy));\n'
-            '  cudaErrorCheck(cudaFree(d_spec_rates));\n'
-            '  cudaErrorCheck(cudaFree(d_jacob));\n'
-            '  return 0;\n'
-            '}\n'
-
-        )
-
-
-def write_c_test(build_dir, pmod):
-    with open(build_dir + os.path.sep + 'test.c', 'w') as f:
-        __write_header_include(f, 'c')
-        __write_output_methods(f)
-        #__write_fd_jacob(f, 'c')
-        f.write('int main (void) {\n'
-                '\n'
-                '  FILE* fp = fopen ("test/input.txt", "r");\n'
-                '  double y[NN], pres;\n'
-                '\n'
-                )
-
-        __write_condition_reader(f)
-
-        f.write(
-            '  double mw_avg;\n'
-            '  double rho;\n'
-            '  double conc[NSP] = {0};\n'
-            '  double fwd_rates[FWD_RATES] = {0};\n'
-            '  double rev_rates[REV_RATES] = {0};\n'
-            '  double sp_rates[NSP] = {0};\n'
-            '  double dy[NN] = {0};\n'
-            '  double jacob[NN * NN] = {0};\n'
-            '\n'
-            '  fp = fopen ("test/output.txt", "w");\n'
-            '\n'
-            '  eval_conc (y[0], pres, &y[1], &mw_avg, &rho, conc);\n'
-            '  write_conc (fp, conc);\n'
-            '\n'
-            '  eval_rxn_rates (y[0], pres, conc, fwd_rates, rev_rates);\n'
-            )
-        if pmod:
-            f.write(
-            '  double pres_mod[PRES_MOD_RATES] = {0};\n'
-            '  get_rxn_pres_mod (y[0], pres, conc, pres_mod);\n'
-            )
-        else:
-            f.write('double* pres_mod = 0;\n')
-        f.write(
-            '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, sp_rates);\n'
-            '  dydt (0.0, pres, y, dy);\n'
-            '  write_rates (fp, fwd_rates, rev_rates, '
-            'pres_mod, sp_rates, dy);\n'
-            '\n'
-            '  eval_jacob (0.0, pres, y, jacob);\n'
-            '  write_jacob (fp, jacob);\n'
-            #'  double fd_jacob[NN * NN] = {0};\n'
-            #'  eval_fd_jacob(0.0, pres, y, fd_jacob);\n'
-            #'  write_jacob(fp, fd_jacob);\n'
-            '\n'
-            '  fclose (fp);\n'
-            '\n'
-            '  return 0;\n'
-            '}\n'
-            '\n'
-        )
-
-    return None
-
 
 class analytic_eval_jacob:
     def __init__(self, pressure):
         self.pres = pressure
-        #self.idx_rev = idx_rev
-        #self.test_dir = test_dir
 
     def dydt(self, y):
         import pyjacob
@@ -470,19 +149,23 @@ class analytic_eval_jacob:
         return dy
 
     def eval_jacobian(self, gas, order):
+        """Evaluate finite difference Jacobian.
+
+        Uses Richardson extrapolation applied to central finite difference to
+        to achieve much higher accuracy.
         """
-        """
-        abs_tol = 1.e-20
-        rel_tol = 1.e-8
+        #abs_tol = 1.e-20
+        #rel_tol = 1.e-8
 
         y = np.hstack((gas.T, gas.Y))
-        step = np.array([1e-15 for x in range(len(y))])
-        step[0] = abs_tol
+        #step = np.array([1e-15 for x in range(len(y))])
+        #step[0] = abs_tol
 
-        jacob = numdifftools.Jacobian(self.dydt, order=order, method='central', full_output=True)
+        jacob = numdifftools.Jacobian(self.dydt, order=order,
+                                      method='central', full_output=True
+                                      )
         arr = jacob(y)
         fd = np.array(arr[0])
-        index = np.array(arr[-1].index)
         return fd.T.flatten()
 
 def __is_pdep(rxn):
@@ -549,9 +232,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         os.remove('pyjacob.so')
     except:
         pass
-    #doesn't work at the moment
     #just run python dydt_setup.py build_ext --inplace
-    subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 'pyjacob_setup.py', 'build_ext', '--inplace'])
+    subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
+                           'pyjacob_setup.py', 'build_ext', '--inplace'
+                           ])
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
@@ -585,14 +269,20 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         except Exception, e:
             # Run PaSR to get data
             print('Could not load saved pasr data... re-running')
-            state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
+            state_data = run_pasr(pasr_input_file, mech_filename,
+                                  pasr_output_file
+                                  )
     else:
         # Run PaSR to get data
-        state_data = run_pasr(pasr_input_file, mech_filename, pasr_output_file)
+        state_data = run_pasr(pasr_input_file, mech_filename,
+                              pasr_output_file
+                              )
     # Reshape array to treat time steps and particles the same
-    state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
-                                    state_data.shape[2]
-                                    )
+    if len(state_data.shape) == 3:
+        state_data = state_data.reshape(state_data.shape[0] *
+                                        state_data.shape[1],
+                                        state_data.shape[2]
+                                        )
     num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)
@@ -623,9 +313,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
 
-        # Run testing executable to get output printed to file
-        #subprocess.check_call(os.path.join(test_dir, 'test'))
-
         gas.TPY = temp, pres, mass_frac
 
         # Derivative source term
@@ -648,7 +335,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             .format(max_err * 100., loc))
 
         #get rates
-        pyjacob.py_eval_rxn_rates(temp, pres, test_conc, test_fwd_rates, test_rev_rates)
+        pyjacob.py_eval_rxn_rates(temp, pres, test_conc,
+                                  test_fwd_rates, test_rev_rates
+                                  )
         pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
 
         # Modify forward and reverse rates with pressure modification
@@ -663,9 +352,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
-        print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
-        print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
-              format(max_err * 100., loc))
+        print('L2 norm error in non-zero forward reaction rates: '
+              '{:.2e}%'.format(err)
+              )
+        print('Max error in non-zero forward reaction rates: '
+              '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+              )
 
         if idx_rev:
             non_zero = np.where(test_rev_rates > 0.)[0]
@@ -676,12 +368,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             max_err = np.max(err)
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
-            print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
-            print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
-                  format(max_err * 100., loc))
+            print('L2 norm error in non-zero reverse reaction rates: '
+                  '{:.2e}%'.format(err)
+                  )
+            print('Max error in non-zero reverse reaction rates: '
+                  '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+                  )
 
         # Species production rates
-        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
+        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates,
+                                   test_pres_mod, test_spec_rates
+                                   )
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -723,7 +420,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
         pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e20)[0]
+        non_zero = np.where(abs(test_jacob) > 1.e-30)[0]
         zero = np.where(test_jacob == 0.)[0]
 
         jacob = ajac.eval_jacobian(gas, 6)
@@ -734,14 +431,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
         print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {} %'.format(max_err * 100., loc))
+              '@ index {}'.format(max_err * 100., loc))
         print('L2 norm of relative error of Jacobian: '
               '{:.2e} %'.format(err))
         err_jac_max[i] = max_err
         err_jac[i] = err
 
         # Thresholded error
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
+        non_zero = np.where(abs(test_jacob) >
+                            np.linalg.norm(test_jacob) / 1.e20
+                            )[0]
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )
@@ -759,28 +458,27 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('L2 norm difference of "zero" Jacobian: '
               '{:.2e}'.format(err))
 
-    plt.semilogy(state_data[:,1], err_jac_norm, 'o')
-    plt.xlabel('Temperature [K]')
-    plt.ylabel('Jacobian matrix norm error')
-    pp = PdfPages('Jacobian_error_norm.pdf')
-    pp.savefig()
-    pp.close()
+    #plt.semilogy(state_data[:,1], err_jac_norm, 'o')
+    #plt.xlabel('Temperature [K]')
+    #plt.ylabel('Jacobian matrix norm error')
+    #pp = PdfPages('Jacobian_error_norm.pdf')
+    #pp.savefig()
+    #pp.close()
 
-    plt.figure()
-    plt.semilogy(state_data[:,1], err_jac, 'o')
-    plt.xlabel('Temperature [K]')
-    plt.ylabel('Jacobian matrix relative error norm [%]')
-    pp = PdfPages('Jacobian_relative_error.pdf')
-    pp.savefig()
-    pp.close()
+    #plt.figure()
+    #plt.semilogy(state_data[:,1], err_jac, 'o')
+    #plt.xlabel('Temperature [K]')
+    #plt.ylabel('Jacobian matrix relative error norm [%]')
+    #pp = PdfPages('Jacobian_relative_error.pdf')
+    #pp.savefig()
+    #pp.close()
 
     # Save all error arrays
     np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm,
               err_jac=err_jac, err_jac_thr=err_jac_thr)
 
-    # Cleanup all files in test directory.
-    test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
-    for f in test_files + ['pyjacob.so', 'pyjacob_wrapper.c']:
+    # Cleanup all compiled files.
+    for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
     os.rmdir(test_dir)
 
@@ -809,7 +507,7 @@ if __name__ == '__main__':
                         type=str,
                         default='out' + os.path.sep,
                         help='The directory the jacob/rates/tester'
-                        ' files will be generated and built in.')
+                             ' files will be generated and built in.')
     parser.add_argument('-m', '--mech',
                         type=str,
                         required=True,
@@ -822,14 +520,14 @@ if __name__ == '__main__':
     parser.add_argument('-i', '--input',
                         type=str,
                         default='pasr_input.yaml',
-                        help='Perfectly stirred reactor input file for '
+                        help='Partially stirred reactor input file for '
                              'generating test data (e.g, pasr_input.yaml)')
     parser.add_argument('-dng', '--do_not_generate',
                         action='store_false',
                         dest='generate_jacob',
                         default=True,
-                        help='Use this option to have the tester utilize'
-                        ' the already existant jacobian files')
+                        help='Use this option to have the tester utilize '
+                             'existing Jacobian files')
     parser.add_argument('-s', '--seed',
                         type=int,
                         default=None,
@@ -838,7 +536,7 @@ if __name__ == '__main__':
                         type=str,
                         default=None,
                         help='An optional saved .npy file that has the '
-                             'resulting pasr data (to speed testing)')
+                             'resulting PaSR data (to speed testing)')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
          args.generate_jacob, args.seed, args.pasr_output

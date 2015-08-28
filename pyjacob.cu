@@ -15,7 +15,7 @@
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 
 __global__
-void k_eval_conc(const int num, const double* T, const double* pres, 
+void k_eval_conc(const size_t num, const double* T, const double* pres, 
 	const double* dMass, size_t pitch1, 
 	double* dMw,
 	double* dRho,
@@ -48,7 +48,7 @@ void k_eval_conc(const int num, const double* T, const double* pres,
 	}
 }
 
-void cu_eval_conc (const int num, const double * T, const double * pres, const double * mass_frac, double * mw_avg, double * rho, double * conc) {
+void cu_eval_conc (const size_t num, const double * T, const double * pres, const double * mass_frac, double * mw_avg, double * rho, double * conc) {
 	int grid_num = num / TARGET_BLOCK_SIZE;
 	//allocate device memory
 	double* dT;
@@ -57,24 +57,25 @@ void cu_eval_conc (const int num, const double * T, const double * pres, const d
 	double* dMw;
 	double* dRho = 0;
 	double* dC = 0;
+	size_t one = 1;
 	size_t pitch1 = 0, pitch2 = 0, pitch3 = 0, pitch4 = 0, pitch5 = 0, pitch6 = 0;
-	cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch1, num * sizeof(double), 1) );
-	cudaErrorCheck( cudaMallocPitch((void**)&dPres, &pitch2, num * sizeof(double), 1) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch1, num * sizeof(double), one) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dPres, &pitch2, num * sizeof(double), one) );
 	cudaErrorCheck( cudaMallocPitch((void**)&dMass, &pitch3, num * sizeof(double), NSP) );
-	cudaErrorCheck( cudaMallocPitch((void**)&dMw, &pitch4, num * sizeof(double), 1) );
-	cudaErrorCheck( cudaMallocPitch((void**)&dRho, &pitch5, num * sizeof(double), 1) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dMw, &pitch4, num * sizeof(double), one) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dRho, &pitch5, num * sizeof(double), one) );
 	cudaErrorCheck( cudaMallocPitch((void**)&dC, &pitch6, num * sizeof(double), NSP) );
 
 	//copy over
-	cudaErrorCheck( cudaMemcpy2D(dT, pitch1, T, num, num * sizeof(double), 1, cudaMemcpyHostToDevice) );
-	cudaErrorCheck( cudaMemcpy2D(dPres, pitch2, pres, num, num * sizeof(double), 1, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(dT, pitch1, T, num, num * sizeof(double), one, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(dPres, pitch2, pres, num, num * sizeof(double), one, cudaMemcpyHostToDevice) );
 	cudaErrorCheck( cudaMemcpy2D(dMass, pitch3, mass_frac, num, num * sizeof(double), NSP, cudaMemcpyHostToDevice) );
 
 	//run
 	k_eval_conc<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, T, pres, dMass, pitch3, dMw, dRho, dC, pitch6);
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(mw_avg, num, dMw, pitch4, num * sizeof(double), 1, cudaMemcpyDeviceToHost) );
-	cudaErrorCheck( cudaMemcpy2D(rho, num, dRho, pitch5, num * sizeof(double), 1, cudaMemcpyDeviceToHost) );
+	cudaErrorCheck( cudaMemcpy2D(mw_avg, num, dMw, pitch4, num * sizeof(double), one, cudaMemcpyDeviceToHost) );
+	cudaErrorCheck( cudaMemcpy2D(rho, num, dRho, pitch5, num * sizeof(double), one, cudaMemcpyDeviceToHost) );
 	cudaErrorCheck( cudaMemcpy2D(conc, num, dC, pitch6, num * sizeof(double), NSP, cudaMemcpyDeviceToHost) );
 
 	cudaErrorCheck( cudaFree(dT) );
@@ -87,7 +88,7 @@ void cu_eval_conc (const int num, const double * T, const double * pres, const d
 
 
 __global__
-void k_eval_rxn_rates(const int num, const double* Tarr, const double* presarr, const double * C,
+void k_eval_rxn_rates(const size_t num, const double* T, const double* pres, const double * C,
 	size_t pitch1, double * fwd_rxn_rates, size_t pitch2, double * rev_rxn_rates,
 	size_t pitch3)
 {
@@ -125,7 +126,7 @@ void k_eval_rxn_rates(const int num, const double* Tarr, const double* presarr, 
 	} 
 }
 
-void cu_eval_rxn_rates (const int num, const double* T, const double* pres, const double * C, double * fwd_rxn_rates, double * rev_rxn_rates) {
+void cu_eval_rxn_rates (const size_t num, const double* T, const double* pres, const double * C, double * fwd_rxn_rates, double * rev_rxn_rates) {
 	int grid_num = num / TARGET_BLOCK_SIZE;
 	//allocate device memory
 	double* dC;
@@ -133,6 +134,7 @@ void cu_eval_rxn_rates (const int num, const double* T, const double* pres, cons
 	double* dRev = 0;
 	double* dT;
 	double* dP;
+	size_t one = 1;
 	size_t pitch1 = 0, pitch2 = 0, pitch3 = 0, pitch4 = 0, pitch5;
 	cudaErrorCheck( cudaMallocPitch((void**)&dC, &pitch1, num * sizeof(double), NSP) );
 	cudaErrorCheck( cudaMallocPitch((void**)&dFwd, &pitch2, num * sizeof(double), FWD_RATES) );
@@ -140,13 +142,13 @@ void cu_eval_rxn_rates (const int num, const double* T, const double* pres, cons
 		cudaErrorCheck( cudaMallocPitch((void**)&dRev, &pitch3, num * sizeof(double), REV_RATES) );
 	#endif
 
-	cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch4, num * sizeof(double), 1) );
-	cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch5, num * sizeof(double), 1) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch4, num * sizeof(double), one) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch5, num * sizeof(double), one) );
 
 	//copy over
 	cudaErrorCheck( cudaMemcpy2D(dC, pitch1, C, num, num * sizeof(double), NSP, cudaMemcpyHostToDevice) );
-	cudaErrorCheck( cudaMemcpy2D(dT, pitch4, T, num, num * sizeof(double), 1, cudaMemcpyHostToDevice) );
-	cudaErrorCheck( cudaMemcpy2D(dP, pitch5, pres, num, num * sizeof(double), 1, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(dT, pitch4, T, num, num * sizeof(double), one, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(dP, pitch5, pres, num, num * sizeof(double), one, cudaMemcpyHostToDevice) );
 
 	//run
 	k_eval_rxn_rates<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, T, dP, dC, pitch1, dFwd, pitch2, dRev, pitch3);
@@ -168,7 +170,7 @@ void cu_eval_rxn_rates (const int num, const double* T, const double* pres, cons
 }
 
 __global__
-void k_get_rxn_pres_mod(const int num, const double* T, const double* pres, const double * C, size_t pitch1, double * pres_mod,
+void k_get_rxn_pres_mod(const size_t num, const double* T, const double* pres, const double * C, size_t pitch1, double * pres_mod,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -191,7 +193,7 @@ void k_get_rxn_pres_mod(const int num, const double* T, const double* pres, cons
 	}	
 }
 
-void cu_get_rxn_pres_mod (const int num, const double* T, const double* pres, const double * C, double * pres_mod) {
+void cu_get_rxn_pres_mod (const size_t num, const double* T, const double* pres, const double * C, double * pres_mod) {
 	#if PRES_MOD_RATES != 0
 		int grid_num = num / TARGET_BLOCK_SIZE;
 		//allocate device memory
@@ -199,22 +201,23 @@ void cu_get_rxn_pres_mod (const int num, const double* T, const double* pres, co
 		double* dPres;
 		double* dT;
 		double* dP;
-		size_t pitch1, pitch2, pitch3, pitch4
+		size_t pitch1, pitch2, pitch3, pitch4;
+		size_t one = 1;
 		
 		cudaErrorCheck( cudaMallocPitch((void**)&dC, &pitch1, num * sizeof(double), NSP) );
 		cudaErrorCheck( cudaMallocPitch((void**)&dPres, &pitch2, num * sizeof(double), PRES_MOD_RATES) );
-		cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch3, num * sizeof(double), 1) );
-		cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch4, num * sizeof(double), 1) );
+		cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch3, num * sizeof(double), one) );
+		cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch4, num * sizeof(double), one) );
 
 		//copy over
 		cudaErrorCheck( cudaMemcpy2D(dC, pitch1, C, num, num * sizeof(double), NSP, cudaMemcpyHostToDevice) );
-		cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch3, num * sizeof(double), 1) );
-		cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch4, num * sizeof(double), 1) );
+		cudaErrorCheck( cudaMallocPitch((void**)&dT, &pitch3, num * sizeof(double), one) );
+		cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch4, num * sizeof(double), one) );
 		//run
 		k_get_rxn_pres_mod<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dT, dP, dC, pitch1, dPres, pitch2);
 
 		//copy back
-		cudaErrorCheck( cudaMemcpy2D(pres_mod, num, dPres, pitch2, num * sizeof(double), PRES_MOD_RATES, cudaMemcpyHostToDevice) );
+		cudaErrorCheck( cudaMemcpy2D(pres_mod, num, dPres, pitch2, num * sizeof(double), PRES_MOD_RATES, cudaMemcpyDeviceToHost) );
 	
 		cudaErrorCheck(cudaFree(dC));
 		cudaErrorCheck(cudaFree(dPres));
@@ -225,7 +228,7 @@ void cu_get_rxn_pres_mod (const int num, const double* T, const double* pres, co
 
 
 __global__
-void k_eval_spec_rates(const int num, const double* fwd_rates, size_t pitch1, const double * rev_rates,
+void k_eval_spec_rates(const size_t num, const double* fwd_rates, size_t pitch1, const double * rev_rates,
 	size_t pitch2, const double* pres_mod, size_t pitch3, double* spec_rates, size_t pitch4)
 {
 	if (T_ID < num)
@@ -270,7 +273,7 @@ void k_eval_spec_rates(const int num, const double* fwd_rates, size_t pitch1, co
 	}	
 }
 
-void cu_eval_spec_rates (const int num, const double * fwd_rates, const double * rev_rates, const double * pres_mod, double * spec_rates) {
+void cu_eval_spec_rates (const size_t num, const double * fwd_rates, const double * rev_rates, const double * pres_mod, double * spec_rates) {
 	int grid_num = num / TARGET_BLOCK_SIZE;
 	//allocate device memory
 	double* dFwd;
@@ -296,7 +299,7 @@ void cu_eval_spec_rates (const int num, const double * fwd_rates, const double *
 	k_eval_spec_rates<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dFwd, pitch1, dRev, pitch2, dPres, pitch3, dSpec, pitch4);
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(spec_rates, num, dSpec, pitch4, num * sizeof(double), NSP, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(spec_rates, num, dSpec, pitch4, num * sizeof(double), NSP, cudaMemcpyDeviceToHost) );
 
 	cudaErrorCheck(cudaFree(dFwd));
 	#if REV_RATES != 0
@@ -312,7 +315,7 @@ void cu_eval_spec_rates (const int num, const double * fwd_rates, const double *
 
 
 __global__
-void k_dydt(const int num, const double* pres, const double* y, size_t pitch1, double * dy,
+void k_dydt(const size_t num, const double* pres, const double* y, size_t pitch1, double * dy,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -335,26 +338,27 @@ void k_dydt(const int num, const double* pres, const double* y, size_t pitch1, d
 	}	
 }
 
-void cu_dydt (const int num, const double* pres, const double* y, double* dy) {
+void cu_dydt (const size_t num, const double* pres, const double* y, double* dy) {
 	int grid_num = num / TARGET_BLOCK_SIZE;
 	//allocate device memory
 	double* dY;
 	double* dDy;
 	double* dP;
 	size_t pitch1, pitch2, pitch3;
+	size_t one = 1;
 	
 	cudaErrorCheck( cudaMallocPitch((void**)&dY, &pitch1, num * sizeof(double), NN) );
 	cudaErrorCheck( cudaMemcpy2D(dY, pitch1, y, num, num * sizeof(double), NN, cudaMemcpyHostToDevice) );
 
 	cudaErrorCheck( cudaMallocPitch((void**)&dDy, &pitch2, num * sizeof(double), NN) );
-	cudaErrorCheck( cudaMallocPitch((void**)&P, &pitch3, num * sizeof(double), 1) );
-	cudaErrorCheck( cudaMemcpy2D(dP, pitch3, pres, num, num * sizeof(double), 1, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch3, num * sizeof(double), one) );
+	cudaErrorCheck( cudaMemcpy2D(dP, pitch3, pres, num, num * sizeof(double), one, cudaMemcpyHostToDevice) );
 
 	//run
 	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dP, dY, pitch1, dDy, pitch2);
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(dy, num, dDy, pitch2, num * sizeof(double), NN, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(dy, num, dDy, pitch2, num * sizeof(double), NN, cudaMemcpyDeviceToHost) );
 
 	cudaErrorCheck(cudaFree(dY));
 	cudaErrorCheck(cudaFree(dDy));
@@ -362,7 +366,7 @@ void cu_dydt (const int num, const double* pres, const double* y, double* dy) {
 }
 
 __global__
-void k_eval_jacob(const int num, const double* pres, const double* y, size_t pitch1, double * jac,
+void k_eval_jacob(const size_t num, const double* pres, const double* y, size_t pitch1, double * jac,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -385,19 +389,20 @@ void k_eval_jacob(const int num, const double* pres, const double* y, size_t pit
 	}	
 }
 
-void cu_eval_jacob (const int num, const double t, const double pres, const double* y, double* jac) {
+void cu_eval_jacob (const size_t num, const double* pres, const double* y, double* jac) {
 	int grid_num = num / TARGET_BLOCK_SIZE;
 	//allocate device memory
 	double* dY;
 	double* dJac;
 	double* dP;
 	size_t pitch1, pitch2, pitch3;
+	size_t one = 1;
 	
 	cudaErrorCheck( cudaMallocPitch((void**)&dY, &pitch1, num * sizeof(double), NN) );
 	cudaErrorCheck( cudaMemcpy2D(dY, pitch1, y, num, num * sizeof(double), NN, cudaMemcpyHostToDevice) );
 
-	cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch3, num * sizeof(double), 1) );
-	cudaErrorCheck( cudaMemcpy2D(dP, pitch3, pres, num, num * sizeof(double), 1, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dP, &pitch3, num * sizeof(double), one) );
+	cudaErrorCheck( cudaMemcpy2D(dP, pitch3, dP, num, num * sizeof(double), one, cudaMemcpyHostToDevice) );
 
 
 	cudaErrorCheck( cudaMallocPitch((void**)&dJac, &pitch2, num * sizeof(double), NN * NN) );
@@ -405,7 +410,7 @@ void cu_eval_jacob (const int num, const double t, const double pres, const doub
 	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dP, dY, pitch1, dJac, pitch2);
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(jac, num, dJac, pitch2, num * sizeof(double), NN * NN, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(jac, num, dJac, pitch2, num * sizeof(double), NN * NN, cudaMemcpyDeviceToHost) );
 
 	cudaErrorCheck(cudaFree(dY));
 	cudaErrorCheck(cudaFree(dJac));

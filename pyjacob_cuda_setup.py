@@ -111,7 +111,6 @@ def customize_linker_for_nvcc(self):
         self.linker_so = [x for x in self.linker_so if not '-pthread' in x]
         self.linker_exe = [x for x in self.linker_exe if not '-pthread' in x]
         self.compiler_cxx = [x for x in self.compiler_cxx if not '-pthread' in x]
-        print (self.compiler_cxx, self.linker_so, self.linker_exe)
         
         super(target_desc, objects, output_filename, output_dir,
             libraries, library_dirs, runtime_library_dirs, export_symbols,

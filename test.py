@@ -560,7 +560,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     #write and compile the dydt python wrapper
     try:
         os.remove('pyjacob.so')
-        os.remove('cu_pyjacob.so')
+        #os.remove('cu_pyjacob.so')
     except:
         pass
     #doesn't work at the moment
@@ -622,160 +622,308 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
 
-    for i, state in enumerate(state_data):
-        temp = state[1]
-        pres = state[2]
-        mass_frac = state[3:]
-
-        ajac = analytic_eval_jacob(pres, lang)
-
+    if lang == 'cuda':
+        cuda_state = state_data[:, 1:]
+        num_cond = cuda_state.shape[0]
         #init vectors
-        test_conc = np.zeros(gas.n_species)
-        test_fwd_rates = np.zeros(gas.n_reactions)
-        test_rev_rates = np.zeros(len(idx_rev))
-        test_pres_mod = np.zeros(len(idx_pmod))
-        test_spec_rates = np.zeros(gas.n_species)
-        test_dydt = np.zeros(gas.n_species + 1)
-        test_jacob = np.zeros((gas.n_species + 1) * (gas.n_species + 1))
+        test_conc = np.zeros((num_cond, gas.n_species))
+        test_fwd_rates = np.zeros((num_cond,gas.n_reactions))
+        test_rev_rates = np.zeros((num_cond,len(idx_rev)))
+        test_pres_mod = np.zeros((num_cond,len(idx_pmod)))
+        test_spec_rates = np.zeros((num_cond,gas.n_species))
+        test_dydt = np.zeros((num_cond,gas.n_species + 1))
+        test_jacob = np.zeros((num_cond,(gas.n_species + 1) * (gas.n_species + 1)))
 
-        print()
-        print('Testing condition {} / {}'.format(i + 1, num_trials))
+        mw_avg = np.zeros(num_cond)
+        rho = np.zeros(num_cond)
+        temp = cuda_state[:, 0]
+        pres = cuda_state[:, 1]
+        mass_frac = cuda_state[:, 2:]
+        y_dummy = cuda_state[:, [0] + range(2, cuda_state.shape[1])]
 
-        # Run testing executable to get output printed to file
-        #subprocess.check_call(os.path.join(test_dir, 'test'))
-
-        gas.TPY = temp, pres, mass_frac
-
-        # Derivative source term
-        ode = ReactorConstPres(gas)
-
-        mw_avg = 0
-        rho = 0
-        #get conc
         pyjacob.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
-
-        non_zero = np.where(test_conc > 0.)[0]
-        err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
-                  gas.concentrations[non_zero]
-                  )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err) * 100.
-        print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
-        print('Max error in non-zero concentration: {:.2e} % @ species {}'
-            .format(max_err * 100., loc))
-
-        #get rates
         pyjacob.py_eval_rxn_rates(temp, pres, test_conc, test_fwd_rates, test_rev_rates)
         pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
+        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
+        pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
+        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
 
         # Modify forward and reverse rates with pressure modification
-        test_fwd_rates[idx_pmod] *= test_pres_mod
-        test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
+        test_fwd_rates[:, idx_pmod] *= test_pres_mod
+        test_rev_rates[:, idx_rev_pmod] *= test_pres_mod[:, idx_pmod_rev]
 
-        non_zero = np.where(test_fwd_rates > 0.)[0]
-        err = abs((test_fwd_rates[non_zero] -
-                  gas.forward_rates_of_progress[non_zero]) /
-                  gas.forward_rates_of_progress[non_zero]
-                  )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err) * 100.
-        print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
-        print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
-              format(max_err * 100., loc))
+        for i, state in enumerate(state_data):
+            temp = state[1]
+            pres = state[2]
+            mass_frac = state[3:]
 
-        if idx_rev:
-            non_zero = np.where(test_rev_rates > 0.)[0]
-            err = abs((test_rev_rates[non_zero] -
-                      (gas.reverse_rates_of_progress[idx_rev])[non_zero]) /
-                      (gas.reverse_rates_of_progress[idx_rev])[non_zero]
+            ajac = analytic_eval_jacob(pres, lang)
+            non_zero = np.where(test_conc[i, :] > 0.)[0]
+            err = abs((test_conc[:, non_zero] - gas.concentrations[non_zero]) /
+                      gas.concentrations[non_zero]
                       )
             max_err = np.max(err)
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
-            print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
-            print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
+            print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
+            print('Max error in non-zero concentration: {:.2e} % @ species {}'
+                .format(max_err * 100., loc))
+
+            non_zero = np.where(test_fwd_rates[i, :] > 0.)[0]
+            err = abs((test_fwd_rates[i, non_zero] -
+                      gas.forward_rates_of_progress[non_zero]) /
+                      gas.forward_rates_of_progress[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
+            print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
                   format(max_err * 100., loc))
 
-        # Species production rates
-        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
-        non_zero = np.where(test_spec_rates != 0.)[0]
-        zero = np.where(test_spec_rates == 0.)[0]
-        err = abs((test_spec_rates[non_zero] -
-                  gas.net_production_rates[non_zero]) /
-                  gas.net_production_rates[non_zero]
+            if idx_rev:
+                non_zero = np.where(test_rev_rates[i, :] > 0.)[0]
+                err = abs((test_rev_rates[i, non_zero] -
+                          (gas.reverse_rates_of_progress[idx_rev])[non_zero]) /
+                          (gas.reverse_rates_of_progress[idx_rev])[non_zero]
+                          )
+                max_err = np.max(err)
+                loc = non_zero[np.argmax(err)]
+                err = np.linalg.norm(err) * 100.
+                print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
+                print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
+                      format(max_err * 100., loc))
+
+            # Species production rates
+            non_zero = np.where(test_spec_rates[i, :] != 0.)[0]
+            zero = np.where(test_spec_rates[i, :] == 0.)[0]
+            err = abs((test_spec_rates[o, non_zero] -
+                      gas.net_production_rates[non_zero]) /
+                      gas.net_production_rates[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm relative error of non-zero net production rates: '
+                  '{:.2e} %'.format(err)
                   )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err) * 100.
-        print('L2 norm relative error of non-zero net production rates: '
-              '{:.2e} %'.format(err)
-              )
-        print('Max error in non-zero net production rates: {:.2e}% '
-              '@ species {}'.format(max_err * 100., loc)
-              )
-        err = np.linalg.norm(
-            test_spec_rates[zero] - gas.net_production_rates[zero])
-        print(
-            'L2 norm difference of "zero" net production rates: {:.2e}'
-            .format(err))
-
-        y_dummy = np.hstack((temp, mass_frac))
-        pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
-        non_zero = np.where(test_dydt != 0.)[0]
-        zero = np.where(test_dydt == 0.)[0]
-        err = abs((test_dydt[non_zero] - ode()[non_zero]) /
-                  ode()[non_zero]
+            print('Max error in non-zero net production rates: {:.2e}% '
+                  '@ species {}'.format(max_err * 100., loc)
                   )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err) * 100.
-        err_dydt[i] = err
-        print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
-        print('Max error in non-zero dydt: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc)
-              )
-        err = np.linalg.norm(test_dydt[zero] - ode()[zero])
-        err_dydt_zero[i] = err
-        print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
+            err = np.linalg.norm(
+                test_spec_rates[zero] - gas.net_production_rates[zero])
+            print(
+                'L2 norm difference of "zero" net production rates: {:.2e}'
+                .format(err))
 
-        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e20)[0]
-        zero = np.where(test_jacob == 0.)[0]
-
-        jacob = ajac.eval_jacobian(gas, 6)
-        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                  jacob[non_zero]
+            non_zero = np.where(test_dydt[i, :] != 0.)[0]
+            zero = np.where(test_dydt[i, :] == 0.)[0]
+            err = abs((test_dydt[i, non_zero] - ode()[non_zero]) /
+                      ode()[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            err_dydt[i] = err
+            print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
+            print('Max error in non-zero dydt: {:.2e}% '
+                  '@ index {}'.format(max_err * 100., loc)
                   )
-        max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
-        err = np.linalg.norm(err) * 100.
-        print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {} %'.format(max_err * 100., loc))
-        print('L2 norm of relative error of Jacobian: '
-              '{:.2e} %'.format(err))
-        err_jac_max[i] = max_err
-        err_jac[i] = err
+            err = np.linalg.norm(test_dydt[i, zero] - ode()[zero])
+            err_dydt_zero[i] = err
+            print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        # Thresholded error
-        non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
-        err = abs((test_jacob[non_zero] - jacob[non_zero]) /
-                  jacob[non_zero]
+            non_zero = np.where(abs(test_jacob[i, :]) > np.linalg.norm(test_jacob[i, :]) / 1.e20)[0]
+            zero = np.where(test_jacob[i, :] == 0.)[0]
+
+            jacob = ajac.eval_jacobian(gas, 6)
+            err = abs((test_jacob[i, non_zero] - jacob[i, non_zero]) /
+                      jacob[i, non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('Max error in non-zero Jacobian: {:.2e}% '
+                  '@ index {} %'.format(max_err * 100., loc))
+            print('L2 norm of relative error of Jacobian: '
+                  '{:.2e} %'.format(err))
+            err_jac_max[i] = max_err
+            err_jac[i] = err
+
+            # Thresholded error
+            non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
+            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                      jacob[non_zero]
+                      )
+            err = np.linalg.norm(err) * 100.
+            err_jac_thr[i] = err
+            print('L2 norm of thresholded relative error of Jacobian: '
+                  '{:.2e} %'.format(err))
+
+            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
+            err_jac_norm[i] = err
+            print('L2 norm error of Jacobian: {:.2e}'.format(err))
+
+            err = np.linalg.norm(test_jacob[zero] - jacob[zero])
+            err_jac_zero[i] = err
+            print('L2 norm difference of "zero" Jacobian: '
+                  '{:.2e}'.format(err))
+
+    else:
+        for i, state in enumerate(state_data):
+            temp = state[1]
+            pres = state[2]
+            mass_frac = state[3:]
+
+            ajac = analytic_eval_jacob(pres, lang)
+
+            #init vectors
+            test_conc = np.zeros(gas.n_species)
+            test_fwd_rates = np.zeros(gas.n_reactions)
+            test_rev_rates = np.zeros(len(idx_rev))
+            test_pres_mod = np.zeros(len(idx_pmod))
+            test_spec_rates = np.zeros(gas.n_species)
+            test_dydt = np.zeros(gas.n_species + 1)
+            test_jacob = np.zeros((gas.n_species + 1) * (gas.n_species + 1))
+
+            print()
+            print('Testing condition {} / {}'.format(i + 1, num_trials))
+
+            # Run testing executable to get output printed to file
+            #subprocess.check_call(os.path.join(test_dir, 'test'))
+
+            gas.TPY = temp, pres, mass_frac
+
+            # Derivative source term
+            ode = ReactorConstPres(gas)
+
+            mw_avg = 0
+            rho = 0
+            #get conc
+            pyjacob.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
+
+            non_zero = np.where(test_conc > 0.)[0]
+            err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
+                      gas.concentrations[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
+            print('Max error in non-zero concentration: {:.2e} % @ species {}'
+                .format(max_err * 100., loc))
+
+            #get rates
+            pyjacob.py_eval_rxn_rates(temp, pres, test_conc, test_fwd_rates, test_rev_rates)
+            pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
+
+            # Modify forward and reverse rates with pressure modification
+            test_fwd_rates[idx_pmod] *= test_pres_mod
+            test_rev_rates[idx_rev_pmod] *= test_pres_mod[idx_pmod_rev]
+
+            non_zero = np.where(test_fwd_rates > 0.)[0]
+            err = abs((test_fwd_rates[non_zero] -
+                      gas.forward_rates_of_progress[non_zero]) /
+                      gas.forward_rates_of_progress[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm error in non-zero forward reaction rates: {:.2e}%'.format(err))
+            print('Max error in non-zero forward reaction rates: {:.2e}% @ reaction {}'.
+                  format(max_err * 100., loc))
+
+            if idx_rev:
+                non_zero = np.where(test_rev_rates > 0.)[0]
+                err = abs((test_rev_rates[non_zero] -
+                          (gas.reverse_rates_of_progress[idx_rev])[non_zero]) /
+                          (gas.reverse_rates_of_progress[idx_rev])[non_zero]
+                          )
+                max_err = np.max(err)
+                loc = non_zero[np.argmax(err)]
+                err = np.linalg.norm(err) * 100.
+                print('L2 norm error in non-zero reverse reaction rates: {:.2e}%'.format(err))
+                print('Max error in non-zero reverse reaction rates: {:.2e}% @ reaction {}'.
+                      format(max_err * 100., loc))
+
+            # Species production rates
+            pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
+            non_zero = np.where(test_spec_rates != 0.)[0]
+            zero = np.where(test_spec_rates == 0.)[0]
+            err = abs((test_spec_rates[non_zero] -
+                      gas.net_production_rates[non_zero]) /
+                      gas.net_production_rates[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm relative error of non-zero net production rates: '
+                  '{:.2e} %'.format(err)
                   )
-        err = np.linalg.norm(err) * 100.
-        err_jac_thr[i] = err
-        print('L2 norm of thresholded relative error of Jacobian: '
-              '{:.2e} %'.format(err))
+            print('Max error in non-zero net production rates: {:.2e}% '
+                  '@ species {}'.format(max_err * 100., loc)
+                  )
+            err = np.linalg.norm(
+                test_spec_rates[zero] - gas.net_production_rates[zero])
+            print(
+                'L2 norm difference of "zero" net production rates: {:.2e}'
+                .format(err))
 
-        err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
-        err_jac_norm[i] = err
-        print('L2 norm error of Jacobian: {:.2e}'.format(err))
+            y_dummy = np.hstack((temp, mass_frac))
+            pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
+            non_zero = np.where(test_dydt != 0.)[0]
+            zero = np.where(test_dydt == 0.)[0]
+            err = abs((test_dydt[non_zero] - ode()[non_zero]) /
+                      ode()[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            err_dydt[i] = err
+            print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
+            print('Max error in non-zero dydt: {:.2e}% '
+                  '@ index {}'.format(max_err * 100., loc)
+                  )
+            err = np.linalg.norm(test_dydt[zero] - ode()[zero])
+            err_dydt_zero[i] = err
+            print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        err = np.linalg.norm(test_jacob[zero] - jacob[zero])
-        err_jac_zero[i] = err
-        print('L2 norm difference of "zero" Jacobian: '
-              '{:.2e}'.format(err))
+            pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
+            non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e20)[0]
+            zero = np.where(test_jacob == 0.)[0]
+
+            jacob = ajac.eval_jacobian(gas, 6)
+            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                      jacob[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('Max error in non-zero Jacobian: {:.2e}% '
+                  '@ index {} %'.format(max_err * 100., loc))
+            print('L2 norm of relative error of Jacobian: '
+                  '{:.2e} %'.format(err))
+            err_jac_max[i] = max_err
+            err_jac[i] = err
+
+            # Thresholded error
+            non_zero = np.where(abs(test_jacob) > np.linalg.norm(test_jacob) / 1.e8)[0]
+            err = abs((test_jacob[non_zero] - jacob[non_zero]) /
+                      jacob[non_zero]
+                      )
+            err = np.linalg.norm(err) * 100.
+            err_jac_thr[i] = err
+            print('L2 norm of thresholded relative error of Jacobian: '
+                  '{:.2e} %'.format(err))
+
+            err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
+            err_jac_norm[i] = err
+            print('L2 norm error of Jacobian: {:.2e}'.format(err))
+
+            err = np.linalg.norm(test_jacob[zero] - jacob[zero])
+            err_jac_zero[i] = err
+            print('L2 norm difference of "zero" Jacobian: '
+                  '{:.2e}'.format(err))
 
     plt.semilogy(state_data[:,1], err_jac_norm, 'o')
     plt.xlabel('Temperature [K]')

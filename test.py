@@ -458,15 +458,17 @@ def write_c_test(build_dir, pmod):
 
 
 class analytic_eval_jacob:
-    def __init__(self, pressure):
+    def __init__(self, pressure, lang):
         self.pres = pressure
-        #self.idx_rev = idx_rev
-        #self.test_dir = test_dir
+        if lang == 'cuda':
+            import cu_pyjacob as pyjacob
+        else:
+            import pyjacob
+        self.jac = pyjacob
 
     def dydt(self, y):
-        import pyjacob
         dy = np.zeros_like(y)
-        pyjacob.py_dydt(0, self.pres, y, dy)
+        self.jac.py_dydt(0, self.pres, y, dy)
         return dy
 
     def eval_jacobian(self, gas, order):
@@ -531,6 +533,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
 
+    #remove the old jaclist
+    try:
+        os.remove('out/jacobs/jac_list_c')
+    except:
+        pass
+    try:
+        os.remove('out/jacobs/jac_list_cuda')
+    except:
+        pass
+
+
     if generate_jacob:
         # Create Jacobian and supporting source code files
         create_jacobian(lang, mech_filename, therm_name=therm_filename,
@@ -547,11 +560,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     #write and compile the dydt python wrapper
     try:
         os.remove('pyjacob.so')
+        os.remove('cu_pyjacob.so')
     except:
         pass
     #doesn't work at the moment
     #just run python dydt_setup.py build_ext --inplace
-    subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 'pyjacob_setup.py', 'build_ext', '--inplace'])
+    if lang == 'cuda':
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 'pyjacob_cuda_setup.py', 'build_ext', '--inplace'])
+        import cu_pyjacob as pyjacob
+    else:
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 'pyjacob_setup.py', 'build_ext', '--inplace'])
+        import pyjacob
 
     #get the cantera object
     gas = ct.Solution(mech_filename)
@@ -604,12 +623,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_zero = np.zeros(num_trials)
 
     for i, state in enumerate(state_data):
-        import pyjacob
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
 
-        ajac = analytic_eval_jacob(pres)
+        ajac = analytic_eval_jacob(pres, lang)
 
         #init vectors
         test_conc = np.zeros(gas.n_species)

@@ -38,7 +38,8 @@ def locate_cuda():
 
     cudaconfig = {'home':home, 'nvcc':nvcc,
                   'include': pjoin(home, 'include'),
-                  'lib64': pjoin(home, 'lib64')}
+                  'lib64': pjoin(home, 'lib64'),
+                  'samples': pjoin(home, 'samples', 'common', 'inc')}
     for k, v in cudaconfig.iteritems():
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
@@ -54,11 +55,11 @@ except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
 sources = ['pyjacob_cuda_wrapper.pyx',
+           'out/chem_utils.cu',
            'out/dydt.cu', 
            'out/rxn_rates.cu',
            'out/rxn_rates_pres_mod.cu',
            'out/spec_rates.cu',
-           'out/chem_utils.cu',
            'out/jacob.cu'
            ]
 includes = ['out/']
@@ -71,9 +72,8 @@ if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_cuda'):
     sources += ['out/jacobs/' + f for f in files]
     includes += ['out/jacobs/']
 
-
 ext = Extension('cu_pyjacob',
-                sources=['src/manager.cu', 'wrapper.pyx'],
+                sources=sources,
                 library_dirs=[CUDA['lib64']],
                 libraries=['cudart'],
                 language='c++',
@@ -83,7 +83,7 @@ ext = Extension('cu_pyjacob',
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
                                     'nvcc': ['-arch=sm_20', '--ptxas-options=-v', '-c', '--compiler-options', "'-fPIC'"]},
-                include_dirs = [numpy_include, CUDA['include'], includes])
+                include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes)
 
 
 
@@ -114,6 +114,7 @@ def customize_compiler_for_nvcc(self):
             # use only a subset of the extra_postargs, which are 1-1 translated
             # from the extra_compile_args in the Extension class
             postargs = extra_postargs['nvcc']
+            cc_args[-1] = '-dc'
         else:
             postargs = extra_postargs['gcc']
 

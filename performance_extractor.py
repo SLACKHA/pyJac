@@ -32,7 +32,7 @@ for directory in dirs:
 				vals = [float(f) for f in line.split(',')]
 				if not basename in data[directory]:
 					data[directory][basename] = []
-				data[directory][basename].append(vals[2] / vals[1])
+				data[directory][basename].append(vals[1] / vals[0])
 		else:
 			name = 'GPU'
 			if '_co_' in filename:

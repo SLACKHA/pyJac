@@ -250,6 +250,85 @@ def write_c_reader(file):
     """
     )
 
+def write_tc_tester(file, path, mechfile, thermofile):
+    the_file = path + "data.bin"
+    if thermofile == None:
+        thermofile = mechfile
+    file.write(
+    """
+
+    #include <stdio.h>
+    #include "header.h"
+    #include "timer.h"
+
+    void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
+   
+
+    void chemjac(double t, double* y, double *jac) 
+    {
+
+      int i, j, iJac, Nv, Ns ;
+      double sumY ;
+      unsigned int useJacAnl = 1 ; /* use analytic Jacobian */
+
+      TC_getJacTYN ( y, NSP, jac, useJacAnl ) ;
+    }
+
+    int main(int argc, char *argv[])
+    {
+    """
+    )
+    file.write("""
+      char *mechfile = {};
+      char *thermofile = {};
+      """.format(mechfile, thermofile)
+        )
+    file.write(
+    """
+      int num_odes = 1;
+      if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
+      {
+          exit(-1);
+      }
+
+      double* y_host;
+      double* var_host;
+      """
+    )
+    file.write(
+    """
+      read_initial_conditions("{}", num_odes, &y_host, &var_host);
+    """.format(the_file))
+    file.write(
+    """
+
+      /* Initialize TC library */
+      TC_initChem( mechfile, thermofile, (int) withTab, 1.0) ; 
+      
+      StartTimer();
+
+
+      for(int tid = 0; tid < num_odes; ++tid)
+      {
+          TC_setThermoPres(var_host[i]) ;
+          double y_local[NN];
+          double jac[NN * NN] = {0};
+          #pragma unroll
+          for (int i = 0; i < NN; ++i)
+          {
+              y_local[i] = y_host[tid + i * num_odes];
+          }
+          chemjac(0, y_local, jac);
+      }
+      double runtime = GetTimer();
+      printf("%d,%.15le\\n", num_odes, runtime);
+      free(y_host);
+      free(var_host);
+      return 0;
+    }
+    """
+    )
+
 def write_c_tester(file, path):
     the_file = path + "data.bin"
     file.write(
@@ -708,3 +787,63 @@ for mechanism in mechanism_list:
                         print(i, "/", gpu_repeats - todo[stepsize])
                         subprocess.check_call([os.path.join(the_path, 'speedtest'),
                          str(stepsize)], stdout=file)
+    #finally tc tester
+    data_output = 'tchem_output.txt'
+    data_output = os.path.join(os.getcwd(), data_output)
+    num_completed = check_file(data_output)
+    #now we need to write the reader and the tester
+    with open(build_dir + 'read_initial_conditions.c', 'w') as file:
+        write_c_reader(file)
+
+    with open(build_dir + 'tc_test.c', 'w') as file:
+        write_tc_tester(file, the_path, mechanism['name'], mechanism['thermo'])
+
+    write_timer()
+
+    # Compile generated source code
+    files = ['tc_test', 'read_initial_conditions']
+
+    i_dirs = [build_dir]
+
+    def compiler(f):
+        args = [cmd_compile['c']]
+        args.extend(flags['c'])
+        include = ['-I./' + d for d in i_dirs]
+        args.extend(include)
+        args.extend([
+            '-I.' + os.path.sep + build_dir,
+            '-c', os.path.join(build_dir, f + utils.file_ext['c']),
+            '-o', os.path.join(test_dir, getf(f) + '.o')
+            ])
+        args = [val for val in args if val.strip()]
+        try:
+            subprocess.check_call(args)
+        except subprocess.CalledProcessError:
+            print('Error: compilation failed for ' + f + utils.file_ext['c'])
+            return -1
+        return 0
+
+    pool = multiprocessing.Pool()
+    results = pool.map(compiler, files)
+    pool.close()
+    pool.join()
+    if any(r == -1 for r in results):
+        sys.exit(-1)
+
+    # Link into executable
+    args = [cmd_compile['c']]
+    args.extend([os.path.join(test_dir, f+ '.o') for f in files])
+    args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+    args.extend(libs['c'] + ['-L~/TChem_v0.2/lib', '-ltchem'])
+
+    try:
+        subprocess.check_call(args)
+    except subprocess.CalledProcessError:
+        print('Error: linking of test program failed.')
+        sys.exit(1)
+
+    with open(data_output, 'a+') as file:
+        for i in range(repeats - num_completed):
+            print(i, '/', repeats - num_completed)
+            subprocess.check_call([os.path.join(the_path, 'speedtest'),
+             str(num_conditions)], stdout=file)

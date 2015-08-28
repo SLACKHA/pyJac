@@ -10,6 +10,7 @@ import sys
 import subprocess
 from argparse import ArgumentParser
 import multiprocessing
+import shutil
 
 # More Python 2 compatibility
 if sys.version_info.major == 3:
@@ -319,6 +320,10 @@ def write_tc_tester(file, path, mechfile, thermofile):
               y_local[i] = y_host[tid + i * num_odes];
           }
           chemjac(0, y_local, jac);
+          for (int i = 0; i < NN * NN; ++i)
+          {
+              printf("%.15le\\n", jac[i]);
+          }
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);
@@ -486,7 +491,7 @@ flags = dict(c=['-std=c99', '-O3', '-mtune=native',
 libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             cuda=['-arch=sm_20'])
 
-mechanism_dir = '~/mechs/'
+mechanism_dir = '/home/nick/mechs/'
 mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2therm.dat'},
                   {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
                   {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}]
@@ -839,6 +844,11 @@ for mechanism in mechanism_list:
     except subprocess.CalledProcessError:
         print('Error: linking of test program failed.')
         sys.exit(1)
+
+    #copy periodic table and mechanisms in
+    shutil.copy(os.path.join(home, 'TChem_v0.2', 'data', 'periodictable.dat'), os.path.join(test_dir, 'periodictable.dat'))
+    shutil.copy(os.path.join(mechanism_dir, mechanism['chemkin']), mechanism['chemkin'])
+    shutil.copy(os.path.join(mechanism_dir, mechanism['thermo']), mechanism['thermo'])
 
     with open(data_output, 'a+') as file:
         for i in range(repeats - num_completed):

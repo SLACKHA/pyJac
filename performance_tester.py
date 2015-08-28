@@ -279,8 +279,8 @@ def write_tc_tester(file, path, mechfile, thermofile):
     """
     )
     file.write("""
-      char *mechfile = {};
-      char *thermofile = {};
+      char *mechfile = "{}";
+      char *thermofile = "{}";
       """.format(mechfile, thermofile)
         )
     file.write(
@@ -303,14 +303,14 @@ def write_tc_tester(file, path, mechfile, thermofile):
     """
 
       /* Initialize TC library */
-      TC_initChem( mechfile, thermofile, (int) withTab, 1.0) ; 
+      TC_initChem( mechfile, thermofile, (int) 0, 1.0) ; 
       
       StartTimer();
 
 
       for(int tid = 0; tid < num_odes; ++tid)
       {
-          TC_setThermoPres(var_host[i]) ;
+          TC_setThermoPres(var_host[tid]) ;
           double y_local[NN];
           double jac[NN * NN] = {0};
           #pragma unroll
@@ -799,7 +799,7 @@ for mechanism in mechanism_list:
     write_timer()
 
     # Compile generated source code
-    files = ['tc_test', 'read_initial_conditions']
+    files = ['tc_test', 'read_initial_conditions', 'mechanism', 'mass_mole']
 
     i_dirs = [build_dir]
 
@@ -832,7 +832,7 @@ for mechanism in mechanism_list:
     args = [cmd_compile['c']]
     args.extend([os.path.join(test_dir, f+ '.o') for f in files])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-    args.extend(libs['c'] + ['-L~/TChem_v0.2/lib', '-ltchem'])
+    args.extend(libs['c'] + ['-L' + os.path.join(home, 'TChem_v0.2', 'lib'), '-ltchem'])
 
     try:
         subprocess.check_call(args)

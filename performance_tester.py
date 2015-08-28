@@ -487,9 +487,9 @@ libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             cuda=['-arch=sm_20'])
 
 mechanism_dir = '~/mechs/'
-mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml'},
-                  {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml'},
-                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml'}]
+mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2.dat'},
+                  {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
+                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}]
 
 pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]
@@ -794,7 +794,7 @@ for mechanism in mechanism_list:
         write_c_reader(file)
 
     with open(build_dir + 'tc_test.c', 'w') as file:
-        write_tc_tester(file, the_path, mechanism['name'], mechanism['thermo'])
+        write_tc_tester(file, the_path, mechanism['chemkin'], mechanism['thermo'])
 
     write_timer()
 
@@ -811,7 +811,7 @@ for mechanism in mechanism_list:
         args.extend([
             '-I.' + os.path.sep + build_dir,
             '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-            '-o', os.path.join(test_dir, getf(f) + '.o')
+            '-o', os.path.join(test_dir, f + '.o')
             ])
         args = [val for val in args if val.strip()]
         try:

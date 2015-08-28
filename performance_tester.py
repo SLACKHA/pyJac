@@ -223,14 +223,14 @@ def write_c_reader(file):
         //apply mask if necessary
         apply_mask(&buffer[3]);
         //put into y_host
-        (*y_host)[i] = buffer[1];
+        (*y_host)[i * NN] = buffer[1];
 #ifdef CONP
         (*variable_host)[i] = buffer[2];
 #elif CONV
         double pres = buffer[2];
 #endif
         for (int j = 2; j <= NN; j++)
-            (*y_host)[i + (j - 1) * NUM] = buffer[j + 1];
+            (*y_host)[i * NN + j - 1] = buffer[j + 1];
 
         // if constant volume, calculate density
 #ifdef CONV
@@ -239,7 +239,7 @@ def write_c_reader(file):
 
         for (int j = 1; j < NN; ++j)
         {
-            Yi[j - 1] = (*y_host)[i + j * NUM];
+            Yi[j - 1] = (*y_host)[i * NN + j];
         }
 
         mass2mole (Yi, Xi);
@@ -306,20 +306,12 @@ def write_tc_tester(file, path, mechfile, thermofile):
       /* Initialize TC library */
       TC_initChem( mechfile, thermofile, (int) 0, 1.0) ; 
       
+      double jac[NN * NN] = {0};
       StartTimer();
-
-
       for(int tid = 0; tid < num_odes; ++tid)
       {
           TC_setThermoPres(var_host[tid]) ;
-          double y_local[NN];
-          double jac[NN * NN] = {0};
-          #pragma unroll
-          for (int i = 0; i < NN; ++i)
-          {
-              y_local[i] = y_host[tid + i * num_odes];
-          }
-          chemjac(0, y_local, jac);
+          chemjac(0, &y_host[i * NN], jac);
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);
@@ -355,17 +347,11 @@ def write_c_tester(file, path):
         """.format(the_file))
     file.write(
     """
+        double jac[NN * NN] = {0};
         StartTimer();
         for(int tid = 0; tid < num_odes; ++tid)
         {
-            double y_local[NN];
-            double jac[NN * NN] = {0};
-            #pragma unroll
-            for (int i = 0; i < NN; ++i)
-            {
-                y_local[i] = y_host[tid + i * num_odes];
-            }
-            eval_jacob(0, var_host[tid], y_local, jac);
+            eval_jacob(0, var_host[tid], &y_host[i * NN], jac);
         }
         double runtime = GetTimer();
         printf("%d,%.15le\\n", num_odes, runtime);

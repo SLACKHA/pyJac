@@ -167,8 +167,8 @@ def write_cuda_reader(file):
 #elif CONV
         double pres = buffer[2];
 #endif
-        for (int j = 2; j <= NN; j++)
-            (*y_host)[i + (j - 1) * padded] = buffer[j + 1];
+        for (int j = 0; j < NSP; j++)
+            (*y_host)[i + (j + 1) * padded] = buffer[j + 3];
 
         // if constant volume, calculate density
 #ifdef CONV
@@ -229,8 +229,10 @@ def write_c_reader(file):
 #elif CONV
         double pres = buffer[2];
 #endif
-        for (int j = 2; j <= NN; j++)
-            (*y_host)[i * NN + j - 1] = buffer[j + 1];
+        for (int j = 0; j < NSP; j++)
+        {
+            (*y_host)[i * NN + j + 1] = buffer[j + 3];
+        }
 
         // if constant volume, calculate density
 #ifdef CONV
@@ -311,7 +313,7 @@ def write_tc_tester(file, path, mechfile, thermofile):
       for(int tid = 0; tid < num_odes; ++tid)
       {
           TC_setThermoPres(var_host[tid]) ;
-          chemjac(0, &y_host[i * NN], jac);
+          chemjac(0, &y_host[tid * NN], jac);
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);
@@ -351,7 +353,7 @@ def write_c_tester(file, path):
         StartTimer();
         for(int tid = 0; tid < num_odes; ++tid)
         {
-            eval_jacob(0, var_host[tid], &y_host[i * NN], jac);
+            eval_jacob(0, var_host[tid], &y_host[tid * NN], jac);
         }
         double runtime = GetTimer();
         printf("%d,%.15le\\n", num_odes, runtime);

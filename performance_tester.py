@@ -320,10 +320,6 @@ def write_tc_tester(file, path, mechfile, thermofile):
               y_local[i] = y_host[tid + i * num_odes];
           }
           chemjac(0, y_local, jac);
-          for (int i = 0; i < NN * NN; ++i)
-          {
-              printf("%.15le\\n", jac[i]);
-          }
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);
@@ -846,7 +842,7 @@ for mechanism in mechanism_list:
         sys.exit(1)
 
     #copy periodic table and mechanisms in
-    shutil.copy(os.path.join(home, 'TChem_v0.2', 'data', 'periodictable.dat'), os.path.join(test_dir, 'periodictable.dat'))
+    shutil.copy(os.path.join(home, 'TChem_v0.2', 'data', 'periodictable.dat'), 'periodictable.dat')
     shutil.copy(os.path.join(mechanism_dir, mechanism['chemkin']), mechanism['chemkin'])
     shutil.copy(os.path.join(mechanism_dir, mechanism['thermo']), mechanism['thermo'])
 

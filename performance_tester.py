@@ -279,8 +279,8 @@ def write_tc_tester(file, path, mechfile, thermofile):
     """
     )
     file.write("""
-      char *mechfile = "{}";
-      char *thermofile = "{}";
+      char mechfile[100] = "{}";
+      char thermofile[100] = "{}";
       """.format(mechfile, thermofile)
         )
     file.write(
@@ -487,7 +487,7 @@ libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             cuda=['-arch=sm_20'])
 
 mechanism_dir = '~/mechs/'
-mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2.dat'},
+mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2therm.dat'},
                   {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
                   {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}]
 

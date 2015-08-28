@@ -537,15 +537,13 @@ def check_file(filename):
         with open(filename, 'r') as file:
             lines = [line.strip() for line in file.readlines()]
         num_completed = 0
-        if 'gpu' in filename:
-            to_find = 2
-        else:
-            to_find = 3
+        to_find = 2
         for line in lines:
             try:
                 vals = line.split(',')
                 if len(vals) == to_find:
-                    vals = [float(v) for v in vals]
+                    i = int(vals[0])
+                    f = float(vals[1])
                     num_completed += 1
             except:
                 pass

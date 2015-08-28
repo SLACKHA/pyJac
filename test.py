@@ -477,9 +477,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm,
               err_jac=err_jac, err_jac_thr=err_jac_thr)
 
-    # Cleanup all files in test directory.
-    test_files = [os.path.join(test_dir, f) for f in os.listdir(test_dir)]
-    for f in test_files + ['pyjacob.so', 'pyjacob_wrapper.c']:
+    # Cleanup all compiled files.
+    for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
     os.rmdir(test_dir)
 

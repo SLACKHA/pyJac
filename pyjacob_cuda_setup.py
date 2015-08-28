@@ -55,6 +55,7 @@ except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
 sources = ['pyjacob_cuda_wrapper.pyx',
+           'pyjacob.cu',
            'out/chem_utils.cu',
            'out/dydt.cu', 
            'out/rxn_rates.cu',
@@ -62,7 +63,7 @@ sources = ['pyjacob_cuda_wrapper.pyx',
            'out/spec_rates.cu',
            'out/jacob.cu'
            ]
-includes = ['out/']
+includes = ['out/', './']
 
 # Look for file with list of Jacobian files
 if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_cuda'):
@@ -77,14 +78,52 @@ ext = Extension('cu_pyjacob',
                 library_dirs=[CUDA['lib64']],
                 libraries=['cudart'],
                 language='c++',
-                runtime_library_dirs=[CUDA['lib64']],
+                #runtime_library_dirs=[CUDA['lib64']],
                 # this syntax is specific to this build system
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
                                     'nvcc': ['-arch=sm_20', '--ptxas-options=-v', '-c', '--compiler-options', "'-fPIC'"]},
-                include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes)
+                include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes
+                )
 
+
+def customize_linker_for_nvcc(self):
+    """
+    same as below, but link w/ NVCC
+    """
+
+    #save references
+    default_linker_so = self.linker_so[:]
+    default_link_exe = self.linker_exe[:]
+    default_compiler_cxx = self.compiler_cxx[:]
+    super = self.link
+
+    def link(target_desc, objects,
+             output_filename, output_dir=None, libraries=None,
+             library_dirs=None, runtime_library_dirs=None,
+             export_symbols=None, debug=0, extra_preargs=None,
+             extra_postargs=None, build_temp=None, target_lang=None):
+
+        self.linker_so = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.linker_so]
+        self.linker_exe = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.linker_exe]
+        self.compiler_cxx = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.compiler_cxx]
+        self.linker_so = [x for x in self.linker_so if not '-pthread' in x]
+        self.linker_exe = [x for x in self.linker_exe if not '-pthread' in x]
+        self.compiler_cxx = [x for x in self.compiler_cxx if not '-pthread' in x]
+        print (self.compiler_cxx, self.linker_so, self.linker_exe)
+        
+        super(target_desc, objects, output_filename, output_dir,
+            libraries, library_dirs, runtime_library_dirs, export_symbols,
+            debug, extra_preargs, extra_postargs, build_temp, target_lang)
+
+        #restore
+        self.linker_so = default_linker_so[:]
+        self.linker_exe  = default_link_exe[:]
+        self.compiler_cxx = default_compiler_cxx[:]
+
+    self.link = link
+    
 
 
 def customize_compiler_for_nvcc(self):
@@ -130,6 +169,7 @@ def customize_compiler_for_nvcc(self):
 class custom_build_ext(build_ext):
     def build_extensions(self):
         customize_compiler_for_nvcc(self.compiler)
+        customize_linker_for_nvcc(self.compiler)
         build_ext.build_extensions(self)
 
 setup(name='cu_pyjacob',

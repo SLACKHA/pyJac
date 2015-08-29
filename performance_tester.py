@@ -265,17 +265,6 @@ def write_tc_tester(file, path, mechfile, thermofile):
     #include "timer.h"
 
     void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
-   
-
-    void chemjac(double t, double* y, double *jac) 
-    {
-
-      int i, j, iJac, Nv, Ns ;
-      double sumY ;
-      unsigned int useJacAnl = 1 ; /* use analytic Jacobian */
-
-      TC_getJacTYN ( y, NSP, jac, useJacAnl ) ;
-    }
 
     int main(int argc, char *argv[])
     {
@@ -306,14 +295,17 @@ def write_tc_tester(file, path, mechfile, thermofile):
     """
 
       /* Initialize TC library */
-      TC_initChem( mechfile, thermofile, (int) 0, 1.0) ; 
+      int withtab = 0;
+      TC_initChem( mechfile, thermofile, withtab, 1.0) ; 
+
+      unsigned int useJacAnl = 1 ; /* use analytic Jacobian */
       
       double jac[NN * NN] = {0};
       StartTimer();
       for(int tid = 0; tid < num_odes; ++tid)
       {
           TC_setThermoPres(var_host[tid]) ;
-          chemjac(0, &y_host[tid * NN], jac);
+          TC_getJacTYN ( &y_host[tid * NN], NSP, jac, useJacAnl ) ;
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);

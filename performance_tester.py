@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import sys
 import subprocess
+import re
 from argparse import ArgumentParser
 import multiprocessing
 import shutil
@@ -17,6 +18,8 @@ if sys.version_info.major == 3:
     from itertools import zip
 elif sys.version_info.major == 2:
     from itertools import izip as zip
+
+from itertools import permutations, product, chain
 
 # Related modules
 import numpy as np
@@ -450,42 +453,6 @@ def write_cuda_tester(file, path):
     """
     )
 
-# Compiler based on language
-cmd_compile = dict(c='gcc',
-                   cuda='nvcc',
-                   fortran='gfortran'
-                   )
-
-# Flags based on language
-flags = dict(c=['-std=c99', '-O3', '-mtune=native',
-                '-fopenmp'],
-             cuda=['-O3', '-arch=sm_20',
-                   '-I/usr/local/cuda/include/',
-                   '-I/usr/local/cuda/samples/common/inc/',
-                   '-dc'])
-
-libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
-            cuda=['-arch=sm_20'])
-
-mechanism_dir = '/home/nick/mechs/'
-mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2therm.dat'},
-                  {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
-                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}]
-
-pressure_list = [1, 10, 25]
-temp_list = [400, 600, 800]
-#premixed = ['premixed', 'non-premixed']
-
-cache_opt = [True, False]
-shared = [True, False]
-num_threads = [1]#[1, 12]
-
-repeats = 20
-gpu_repeats = 100
-home = os.getcwd() + os.path.sep
-build_dir = 'out/'
-test_dir = 'test/'
-
 def check_step_file(filename, steplist):
     #checks file for existing data
     #and returns number of runs left to do 
@@ -493,7 +460,7 @@ def check_step_file(filename, steplist):
     runs = {}
     for step in steplist:
         runs[step] = 0
-    if not 'gpu' in filename:
+    if not 'nvcc' in filename:
         raise Exception
 
     try:
@@ -533,6 +500,60 @@ def check_file(filename):
         return 0
 
 
+# Compiler based on language
+cmd_compile = dict(c='gcc',
+                   icc='icc',
+                   cuda='nvcc'
+                   )
+
+# Flags based on language
+flags = dict(c=['-std=c99', '-O3', '-mtune=native',
+                '-fopenmp'],
+             icc=['-std=c99', '-O3', '-xhost', '-fp-model precise', '-ipo'],
+             cuda=['-O3', '-arch=sm_20',
+                   '-I/usr/local/cuda/include/',
+                   '-I/usr/local/cuda/samples/common/inc/',
+                   '-dc'])
+
+libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
+            cuda=['-arch=sm_20'],
+            icc=['-m64', '-ipo', '-lm', '-std=c99'])
+
+mechanism_dir = '/home/nick/mechs/'
+mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2therm.dat'},
+                  {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
+                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}]
+
+pressure_list = [1, 10, 25]
+temp_list = [400, 600, 800]
+#premixed = ['premixed', 'non-premixed']
+
+cache_opt = [False]#[True, False]
+shared = [True, False]
+num_threads = [1]#[1, 12]
+
+repeats = 10
+gpu_repeats = 100
+home = os.getcwd() + os.path.sep
+build_dir = 'out/'
+test_dir = 'test/'
+
+
+version = {}
+#get version info
+for lang in cmd_compile:
+    with open('temp', 'w') as file:
+        subprocess.check_call([cmd_compile[lang], '--version'], stdout=file)
+    with open('temp', 'r') as file:
+        lines = [line.strip() for line in file.readlines()]
+        for line in lines:
+            v = re.search(r'(\d+\.\d+\.(?:\d+))', line)
+            if v:
+                v = v.group(1)
+                break
+    version[lang] = v.replace('.', '')
+    os.remove('temp')
+
 #make sure the performance directory exists
 subprocess.check_call(['mkdir', '-p', 'performance'])
 
@@ -568,11 +589,12 @@ for mechanism in mechanism_list:
             index += 1
 
     the_path = os.path.join(os.getcwd(), test_dir)
+
     #do c
     #next we need to start writing the jacobians
     for opt in cache_opt:
         for thread in num_threads:
-            data_output = 'cpu_{}_{}_output.txt'.format('co' if opt else 'nco', thread)
+            data_output = 'gcc_{}_{}_output.txt'.format(version['c'], 'co' if opt else 'nco')
             data_output = os.path.join(os.getcwd(), data_output)
             num_completed = check_file(data_output)
             if num_completed >= repeats:
@@ -672,7 +694,7 @@ for mechanism in mechanism_list:
             if step_size / 2 != num_conditions:
                 steplist.append(num_conditions)
 
-            data_output = 'gpu_{}_{}_output_steps.txt'.format('co' if opt else 'nco',
+            data_output = 'nvcc_{}_{}_{}_output_steps.txt'.format(version['cuda'], 'co' if opt else 'nco',
                 'sm' if smem else 'nsm')
             data_output = os.path.join(os.getcwd(), data_output)
             todo = check_step_file(data_output, steplist)
@@ -831,3 +853,93 @@ for mechanism in mechanism_list:
             print(i, '/', repeats - num_completed)
             subprocess.check_call([os.path.join(the_path, 'speedtest'),
              str(num_conditions)], stdout=file)
+
+    #do icc
+    #next we need to start writing the jacobians
+    for opt in cache_opt:
+        for thread in num_threads:
+            data_output = 'icc_{}_{}_output.txt'.format(version['icc'], 'co' if opt else 'nco')
+            data_output = os.path.join(os.getcwd(), data_output)
+            num_completed = check_file(data_output)
+            if num_completed >= repeats:
+                continue
+            create_jacobian('c', mechanism_dir+mechanism['mech'],
+                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
+
+            #now we need to write the reader and the tester
+            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
+                write_c_reader(file)
+
+            with open(build_dir + 'test.c', 'w') as file:
+                write_c_tester(file, the_path)
+
+            write_timer()
+
+            #get the cantera object
+            gas = ct.Solution(mechanism_dir+mechanism['mech'])
+            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+
+            # Compile generated source code
+            files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
+                     'rxn_rates', 'test', 'read_initial_conditions',
+                     'mechanism', 'mass_mole'
+                     ]
+            if pmod:
+                files += ['rxn_rates_pres_mod']
+
+            i_dirs = [build_dir]
+            try:
+                with open('out/jacobs/jac_list_c') as file:
+                    vals = file.readline().strip().split(' ')
+                    vals = ['jacobs/' + f[:f.index('.c')] for f in vals]
+                    files = vals + files
+                    i_dirs.append('out/jacobs/')
+            except:
+                pass
+
+
+            getf = lambda x: x[x.index('/') + 1:] \
+                                if 'jacobs/' in x else x
+
+            def compiler(f):
+                args = [cmd_compile['icc']]
+                args.extend(flags['icc'])
+                include = ['-I./' + d for d in i_dirs]
+                args.extend(include)
+                args.extend([
+                    '-I.' + os.path.sep + build_dir,
+                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
+                    '-o', os.path.join(test_dir, getf(f) + '.o')
+                    ])
+                args = [val for val in args if val.strip()]
+                try:
+                    subprocess.check_call(args)
+                except subprocess.CalledProcessError:
+                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
+                    return -1
+                return 0
+
+            pool = multiprocessing.Pool()
+            results = pool.map(compiler, files)
+            pool.close()
+            pool.join()
+            if any(r == -1 for r in results):
+                sys.exit(-1)
+
+            # Link into executable
+            args = [cmd_compile['icc']]
+            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
+            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+            args.extend(libs['icc'])
+
+            try:
+                subprocess.check_call(args)
+            except subprocess.CalledProcessError:
+                print('Error: linking of test program failed.')
+                sys.exit(1)
+
+            with open(data_output, 'a+') as file:
+                for i in range(repeats - num_completed):
+                    print(i, '/', repeats - num_completed)
+                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
+                     str(num_conditions)], stdout=file)

@@ -21,18 +21,27 @@ for directory in dirs:
 	for filename in files:
 		with open(filename) as file:
 			lines = [l.strip() for l in file.readlines() if l.strip()]
-		if 'cpu' in filename:
+		if 'cpu' in filename or 'tchem' in filename:
 			#format is num_threads, num_odes, runtime (ms)
-			basename = 'CPU'
 			if '_co_' in filename:
-				basename += ' (cache-opt)'
-			elif '_nco_' not in filename:
-				raise Exception
+				continue
+			if 'tchem' in filename:
+				basename = 'TChem'
+			else:
+				basename = 'pyJac'
+			#basename = 'CPU'
+			#if '_co_' in filename:
+			#	basename += ' (cache-opt)'
+			#elif '_nco_' not in filename:
+			#	raise Exception
 			for line in lines:
-				vals = [float(f) for f in line.split(',')]
+				try:
+					vals = [float(f) for f in line.split(',')]
+				except:
+					continue
 				if not basename in data[directory]:
 					data[directory][basename] = []
-				data[directory][basename].append(vals[2] / vals[1])
+				data[directory][basename].append(vals[1] / vals[0])
 		else:
 			name = 'GPU'
 			if '_co_' in filename:
@@ -47,7 +56,10 @@ for directory in dirs:
 				name += ')'
 			#format is num_odes, runtime (ms)
 			for line in lines:
-				vals = [float(f) for f in line.split(',')]
+				try:
+					vals = [float(f) for f in line.split(',')]
+				except:
+					continue
 				if not name in step_data[directory]:
 					step_data[directory][name] = {}
 				if not vals[0] in step_data[directory][name]:

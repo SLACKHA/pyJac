@@ -21,7 +21,7 @@ for directory in dirs:
 	for filename in files:
 		with open(filename) as file:
 			lines = [l.strip() for l in file.readlines() if l.strip()]
-		if 'cpu' in filename or 'tchem' in filename:
+		if 'nvcc' not in filename:
 			#format is num_threads, num_odes, runtime (ms)
 			if '_co_' in filename:
 				continue
@@ -29,11 +29,8 @@ for directory in dirs:
 				basename = 'TChem'
 			else:
 				basename = 'pyJac'
-			#basename = 'CPU'
-			#if '_co_' in filename:
-			#	basename += ' (cache-opt)'
-			#elif '_nco_' not in filename:
-			#	raise Exception
+			vals = filename.split('_')
+			basename += '(' + vals[0] + ' - ' + vals[1][0] + '.' + vals[1][1] + '.' + vals[1][2:] + ')' 
 			for line in lines:
 				try:
 					vals = [float(f) for f in line.split(',')]
@@ -71,6 +68,11 @@ for thedir in data:
 		avg = np.mean(data[thedir][name])
 		dev = np.std(data[thedir][name])
 		data[thedir][name] = (avg, dev)
+	print(thedir)
+	for name in data[thedir]:
+		if name == 'TChem': continue
+		print(name)
+		print(data[thedir]['TChem'][0] / data[thedir][name][0])
 
 gpu_data = {}
 for thedir in step_data:

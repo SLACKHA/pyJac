@@ -100,6 +100,9 @@ key = {'H2':r'H$_2$/CO',
 	   'GRI':'GRI',
 	   'USC':'USC'}
 
+ls = ''
+ms = 'o'
+
 def barplot(data):
 	N = len(data)
 
@@ -127,7 +130,7 @@ def barplot(data):
 		count += 1
 
 	# add some text for labels, title and axes ticks
-	ax.set_ylabel('Mean evaulation time per condition (ms / condition)')
+	ax.set_ylabel('Mean evaulation time per condition (ms)')
 	ax.set_title('Jacobian Evaluation Performance')
 	x_loc = [ind[0] + (name_count / 2) * width]
 	for i in range(1, N):
@@ -154,7 +157,7 @@ def barplot(data):
 			thez.append(z)
 		miny = they[0] if miny is None else they[0] if they[0] < miny else miny
 		thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
-		plt.errorbar(thex, they, thez, label=name)
+		plt.errorbar(thex, they, thez, linestyle=ls, marker=ms, label=name)
 
 	#draw a slope line
 	x = np.arange(thex[-1] + 1)
@@ -173,9 +176,9 @@ def barplot(data):
 	ax.set_ylim(ymin=miny)
 	ax.legend(loc=0)
 	# add some text for labels, title and axes ticks
-	ax.set_ylabel('Mean evaluation time / condition (ms / condition)')
+	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-	ax.set_xlabel('Number of Reactions in mechanism')
+	ax.set_xlabel('Number of reactions in mechanism')
 	#ax.legend(loc=0)
 	plt.savefig('cpu_norm.pdf')
 	plt.close()	
@@ -190,7 +193,7 @@ def line_plot(data):
 			order = list(order)
 			y = np.array(y)[order]
 			z = np.array(z)[order]
-			plt.errorbar(x, y, yerr=z, label=key[thedir])
+			plt.errorbar(x, y, yerr=z, label=key[thedir], linestyle=ls, marker=ms)
 
 	ax.set_yscale('log')
 	# add some text for labels, title and axes ticks
@@ -213,7 +216,7 @@ def line_plot(data):
 			thez.append(z)
 
 	thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
-	plt.errorbar(thex, they, thez)
+	plt.errorbar(thex, they, thez, linestyle=ls, marker=ms)
 
 	#draw a slope line
 	x = np.arange(thex[-1] + 1)
@@ -233,7 +236,7 @@ def line_plot(data):
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaluation time / condition (ms / condition)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-	ax.set_xlabel('Number of Reactions in mechanism')
+	ax.set_xlabel('Number of reactions in mechanism')
 	#ax.legend(loc=0)
 	plt.savefig('gpu_norm.pdf')
 	plt.close()	

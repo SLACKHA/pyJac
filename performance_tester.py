@@ -582,8 +582,14 @@ for mechanism in mechanism_list:
             state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
                                 state_data.shape[2]
                                 )
+
             with open("test/data.bin", "ab") as file:
                 state_data.tofile(file)
+            if mechanism[name] == 'USC':
+                for i in range(4):
+                    with open("test/data.bin", "ab") as file:
+                        state_data.tofile(file)
+                    num_conditions += state_data.shape[0]
             num_conditions += state_data.shape[0]
             print(num_conditions)
             index += 1

@@ -101,9 +101,11 @@ key = {'H2':r'H$_2$/CO',
 	   'USC':'USC'}
 
 ls = ''
-ms = {'H2', 'o',
-	  'GRI', '>',
-	  'USC', 's'}
+ms = {'H2':'o',
+	  'GRI':'>',
+	  'USC':'s',
+	  'pyJac':'o',
+	  'TChem':'>'}
 
 def barplot(data):
 	N = len(data)
@@ -141,7 +143,7 @@ def barplot(data):
 	ax.set_xticklabels( name_list )
 	ax.set_yscale('log')
 
-	ax.legend(rects[:len(legend_list)], legend_list, loc=0)
+	ax.legend(rects[:len(legend_list)], legend_list, loc=0, numpoints=1)
 	#autolabel(rects)
 	plt.savefig('cpu.pdf')
 	plt.close()
@@ -176,7 +178,7 @@ def barplot(data):
 
 	ax.set_yscale('log')
 	ax.set_ylim(ymin=miny*0.95)
-	ax.legend(loc=0)
+	ax.legend(loc=0, numpoints=1)
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
@@ -204,7 +206,7 @@ def line_plot(data):
 	ax.set_ylabel('Mean evaluation time (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
 	ax.set_xlabel('Number of conditions')
-	ax.legend(loc=0)
+	ax.legend(loc=0, numpoints=1)
 	plt.savefig('gpu.pdf')
 	plt.close()
 
@@ -241,7 +243,7 @@ def line_plot(data):
 	ax.set_ylabel('Mean evaluation time / condition (ms / condition)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
 	ax.set_xlabel('Number of reactions in mechanism')
-	ax.legend(loc=0)
+	ax.legend(loc=0, numpoints=1)
 	plt.savefig('gpu_norm.pdf')
 	plt.close()	
 

@@ -182,7 +182,7 @@ def barplot(data):
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-	ax.set_xlabel('Number of reactions in mechanism')
+	ax.set_xlabel('Number of reactions')
 	#ax.legend(loc=0)
 	plt.savefig('cpu_norm.pdf')
 	plt.close()	
@@ -242,7 +242,7 @@ def line_plot(data):
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-	ax.set_xlabel('Number of reactions in mechanism')
+	ax.set_xlabel('Number of reactions')
 	ax.legend(loc=0, numpoints=1)
 	plt.savefig('gpu_norm.pdf')
 	plt.close()	

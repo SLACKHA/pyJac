@@ -157,7 +157,7 @@ def barplot(data):
 			thez.append(z)
 		miny = they[0] if miny is None else they[0] if they[0] < miny else miny
 		thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
-		plt.plot(thex, they, thez, linestyle=ls, marker=ms, label=name)
+		plt.plot(thex, they, linestyle=ls, marker=ms, label=name)
 
 	#draw a slope line
 	x = np.arange(thex[-1] + 1)
@@ -193,7 +193,7 @@ def line_plot(data):
 			order = list(order)
 			y = np.array(y)[order]
 			z = np.array(z)[order]
-			plt.plot(x, y, yerr=z, label=key[thedir], linestyle=ls, marker=ms)
+			plt.plot(x, y, label=key[thedir], linestyle=ls, marker=ms)
 
 	ax.set_yscale('log')
 	# add some text for labels, title and axes ticks
@@ -216,7 +216,7 @@ def line_plot(data):
 			thez.append(z)
 
 	thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
-	plt.plot(thex, they, thez, linestyle=ls, marker=ms, label='pyJac')
+	plt.plot(thex, they, linestyle=ls, marker=ms, label='pyJac')
 
 	#draw a slope line
 	x = np.arange(thex[-1] + 1)

@@ -240,7 +240,7 @@ def line_plot(data):
 	ax.set_yscale('log')
 	ax.set_ylim(ymin=they[0]*0.95)
 	# add some text for labels, title and axes ticks
-	ax.set_ylabel('Mean evaluation time / condition (ms / condition)')
+	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
 	ax.set_xlabel('Number of reactions in mechanism')
 	ax.legend(loc=0, numpoints=1)

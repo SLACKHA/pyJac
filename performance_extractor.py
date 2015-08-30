@@ -186,7 +186,8 @@ def barplot(data):
 
 def line_plot(data):
 	fig, ax = plt.subplots()
-	for thedir in data:
+	order = [x for x in key]
+	for thedir in order:
 		for name in data[thedir]:
 			x, y, z = data[thedir][name]
 			order, x = zip(*sorted(enumerate(x), key=lambda k:k[1]))

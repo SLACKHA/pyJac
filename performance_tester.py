@@ -585,7 +585,7 @@ for mechanism in mechanism_list:
 
             with open("test/data.bin", "ab") as file:
                 state_data.tofile(file)
-            if mechanism[name] == 'USC':
+            if mechanism['name'] == 'USC':
                 for i in range(4):
                     with open("test/data.bin", "ab") as file:
                         state_data.tofile(file)

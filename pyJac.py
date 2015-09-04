@@ -2526,7 +2526,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 
 def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                     initial_state="", num_blocks=8, num_threads=64,
-                    no_shared=False, L1_preferred=True, multi_thread=None.,
+                    no_shared=False, L1_preferred=True, multi_thread=None,
                     force_optimize=False, build_path='./out/'
                     ):
     """Create Jacobian subroutine from mechanism.
@@ -2735,7 +2735,7 @@ if __name__ == "__main__":
                         help='Use this option to force a reoptimization of the mechanism (usually only happens when '
                              'generating for a different mechanism)')
     parser.add_argument('-b', '--build_path',
-                        required=False
+                        required=False,
                         default='./out/',
                         help='The folder to generate the mechanism in')
 

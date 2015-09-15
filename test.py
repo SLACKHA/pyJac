@@ -645,8 +645,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pyjacob.py_eval_rxn_rates(temp, pres, test_conc, test_fwd_rates, test_rev_rates)
         pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
         pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
-        pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
-        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
+        pyjacob.py_dydt(pres, y_dummy, test_dydt)
+        pyjacob.py_eval_jacobian(pres, y_dummy, test_jacob)
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[:, idx_pmod] *= test_pres_mod

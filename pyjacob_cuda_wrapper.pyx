@@ -13,8 +13,7 @@ cdef extern from "pyjacob.cuh":
     void cu_get_rxn_pres_mod (const size_t num, const double* T, const double* pres, const double* C, double* pres_mod)
     void cu_eval_conc (const size_t num, const double * T, const double * pres, const double * mass_frac, double * mw_avg, double * rho, double * conc)
 
-def py_dydt(np.ndarray[np.double_t] t,
-            np.ndarray[np.double_t] pres,
+def py_dydt(np.ndarray[np.double_t] pres,
             np.ndarray[np.double_t, ndim=2] y,
             np.ndarray[np.double_t, ndim=2] dy):
     cdef size_type num
@@ -28,8 +27,7 @@ def py_dydt(np.ndarray[np.double_t] t,
     cu_dydt(num, &temp_p[0], &temp_y[0, 0], &temp_dy[0, 0])
     dy = temp_dy.T
 
-def py_eval_jacobian(np.ndarray[np.double_t] t,
-            np.ndarray[np.double_t] pres,
+def py_eval_jacobian(np.ndarray[np.double_t] pres,
             np.ndarray[np.double_t, ndim=2] y,
             np.ndarray[np.double_t, ndim=2] jac):
     cdef size_type num

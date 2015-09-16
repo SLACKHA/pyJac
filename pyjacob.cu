@@ -35,10 +35,6 @@ void k_eval_conc(const int num, const double* T, const double* pres,
 		for (int i = 0; i < NSP; ++i)
 		{
 			mass_local[i] = *((double*)((char*)dMass + i * pitch1) + T_ID);
-			if (T_ID == num - 3)
-			{
-				printf("%d\t%le\n", i, mass_local[i]);
-			}
 		}
 
 		double mw_avg = 0;

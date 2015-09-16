@@ -598,7 +598,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # Cleanup all compiled files.
     for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
-    os.rmdir(test_dir)
+    if lang == 'cuda':
+        for f in ['cu_pyjacob.so', 'cu_pyjacob_wrapper.cu']:
+            os.remove(f)
 
     # Now clean build directory
     for root, dirs, files in os.walk('./build', topdown=False):

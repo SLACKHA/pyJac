@@ -452,10 +452,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             .format(max_err * 100., loc))
 
         #get rates
-        pyjacob.py_eval_rxn_rates(temp, pres, test_conc,
+        pyjacob.eval_rxn_rates(temp, pres, test_conc,
                                   test_fwd_rates, test_rev_rates
                                   )
-        pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
+        pyjacob.get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod

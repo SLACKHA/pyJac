@@ -141,11 +141,12 @@ def convert_mech(mech_filename, therm_filename=None):
 class analytic_eval_jacob:
     def __init__(self, pressure):
         self.pres = pressure
+        import pyjacob
+        self.jac = pyjacob
 
     def dydt(self, y):
-        import pyjacob
         dy = np.zeros_like(y)
-        pyjacob.py_dydt(0, self.pres, y, dy)
+        self.jac.py_dydt(0, self.pres, y, dy)
         return dy
 
     def eval_jacobian(self, gas, order):
@@ -168,7 +169,7 @@ class analytic_eval_jacob:
         fd = np.array(arr[0])
         return fd.T.flatten()
 
-def __is_pdep(rxn):
+def is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
@@ -195,6 +196,93 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
         np.save(pasr_output_file, state_data)
     return state_data
 
+class cpyjac_evaluator(object):
+    def __init__(self):
+        import pyjacob
+        pass
+    def eval_conc(self, temp, pres, mass_frac, mw_avg, rho, conc):
+        pyjacob.eval_conc(self, temp, pres, mass_frac, mw_avg, rho, conc)
+    def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        pyjacob.eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
+    def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        pyjacob.get_rxn_pres_mod(temp, pres, conc, pres_mod)
+    def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        pyjacob.eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
+    def dydt(self, t, pres, dummy, dydt):
+        pyjacob.eval_dydt(t, pres, dummy, dydt)
+    def eval_jacobian(self, pres, dummy, jacob):
+        pyjacob.eval_jacobian(pres, dummy, jacob)
+    def update(self, index):
+        pass
+
+class cupyjac_evaluator(cpyjac_evaluator):
+    def __init__(self, gas, state_data):
+        import cu_pyjacob as pyjacob
+
+        def czeros(shape):
+            arr = np.zeros(shape)
+            return arr.flatten(order='c')
+        def reshaper(arr, shape):
+            return arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
+
+        idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
+        idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
+                is_pdep(rxn)
+                ]
+
+        cuda_state = state_data[:, 1:]
+        num_cond = cuda_state.shape[0]
+        #init vectors
+        test_conc = czeros((num_cond, gas.n_species))
+        test_fwd_rates = czeros((num_cond,gas.n_reactions))
+        test_rev_rates = czeros((num_cond,len(idx_rev)))
+        test_pres_mod = czeros((num_cond,len(idx_pmod)))
+        test_spec_rates = czeros((num_cond,gas.n_species))
+        test_dydt = czeros((num_cond,gas.n_species + 1))
+        test_jacob = czeros((num_cond,(gas.n_species + 1) * (gas.n_species + 1)))
+
+        mw_avg = czeros(num_cond)
+        rho = czeros(num_cond)
+        temp = cuda_state[:, 0].flatten(order='c')
+        pres = cuda_state[:, 1].flatten(order='c')
+        mass_frac = cuda_state[:, 2:].flatten(order='f').astype(np.dtype('d'), order='c')
+        y_dummy = cuda_state[:, [0] + range(2, cuda_state.shape[1])].flatten(order='f').astype(np.dtype('d'), order='c')
+
+        pyjacob.py_eval_conc(num_cond, temp, pres, mass_frac, mw_avg, rho, test_conc)
+        pyjacob.py_eval_rxn_rates(num_cond, temp, pres, test_conc, test_fwd_rates, test_rev_rates)
+        pyjacob.py_get_rxn_pres_mod(num_cond, temp, pres, test_conc, test_pres_mod)
+        pyjacob.py_eval_spec_rates(num_cond, test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
+        pyjacob.py_dydt(num_cond, pres, y_dummy, test_dydt)
+        pyjacob.py_eval_jacobian(num_cond, pres, y_dummy, test_jacob)
+
+        #reshape for comparison
+        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species))
+        self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions))
+        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, len(idx_rev)))
+        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, len(idx_pmod)))
+        self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species))
+        self.test_dydt = reshaper(test_dydt, (num_cond,gas.n_species + 1))
+        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species + 1) * (gas.n_species + 1)))
+        self.index = 0
+
+    def update(self, index):
+        self.index = index
+    def eval_conc(self, temp, pres, mass_frac, mw_avg, rho, conc):
+        conc[:] = self.test_conc[self.index, :]
+    def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        fwd_rates[:] = self.test_fwd_rates[self.index, :]
+        rev_rates[:] = self.test_rev_rates[self.index, :]
+    def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        pres_mod[:] = self.test_pres_mod[self.index, :]
+    def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        spec_rates[:] = self.test_spec_rates[self.index, :]
+    def dydt(self, t, pres, y, dydt):
+        dydt[:] = self.test_dydt[self.index, :]
+    def eval_jacobian(self, t, pres, y, jacob):
+        jacob[:] = self.test_jacob[self.index, :]
+
+
+
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
@@ -214,6 +302,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
 
+    #remove the old jaclist
+    try:
+        os.remove('out/jacobs/jac_list_c')
+    except:
+        pass
+    try:
+        os.remove('out/jacobs/jac_list_cuda')
+    except:
+        pass
+
+
     if generate_jacob:
         # Create Jacobian and supporting source code files
         create_jacobian(lang, mech_filename, therm_name=therm_filename,
@@ -232,14 +331,24 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         os.remove('pyjacob.so')
     except:
         pass
-    #just run python dydt_setup.py build_ext --inplace
+    #need to compile this anyways, it's way easier to get the analytical
+    #jacobian evaulator to use the c interface
     subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
                            'pyjacob_setup.py', 'build_ext', '--inplace'
                            ])
 
+    try:
+        os.remove('cu_pyjacob.so')
+    except:
+        pass
+    if lang == 'cuda':
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 
+                               'pyjacob_cuda_setup.py', 'build_ext', '--inplace'
+                               ])
+
     #get the cantera object
     gas = ct.Solution(mech_filename)
-    pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+    pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
 
     # Now generate data and check results
@@ -248,7 +357,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # pressure modification applies.
     idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
     idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
-                __is_pdep(rxn)
+                is_pdep(rxn)
                 ]
     # Index of element in idx_pmod that corresponds to reversible reaction
     idx_pmod_rev = [
@@ -283,6 +392,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                         state_data.shape[1],
                                         state_data.shape[2]
                                         )
+    
+    if lang == 'cuda':
+        pyjacob = cupyjac_evaluator(gas, state_data)
+    else:
+        pyjacob = cpyjac_evaluator()
+
     num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)
@@ -294,7 +409,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_zero = np.zeros(num_trials)
 
     for i, state in enumerate(state_data):
-        import pyjacob
+        #update index in case we're using cuda
+        pyjacob.update(i)
+
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
@@ -321,7 +438,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         mw_avg = 0
         rho = 0
         #get conc
-        pyjacob.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
+        pyjacob.eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
 
         non_zero = np.where(test_conc > 0.)[0]
         err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
@@ -376,9 +493,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
 
         # Species production rates
-        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates,
-                                   test_pres_mod, test_spec_rates
-                                   )
+        pyjacob.eval_spec_rates(test_fwd_rates, test_rev_rates,
+                                test_pres_mod, test_spec_rates
+                                )
+
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -401,7 +519,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             .format(err))
 
         y_dummy = np.hstack((temp, mass_frac))
-        pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
+        pyjacob.dydt(0, pres, y_dummy, test_dydt)
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
         err = abs((test_dydt[non_zero] - ode()[non_zero]) /
@@ -419,7 +537,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
+        pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
         non_zero = np.where(abs(test_jacob) > 1.e-30)[0]
         zero = np.where(test_jacob == 0.)[0]
 

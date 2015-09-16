@@ -6,7 +6,7 @@ import numpy
 import os
 
 sources = ['pyjacob_wrapper.pyx', 
-		   'out/dydt.c', 
+		       'out/dydt.c', 
            'out/rxn_rates.c',
            'out/rxn_rates_pres_mod.c',
            'out/spec_rates.c',
@@ -16,7 +16,7 @@ sources = ['pyjacob_wrapper.pyx',
 includes = ['out/']
 
 # Look for file with list of Jacobian files
-if os.path.exists('out/jacobs'):
+if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_c'):
     with open('out/jacobs/jac_list_c', 'r') as f:
         line = f.readline()
     files = line.split()

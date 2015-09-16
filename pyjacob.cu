@@ -8,6 +8,7 @@
 #include "jacob.cuh"
 #include "dydt.cuh"
 #include <stdio.h>
+#include <math.h>
 
 #ifndef SHARED_SIZE
 	#define SHARED_SIZE (0)
@@ -15,8 +16,13 @@
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 
+int g_num(int num, int threads)
+{
+	return (int)ceil(((double)num) / ((double)threads));
+}
+
 __global__
-void k_eval_conc(const size_t num, const double* T, const double* pres, 
+void k_eval_conc(const int num, const double* T, const double* pres, 
 	const double* dMass, size_t pitch1, 
 	double* dMw,
 	double* dRho,
@@ -29,6 +35,10 @@ void k_eval_conc(const size_t num, const double* T, const double* pres,
 		for (int i = 0; i < NSP; ++i)
 		{
 			mass_local[i] = *((double*)((char*)dMass + i * pitch1) + T_ID);
+			if (T_ID == num - 3)
+			{
+				printf("%d\t%le\n", i, mass_local[i]);
+			}
 		}
 
 		double mw_avg = 0;
@@ -47,9 +57,8 @@ void k_eval_conc(const size_t num, const double* T, const double* pres,
 	}
 }
 
-void cu_eval_conc (const size_t num, const double * T, const double * pres, const double * mass_frac, double * mw_avg, double * rho, double * conc) {
-	int grid_num = num / TARGET_BLOCK_SIZE;
-	grid_num = grid_num == 0 ? 1 : grid_num;
+void cu_eval_conc (const int num, const double * T, const double * pres, const double * mass_frac, double * mw_avg, double * rho, double * conc) {
+	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dT;
 	double* dPres;
@@ -88,7 +97,7 @@ void cu_eval_conc (const size_t num, const double * T, const double * pres, cons
 
 
 __global__
-void k_eval_rxn_rates(const size_t num, const double* T, const double* pres, const double * C,
+void k_eval_rxn_rates(const int num, const double* T, const double* pres, const double * C,
 	size_t pitch1, double * fwd_rxn_rates, size_t pitch2, double * rev_rxn_rates,
 	size_t pitch3)
 {
@@ -126,9 +135,8 @@ void k_eval_rxn_rates(const size_t num, const double* T, const double* pres, con
 	} 
 }
 
-void cu_eval_rxn_rates (const size_t num, const double* T, const double* pres, const double * C, double * fwd_rxn_rates, double * rev_rxn_rates) {
-	int grid_num = num / TARGET_BLOCK_SIZE;
-	grid_num = grid_num == 0 ? 1 : grid_num;
+void cu_eval_rxn_rates (const int num, const double* T, const double* pres, const double * C, double * fwd_rxn_rates, double * rev_rxn_rates) {
+	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dC;
 	double* dFwd;
@@ -172,7 +180,7 @@ void cu_eval_rxn_rates (const size_t num, const double* T, const double* pres, c
 }
 
 __global__
-void k_get_rxn_pres_mod(const size_t num, const double* T, const double* pres, const double * C, size_t pitch1, double * pres_mod,
+void k_get_rxn_pres_mod(const int num, const double* T, const double* pres, const double * C, size_t pitch1, double * pres_mod,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -195,10 +203,9 @@ void k_get_rxn_pres_mod(const size_t num, const double* T, const double* pres, c
 	}	
 }
 
-void cu_get_rxn_pres_mod (const size_t num, const double* T, const double* pres, const double * C, double * pres_mod) {
+void cu_get_rxn_pres_mod (const int num, const double* T, const double* pres, const double * C, double * pres_mod) {
 	#if PRES_MOD_RATES != 0
-		int grid_num = num / TARGET_BLOCK_SIZE;
-		grid_num = grid_num == 0 ? 1 : grid_num;
+		int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 		//allocate device memory
 		double* dC;
 		double* dPres;
@@ -230,7 +237,7 @@ void cu_get_rxn_pres_mod (const size_t num, const double* T, const double* pres,
 
 
 __global__
-void k_eval_spec_rates(const size_t num, const double* fwd_rates, size_t pitch1, const double * rev_rates,
+void k_eval_spec_rates(const int num, const double* fwd_rates, size_t pitch1, const double * rev_rates,
 	size_t pitch2, const double* pres_mod, size_t pitch3, double* spec_rates, size_t pitch4)
 {
 	if (T_ID < num)
@@ -275,9 +282,8 @@ void k_eval_spec_rates(const size_t num, const double* fwd_rates, size_t pitch1,
 	}	
 }
 
-void cu_eval_spec_rates (const size_t num, const double * fwd_rates, const double * rev_rates, const double * pres_mod, double * spec_rates) {
-	int grid_num = num / TARGET_BLOCK_SIZE;
-	grid_num = grid_num == 0 ? 1 : grid_num;
+void cu_eval_spec_rates (const int num, const double * fwd_rates, const double * rev_rates, const double * pres_mod, double * spec_rates) {
+	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dFwd;
 	double* dRev = 0;
@@ -318,7 +324,7 @@ void cu_eval_spec_rates (const size_t num, const double * fwd_rates, const doubl
 
 
 __global__
-void k_dydt(const size_t num, const double* pres, const double* y, size_t pitch1, double * dy,
+void k_dydt(const int num, const double* pres, const double* y, size_t pitch1, double * dy,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -341,9 +347,8 @@ void k_dydt(const size_t num, const double* pres, const double* y, size_t pitch1
 	}	
 }
 
-void cu_dydt (const size_t num, const double* pres, const double* y, double* dy) {
-	int grid_num = num / TARGET_BLOCK_SIZE;
-	grid_num = grid_num == 0 ? 1 : grid_num;
+void cu_dydt (const int num, const double* pres, const double* y, double* dy) {
+	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dY;
 	double* dDy;
@@ -370,7 +375,7 @@ void cu_dydt (const size_t num, const double* pres, const double* y, double* dy)
 }
 
 __global__
-void k_eval_jacob(const size_t num, const double* pres, const double* y, size_t pitch1, double * jac,
+void k_eval_jacob(const int num, const double* pres, const double* y, size_t pitch1, double * jac,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -393,9 +398,8 @@ void k_eval_jacob(const size_t num, const double* pres, const double* y, size_t 
 	}	
 }
 
-void cu_eval_jacob (const size_t num, const double* pres, const double* y, double* jac) {
-	int grid_num = num / TARGET_BLOCK_SIZE;
-	grid_num = grid_num == 0 ? 1 : grid_num;
+void cu_eval_jacob (const int num, const double* pres, const double* y, double* jac) {
+	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dY;
 	double* dJac;

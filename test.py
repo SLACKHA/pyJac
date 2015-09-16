@@ -563,8 +563,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         #os.remove('cu_pyjacob.so')
     except:
         pass
-    #doesn't work at the moment
-    #just run python dydt_setup.py build_ext --inplace
     if lang == 'cuda':
         subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 'pyjacob_cuda_setup.py', 'build_ext', '--inplace'])
         import cu_pyjacob as pyjacob
@@ -636,9 +634,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         mw_avg = np.zeros(num_cond)
         rho = np.zeros(num_cond)
-        temp = cuda_state[:, 0]
-        pres = cuda_state[:, 1]
-        mass_frac = cuda_state[:, 2:]
+        temp = cuda_state[:, 0].astype(np.dtype('d'), order='c', casting='no')
+        pres = cuda_state[:, 1].astype(np.dtype('d'), order='c', casting='no')
+        mass_frac = cuda_state[:, 2:].astype(np.dtype('d'), order='c', casting='no')
         y_dummy = cuda_state[:, [0] + range(2, cuda_state.shape[1])]
 
         pyjacob.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)

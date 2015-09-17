@@ -197,46 +197,137 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
     return state_data
 
 class cpyjac_evaluator(object):
-    def __init__(self):
-        import pyjacob
-        pass
-    def eval_conc(self, temp, pres, mass_frac, mw_avg, rho, conc):
-        pyjacob.eval_conc(self, temp, pres, mass_frac, mw_avg, rho, conc)
+    def check_optimized(self, build_dir, filename='mechanism.h'):
+        with open(os.path.join(build_dir, filename), 'r') as file:
+            opt = False
+            for line in file.readlines():
+                if 'Cache Optimized' in line:
+                    opt = True
+                    break
+        self.cache_opt = opt
+        if self.cache_opt:
+            with open(os.path.join(build_path, 'optimized.pickle'), 'rb') as file:
+                specs = pickle.load(file)
+                reacs = pickle.load(file)
+                self.fwd_rxn_map = np.array(pickle.load(file))
+                self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if reacs[i].rev])
+                self.fwd_spec_map = np.array(pickle.load(file))
+                self.fwd_pdep_map = np.array(pickle.load(file))
+                self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
+                spec_ordering = pickle.load(file)
+                rxn_ordering = pickle.load(file)
+
+            self.sp_map = np.array(spec_ordering)
+            self.rxn_map = np.array(rxn_ordering)
+
+            rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
+            if rev_reacs:
+                old_rev_order = [i for i in old_rxn_order if reacs[i].rev]
+                self.rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in old_rev_order])
+            else:
+                self.rev_rxn_map = np.array([])
+
+            pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
+            if pdep_reacs:
+                old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd_body]
+                self.pdep_rxn_map = np.array([pdep_reacs.index(rxn) for rxn in old_pdep_order])
+            else:
+                self.pdep_rxn_map = np.array([])
+
+            self.dydt_map = np.array([0] + spec_ordering)
+            #handle jacobian map separately
+            #dT/dT doesn't change
+            self.jac_map = [0]
+            #updated species map (+ 1 to account for dT entry)
+            self.jac_map.extend([x + 1 for x in self.sp_map])
+            for i in range(len(self.sp_map)):
+                #dT / dY entry
+                self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1))
+                for j in range(len(self.sp_map)):
+                    self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1) + self.sp_map[j] + 1)
+            self.jac_map = np.array(self.jac_map)
+
+        
+    def __init__(self, build_dir, gas, module_name='pyjacob'):
+        self.idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
+        self.idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
+                is_pdep(rxn)
+                ]
+        self.check_optimized(build_dir)
+        self.pyjac = __import__(module_name)
+
+
+    def eval_conc(self, temp, pres, mass_frac, conc):
+        mw_avg = 0
+        rho = 0
+        if self.cache_opt:
+            test_mf[:] = mass_frac[self.sp_map]
+            self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
+            conc[:] = conc[self.sp_map]
+        else:
+            self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
-        pyjacob.eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
+        if self.cache_opt:
+            test_conc[:] = conc[self.fwd_spec_map]
+            self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
+             fwd_rates, rev_rates)
+            fwd_rates[:] = fwd_rates[self.rxn_map]
+            rev_rates[:] = rev_rates[self.rev_rxn_map]
+        else:
+            self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
-        pyjacob.get_rxn_pres_mod(temp, pres, conc, pres_mod)
+        if self.cache_opt:
+            test_conc[:] = conc[self.fwd_spec_map]
+            pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
+            pres_mod[:] = pres_mod[self.pdep_rxn_map]
+        else:
+            self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
-        pyjacob.eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
-    def dydt(self, t, pres, dummy, dydt):
-        pyjacob.eval_dydt(t, pres, dummy, dydt)
-    def eval_jacobian(self, pres, dummy, jacob):
-        pyjacob.eval_jacobian(pres, dummy, jacob)
+        if self.cache_opt:
+            test_fwd[:] = fwd_rates[self.fwd_rxn_map]
+            test_rev[:] = rev_rates[self.fwd_rev_rxn_map]
+            test_pdep[:] = pres_mod[self.fwd_pdep_map]
+            self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
+            spec_rates[:] = spec_rates[self.sp_map]
+        else:
+            self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
+    def dydt(self, t, pres, y, dydt):
+        if self.cache_opt:
+            test_y[:] = y[self.fwd_dydt_map]
+            pyjacob.py_dydt(t, pres, test_y, dydt)
+            dydt[:] = dydt[self.dydt_map]
+        else:   
+            self.pyjac.py_dydt(t, pres, y, dydt)
+    def eval_jacobian(self, t, pres, y, jacob):
+        if self.cache_opt:
+            test_y[:] = y[self.fwd_dydt_map]
+            self.pyjac.py_eval_jacobian(pres, test_y, jacob)
+            jacob[:] = jacob[self.jac_map]
+        else:
+            self.pyjac.py_eval_jacobian(t, pres, y, jacob)
     def update(self, index):
         pass
 
 class cupyjac_evaluator(cpyjac_evaluator):
-    def __init__(self, gas, state_data):
-        import cu_pyjacob as pyjacob
+    def __init__(self, build_dir, gas, state_data):
+        super(cpyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob')
 
         def czeros(shape):
             arr = np.zeros(shape)
             return arr.flatten(order='c')
-        def reshaper(arr, shape):
-            return arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
-
-        idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
-        idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
-                is_pdep(rxn)
-                ]
+        def reshaper(arr, shape, reorder=None):
+            arr = arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
+            if reorder is not None:
+                arr = arr[:, reorder]
+            return arr
 
         cuda_state = state_data[:, 1:]
         num_cond = cuda_state.shape[0]
         #init vectors
         test_conc = czeros((num_cond, gas.n_species))
         test_fwd_rates = czeros((num_cond,gas.n_reactions))
-        test_rev_rates = czeros((num_cond,len(idx_rev)))
-        test_pres_mod = czeros((num_cond,len(idx_pmod)))
+        test_rev_rates = czeros((num_cond,len(self.idx_rev)))
+        test_pres_mod = czeros((num_cond,len(self.idx_pmod)))
         test_spec_rates = czeros((num_cond,gas.n_species))
         test_dydt = czeros((num_cond,gas.n_species + 1))
         test_jacob = czeros((num_cond,(gas.n_species + 1) * (gas.n_species + 1)))
@@ -245,29 +336,32 @@ class cupyjac_evaluator(cpyjac_evaluator):
         rho = czeros(num_cond)
         temp = cuda_state[:, 0].flatten(order='c')
         pres = cuda_state[:, 1].flatten(order='c')
-        mass_frac = cuda_state[:, 2:].flatten(order='f').astype(np.dtype('d'), order='c')
-        y_dummy = cuda_state[:, [0] + range(2, cuda_state.shape[1])].flatten(order='f').astype(np.dtype('d'), order='c')
+        mass_frac = cuda_state[:, [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+                                .astype(np.dtype('d'), order='c')
+        y_dummy = cuda_state[:, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+                                .astype(np.dtype('d'), order='c')
 
-        pyjacob.py_eval_conc(num_cond, temp, pres, mass_frac, mw_avg, rho, test_conc)
-        pyjacob.py_eval_rxn_rates(num_cond, temp, pres, test_conc, test_fwd_rates, test_rev_rates)
-        pyjacob.py_get_rxn_pres_mod(num_cond, temp, pres, test_conc, test_pres_mod)
-        pyjacob.py_eval_spec_rates(num_cond, test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
-        pyjacob.py_dydt(num_cond, pres, y_dummy, test_dydt)
-        pyjacob.py_eval_jacobian(num_cond, pres, y_dummy, test_jacob)
+        self.pyjac.py_eval_conc(num_cond, temp, pres, mass_frac, mw_avg, rho, test_conc)
+        self.pyjac.py_eval_rxn_rates(num_cond, temp, pres, test_conc, test_fwd_rates, test_rev_rates)
+        self.pyjac.py_get_rxn_pres_mod(num_cond, temp, pres, test_conc, test_pres_mod)
+        self.pyjac.py_eval_spec_rates(num_cond, test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
+        self.pyjac.py_dydt(num_cond, pres, y_dummy, test_dydt)
+        self.pyjac.py_eval_jacobian(num_cond, pres, y_dummy, test_jacob)
 
         #reshape for comparison
-        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species))
-        self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions))
-        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, len(idx_rev)))
-        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, len(idx_pmod)))
-        self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species))
-        self.test_dydt = reshaper(test_dydt, (num_cond,gas.n_species + 1))
-        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species + 1) * (gas.n_species + 1)))
+        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.sp_map)
+        self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.rxn_map)
+        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, len(self.idx_rev)), self.rev_rxn_map)
+        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, len(self.idx_pmod)), self.pdep_rxn_map)
+        self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.sp_map)
+        self.test_dydt = reshaper(test_dydt, (num_cond,gas.n_species + 1), self.dydt_map)
+        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species + 1) * (gas.n_species + 1)),
+                            self.jac_map)
         self.index = 0
 
     def update(self, index):
         self.index = index
-    def eval_conc(self, temp, pres, mass_frac, mw_avg, rho, conc):
+    def eval_conc(self, temp, pres, mass_frac, conc):
         conc[:] = self.test_conc[self.index, :]
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
         fwd_rates[:] = self.test_fwd_rates[self.index, :]
@@ -394,9 +488,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                         )
     
     if lang == 'cuda':
-        pyjacob = cupyjac_evaluator(gas, state_data)
+        pyjacob = cupyjac_evaluator(build_dir, gas, state_data)
     else:
-        pyjacob = cpyjac_evaluator()
+        pyjacob = cpyjac_evaluator(build_dir, gas)
 
     num_trials = len(state_data)
 

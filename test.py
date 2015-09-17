@@ -701,7 +701,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
     if lang == 'cuda':
-        for f in ['cu_pyjacob.so', 'cu_pyjacob_wrapper.cu']:
+        for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
             os.remove(f)
 
     # Now clean build directory

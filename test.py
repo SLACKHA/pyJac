@@ -310,7 +310,7 @@ class cpyjac_evaluator(object):
 
 class cupyjac_evaluator(cpyjac_evaluator):
     def __init__(self, build_dir, gas, state_data):
-        super(cpyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob')
+        super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob')
 
         def czeros(shape):
             arr = np.zeros(shape)

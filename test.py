@@ -246,6 +246,13 @@ class cpyjac_evaluator(object):
                 for j in range(len(self.sp_map)):
                     self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1) + self.sp_map[j] + 1)
             self.jac_map = np.array(self.jac_map)
+        else:
+            self.sp_map = None
+            self.rxn_map = None
+            self.rev_rxn_map = None
+            self.pdep_rxn_map = None
+            self.dydt_map = None
+            self.jac_map = None
 
         
     def __init__(self, build_dir, gas, module_name='pyjacob'):
@@ -321,6 +328,9 @@ class cupyjac_evaluator(cpyjac_evaluator):
                 arr = arr[:, reorder]
             return arr
 
+        if not self.cache_opt:
+            self.fwd_spec_map = np.arange(gas.n_species)
+
         cuda_state = state_data[:, 1:]
         num_cond = cuda_state.shape[0]
         #init vectors
@@ -345,8 +355,8 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.pyjac.py_eval_rxn_rates(num_cond, temp, pres, test_conc, test_fwd_rates, test_rev_rates)
         self.pyjac.py_get_rxn_pres_mod(num_cond, temp, pres, test_conc, test_pres_mod)
         self.pyjac.py_eval_spec_rates(num_cond, test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
-        self.pyjac.py_dydt(num_cond, pres, y_dummy, test_dydt)
-        self.pyjac.py_eval_jacobian(num_cond, pres, y_dummy, test_jacob)
+        self.pyjac.py_dydt(num_cond, 0, pres, y_dummy, test_dydt)
+        self.pyjac.py_eval_jacobian(num_cond, 0, pres, y_dummy, test_jacob)
 
         #reshape for comparison
         self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.sp_map)
@@ -529,10 +539,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         # Derivative source term
         ode = ReactorConstPres(gas)
 
-        mw_avg = 0
-        rho = 0
         #get conc
-        pyjacob.eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
+        pyjacob.eval_conc(temp, pres, mass_frac, test_conc)
 
         non_zero = np.where(test_conc > 0.)[0]
         err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /

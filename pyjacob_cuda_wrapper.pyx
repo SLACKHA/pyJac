@@ -18,7 +18,7 @@ def py_dydt(int num,
             np.ndarray[np.double_t, mode='c'] pres,
             np.ndarray[np.double_t, mode='c'] y,
             np.ndarray[np.double_t, mode='c'] dy):
-    cu_dydt(num, &pres[0], &y[0], &dy[0])
+    cu_dydt(num, t, &pres[0], &y[0], &dy[0])
 
 @cython.boundscheck(False)
 def py_eval_jacobian(int num,

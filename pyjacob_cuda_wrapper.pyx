@@ -5,8 +5,8 @@ cimport numpy as np
 cimport cython
 
 cdef extern from "pyjacob.cuh":
-    void cu_dydt(const int num, const double* pres, const double* y, double* dy)
-    void cu_eval_jacob (const int num, const double* pres, const double* y, double* jac)
+    void cu_dydt(const int num, const double t, const double* pres, const double* y, double* dy)
+    void cu_eval_jacob (const int num, const double t, const double* pres, const double* y, double* jac)
     void cu_eval_rxn_rates (const int num, const double* T, const double* pres, const double * C, double * fwd_rxn_rates, double * rev_rxn_rates)
     void cu_eval_spec_rates (const int num, const double* fwd_rates, const double* rev_rates, const double* pres_mod, double * sp_rates)
     void cu_get_rxn_pres_mod (const int num, const double* T, const double* pres, const double* C, double* pres_mod)
@@ -14,6 +14,7 @@ cdef extern from "pyjacob.cuh":
 
 @cython.boundscheck(False)
 def py_dydt(int num,
+            np.double_t t,
             np.ndarray[np.double_t, mode='c'] pres,
             np.ndarray[np.double_t, mode='c'] y,
             np.ndarray[np.double_t, mode='c'] dy):
@@ -21,10 +22,11 @@ def py_dydt(int num,
 
 @cython.boundscheck(False)
 def py_eval_jacobian(int num,
+            np.double_t t,
             np.ndarray[np.double_t, mode='c'] pres,
             np.ndarray[np.double_t, mode='c'] y,
             np.ndarray[np.double_t, mode='c'] jac):
-    cu_eval_jacob(num, &pres[0], &y[0], &jac[0])
+    cu_eval_jacob(num, t, &pres[0], &y[0], &jac[0])
 
 @cython.boundscheck(False)
 def py_eval_rxn_rates(int num,

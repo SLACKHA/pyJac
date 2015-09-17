@@ -320,7 +320,7 @@ void cu_eval_spec_rates (const int num, const double * fwd_rates, const double *
 
 
 __global__
-void k_dydt(const int num, const double* pres, const double* y, size_t pitch1, double * dy,
+void k_dydt(const int num, const double t, const double* pres, const double* y, size_t pitch1, double * dy,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -333,7 +333,7 @@ void k_dydt(const int num, const double* pres, const double* y, size_t pitch1, d
 		}
 
 		double dy_local[NN];
-		dydt(0, pres[T_ID], y_local, dy_local);
+		dydt(t, pres[T_ID], y_local, dy_local);
 
 		#pragma unroll
 		for (int i = 0; i < NN; ++i)
@@ -343,7 +343,7 @@ void k_dydt(const int num, const double* pres, const double* y, size_t pitch1, d
 	}	
 }
 
-void cu_dydt (const int num, const double* pres, const double* y, double* dy) {
+void cu_dydt (const int num, const double t, const double* pres, const double* y, double* dy) {
 	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dY;
@@ -360,7 +360,7 @@ void cu_dydt (const int num, const double* pres, const double* y, double* dy) {
 	cudaErrorCheck( cudaMemcpy(dP, pres, num * sizeof(double), cudaMemcpyHostToDevice) );
 
 	//run
-	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dP, dY, pitch1, dDy, pitch2);
+	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, t, dP, dY, pitch1, dDy, pitch2);
 
 	//copy back
 	cudaErrorCheck( cudaMemcpy2D(dy, num * sizeof(double), dDy, pitch2, num * sizeof(double), NN, cudaMemcpyDeviceToHost) );
@@ -371,7 +371,7 @@ void cu_dydt (const int num, const double* pres, const double* y, double* dy) {
 }
 
 __global__
-void k_eval_jacob(const int num, const double* pres, const double* y, size_t pitch1, double * jac,
+void k_eval_jacob(const int num, const double t, const double* pres, const double* y, size_t pitch1, double * jac,
 	size_t pitch2)
 {
 	if (T_ID < num)
@@ -384,7 +384,7 @@ void k_eval_jacob(const int num, const double* pres, const double* y, size_t pit
 		}
 
 		double jac_local[NN * NN] = {0};
-		eval_jacob(0, pres[T_ID], y_local, jac_local);
+		eval_jacob(t, pres[T_ID], y_local, jac_local);
 
 		#pragma unroll
 		for (int i = 0; i < NN * NN; ++i)
@@ -394,7 +394,7 @@ void k_eval_jacob(const int num, const double* pres, const double* y, size_t pit
 	}	
 }
 
-void cu_eval_jacob (const int num, const double* pres, const double* y, double* jac) {
+void cu_eval_jacob (const int num, const double t, const double* pres, const double* y, double* jac) {
 	int grid_num = g_num(num, TARGET_BLOCK_SIZE);
 	//allocate device memory
 	double* dY;
@@ -411,7 +411,7 @@ void cu_eval_jacob (const int num, const double* pres, const double* y, double* 
 
 	cudaErrorCheck( cudaMallocPitch((void**)&dJac, &pitch2, num * sizeof(double), NN * NN) );
 	//run
-	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dP, dY, pitch1, dJac, pitch2);
+	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, t, dP, dY, pitch1, dJac, pitch2);
 
 	//copy back
 	cudaErrorCheck( cudaMemcpy2D(jac, num * sizeof(double), dJac, pitch2, num * sizeof(double), NN * NN, cudaMemcpyDeviceToHost) );

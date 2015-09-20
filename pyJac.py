@@ -2441,49 +2441,30 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 
     sorted_and_cleaned = sorted(list(set(sparse_indicies)))
     # first write header file
-    if lang == 'c':
-        file = open(path + 'sparse_multiplier.h', 'w')
-        file.write('#ifndef SPARSE_HEAD\n'
-                   '#define SPARSE_HEAD\n')
-        file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
-        file.write(
-            '\n'
-            '#include "header.h"\n'
-            '\n'
-            'void sparse_multiplier (const double *, const double *, double*);\n'
-            '\n'
-            '#ifdef COMPILE_TESTING_METHODS\n'
-            '  int test_sparse_multiplier();\n'
-            '#endif\n'
-            '\n'
-            '#endif\n'
+    file = open(path + 'sparse_multiplier{}'.format(utils.header_ext[lang]), 'w')
+    file.write('#ifndef SPARSE_HEAD\n'
+               '#define SPARSE_HEAD\n')
+    file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
+    file.write(
+        '\n'
+        '#include "header.h"\n'
+        '\n' + 
+        ('__device__\n' if lang == 'cuda' else '') +
+        'void sparse_multiplier (const double *, const double *, double*);\n'
+        '\n'
+        '#ifdef COMPILE_TESTING_METHODS\n'
+        '  int test_sparse_multiplier();\n'
+        '#endif\n'
+        '\n'
+        '#endif\n'
         )
-        file.close()
-    elif lang == 'cuda':
-        file = open(path + 'sparse_multiplier.cuh', 'w')
-        file.write('#ifndef SPARSE_HEAD\n'
-                   '#define SPARSE_HEAD\n')
-        file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
-        file.write(
-            '\n'
-            '#include "header.h"\n'
-            '\n'
-            '__device__ void sparse_multiplier (const double *, const double *, double*);\n'
-            '#ifdef COMPILE_TESTING_METHODS\n'
-            '  __device__ int test_sparse_multiplier();\n'
-            '#endif\n'
-            '\n'
-            '#endif\n'
-        )
-        file.close()
-    else:
-        raise NotImplementedError
+    file.close()
 
     # create file depending on language
     filename = 'sparse_multiplier' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
-    file.write('#include "sparse_multiplier.{}h"\n\n'.format('cu' if lang == 'cuda' else ''))
+    file.write('#include "sparse_multiplier{}"\n\n'.format(utils.header_ext[lang]))
 
     if lang == 'cuda':
         file.write('__device__\n')
@@ -2496,7 +2477,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
         touched = [False for i in range(nvars)]
         for i in range(nvars):
             # get all indicies that belong to row i
-            i_list = [x for x in sorted_and_cleaned if int(round(x / nvars)) == i]
+            i_list = [x for x in sorted_and_cleaned if int(x / nvars) == i]
             for index in i_list:
                 file.write(' ' + utils.get_array(lang, 'w', index % nvars) + ' {}= '.format(
                     '+' if touched[index % nvars] else ''))

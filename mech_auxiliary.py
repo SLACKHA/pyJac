@@ -503,6 +503,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '#endif\n'
                    '//apply masking of ICs for cache optimized mechanisms\n'
                    'void apply_mask(double*);\n'
+                   '//reverse the masking of ICs for cache optimized mechanism\n'
+                   'void apply_reverse_mask(double*);\n'
                    )
 
         file.write('#endif\n\n')
@@ -546,6 +548,15 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double* y_specs) {\n')
+        if cache_optimized:
+            file.write('        double temp [NSP];\n'
+                       '        memcpy(temp, y_specs, NSP * sizeof(double));\n')
+            for i, spec in enumerate(reversed_specs):
+                file.write('        y_specs[{0}] = temp[{1}];\n'.format(spec, i))
+        file.write('    }\n')
+
+        file.write('    //reverse masking of ICs for cache optimized mechanisms\n')
+        file.write('    void apply_reverse_mask(double* y_specs) {\n')
         if cache_optimized:
             file.write('        double temp [NSP];\n'
                        '        memcpy(temp, y_specs, NSP * sizeof(double));\n')

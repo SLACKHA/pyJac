@@ -561,7 +561,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             file.write('        double temp [NSP];\n'
                        '        memcpy(temp, y_specs, NSP * sizeof(double));\n')
             for i, spec in enumerate(old_spec_order):
-                file.write('        y_specs[{0}] = temp[{1}];\n'.format(spec, i))
+                file.write('        y_specs[{0}] = temp[{1}];\n'.format(i, spec))
         file.write('    }\n')
 
         needed_arr = ['y', 'pres']

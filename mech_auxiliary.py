@@ -503,6 +503,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    '#endif\n'
                    '//apply masking of ICs for cache optimized mechanisms\n'
                    'void apply_mask(double*);\n'
+                   'void apply_reverse_mask(double*);\n'
                    )
 
         file.write('#endif\n\n')

@@ -206,7 +206,7 @@ class cpyjac_evaluator(object):
                     break
         self.cache_opt = opt
         if self.cache_opt:
-            with open(os.path.join(build_path, 'optimized.pickle'), 'rb') as file:
+            with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
                 specs = pickle.load(file)
                 reacs = pickle.load(file)
                 self.fwd_rxn_map = np.array(pickle.load(file))

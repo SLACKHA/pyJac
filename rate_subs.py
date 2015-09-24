@@ -2128,17 +2128,10 @@ def write_mass_mole(path, lang, specs):
             '\n'
             '#include "header.h"\n'
             '\n'
-            '#ifdef __cplusplus\n'
-            '  extern "C" {\n'
-            '#endif\n'
-            '\n'
             'void mole2mass (const double*, double*);\n'
             'void mass2mole (const double*, double*);\n'
             'double getDensity (const double, const double, const double*);\n'
             '\n'
-            '#ifdef __cplusplus\n'
-            '  }\n'
-            '#endif\n'
             '#endif\n'
             )
         file.close()

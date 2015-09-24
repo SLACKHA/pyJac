@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 import subprocess
+import pickle
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
@@ -255,12 +256,12 @@ class cpyjac_evaluator(object):
             self.jac_map = None
 
         
-    def __init__(self, build_dir, gas, module_name='pyjacob'):
+    def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
         self.idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
         self.idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
                 is_pdep(rxn)
                 ]
-        self.check_optimized(build_dir)
+        self.check_optimized(build_dir, filename)
         self.pyjac = __import__(module_name)
 
 
@@ -317,7 +318,7 @@ class cpyjac_evaluator(object):
 
 class cupyjac_evaluator(cpyjac_evaluator):
     def __init__(self, build_dir, gas, state_data):
-        super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob')
+        super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
 
         def czeros(shape):
             arr = np.zeros(shape)

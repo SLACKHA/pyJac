@@ -1132,7 +1132,7 @@ def write_header(path, lang):
                    '//#define CONV\n'
                    '\n'
                    '/** Include mechanism header to get NSP and NN **/\n'
-                   '#ifdef __cplusplus\n'
+                   '#ifdef CUDA\n'
                    ' #include "mechanism.cuh"\n'
                    '#else\n'
                    ' #include "mechanism.h"\n'

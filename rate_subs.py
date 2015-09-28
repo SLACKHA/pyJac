@@ -2133,7 +2133,6 @@ def write_mass_mole(path, lang, specs):
             'double getDensity (const double, const double, const double*);\n'
             '\n'
             '#endif\n'
-            '#endif\n'
             )
         file.close()
 

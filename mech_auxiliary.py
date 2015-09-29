@@ -82,7 +82,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
     # now the mechanism file
     with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
         file.write('#include "mass_mole{}"\n'.format(
-          utils.header_ext[lang]))
+          utils.header_ext[lang]) + 
+        '#include <stdio.h>\n')
+
         if lang == 'cuda':
             file.write('#include <cuda.h>\n'
                        '#include <cuda_runtime.h>\n'
@@ -90,6 +92,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '#include "launch_bounds.cuh"\n'
                        '#include "gpu_macros.cuh"\n'
                        '#include "gpu_memory.cuh"\n')
+        if lang == 'c':
+            file.write('#include <string.h>\n') # for memset
 
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double* y_specs) {\n')

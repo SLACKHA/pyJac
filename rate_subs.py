@@ -259,51 +259,28 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     num_rev = len(rev_reacs)
     pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd_body or rxn.pdep]
 
-    # first write header file
-    if lang == 'c':
-        file = open(path + 'rates.h', 'w')
-        file.write('#ifndef RATES_HEAD\n'
-                   '#define RATES_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n\n'
-                   )
-        file.write('void eval_rxn_rates (const double, const double,'
-                   ' const double*, double*, double*);\n'
-                   'void eval_spec_rates (const double*, const double*,'
-                   ' const double*, double*);\n'
+    pre  = '__device__ ' if lang == 'cuda' else ''
+    file = open(path + 'rates' + utils.header_ext[lang], 'w')
+    file.write('#ifndef RATES_HEAD\n'
+               '#define RATES_HEAD\n'
+               '\n'
+               '#include "header{}"\n'.format(utils.header_ext[lang]) +
+               '\n'
+               )
+    file.write('{0}void eval_rxn_rates (const double,'
+               ' const double, const double*, double*, double*);\n'
+               '{0}void eval_spec_rates (const double*,'
+               ' const double*, const double*, double*);\n'.format(pre)
+               )
+
+    if pdep_reacs:
+        file.write('{}void get_rxn_pres_mod (const double, const '
+                   'double, const double*, double*);\n'.format(pre)
                    )
 
-        if pdep_reacs:
-            file.write('void get_rxn_pres_mod (const double, const double, '
-                       'const double*, double*);\n'
-                       )
-
-        file.write('\n'
-                   '#endif\n'
-                   )
-        file.close()
-    elif lang == 'cuda':
-        file = open(path + 'rates.cuh', 'w')
-        file.write('#ifndef RATES_HEAD\n'
-                   '#define RATES_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   )
-        file.write('__device__ void eval_rxn_rates (const double,'
-                   ' const double, const double*, double*, double*);\n'
-                   '__device__ void eval_spec_rates (const double*,'
-                   ' const double*, const double*, double*);\n'
-                   )
-
-        if pdep_reacs:
-            file.write('__device__ void get_rxn_pres_mod (const double, const '
-                       'double, const double*, double*);\n'
-                       )
-
-        file.write('\n')
-        file.write('#endif\n')
-        file.close()
+    file.write('\n')
+    file.write('#endif\n')
+    file.close()
 
     filename = 'rxn_rates' + utils.file_ext[lang]
     file = open(path + filename, 'w')
@@ -765,7 +742,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     # headers
     if lang in ['c', 'cuda']:
         file.write('#include <math.h>\n'
-                   '#include "header.h"\n'
+                   '#include "header{}"\n'.format(utils.header_ext[lang])
                    )
         file.write('\n')
 
@@ -1170,7 +1147,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     file = open(path + filename, 'w')
 
     if lang in ['c', 'cuda']:
-        file.write('#include "header.h"\n'
+        file.write('#include "header{}"\n'.format(utils.header_ext[lang])
                    )
         file.write('\n')
 
@@ -1380,51 +1357,31 @@ def write_chem_utils(path, lang, specs):
 
     num_s = len(specs)
 
-    # first write header file
-    if lang == 'c':
-        file = open(path + 'chem_utils.h', 'w')
-        file.write('#ifndef CHEM_UTILS_HEAD\n'
-                   '#define CHEM_UTILS_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   'void eval_conc (const double, const double, '
-                   'const double*, double*, double*, double*);\n'
-                   'void eval_h (const double, double*);\n'
-                   'void eval_u (const double, double*);\n'
-                   'void eval_cv (const double, double*);\n'
-                   'void eval_cp (const double, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
-        file.close()
-    elif lang == 'cuda':
-        file = open(path + 'chem_utils.cuh', 'w')
-        file.write('#ifndef CHEM_UTILS_HEAD\n'
-                   '#define CHEM_UTILS_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   '__device__ void eval_conc (const double, const double, '
-                   'const double*, double*, double*, double*);\n'
-                   '__device__ void eval_h (const double, double*);\n'
-                   '__device__ void eval_u (const double, double*);\n'
-                   '__device__ void eval_cv (const double, double*);\n'
-                   '__device__ void eval_cp (const double, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
-        file.close()
-
+    pre = '__device__ ' if lang == 'cuda' else ''
+    file = open(path + 'chem_utils' + utils.header_ext[lang], 'w')
+    file.write('#ifndef CHEM_UTILS_HEAD\n'
+               '#define CHEM_UTILS_HEAD\n'
+               '\n'
+               '#include "header{}"\n'.format(utils.header_ext[lang]) +
+               '\n'
+               '{0}void eval_conc (const double, const double, '
+               'const double*, double*, double*, double*);\n'
+               '{0}void eval_h (const double, double*);\n'
+               '{0}void eval_u (const double, double*);\n'
+               '{0}void eval_cv (const double, double*);\n'
+               '{0}void eval_cp (const double, double*);\n'
+               '\n'
+               '#endif\n'.format(pre)
+               )
+    file.close()
+    
     filename = 'chem_utils' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
     if lang in ['c', 'cuda']:
-        file.write('#include "header.h"\n')
+        file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
         file.write('\n')
 
-    pre = ''
-    if lang == 'cuda': pre = '__device__ '
 
     ######################
     # species concentrations subroutine
@@ -1805,49 +1762,32 @@ def write_derivs(path, lang, specs, reacs):
 
     """
 
+    pre = ''
+    if lang == 'cuda': pre = '__device__ '
+
     # first write header file
-    if lang == 'c':
-        file = open(path + 'dydt.h', 'w')
-        file.write('#ifndef DYDT_HEAD\n'
-                   '#define DYDT_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   'void dydt (const double, const double, '
-                   'const double*, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
-        file.close()
-    elif lang == 'cuda':
-        file = open(path + 'dydt.cuh', 'w')
-        file.write('#ifndef DYDT_HEAD\n'
-                   '#define DYDT_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n'
-                   '\n'
-                   '__device__ void dydt (const double, const double, '
-                   'const double*, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
-        file.close()
+    file = open(path + 'dydt' + utils.header_ext[lang], 'w')
+    file.write('#ifndef DYDT_HEAD\n'
+               '#define DYDT_HEAD\n'
+               '\n'
+               '#include "header{}"\n'.format(utils.header_ext[lang]) +
+               '\n'
+               '{0}void dydt (const double, const double, '
+               'const double*, double*);\n'
+               '\n'
+               '#endif\n'.format(pre)
+               )
+    file.close()
 
     filename = 'dydt' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
-    pre = ''
-    if lang == 'cuda': pre = '__device__ '
+    file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
 
-    file.write('#include "header.h"\n')
-    if lang == 'c':
-        file.write('#include "chem_utils.h"\n'
-                   '#include "rates.h"\n'
-                   )
-    elif lang == 'cuda':
-        file.write('#include "chem_utils.cuh"\n'
-                   '#include "rates.cuh"\n'
-                   '#include "gpu_memory.cuh"\n'
+    file.write('#include "chem_utils{0}"\n'
+               '#include "rates{0}"\n'.format(utils.header_ext[lang]))
+    if lang == 'cuda':
+        file.write('#include "gpu_memory.cuh"\n'
                    )
     file.write('\n')
 
@@ -2120,33 +2060,30 @@ def write_mass_mole(path, lang, specs):
 
     # Create header file
     if lang in ['c', 'cuda']:
-        file = open(path + 'mass_mole.h', 'w')
+        file = open(path + 'mass_mole{}'.format(
+            utils.header_ext[lang]), 'w')
 
         file.write(
-            '#ifndef MASS_MOLE_H\n'
-            '#define MASS_MOLE_H\n'
+            '#ifndef MASS_MOLE_HEAD\n'
+            '#define MASS_MOLE_HEAD\n'
             '\n'
-            '#include "header.h"\n'
+            '#include "header{0}"\n'
             '\n'
             'void mole2mass (const double*, double*);\n'
             'void mass2mole (const double*, double*);\n'
             'double getDensity (const double, const double, const double*);\n'
             '\n'
-            '#endif\n'
+            '#endif\n'.format(utils.header_ext[lang])
             )
         file.close()
 
     # Open file; both C and CUDA programs use C file (only used on host)
-    if lang in ['c', 'cuda']:
-        filename = 'mass_mole.c'
-    elif lang == 'fortran':
-        filename = 'mass_mole.f90'
-    elif lang == 'matlab':
-        filename = 'mass_mole.m'
+    filename = 'mass_mole' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
     if lang in ['c', 'cuda']:
-        file.write('#include "mass_mole.h"\n\n')
+        file.write('#include "mass_mole{}"\n\n'.format(
+            utils.header_ext[lang]))
 
     ###################################################
     # Documentation and function/subroutine initializaton for mole2mass

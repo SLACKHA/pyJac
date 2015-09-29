@@ -81,12 +81,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
     # now the mechanism file
     with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
-        if lang == 'cuda':
-            file.write('extern "C" {\n'
-                       '#include "mass_mole.h"\n'
-                       '}\n')
-        else:
-            file.write('#include "mass_mole.h"\n')
+        file.write('#include "mass_mole{}"\n'.format(
+          utils.header_ext[lang]))
         if lang == 'cuda':
             file.write('#include <cuda.h>\n'
                        '#include <cuda_runtime.h>\n'
@@ -259,8 +255,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             file.write('#ifndef GPU_MEMORY_CUH\n'
                        '#define GPU_MEMORY_CUH\n'
                        '\n'
-                       '#include "header.h"\n'
-                       '#include "mechanism.cuh"\n'
+                       '#include "header{}"\n'.format(utils.header_ext[lang]) +
                        '#include "gpu_macros.cuh"\n'
                        '\n'
                        )
@@ -354,23 +349,18 @@ def write_header(path, lang):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
-    with open(path + 'header.h', 'w') as file:
+    with open(path + 'header' + utils.header_ext[lang], 'w') as file:
         file.write('#ifndef HEAD\n'
                    '#define HEAD\n'
                    '#include <stdlib.h>\n'
-                   '#include <math.h>\n'
-                   '#include <float.h>\n'
+                   '#include <math.h>'
                    '\n'
                    '/** Constant pressure or volume. */\n'
                    '#define CONP\n'
                    '//#define CONV\n'
                    '\n'
                    '/** Include mechanism header to get NSP and NN **/\n'
-                   '#if defined(__cplusplus) || defined(CUDA)\n'
-                   ' #include "mechanism.cuh"\n'
-                   '#else\n'
-                   ' #include "mechanism.h"\n'
-                   '#endif\n'
+                   '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
                    '// OpenMP\n'
                    '#ifdef _OPENMP\n'
                    ' #include <omp.h>\n'

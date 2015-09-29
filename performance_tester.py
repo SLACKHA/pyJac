@@ -131,7 +131,7 @@ double GetTimer()
 def write_cuda_reader(file):
     file.write(
     """
-#include "header.h"
+#include "header.cuh"
 #include "gpu_memory.cuh"
 #include "gpu_macros.cuh"
 #include <stdio.h>
@@ -371,7 +371,7 @@ def write_cuda_tester(file, path):
     #include <cuda.h>
     #include <cuda_runtime.h>
     #include <helper_cuda.h>
-    #include "header.h"
+    #include "header.cuh"
     #include "timer.h"
     #include "gpu_memory.cuh"
     #include "launch_bounds.cuh"

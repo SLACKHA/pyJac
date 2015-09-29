@@ -1436,7 +1436,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
-                   '#include "../header.h"\n'
+                   '#include "../header{}"\n'.format(utils.header_ext[lang]) + 
                    '\n' + ('__device__ ' if lang == 'cuda' else '') +
                    ''
                    'void eval_jacob_{} ('.format(number)
@@ -1453,7 +1453,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
                    )
     file = open(os.path.join(path, 'jacob_' + str(number) + utils.file_ext[lang]), 'w')
     file.write('#include <math.h>\n'
-               '#include "../header.h"\n'
+               '#include "../header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                )
 
@@ -1566,7 +1566,7 @@ def write_dy_intros(path, lang, number):
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
-                   '#include "../header.h"\n'
+                   '#include "../header{}"\n'.format(utils.header_ext[lang]) + 
                    '\n' +
                    ('__device__ ' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
@@ -1576,7 +1576,7 @@ def write_dy_intros(path, lang, number):
                    '#endif\n'
                    )
     file = open(os.path.join(path, 'jacob_' + str(number) + utils.file_ext[lang]), 'w')
-    file.write('#include "../header.h"\n'
+    file.write('#include "../header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                )
 
@@ -1628,41 +1628,26 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         utils.create_dir(os.path.join(path, 'jacobs'))
 
     # first write header file
-    if lang == 'c':
-        file = open(path + 'jacob.h', 'w')
-        file.write('#ifndef JACOB_HEAD\n'
-                   '#define JACOB_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n' + 
-                    ('#include "jacobs/jac_include.h"\n' if
-                    do_unroll else '') +
-                   '#include "chem_utils.h"\n'
-                   '#include "rates.h"\n'
-                   '\n'
-                   'void eval_jacob (const double, const double, '
-                   'const double*, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
-        file.close()
-    elif lang == 'cuda':
-        file = open(path + 'jacob.cuh', 'w')
-        file.write('#ifndef JACOB_HEAD\n'
-                   '#define JACOB_HEAD\n'
-                   '\n'
-                   '#include "header.h"\n' +
-                   ('#include "jacobs/jac_include.cuh"\n' if
-                    do_unroll else '') +
-                   '#include "chem_utils.cuh"\n'
-                   '#include "rates.cuh"\n'
-                   '#include "gpu_macros.cuh"\n'
-                   '\n'
-                   '__device__ void eval_jacob (const double, const double, '
-                   'const double*, double*);\n'
-                   '\n'
-                   '#endif\n'
-                   )
-        file.close()
+    file = open(path + 'jacob' + utils.header_ext[lang], 'w')
+    file.write('#ifndef JACOB_HEAD\n'
+               '#define JACOB_HEAD\n'
+               '\n'
+               '#include "header{0}"\n'.format(utils.header_ext[lang]) +
+               ('#include "jacobs/jac_include{0}"\n'
+                if do_unroll else '') +
+               '#include "chem_utils{0}"\n'
+               '#include "rates{0}"\n'.format(utils.header_ext[lang]))
+    if lang == 'cuda':
+        file.write(
+               '#include "gpu_macros.cuh"\n'
+               '\n'
+               '__device__ ')
+    file.write('void eval_jacob (const double, const double, '
+               'const double*, double*);\n'
+               '\n'
+               '#endif\n'
+               )
+    file.close()
 
     # numbers of species and reactions
     num_s = len(specs)
@@ -1682,14 +1667,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file = open(path + filename, 'w')
 
     # header files
-    if lang == 'c':
-        file.write('#include "jacob.h"\n'
-                   '\n'
-                   )
-    elif lang == 'cuda':
-        file.write('#include "jacob.cuh"\n'
-                   '\n'
-                   )
+    file.write('#include "jacob{}"\n\n'.format(utils.header_ext[lang]))
 
     line = ''
     if lang == 'cuda':
@@ -2447,7 +2425,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
     file.write(
         '\n'
-        '#include "header.h"\n'
+        '#include "header{}"\n'.format(utils.header_ext[lang]) +
         '\n' + 
         ('__device__\n' if lang == 'cuda' else '') +
         'void sparse_multiplier (const double *, const double *, double*);\n'

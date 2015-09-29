@@ -1,6 +1,6 @@
 /* wrapper to translate to cuda arrays */
 
-#include "header.h"
+#include "header.cuh"
 #include "gpu_memory.cuh"
 #include "launch_bounds.cuh"
 #include "chem_utils.cuh"

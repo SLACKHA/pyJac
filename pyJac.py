@@ -959,7 +959,7 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     return jline
 
 
-def write_dcp_dt(file, lang, specs, sparse_indicies):
+def write_dcp_dt(file, lang, specs):
     T_mid_buckets = {}
     # put all of the same T_mids together
     for isp, sp in enumerate(specs):
@@ -2376,7 +2376,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     ######################################
     # Derivatives with respect to temperature
     ######################################
-    write_dcp_dt(file, lang, specs, sparse_indicies)
+    write_dcp_dt(file, lang, specs)
 
     ######################################
     # Derivative with respect to species

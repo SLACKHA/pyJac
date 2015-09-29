@@ -94,14 +94,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '#include <cuda_runtime.h>\n'
                        '#include <helper_cuda.h>\n'
                        '#include "launch_bounds.cuh"\n'
-                       )
-            file.write('#ifndef SHARED_SIZE\n'
-                       '    #define SHARED_SIZE (0)\n'
-                       '#endif\n'
-                       )
-
-            file.write('#include "gpu_macros.cuh"\n')
-            file.write('#include "gpu_memory.cuh"\n')
+                       '#include "gpu_macros.cuh"\n'
+                       '#include "gpu_memory.cuh"\n')
 
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double* y_specs) {\n')

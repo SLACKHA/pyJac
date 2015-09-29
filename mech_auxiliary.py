@@ -81,8 +81,6 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
     # now the mechanism file
     with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
-        file.write('#include <stdio.h>\n'
-                   '#include <string.h>\n')
         if lang == 'cuda':
             file.write('extern "C" {\n'
                        '#include "mass_mole.h"\n'

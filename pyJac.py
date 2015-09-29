@@ -2129,6 +2129,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
                 nu = get_nu(k_sp, rxn)
 
+                if nu == 0:
+                    continue
+
                 # sparse indexes
                 if lang in ['c', 'cuda']:
                     if k_sp + 1 + (num_s + 1) * (j_sp + 1) not in sparse_indicies:
@@ -2136,9 +2139,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 elif lang in ['fortran', 'matlab']:
                     if (k_sp + 1, j_sp + 1) not in sparse_indicies:
                         sparse_indicies.append((k_sp + 1, j_sp + 1))
-
-                if nu == 0:
-                    continue
 
                 working_temp = ''
                 mw_frac = (sp_k.mw / sp_j.mw)* float(nu)

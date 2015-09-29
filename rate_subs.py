@@ -2125,9 +2125,6 @@ def write_mass_mole(path, lang, specs):
         file.write(
             '#ifndef MASS_MOLE_H\n'
             '#define MASS_MOLE_H\n'
-            '#if defined(CUDA)\n'
-            'extern "C" {\n'
-            '#endif\n'
             '\n'
             '#include "header.h"\n'
             '\n'
@@ -2135,9 +2132,6 @@ def write_mass_mole(path, lang, specs):
             'void mass2mole (const double*, double*);\n'
             'double getDensity (const double, const double, const double*);\n'
             '\n'
-            '#if defined(CUDA)\n'
-            '}\n'
-            '#endif\n'
             '#endif\n'
             )
         file.close()

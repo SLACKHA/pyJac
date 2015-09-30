@@ -1633,7 +1633,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                '#define JACOB_HEAD\n'
                '\n'
                '#include "header{0}"\n'.format(utils.header_ext[lang]) +
-               ('#include "jacobs/jac_include{0}"\n'
+               ('#include "jacobs/jac_include{0}"\n'.format(utils.header_ext[lang])
                 if do_unroll else '') +
                '#include "chem_utils{0}"\n'
                '#include "rates{0}"\n'.format(utils.header_ext[lang]))

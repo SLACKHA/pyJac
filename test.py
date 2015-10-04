@@ -6,6 +6,7 @@ from __future__ import print_function
 import os
 import sys
 import subprocess
+import pickle
 from argparse import ArgumentParser
 
 import matplotlib.pyplot as plt
@@ -141,11 +142,12 @@ def convert_mech(mech_filename, therm_filename=None):
 class analytic_eval_jacob:
     def __init__(self, pressure):
         self.pres = pressure
+        import pyjacob
+        self.jac = pyjacob
 
     def dydt(self, y):
-        import pyjacob
         dy = np.zeros_like(y)
-        pyjacob.py_dydt(0, self.pres, y, dy)
+        self.jac.py_dydt(0, self.pres, y, dy)
         return dy
 
     def eval_jacobian(self, gas, order):
@@ -168,7 +170,7 @@ class analytic_eval_jacob:
         fd = np.array(arr[0])
         return fd.T.flatten()
 
-def __is_pdep(rxn):
+def is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
@@ -195,6 +197,197 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
         np.save(pasr_output_file, state_data)
     return state_data
 
+class cpyjac_evaluator(object):
+    def check_optimized(self, build_dir, filename='mechanism.h'):
+        with open(os.path.join(build_dir, filename), 'r') as file:
+            opt = False
+            for line in file.readlines():
+                if 'Cache Optimized' in line:
+                    opt = True
+                    break
+        self.cache_opt = opt
+        if self.cache_opt:
+            with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
+                specs = pickle.load(file)
+                reacs = pickle.load(file)
+                self.fwd_rxn_map = np.array(pickle.load(file))
+                self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if reacs[i].rev])
+                self.fwd_spec_map = np.array(pickle.load(file))
+                self.fwd_pdep_map = np.array(pickle.load(file))
+                self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
+                spec_ordering = pickle.load(file)
+                rxn_ordering = pickle.load(file)
+
+            self.sp_map = np.array(spec_ordering)
+            self.rxn_map = np.array(rxn_ordering)
+
+            rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
+            if rev_reacs:
+                old_rev_order = [i for i in old_rxn_order if reacs[i].rev]
+                self.rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in old_rev_order])
+            else:
+                self.rev_rxn_map = np.array([])
+
+            pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
+            if pdep_reacs:
+                old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd_body]
+                self.pdep_rxn_map = np.array([pdep_reacs.index(rxn) for rxn in old_pdep_order])
+            else:
+                self.pdep_rxn_map = np.array([])
+
+            self.dydt_map = np.array([0] + spec_ordering)
+            #handle jacobian map separately
+            #dT/dT doesn't change
+            self.jac_map = [0]
+            #updated species map (+ 1 to account for dT entry)
+            self.jac_map.extend([x + 1 for x in self.sp_map])
+            for i in range(len(self.sp_map)):
+                #dT / dY entry
+                self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1))
+                for j in range(len(self.sp_map)):
+                    self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1) + self.sp_map[j] + 1)
+            self.jac_map = np.array(self.jac_map)
+        else:
+            self.sp_map = None
+            self.rxn_map = None
+            self.rev_rxn_map = None
+            self.pdep_rxn_map = None
+            self.dydt_map = None
+            self.jac_map = None
+
+        
+    def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
+        self.idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
+        self.idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
+                is_pdep(rxn)
+                ]
+        self.check_optimized(build_dir, filename)
+        self.pyjac = __import__(module_name)
+
+
+    def eval_conc(self, temp, pres, mass_frac, conc):
+        mw_avg = 0
+        rho = 0
+        if self.cache_opt:
+            test_mf[:] = mass_frac[self.sp_map]
+            self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
+            conc[:] = conc[self.sp_map]
+        else:
+            self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
+    def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        if self.cache_opt:
+            test_conc[:] = conc[self.fwd_spec_map]
+            self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
+             fwd_rates, rev_rates)
+            fwd_rates[:] = fwd_rates[self.rxn_map]
+            rev_rates[:] = rev_rates[self.rev_rxn_map]
+        else:
+            self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
+    def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        if self.cache_opt:
+            test_conc[:] = conc[self.fwd_spec_map]
+            pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
+            pres_mod[:] = pres_mod[self.pdep_rxn_map]
+        else:
+            self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
+    def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        if self.cache_opt:
+            test_fwd[:] = fwd_rates[self.fwd_rxn_map]
+            test_rev[:] = rev_rates[self.fwd_rev_rxn_map]
+            test_pdep[:] = pres_mod[self.fwd_pdep_map]
+            self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
+            spec_rates[:] = spec_rates[self.sp_map]
+        else:
+            self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
+    def dydt(self, t, pres, y, dydt):
+        if self.cache_opt:
+            test_y[:] = y[self.fwd_dydt_map]
+            pyjacob.py_dydt(t, pres, test_y, dydt)
+            dydt[:] = dydt[self.dydt_map]
+        else:   
+            self.pyjac.py_dydt(t, pres, y, dydt)
+    def eval_jacobian(self, t, pres, y, jacob):
+        if self.cache_opt:
+            test_y[:] = y[self.fwd_dydt_map]
+            self.pyjac.py_eval_jacobian(pres, test_y, jacob)
+            jacob[:] = jacob[self.jac_map]
+        else:
+            self.pyjac.py_eval_jacobian(t, pres, y, jacob)
+    def update(self, index):
+        pass
+
+class cupyjac_evaluator(cpyjac_evaluator):
+    def __init__(self, build_dir, gas, state_data):
+        super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
+
+        def czeros(shape):
+            arr = np.zeros(shape)
+            return arr.flatten(order='c')
+        def reshaper(arr, shape, reorder=None):
+            arr = arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
+            if reorder is not None:
+                arr = arr[:, reorder]
+            return arr
+
+        if not self.cache_opt:
+            self.fwd_spec_map = np.arange(gas.n_species)
+
+        cuda_state = state_data[:, 1:]
+        num_cond = cuda_state.shape[0]
+        #init vectors
+        test_conc = czeros((num_cond, gas.n_species))
+        test_fwd_rates = czeros((num_cond,gas.n_reactions))
+        test_rev_rates = czeros((num_cond,len(self.idx_rev)))
+        test_pres_mod = czeros((num_cond,len(self.idx_pmod)))
+        test_spec_rates = czeros((num_cond,gas.n_species))
+        test_dydt = czeros((num_cond,gas.n_species + 1))
+        test_jacob = czeros((num_cond,(gas.n_species + 1) * (gas.n_species + 1)))
+
+        mw_avg = czeros(num_cond)
+        rho = czeros(num_cond)
+        temp = cuda_state[:, 0].flatten(order='c')
+        pres = cuda_state[:, 1].flatten(order='c')
+        mass_frac = cuda_state[:, [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+                                .astype(np.dtype('d'), order='c')
+        y_dummy = cuda_state[:, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+                                .astype(np.dtype('d'), order='c')
+
+        self.pyjac.py_eval_conc(num_cond, temp, pres, mass_frac, mw_avg, rho, test_conc)
+        self.pyjac.py_eval_rxn_rates(num_cond, temp, pres, test_conc, test_fwd_rates, test_rev_rates)
+        self.pyjac.py_get_rxn_pres_mod(num_cond, temp, pres, test_conc, test_pres_mod)
+        self.pyjac.py_eval_spec_rates(num_cond, test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
+        self.pyjac.py_dydt(num_cond, 0, pres, y_dummy, test_dydt)
+        self.pyjac.py_eval_jacobian(num_cond, 0, pres, y_dummy, test_jacob)
+
+        #reshape for comparison
+        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.sp_map)
+        self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.rxn_map)
+        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, len(self.idx_rev)), self.rev_rxn_map)
+        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, len(self.idx_pmod)), self.pdep_rxn_map)
+        self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.sp_map)
+        self.test_dydt = reshaper(test_dydt, (num_cond,gas.n_species + 1), self.dydt_map)
+        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species + 1) * (gas.n_species + 1)),
+                            self.jac_map)
+        self.index = 0
+
+    def update(self, index):
+        self.index = index
+    def eval_conc(self, temp, pres, mass_frac, conc):
+        conc[:] = self.test_conc[self.index, :]
+    def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        fwd_rates[:] = self.test_fwd_rates[self.index, :]
+        rev_rates[:] = self.test_rev_rates[self.index, :]
+    def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        pres_mod[:] = self.test_pres_mod[self.index, :]
+    def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        spec_rates[:] = self.test_spec_rates[self.index, :]
+    def dydt(self, t, pres, y, dydt):
+        dydt[:] = self.test_dydt[self.index, :]
+    def eval_jacobian(self, t, pres, y, jacob):
+        jacob[:] = self.test_jacob[self.index, :]
+
+
+
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
@@ -214,6 +407,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
 
+    #remove the old jaclist
+    try:
+        os.remove('out/jacobs/jac_list_c')
+    except:
+        pass
+    try:
+        os.remove('out/jacobs/jac_list_cuda')
+    except:
+        pass
+
+
     if generate_jacob:
         # Create Jacobian and supporting source code files
         create_jacobian(lang, mech_filename, therm_name=therm_filename,
@@ -232,14 +436,24 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         os.remove('pyjacob.so')
     except:
         pass
-    #just run python dydt_setup.py build_ext --inplace
+    #need to compile this anyways, it's way easier to get the analytical
+    #jacobian evaulator to use the c interface
     subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
                            'pyjacob_setup.py', 'build_ext', '--inplace'
                            ])
 
+    try:
+        os.remove('cu_pyjacob.so')
+    except:
+        pass
+    if lang == 'cuda':
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 
+                               'pyjacob_cuda_setup.py', 'build_ext', '--inplace'
+                               ])
+
     #get the cantera object
     gas = ct.Solution(mech_filename)
-    pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
+    pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
 
     # Now generate data and check results
@@ -248,7 +462,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # pressure modification applies.
     idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
     idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
-                __is_pdep(rxn)
+                is_pdep(rxn)
                 ]
     # Index of element in idx_pmod that corresponds to reversible reaction
     idx_pmod_rev = [
@@ -283,6 +497,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                         state_data.shape[1],
                                         state_data.shape[2]
                                         )
+    
+    if lang == 'cuda':
+        pyjacob = cupyjac_evaluator(build_dir, gas, state_data)
+    else:
+        pyjacob = cpyjac_evaluator(build_dir, gas)
+
     num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)
@@ -294,7 +514,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_zero = np.zeros(num_trials)
 
     for i, state in enumerate(state_data):
-        import pyjacob
+        #update index in case we're using cuda
+        pyjacob.update(i)
+
         temp = state[1]
         pres = state[2]
         mass_frac = state[3:]
@@ -318,10 +540,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         # Derivative source term
         ode = ReactorConstPres(gas)
 
-        mw_avg = 0
-        rho = 0
         #get conc
-        pyjacob.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, test_conc)
+        pyjacob.eval_conc(temp, pres, mass_frac, test_conc)
 
         non_zero = np.where(test_conc > 0.)[0]
         err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
@@ -335,10 +555,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             .format(max_err * 100., loc))
 
         #get rates
-        pyjacob.py_eval_rxn_rates(temp, pres, test_conc,
+        pyjacob.eval_rxn_rates(temp, pres, test_conc,
                                   test_fwd_rates, test_rev_rates
                                   )
-        pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
+        pyjacob.get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
@@ -376,9 +596,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   )
 
         # Species production rates
-        pyjacob.py_eval_spec_rates(test_fwd_rates, test_rev_rates,
-                                   test_pres_mod, test_spec_rates
-                                   )
+        pyjacob.eval_spec_rates(test_fwd_rates, test_rev_rates,
+                                test_pres_mod, test_spec_rates
+                                )
+
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -401,7 +622,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             .format(err))
 
         y_dummy = np.hstack((temp, mass_frac))
-        pyjacob.py_dydt(0, pres, y_dummy, test_dydt)
+        pyjacob.dydt(0, pres, y_dummy, test_dydt)
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
         err = abs((test_dydt[non_zero] - ode()[non_zero]) /
@@ -419,7 +640,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        pyjacob.py_eval_jacobian(0, pres, y_dummy, test_jacob)
+        pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
         non_zero = np.where(abs(test_jacob) > 1.e-30)[0]
         zero = np.where(test_jacob == 0.)[0]
 
@@ -480,7 +701,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # Cleanup all compiled files.
     for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
         os.remove(f)
-    os.rmdir(test_dir)
+    if lang == 'cuda':
+        for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
+            os.remove(f)
 
     # Now clean build directory
     for root, dirs, files in os.walk('./build', topdown=False):

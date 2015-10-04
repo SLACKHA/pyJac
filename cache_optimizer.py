@@ -59,7 +59,7 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
     return r_to_s, s_to_r
 
 
-def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, multi_thread=1):
+def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, multi_thread=None):
     """
     The work horse of the greedy_optimizer
 
@@ -86,7 +86,10 @@ def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, mu
         If supplied, the returned list will be of this size, else the entire selection_pool will be used
     """
 
-    Pool = multiprocessing.Pool(multi_thread)
+    if multi_thread is not None:
+        Pool = multiprocessing.Pool(multi_thread)
+    else:
+        Pool = multiprocessing.Pool()
     size = min(size, len(selection_pool)) if size is not None else len(selection_pool)
     the_list = [seed]
     size_offset = 1

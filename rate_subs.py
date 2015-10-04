@@ -544,30 +544,40 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     sp = specs[prod_sp]
                     if not sp:
                         print('Error: species ' + prod_sp + ' in reaction '
-                                                            '{} not found.\n'.format(i_rxn)
+                              '{} not found.\n'.format(i_rxn)
                               )
                         sys.exit()
 
                     # put together all our coeffs
                     lo_array = [nu] + [
                         sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
-                                            sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
-                        sp.lo[5]]
+                        sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
+                        sp.lo[5]
+                        ]
 
-                    lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
+                    lo_array = [x * lo_array[0] for x in
+                                [lo_array[1] - lo_array[2]] + lo_array[3:]
+                                ]
 
                     hi_array = [nu] + [
                         sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
-                                            sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
-                        sp.hi[5]]
+                        sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
+                        sp.hi[5]
+                        ]
 
-                    hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
+                    hi_array = [x * hi_array[0] for x in
+                                [hi_array[1] - hi_array[2]] + hi_array[3:]
+                                ]
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
-                        coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(
-                            lo_array))], \
-                                               [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+                        coeffs[sp.Trange[1]] = [
+                            lo_array[i] + coeffs[sp.Trange[1]][0][i]
+                            for i in range(len(lo_array))
+                            ], [
+                            hi_array[i] + coeffs[sp.Trange[1]][1][i]
+                            for i in range(len(hi_array))
+                            ]
 
                 # now loop through reactants
                 for isp, reac_sp in enumerate(rxn.reac):

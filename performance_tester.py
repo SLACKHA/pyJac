@@ -460,8 +460,8 @@ def check_step_file(filename, steplist):
     runs = {}
     for step in steplist:
         runs[step] = 0
-    if not 'nvcc' in filename:
-        raise Exception
+    if not ('nvcc' in filename or 'fdcu' in filename):
+        raise Exception(filename)
 
     try:
         with open(filename, 'r') as file:
@@ -797,7 +797,7 @@ for mechanism in mechanism_list:
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, 
                             build_path=build_dir,
-                            nosmem=not smem,
+                            no_shared=not smem,
                             num_blocks=8, num_threads=64)
 
             with open('out/regcount') as file:
@@ -833,8 +833,6 @@ for mechanism in mechanism_list:
             if pmod:
                 files += ['rxn_rates_pres_mod']
 
-            ext = lambda x: utils.file_ext['cuda'] if x != 'mass_mole' else \
-                                utils.file_ext['c']
             getf = lambda x: x[x.index('/') + 1:] \
                                 if 'jacobs/' in x else x
 
@@ -847,7 +845,7 @@ for mechanism in mechanism_list:
                     args.insert(-1, i)
                 args.extend([
                     '-o', os.path.join(test_dir, getf(f)) + '.o',
-                    os.path.join(build_dir, f + ext(f))
+                    os.path.join(build_dir, f + utils.file_ext['cuda'])
                     ])
                 args = [val for val in args if val.strip()]
                 try:
@@ -908,7 +906,7 @@ for mechanism in mechanism_list:
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
                             optimize_cache=opt, multi_thread=12, 
                             build_path=build_dir,
-                            nosmem=not smem,
+                            no_shared=not smem,
                             num_blocks=8, num_threads=64)
 
             with open('out/regcount') as file:
@@ -937,8 +935,6 @@ for mechanism in mechanism_list:
             if pmod:
                 files += ['rxn_rates_pres_mod']
 
-            ext = lambda x: utils.file_ext['cuda'] if x != 'mass_mole' else \
-                                utils.file_ext['c']
             getf = lambda x: x
 
             def compiler(f):
@@ -950,7 +946,7 @@ for mechanism in mechanism_list:
                     args.insert(-1, i)
                 args.extend([
                     '-o', os.path.join(test_dir, getf(f)) + '.o',
-                    os.path.join(build_dir, f + ext(f))
+                    os.path.join(build_dir, f + utils.file_ext['cuda'])
                     ])
                 args = [val for val in args if val.strip()]
                 try:

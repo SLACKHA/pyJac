@@ -21,12 +21,15 @@ for directory in dirs:
 	for filename in files:
 		with open(filename) as file:
 			lines = [l.strip() for l in file.readlines() if l.strip()]
-		if 'nvcc' not in filename:
+		if 'nvcc' not in filename\
+			and 'fdcu' not in filename:
 			#format is num_threads, num_odes, runtime (ms)
 			if '_co_' in filename:
 				continue
 			if 'tchem' in filename:
 				basename = 'TChem'
+			elif 'fdc' in filename:
+				basename = 'FD Jac'
 			else:
 				basename = 'pyJac'
 				if not '447' in filename:
@@ -46,7 +49,10 @@ for directory in dirs:
 					data[directory][basename] = []
 				data[directory][basename].append(vals[1] / vals[0])
 		else:
-			name = 'pyJac (GPU)'
+			if 'fdcu' in filename:
+				name = 'FD Jac'
+			else:
+				name = 'pyJac (GPU)'
 			if not '_nco_' in filename and not '_nsm_' in filename:
 				continue
 			#format is num_odes, runtime (ms)
@@ -156,7 +162,7 @@ def barplot(data):
 		thez = []
 		for thedir in data:
 			y, z = data[thedir][name]
-			thex.append(mechanism_sizes[thedir]['nr'])
+			thex.append(mechanism_sizes[thedir]['ns'])
 			they.append(y)
 			thez.append(z)
 		miny = they[0] if miny is None else they[0] if they[0] < miny else miny
@@ -167,6 +173,8 @@ def barplot(data):
 	x = np.arange(thex[-1] + 1)
 	y = np.arange(thex[-1] + 1)
 	y = y / float(y[-1])
+	plt.plot(x, y, '--k')
+	y = [v * v for v in np.arange(thex[-1] + 1)]
 	plt.plot(x, y, '--k')
 	props = {'width':0.1,
 			 'frac':0.05,
@@ -217,7 +225,7 @@ def line_plot(data):
 	for thedir in norm_gpu_data:
 		for name in norm_gpu_data[thedir]:
 			y, z = norm_gpu_data[thedir][name]
-			thex.append(mechanism_sizes[thedir]['nr'])
+			thex.append(mechanism_sizes[thedir]['ns'])
 			they.append(y)
 			thez.append(z)
 

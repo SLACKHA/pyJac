@@ -533,7 +533,7 @@ shared = [True, False]
 num_threads = [1]#[1, 12]
 
 repeats = 10
-gpu_repeats = 100
+gpu_repeats = 10
 home = os.getcwd() + os.path.sep
 build_dir = 'out/'
 test_dir = 'test/'
@@ -589,11 +589,11 @@ for mechanism in mechanism_list:
 
             with open("test/data.bin", "ab") as file:
                 state_data.tofile(file)
-            if mechanism['name'] == 'USC':
-                for i in range(4):
-                    with open("test/data.bin", "ab") as file:
-                        state_data.tofile(file)
-                    num_conditions += state_data.shape[0]
+            #if mechanism['name'] == 'USC':
+            #    for i in range(4):
+            #        with open("test/data.bin", "ab") as file:
+            #            state_data.tofile(file)
+            #        num_conditions += state_data.shape[0]
             num_conditions += state_data.shape[0]
             print(num_conditions)
             index += 1
@@ -983,7 +983,7 @@ for mechanism in mechanism_list:
                          str(stepsize)], stdout=file)
 
     if not do_tchem:
-        sys.exit(0)
+        continue
     #finally tc tester
     data_output = 'tchem_output.txt'
     data_output = os.path.join(os.getcwd(), data_output)

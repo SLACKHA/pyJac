@@ -74,10 +74,14 @@ for thedir in data:
 		data[thedir][name] = (avg, dev)
 	print(thedir)
 	for name in data[thedir]:
-		if name == 'TChem': continue
+		if name == 'pyJac': continue
 		print(name)
-		print(data[thedir]['TChem'][0] / data[thedir][name][0])
+		print(data[thedir][name][0] / data[thedir]['pyJac'][0])
 
+
+print()
+print()
+print('GPU')
 gpu_data = {}
 norm_gpu_data = {}
 for thedir in step_data:
@@ -97,6 +101,11 @@ for thedir in step_data:
 				mdev = np.std(vals)
 		gpu_data[thedir][name] = zip(*thelist)
 		norm_gpu_data[thedir][name] = (mavg, mdev)
+	print(thedir)
+	for name in step_data[thedir]:
+		if name == 'pyJac (GPU)': continue
+		print(name)
+		print(norm_gpu_data[thedir][name][0] / norm_gpu_data[thedir]['pyJac (GPU)'][0])
 
 mechanism_sizes = {'USC':{'ns':111, 'nr':784},
 				   'H2':{'ns':13, 'nr':27},
@@ -111,7 +120,9 @@ ms = {'H2':'o',
 	  'GRI':'>',
 	  'USC':'s',
 	  'pyJac':'o',
-	  'TChem':'>'}
+	  'pyJac (GPU)':'o',
+	  'TChem':'>',
+	  'FD Jac':'s'}
 
 def barplot(data):
 	N = len(data)
@@ -168,21 +179,34 @@ def barplot(data):
 		miny = they[0] if miny is None else they[0] if they[0] < miny else miny
 		thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
 		plt.plot(thex, they, linestyle=ls, marker=ms[name], label=name)
+		if name == 'TChem':
+			#do linear slope
+			w = [5 * (len(they) - i) for i in range(len(they))]
+			line = np.polyfit(thex, they, 1, w=w)
+			x = range(thex[-1] + 1)
+			y = [x[i] * line[0] + line[1] for i in range(len(x))]
+			plt.plot(x, y, '--k')
+			#props = {'width':0.1,
+			#		 'frac':0.05,
+			#		 'shrink':0.01,
+			#		 'color':'k'}
+			ann = (x[len(x) / 4]+25, y[len(y) / 4]+0.6)
+			plt.annotate(r'$y\/\alpha\/N_s$', xy=ann, xytext=ann, fontsize=16)
 
-	#draw a slope line
-	x = np.arange(thex[-1] + 1)
-	y = np.arange(thex[-1] + 1)
-	y = y / float(y[-1])
-	plt.plot(x, y, '--k')
-	y = [v * v for v in np.arange(thex[-1] + 1)]
-	plt.plot(x, y, '--k')
-	props = {'width':0.1,
-			 'frac':0.05,
-			 'shrink':0.01,
-			 'color':'k'}
-	ann = (x[len(x) / 4.], y[len(y) / 4.])
-	plt.annotate(r'$y\/\alpha\/N_r$', xy=ann, xytext=(ann[0]-150, ann[1]+0.125), arrowprops=props,
-		fontsize=16)
+		if name == 'FD Jac':
+			#do quad slope
+			w = [5 * (len(they) - i) for i in range(len(they))]
+			line = np.polyfit(thex, they, 2, w=w)
+			print line
+			x = range(thex[-1] + 1)
+			y = [x[i] * x[i] * line[0] + line[1] * x[i] + line[0] for i in range(len(x))]
+			plt.plot(x, y, '--k')
+			#props = {'width':0.1,
+			#		 'frac':0.05,
+			#		 'shrink':0.01,
+			#		 'color':'k'}
+			ann = (x[len(x) / 4]+23, y[len(y) / 4]+3)
+			plt.annotate(r'$y\/\alpha\/N_s^2$', xy=ann, xytext=ann, fontsize=16)
 
 	ax.set_yscale('log')
 	ax.set_ylim(ymin=miny*0.95)
@@ -190,7 +214,7 @@ def barplot(data):
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-	ax.set_xlabel('Number of reactions')
+	ax.set_xlabel('Number of species')
 	#ax.legend(loc=0)
 	plt.savefig('cpu_norm.pdf')
 	plt.close()	
@@ -201,6 +225,8 @@ def line_plot(data):
 	order = [x for x in key]
 	for thedir in order:
 		for name in data[thedir]:
+			if 'FD' in name:
+				continue
 			x, y, z = data[thedir][name]
 			order, x = zip(*sorted(enumerate(x), key=lambda k:k[1]))
 			order = list(order)
@@ -218,39 +244,51 @@ def line_plot(data):
 	plt.savefig('gpu.pdf')
 	plt.close()
 
-	thex = []
-	they = []
-	thez = []
+	miny = None
 	fig, ax = plt.subplots()
-	for thedir in norm_gpu_data:
-		for name in norm_gpu_data[thedir]:
+	for name in norm_gpu_data[thedir]:
+		thex = []
+		they = []
+		thez = []
+		for thedir in norm_gpu_data:
 			y, z = norm_gpu_data[thedir][name]
+			if miny is None:
+				miny = y
+			elif y < miny:
+				miny = y
 			thex.append(mechanism_sizes[thedir]['ns'])
 			they.append(y)
 			thez.append(z)
 
-	thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
-	plt.plot(thex, they, linestyle=ls, marker='o', label='pyJac')
+		thex, they, thez = zip(*sorted(zip(thex, they, thez), key=lambda x:x[0]))
+		plt.plot(thex, they, linestyle=ls, marker=ms[name], label=name)
 
-	#draw a slope line
-	x = np.arange(thex[-1] + 1)
-	y = np.arange(thex[-1] + 1)
-	y = 0.1 * y / float(y[-1])
-	plt.plot(x, y, '--k')
-	props = {'width':0.1,
-			 'frac':0.05,
-			 'shrink':0.01,
-			 'color':'k'}
-	ann = (x[len(x) / 4.], y[len(y) / 4.])
-	plt.annotate(r'$y\/\alpha\/0.1\times\/N_r$', xy=ann, xytext=(ann[0]-150, ann[1]+0.075), arrowprops=props,
-				fontsize=16)
+		if name != 'FD Jac':
+			#draw a slope line
+			w = [5 * (len(they) - i) for i in range(len(they))]
+			line = np.polyfit(thex, they, 1, w=w)
+			x = range(thex[-1] + 1)
+			y = [x[i] * line[0] + line[1] for i in range(len(x))]
+			plt.plot(x, y, '--k')
+			ann = (x[len(x) / 4]+50, y[len(y) / 4]+0.1)
+			plt.annotate(r'$y\/\alpha\/N_s$', xy=ann, xytext=ann, fontsize=16)
+
+		if name == 'FD Jac':
+			w = [5 * (len(they) - i) for i in range(len(they))]
+			line = np.polyfit(thex, they, 2, w=w)
+			print line
+			x = range(thex[-1] + 1)
+			y = [x[i] * x[i] * line[0] + x[i] * line[1] + line[2] for i in range(len(x))]
+			plt.plot(x, y, '--k')
+			ann = (x[len(x) / 4], y[len(y) / 4]+0.06)
+			plt.annotate(r'$y\/\alpha\/N_s^2$', xy=ann, xytext=ann, fontsize=16)
 
 	ax.set_yscale('log')
-	ax.set_ylim(ymin=they[0]*0.95)
+	ax.set_ylim(ymin=miny*0.95)
 	# add some text for labels, title and axes ticks
 	ax.set_ylabel('Mean evaluation time / condition (ms)')
 	#ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-	ax.set_xlabel('Number of reactions')
+	ax.set_xlabel('Number of species')
 	ax.legend(loc=0, numpoints=1)
 	plt.savefig('gpu_norm.pdf')
 	plt.close()	

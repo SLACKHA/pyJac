@@ -1246,23 +1246,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 sp = specs[spind]
 
                 #find nu
-                if spind in rxn.prod and spind in rxn.reac:
-                    pisp = rxn.prod.index(spind)
-                    risp = rxn.reac.index(spind)
-                    nu = rxn.prod_nu[pisp] - rxn.reac_nu[risp]
-
-                # check products
-                elif spind in rxn.prod:
-                    isp = rxn.prod.index(spind)
-                    nu = rxn.prod_nu[isp]
-
-                # check reactants
-                elif spind in rxn.reac:
-                    isp = rxn.reac.index(spind)
-                    nu = -rxn.reac_nu[isp]
-                else:
-                    continue
-
+                nu = utils.get_nu(spind, rxn)
                 if nu == 0.0:
                     continue
 

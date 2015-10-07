@@ -407,7 +407,7 @@ def write_kc(file, lang, specs, rxn):
     coeffs = {}
     for isp in set(rxn.reac + rxn.prod):
         sp = specs[isp]
-        nu = get_nu(isp, rxn)
+        nu = utils.get_nu(isp, rxn)
 
         if nu == 0:
             continue
@@ -512,23 +512,6 @@ def write_kc(file, lang, specs, rxn):
         line += '{:.16e} * '.format(num)
     line += 'exp(Kc)' + utils.line_end[lang]
     file.write(line)
-
-
-def get_nu(isp, rxn):
-    if isp in rxn.prod and isp in rxn.reac:
-        nu = (rxn.prod_nu[rxn.prod.index(isp)] -
-              rxn.reac_nu[rxn.reac.index(isp)])
-        # check if net production zero
-        if nu == 0:
-            return 0
-    elif isp in rxn.prod:
-        nu = rxn.prod_nu[rxn.prod.index(isp)]
-    elif isp in rxn.reac:
-        nu = -rxn.reac_nu[rxn.reac.index(isp)]
-    else:
-        # doesn't participate in reaction
-        return 0
-    return nu
 
 
 def get_infs(rxn):
@@ -2054,7 +2037,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         for k_sp in set(rxn.reac + rxn.prod):
             sp_k = specs[k_sp]
             line = utils.line_start
-            nu = get_nu(k_sp, rxn)
+            nu = utils.get_nu(k_sp, rxn)
             if nu == 0:
                 continue
             if lang in ['c', 'cuda']:
@@ -2105,7 +2088,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             for k_sp in set(rxn.reac + rxn.prod):
                 sp_k = specs[k_sp]
 
-                nu = get_nu(k_sp, rxn)
+                nu = utils.get_nu(k_sp, rxn)
 
                 if nu == 0:
                     continue

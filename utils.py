@@ -39,6 +39,24 @@ array_chars = dict(c="[{}]", cuda="[{}]",
                    fortran="({})", matlab="({})"
                    )
 
+def get_nu(isp, rxn):
+    """Returns the net nu of species isp for the reaction rxn
+    """
+    if isp in rxn.prod and isp in rxn.reac:
+        nu = (rxn.prod_nu[rxn.prod.index(isp)] -
+              rxn.reac_nu[rxn.reac.index(isp)])
+        # check if net production zero
+        if nu == 0:
+            return 0
+    elif isp in rxn.prod:
+        nu = rxn.prod_nu[rxn.prod.index(isp)]
+    elif isp in rxn.reac:
+        nu = -rxn.reac_nu[rxn.reac.index(isp)]
+    else:
+        # doesn't participate in reaction
+        return 0
+    return nu
+
 def read_str_num(string, sep=None):
     """Returns a list of floats pulled from a string.
 

@@ -404,12 +404,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
     file.write('\n')
 
+
     for i_rxn in ordering:
         rxn = reacs[i_rxn]
 
         if lang == 'cuda' and smm is not None:
             indexes = list(set(rxn.reac + rxn.prod))
-            the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
+            the_vars = [shared.variable('C', index) for index in indexes]
             # estimate usages as the number of consequitive reactions
             usages = []
             for sp_i in indexes:
@@ -695,22 +696,6 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
 
             file.write('\n')
 
-        if lang == 'cuda' and smm is not None:
-            # figure out which to mark for removal
-            indexes = set(rxn.reac + rxn.prod)
-            the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-            mark = []
-            # mark em if they're absent from the next two (or more) rxns
-            for i, sp_i in enumerate(indexes):
-                temp = i_rxn
-                while temp < len(ordering) and sp_i not in set(
-                                reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
-                    temp += 1
-                    if temp - i_rxn - 1 > 2:
-                        mark.append(the_vars[i])
-                        break
-            smm.mark_for_eviction(mark)
-
     if lang in ['c', 'cuda']:
         file.write('} // end eval_rxn_rates\n\n')
     elif lang == 'fortran':
@@ -920,15 +905,15 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if reac.thd_body_eff:
             if lang == 'cuda' and smm is not None:
                 the_vars = []
-                indexes = [sp[0] for sp in reac.thd_body_eff]
-                the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
+                indexes = [sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0]
+                the_vars = [utils.variable('C', index) for index in indexes]
                 # estimate usages as the number of consecutive reactions
                 usages = []
                 for sp_i in indexes:
                     temp = i_rxn + 1
                     while temp < len(ordering):
                         rxn = reacs[ordering[temp]]
-                        if sp_i in set([x[0] for x in rxn.thd_body_eff]):
+                        if sp_i in set([x[0] for x in rxn.thd_body_eff if sp[1] != 1.0]):
                             temp += 1
                         else:
                             break
@@ -1096,25 +1081,6 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
 
         # space in between each reaction
         file.write('\n')
-        if lang == 'cuda' and smm is not None:
-            # mark for eviction
-            the_vars = []
-            indexes = [sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0]
-            the_vars = [utils.get_array(lang, 'C', index) for index in indexes]
-            # estimate usages as the number of consecutive reactions
-            mark = []
-            for i, sp_i in enumerate(indexes):
-                temp = i_rxn + 1
-                while temp < len(ordering):
-                    rxn = reacs[ordering[temp]]
-                    if sp_i not in set([x[0] for x in rxn.thd_body_eff if x[1] != 1.0]):
-                        temp += 1
-                    else:
-                        break
-                    if temp - i_rxn - 1 > 2:
-                        mark.append(the_vars[i])
-                        break
-            smm.mark_for_eviction(mark)
 
     if lang in ['c', 'cuda']:
         file.write('} // end get_rxn_pres_mod\n\n')
@@ -1208,9 +1174,15 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent=2)
-        smm.set_on_eviction(lambda sp, shared: \
-            file.write('  {} = {}'.format(sp, shared) + utils.line_end[lang])
-            )
+
+        cuda_seen = [False for spec in specs]
+        def __on_eviction(sp, shared):
+            file.write('  {} {}= {}'.format(sp.to_string(), shared,
+                                    '+' if cuda_seen[sp.index] else '')
+                                    + utils.line_end[lang])
+            cuda_seen[sp.index] = True
+
+        smm.set_on_eviction(__on_eviction)
 
     seen = [False for spec in specs]
     for order in ordering:
@@ -1223,10 +1195,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             #get allowed species
             my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
             if lang == 'cuda' and smm is not None:
-                sp_inds = sorted(list(set(rxn.reac + rxn.prod)))
-                the_vars = [
-                    utils.get_array(lang, 'sp_rates', sp) for sp in sp_inds
-                    ]
+                the_vars = [utils.variable('sp_rates', sp) for sp in my_specs]
                 # estimate usages
                 usages = []
                 for sp in set(rxn.reac + rxn.prod):
@@ -1237,9 +1206,8 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                            ):
                         temp += 1
                     usages.append(temp - rind - 1)
-                smm.load_into_shared(file, the_vars, usages,
-                                     load=[seen[x] for x in sp_inds]
-                                     )
+                new_loads = smm.load_into_shared(file, the_vars, usages, load=False)
+                new_loads = [x.index for x in new_loads]
 
             # loop through species
             for spind in my_specs:
@@ -1251,13 +1219,17 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     continue
 
                 sign = '-' if nu < 0 else '+'
-                line = ('  ' + get_array(lang, 'sp_rates', spind) +
-                    ' {}= '.format(sign if seen[spind] else '')
-                    )
-                if not seen[spind] and nu < 0:
-                    line += sign
+                line = '  ' + get_array(lang, 'sp_rates', spind)
+                if lang == 'cuda':
+                    valin = spind in new_loads
+                    line += ' {}= {}'.format(sign if not valin else '',
+                                            sign if valin and nu < 0 else '')
+                else:
+                    line += ' {}= '.format(sign if seen[spind] else '')
+                    if not seen[spind] and nu < 0:
+                        line += sign
                 nu = abs(nu)
-                if abs(nu) != 1.0:
+                if nu != 1.0:
                     if utils.is_integer(nu):
                         line += '{} * '.format(float(nu))
                     else:
@@ -1287,22 +1259,6 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 line += utils.line_end[lang]
                 file.write(line)
 
-            if lang == 'cuda' and smm is not None:
-                the_vars = [utils.get_array(lang, 'sp_rates', sp)
-                            for sp in set(rxn.reac + rxn.prod)
-                            ]
-                # estimate usages
-                usages = []
-
-                # mark for eviction
-                for sp in set(rxn.reac + rxn.prod):
-                    temp = rind + 1
-                    while temp < rind and (sp in reacs[i_reacs[temp]].reac \
-                    or sp in reacs[i_reacs[temp]].prod):
-                        temp += 1
-                        if temp - rind - 1 > 2:
-                            mark.append(the_vars[i])
-                smm.mark_for_eviction(the_vars)
 
     for i, seen_sp in enumerate(seen):
         if not seen_sp:

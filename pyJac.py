@@ -34,13 +34,13 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     reac_usages = [0 for i in range(len(rxn.reac))]
     prod_usages = [0 for i in range(len(rxn.prod))]
     # add variables
-    variable_list.append(utils.get_array('cuda', 'fwd_rates', rind))
+    variable_list.append(shared.variable('fwd_rates', rind))
     if rxn.rev:
-        variable_list.append(utils.get_array('cuda', 'rev_rates', rev_reacs.index(rind)))
+        variable_list.append(shared.variable('rev_rates', rev_reacs.index(rind)))
     if rxn.pdep or rxn.thd_body:
-        variable_list.append(utils.get_array('cuda', 'pres_mod', pdep_reacs.index(rind)))
+        variable_list.append(shared.variable('pres_mod', pdep_reacs.index(rind)))
     for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff]):
-        variable_list.append(utils.get_array('cuda', 'conc', sp))
+        variable_list.append(shared.variable('conc', sp))
 
     alphaij_count = 0
     # calculate usages

@@ -1169,17 +1169,19 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         get_array = smm.get_array
         smm.write_init(file, indent=2)
 
-        cuda_seen = [False for spec in specs]
+        cuda_unloaded = [False for spec in specs]
         def __on_eviction(sp, shared):
             file.write('  {} {}= {}'.format(sp.to_string(),
-                                    '+' if cuda_seen[sp.index] else '',
+                                    '+' if cuda_unloaded[sp.index] or 
+                                        cuda_loaded[sp.index] else '',
                                     shared)
                                     + utils.line_end[lang])
-            cuda_seen[sp.index] = True
+            cuda_unloaded[sp.index] = True
 
         smm.set_on_eviction(__on_eviction)
 
     new_loads = []
+    cuda_loaded = [False for spec in specs]
     seen = [False for spec in specs]
     for order in ordering:
         i_specs = order[0]
@@ -1218,6 +1220,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 line = '  ' + get_array(lang, 'sp_rates', spind)
                 if lang == 'cuda':
                     valin = spind in new_loads
+                    #if we're loading it and it's already been touched
+                    #we need to do a += when we unload
+                    cuda_loaded[spind] |= valin and seen[spind]
                     line += ' {}= {}'.format(sign if not valin and seen[spind] else '',
                                             sign if valin and nu < 0 else '')
                 else:

@@ -1218,7 +1218,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 line = '  ' + get_array(lang, 'sp_rates', spind)
                 if lang == 'cuda':
                     valin = spind in new_loads
-                    line += ' {}= {}'.format(sign if not valin else '',
+                    line += ' {}= {}'.format(sign if not valin and seen[spind] else '',
                                             sign if valin and nu < 0 else '')
                 else:
                     line += ' {}= '.format(sign if seen[spind] else '')

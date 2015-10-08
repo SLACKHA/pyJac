@@ -900,7 +900,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
             if lang == 'cuda' and smm is not None:
                 the_vars = []
                 indexes = [sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0]
-                the_vars = [utils.variable('C', index) for index in indexes]
+                the_vars = [shared.variable('C', index) for index in indexes]
                 # estimate usages as the number of consecutive reactions
                 usages = []
                 for sp_i in indexes:
@@ -1171,8 +1171,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
         cuda_seen = [False for spec in specs]
         def __on_eviction(sp, shared):
-            file.write('  {} {}= {}'.format(sp.to_string(), shared,
-                                    '+' if cuda_seen[sp.index] else '')
+            file.write('  {} {}= {}'.format(sp.to_string(),
+                                    '+' if cuda_seen[sp.index] else '',
+                                    shared)
                                     + utils.line_end[lang])
             cuda_seen[sp.index] = True
 
@@ -1189,7 +1190,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             #get allowed species
             my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
             if lang == 'cuda' and smm is not None:
-                the_vars = [utils.variable('sp_rates', sp) for sp in my_specs]
+                the_vars = [shared.variable('sp_rates', sp) for sp in my_specs]
                 # estimate usages
                 usages = []
                 for sp in set(rxn.reac + rxn.prod):

@@ -18,7 +18,7 @@ class variable(object):
     def update(self):
         self.last_use_count += 1
     def to_string(self):
-        return utils.to_string(self.lang, self.base, self.index)
+        return utils.get_array(self.lang, self.base, self.index)
 
 class shared_memory_manager(object):
     def __init__(self, blocks_per_sm=8, num_threads=64, L1_PREFERRED=True):
@@ -35,20 +35,22 @@ class shared_memory_manager(object):
         self.self_eviction_strategy = lambda x: x.last_use_count >= 2
 
     def force_eviction(self):
-        for shared_index in self.shared_dict.iterkeys(): 
+        key_copy = [x for x in self.shared_dict.iterkeys()]
+        for shared_index in key_copy: 
             self.evict(shared_index)
 
     def evict_longest_gap(self):
         """evicts the entry that has gone the longest without use"""
         if len(self.shared_dict):
-            ind = max(x for x in self.shared_dict if self.mark_for_eviction[x],
+            ind = max((x for x in self.shared_dict if self.eviction_marking[x]),
                       key=lambda k: self.shared_dict[k].last_use_count)
             self.evict(ind)
 
     def evict(self, shared_index):
+        var = self.shared_dict[shared_index]
         del self.shared_dict[shared_index]
         self.shared_indexes.append(shared_index)
-        self.mark_for_eviction[shared_index] = False
+        self.eviction_marking[shared_index] = False
         if self.on_eviction is not None:
             self.on_eviction(var, self.__get_string(shared_index))
     def add_to_dictionary(self, val):
@@ -61,7 +63,7 @@ class shared_memory_manager(object):
     def reset(self):
         self.shared_dict = {}
         self.shared_indexes = range(self.shared_per_thread)
-        self.eviction_marking = []
+        self.eviction_marking = [False for x in range(self.shared_per_thread)]
         self.on_eviction = None
 
     def write_init(self, file, indent=4):
@@ -70,7 +72,10 @@ class shared_memory_manager(object):
 
     def load_into_shared(self, file, variables, estimated_usage=None, indent=2, load=True):
         #save old variables
-        old_index, old_variables = zip(*self.shared_dict.iteritems())
+        old_index = []
+        old_variables = []
+        if len(self.shared_dict):
+            old_index, old_variables = zip(*self.shared_dict.iteritems())
 
         #update all the old variables usage counts
         for x in old_variables:
@@ -81,7 +86,7 @@ class shared_memory_manager(object):
             for ind, val in self.shared_dict.iteritems():
                 #if qualifies for self eviction and not in current set
                 if self.self_eviction_strategy(val) and not val in variables:
-                    self.mark_for_eviction[ind] = True
+                    self.eviction_marking[ind] = True
 
         #sort by usage if available
         if estimated_usage is not None:
@@ -102,7 +107,7 @@ class shared_memory_manager(object):
                     continue
                 #if we have something marked for eviction, now's the time
                 if len(self.shared_dict) >= self.shared_per_thread and \
-                        self.mark_for_eviction.count(True):
+                        self.eviction_marking.count(True):
                         self.evict_longest_gap()
                 #add it if possible
                 if len(self.shared_dict) < self.shared_per_thread:
@@ -111,14 +116,14 @@ class shared_memory_manager(object):
         if estimated_usage:
             # add any usage = 1 ones if space
             for var, usage in variables:
-                if not var in self.shared_dict.itervalues()
+                if not var in self.shared_dict.itervalues():
                     if len(self.shared_dict) < self.shared_per_thread:
                         self.add_to_dictionary(var)
         if load is True:
             # need to write loads for any new vars
-            for ind, val in self.shared_dict.itervalues():
-                if not var in old_variables:
-                    file.write(' ' * indent + self.__get_string(ind) + ' = ' + var.to_string() +
+            for ind, val in self.shared_dict.iteritems():
+                if not val in old_variables:
+                    file.write(' ' * indent + self.__get_string(ind) + ' = ' + val.to_string() +
                                 utils.line_end['cuda'])
 
         return [x for x in self.shared_dict.itervalues() if not x in old_variables]
@@ -133,12 +138,13 @@ class shared_memory_manager(object):
         else:
             return self.skeleton.format('threadIdx.x + {} * blockDim.x'.format(index))
 
-    def get_index(self, thevar):
-        return next((x for x in self.shared_dict if thevar == self.shared_dict[x]), None)
-
     def get_array(self, lang, thevar, index, twod=None):
-        var = variable(thevar, index)
-        ind = self.get_index(var)
-        #mark as used
-        self.shared_dict[ind].reset()
-        return self.__get_string(var[1])
+        var = variable(thevar, index, lang)
+        our_ind, our_var = next((val for val in self.shared_dict.iteritems() if val[1] == var), (None, None))
+        if our_var is not None:
+            #mark as used
+            our_var.reset()
+            #and return the shared string
+            return self.__get_string(our_ind)
+        else:
+            return var.to_string()

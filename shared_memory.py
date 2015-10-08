@@ -87,6 +87,8 @@ class shared_memory_manager(object):
                 #if qualifies for self eviction and not in current set
                 if self.self_eviction_strategy(val) and not val in variables:
                     self.eviction_marking[ind] = True
+                elif val in variables:
+                    self.eviction_marking[ind] = False
 
         #sort by usage if available
         if estimated_usage is not None:

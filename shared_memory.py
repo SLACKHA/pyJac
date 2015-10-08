@@ -32,7 +32,7 @@ class shared_memory_manager(object):
         self.shared_indexes = [True for i in range(self.shared_per_thread)]
         self.eviction_marking = [False for i in range(self.shared_per_thread)]
         self.on_eviction = None
-        self.self_eviction_strategy = lambda x: x.last_use_count > 2
+        self.self_eviction_strategy = lambda x: x.last_use_count >= 2
 
     def force_eviction(self):
         for shared_index in self.shared_dict.iterkeys(): 

@@ -431,7 +431,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
         rxn = reacs[i_rxn]
 
         if lang == 'cuda' and smm is not None:
-            indexes = list(set(rxn.reac + rxn.prod))
+            indexes = sorted(list(set(rxn.reac + rxn.prod)))
             the_vars = [shared.variable('C', index) for index in indexes]
             # estimate usages as the number of consequitive reactions
             usages = []
@@ -899,7 +899,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if reac.thd_body_eff:
             if lang == 'cuda' and smm is not None:
                 the_vars = []
-                indexes = [sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0]
+                indexes = sorted([sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0])
                 the_vars = [shared.variable('C', index) for index in indexes]
                 # estimate usages as the number of consecutive reactions
                 usages = []

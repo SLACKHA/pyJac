@@ -1179,6 +1179,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
         smm.set_on_eviction(__on_eviction)
 
+    new_loads = []
     seen = [False for spec in specs]
     for order in ordering:
         i_specs = order[0]

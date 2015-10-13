@@ -2140,7 +2140,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write('\n')
 
         if lang == 'cuda' and smm is not None:
-            smm.mark_for_eviction(variable_list)
+            evictable = [x for x in variable_list if not x.base == 'conc']
+            smm.mark_for_eviction(evictable)
 
         if do_unroll and (rind == next_fn_index - 1 or rind == len(reacs) - 1):
             # switch back

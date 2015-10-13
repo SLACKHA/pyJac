@@ -1224,7 +1224,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     #we need to do a += when we unload
                     cuda_loaded[spind] |= valin and seen[spind]
                     line += ' {}= {}'.format(sign if not valin and seen[spind] else '',
-                                            sign if valin and nu < 0 else '')
+                                            sign if (valin or not seen[spind]) and nu < 0 else '')
                 else:
                     line += ' {}= '.format(sign if seen[spind] else '')
                     if not seen[spind] and nu < 0:
@@ -1255,10 +1255,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                 #    rxn_out = get_array(lang, rxn_out, None, preformed=True)
                 line += rxn_out
 
-
                 # done with this species
                 line += utils.line_end[lang]
                 file.write(line)
+            file.write('\n')
 
 
     for i, seen_sp in enumerate(seen):

@@ -138,6 +138,7 @@ def rxn_rate_const(A, b, E):
 
     return line
 
+
 def get_cheb_rate(lang, rxn, write_defns=True):
     """
     Given a reaction, and a temperature and pressure, this routine
@@ -270,7 +271,7 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
     file.write('{0}void eval_rxn_rates (const double,'
                ' const double, const double*, double*, double*);\n'
                '{0}void eval_spec_rates (const double*,'
-               ' const double*, const double*, double*);\n'.format(pre)
+               ' const double*, const double*, double*, double*);\n'.format(pre)
                )
 
     if pdep_reacs:
@@ -376,9 +377,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 kf_flag = False
             file.write('  double Tred;\n'
                        '  double Pred;\n')
-            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
+                       utils.line_end[lang]
+                       )
             dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) +
+                       utils.line_end[lang])
+
 
         elif lang == 'cuda':
             if kf_flag:
@@ -386,9 +391,13 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                 kf_flag = False
             file.write('  register double Tred;\n'
                        '  register double Pred;\n')
-            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
+                       utils.line_end[lang]
+                       )
             dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) +
+                       utils.line_end[lang]
+                       )
 
 
     if any([rxn.plog for rxn in reacs]):
@@ -437,8 +446,10 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
             usages = []
             for sp_i in indexes:
                 temp = i_rxn + 1
-                while temp < len(ordering) and sp_i in set(
-                                reacs[ordering[temp]].reac + reacs[ordering[temp]].prod):
+                while (temp < len(ordering) and
+                       sp_i in set(reacs[ordering[temp]].reac +
+                                   reacs[ordering[temp]].prod)
+                       ):
                     temp += 1
                 usages.append(temp - i_rxn - 1)
             smm.load_into_shared(file, the_vars, usages)
@@ -583,9 +594,14 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                     if not sp.Trange[1] in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
-                        coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i] for i in range(len(
-                            lo_array))], \
-                            [hi_array[i] + coeffs[sp.Trange[1]][1][i] for i in range(len(hi_array))]
+                        coeffs[sp.Trange[1]] = [
+                            lo_array[i] +
+                            coeffs[sp.Trange[1]][0][i]
+                            for i in range(len(lo_array))
+                            ], [hi_array[i] +
+                            coeffs[sp.Trange[1]][1][i]
+                            for i in range(len(hi_array))
+                            ]
 
                 isFirst = True
                 for T_mid in coeffs:
@@ -659,7 +675,9 @@ def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
                         )
                 file.write(line)
 
-            line = '  ' + get_array(lang, 'rev_rxn_rates', rev_reacs.index(i_rxn)) + ' = '
+            line = '  ' + get_array(lang, 'rev_rxn_rates',
+                                    rev_reacs.index(i_rxn)
+                                    ) + ' = '
 
             # reactants (products from forward reaction)
             for isp in rxn.prod:
@@ -884,7 +902,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     # loop through third-body and pressure-dependent reactions
     for i_rxn, rind in enumerate(ordering):
         reac = reacs[rind]  # index in reaction list
-        pind = pdep_reacs.index(rind)  # index in list of third/pressure-dep reactions
+        # index in list of third/pressure-dep reactions
+        pind = pdep_reacs.index(rind)
 
         # print reaction index
         if lang in ['c', 'cuda']:
@@ -899,7 +918,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         if reac.thd_body_eff:
             if lang == 'cuda' and smm is not None:
                 the_vars = []
-                indexes = sorted([sp[0] for sp in reac.thd_body_eff if sp[1] != 1.0])
+                indexes = sorted([sp[0] for sp in reac.thd_body_eff
+                                 if sp[1] != 1.0]
+                                 )
                 the_vars = [shared.variable('C', index) for index in indexes]
                 # estimate usages as the number of consecutive reactions
                 usages = []
@@ -907,7 +928,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                     temp = i_rxn + 1
                     while temp < len(ordering):
                         rxn = reacs[ordering[temp]]
-                        if sp_i in set([x[0] for x in rxn.thd_body_eff if sp[1] != 1.0]):
+                        if sp_i in set([x[0] for x in rxn.thd_body_eff
+                                       if sp[1] != 1.0]
+                                       ):
                             temp += 1
                         else:
                             break
@@ -974,7 +997,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
 
             # reduced pressure
             if reac.pdep_sp != '':
-                line = '  Pr = k0 * ' + get_array(lang, 'C', reac.pdep_sp) + ' / kinf'
+                line = ('  Pr = k0 * ' +
+                        get_array(lang, 'C', reac.pdep_sp) + ' / kinf'
+                        )
             else:
                 line = '  Pr = k0 * thd / kinf'
             line += utils.line_end[lang]
@@ -1018,7 +1043,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
                         )
                 file.write(line)
 
-                line = '  ' + get_array(lang, 'pres_mod', pind) + ' = ' + utils.exp_10_fun[lang]
+                line = ('  ' + get_array(lang, 'pres_mod', pind) +
+                        ' = ' + utils.exp_10_fun[lang]
+                        )
                 line += 'logFcent / (1.0 + A * A / (B * B))) '
 
             elif reac.sri:
@@ -1139,11 +1166,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     if lang in ['c', 'cuda']:
         line += ('void eval_spec_rates (const double * fwd_rates,'
                  ' const double * rev_rates, const double * pres_mod,'
-                 ' double * sp_rates) {\n'
+                 ' double * sp_rates, double * dy_N) {\n'
                  )
     elif lang == 'fortran':
         line += ('subroutine eval_spec_rates (fwd_rates, rev_rates,'
-                 ' pres_mod, sp_rates)\n\n'
+                 ' pres_mod, sp_rates, dy_N)\n\n'
                  )
 
         # fortran needs type declarations
@@ -1153,12 +1180,12 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                  'pres_mod({})\n'.format(len(pdep_reacs))
                  )
         line += ('  double precision, intent(out) :: '
-                 'sp_rates({})\n'.format(num_s) +
+                 'sp_rates({}), dy_N\n'.format(num_s) +
                  '\n'
                  )
     elif lang == 'matlab':
-        line += ('function sp_rates = eval_spec_rates ( fwd_rates,'
-                 ' rev_rates, pres_mod )\n\n'
+        line += ('function sp_rates = eval_spec_rates (fwd_rates,'
+                 ' rev_rates, pres_mod, dy_N)\n\n'
                  )
         line += '  sp_rates = zeros({},1);\n'.format(len(specs))
     file.write(line)
@@ -1171,10 +1198,11 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
         cuda_unloaded = [False for spec in specs]
         def __on_eviction(sp, shared):
-            file.write('  {} {}= {}'.format(sp.to_string(),
-                                    '+' if cuda_unloaded[sp.index] or 
-                                        cuda_loaded[sp.index] else '',
-                                    shared)
+            file.write('  {} {}= {}'.format(sp.to_string(), '+'
+                                    if cuda_unloaded[sp.index] or
+                                    cuda_loaded[sp.index] else '',
+                                    shared
+                                    )
                                     + utils.line_end[lang])
             cuda_unloaded[sp.index] = True
 
@@ -1204,7 +1232,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                            ):
                         temp += 1
                     usages.append(temp - rind - 1)
-                new_loads = smm.load_into_shared(file, the_vars, usages, load=False)
+                new_loads = smm.load_into_shared(file, the_vars,
+                                                 usages, load=False
+                                                 )
                 new_loads = [x.index for x in new_loads]
 
             # loop through species
@@ -1217,14 +1247,21 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     continue
 
                 sign = '-' if nu < 0 else '+'
-                line = '  ' + get_array(lang, 'sp_rates', spind)
+                if spind == len(specs) - 1:
+                    line = '  dy_N'
+                else:
+                    line = '  ' + get_array(lang, 'sp_rates', spind)
                 if lang == 'cuda':
                     valin = spind in new_loads
                     #if we're loading it and it's already been touched
                     #we need to do a += when we unload
                     cuda_loaded[spind] |= valin and seen[spind]
-                    line += ' {}= {}'.format(sign if not valin and seen[spind] else '',
-                                            sign if (valin or not seen[spind]) and nu < 0 else '')
+                    line += ' {}= {}'.format(sign if not valin and
+                                             seen[spind] else '',
+                                             sign if (valin or
+                                             not seen[spind]) and
+                                             nu < 0 else ''
+                                             )
                 else:
                     line += ' {}= '.format(sign if seen[spind] else '')
                     if not seen[spind] and nu < 0:
@@ -1325,7 +1362,7 @@ def write_chem_utils(path, lang, specs):
                '#endif\n'.format(pre)
                )
     file.close()
-    
+
     filename = 'chem_utils' + utils.file_ext[lang]
     file = open(path + filename, 'w')
 
@@ -1334,32 +1371,153 @@ def write_chem_utils(path, lang, specs):
         file.write('\n')
 
 
-    ######################
+    ###################################
     # species concentrations subroutine
-    ######################
+    ###################################
     line = pre
     if lang in ['c', 'cuda']:
         line += ('void eval_conc (const double T, const double pres, '
-                 'const double * mass_frac, double * mw_avg, '
+                 'const double * mass_frac, double * y_N, double * mw_avg, '
                  'double * rho, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
         line += (
             # fortran needs type declarations
-            'subroutine eval_conc (temp, pres, mass_frac, conc)\n\n'
+            'subroutine eval_conc (T, pres, mass_frac, y_N, '
+            'mw_avg, rho, conc)\n\n'
             '  implicit none\n'
-            '  double precision, intent(in) :: T, pres, y\n'.format(num_s) +
-            '  double precision, intent(out) :: conc({})\n'.format(num_s) +
+            '  double precision, intent(in) :: T, pres, '
+            'mass_frac\n'.format(num_s) +
+            '  double precision, intent(out) :: y_N, mw_avg, '
+            'rho, conc({})\n'.format(num_s) +
             '\n'
         )
     elif lang == 'matlab':
-        line += 'function conc = eval_conc (temp, pres, mass_frac)\n\n'
+        line += ('function conc = eval_conc (T, pres, mass_frac, y_N, '
+                 'mw_avg, rho, conc)\n\n'
+                 )
     file.write(line)
+
+    # Get mass fraction of last species
+    file.write('  // mass fraction of final species\n')
+    line = '  *y_N = 1.0 - ('
+    for isp in range(len(specs[:-1])):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '               '
+
+        if not isfirst: line += ' + '
+
+        line += utils.get_array(lang, 'y', isp + 1)
+
+        isfirst = False
+    line += ')'
+    file.write(line + utils.line_end[lang])
 
     # calculation of mw avg
     line = '  *mw_avg = '
     isfirst = True
-    for isp, sp in enumerate(specs):
+    for isp, sp in enumerate(specs[:-1]):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '     '
+
+        if not isfirst: line += ' + '
+        if lang in ['c', 'cuda']:
+            line += ('(mass_frac[{}] * {:.16e})'.format(isp,
+                     1.0 / sp.mw)
+                     )
+        elif lang in ['fortran', 'matlab']:
+            line += ('(mass_frac[{}] * {:.16e})'.format(isp + 1,
+                     1.0 / sp.mw)
+                     )
+
+        isfirst = False
+    line += ' + (y_N * {:16e})'.format(1.0 / specs[-1].mw)
+    line += utils.line_end[lang]
+    file.write(line)
+    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
+
+    # calculation of density
+    file.write('  // mass-averaged density\n')
+    line = '  *rho = pres * (*mw_avg) / ({:.8e} * T)'.format(chem.RU)
+    file.write(line + utils.line_end[lang])
+
+    # calculation of species molar concentrations
+
+    # loop through species
+    for isp, sp in enumerate(specs[:-1]):
+        line = '  conc'
+        if lang in ['c', 'cuda']:
+            line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
+        elif lang in ['fortran', 'matlab']:
+            line += '({0}) = (*rho) * mass_frac({0}) * '.format(isp + 1)
+        line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
+        file.write(line)
+    line = '  conc'
+    if lang in ['c', 'cuda']:
+        line += '[{0}] = (*rho) * y_N * '.format(len(specs))
+    elif lang in ['fortran', 'matlab']:
+        line += '({0}) = (*rho) * y_N * '.format(len(specs) + 1)
+    line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
+    file.write(line + '\n')
+
+    if lang in ['c', 'cuda']:
+        file.write('} // end eval_conc\n\n')
+    elif lang == 'fortran':
+        file.write('end subroutine eval_conc\n\n')
+    elif lang == 'matlab':
+        file.write('end\n\n')
+
+    #######################################################################
+
+    line = pre
+    if lang in ['c', 'cuda']:
+        line += ('void eval_conc_rho (const double T, const double rho, '
+                 'const double * mass_frac, double * y_N, double * mw_avg, '
+                 'double * pres, double * conc) {\n\n'
+                 )
+    elif lang == 'fortran':
+        line += (
+            # fortran needs type declarations
+            'subroutine eval_conc_rho (temp, rho, mass_frac, y_N, '
+            'mw_avg, pres, conc)\n'
+            '  implicit none\n'
+            '  double precision, intent(in) :: '
+            'T, rho, mass_frac({})\n'.format(num_s) +
+            '  double precision, intent(out) :: '
+            'conc({}), y_N, mw_avg, pres\n'.format(num_s) +
+            '\n'
+            )
+    elif lang == 'matlab':
+        line += ('function conc = eval_conc (temp, rho, mass_frac, y_N, '
+                 'mw_avg, pres, conc)\n\n'
+                 )
+    file.write(line)
+
+    # Get mass fraction of last species
+    file.write('  // mass fraction of final species\n')
+    line = '  *y_N = 1.0 - ('
+    for isp in range(len(specs[:-1])):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '               '
+
+        if not isfirst: line += ' + '
+
+        line += utils.get_array(lang, 'y', isp + 1)
+
+        isfirst = False
+    line += ')'
+    file.write(line + utils.line_end[lang])
+
+    # calculation of mw avg
+    line = '  *mw_avg = '
+    isfirst = True
+    for isp, sp in enumerate(specs[:-1]):
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -1376,20 +1534,20 @@ def write_chem_utils(path, lang, specs):
                      )
 
         isfirst = False
-
-    line += ';\n'
+    line += ' + (y_N * {})'.format(1.0 / specs[-1].mw)
+    line += utils.line_end[lang]
     file.write(line)
     file.write('  *mw_avg = 1.0 / *mw_avg;\n')
 
-    # calculation of density
-    file.write('  // mass-averaged density\n')
-    line = '  *rho = pres * (*mw_avg) / ({:.8e} * T)'.format(chem.RU)
+    # calculation of pressure
+    file.write('  // pressure\n')
+    line = '  *pres = rho * {:.8e} * T / (*mw_avg)'.format(chem.RU)
     file.write(line + utils.line_end[lang])
 
     # calculation of species molar concentrations
 
     # loop through species
-    for isp, sp in enumerate(specs):
+    for isp, sp in enumerate(specs[:-1]):
         line = '  conc'
         if lang in ['c', 'cuda']:
             line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
@@ -1397,6 +1555,13 @@ def write_chem_utils(path, lang, specs):
             line += '({0}) = (*rho) * mass_frac({0}) * '.format(isp + 1)
         line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
+    line = '  conc'
+    if lang in ['c', 'cuda']:
+        line += '[{0}] = (*rho) * y_N * '.format(len(specs))
+    elif lang in ['fortran', 'matlab']:
+        line += '({0}) = (*rho) * y_N * '.format(len(specs) + 1)
+    line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
+    file.write(line)
 
     file.write('\n')
 
@@ -1742,7 +1907,9 @@ def write_derivs(path, lang, specs, reacs):
                    )
     file.write('\n')
 
+    ##################################################################
     # constant pressure
+    ##################################################################
     file.write('#if defined(CONP)\n\n')
 
     line = (pre + 'void dydt (const double t, const double pres, '
@@ -1754,145 +1921,14 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // species molar concentrations\n'
                '  double conc[{}];\n'.format(len(specs))
                )
+    file.write('  double y_N;\n')
     file.write('  double mw_avg;\n')
     file.write('  double rho;\n')
 
     # Simply call subroutine
-    file.write('  eval_conc (y[0], pres, &y[1], &mw_avg, &rho, conc);\n\n')
-
-    # evaluate reaction rates
-    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
-    file.write('  // local arrays holding reaction rates\n'
-               '  double fwd_rates[{}];\n'.format(len(reacs))
-               )
-    if rev_reacs:
-        file.write('  double rev_rates[{}];\n'.format(len(rev_reacs)))
-    else:
-        file.write('  double* rev_rates = 0;\n')
-    file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) +
-               ', pres, conc, fwd_rates, rev_rates);\n\n'
-               )
-
-    # reaction pressure dependence
-    num_dep_reacs = sum([rxn.thd_body or rxn.pdep for rxn in reacs])
-    if num_dep_reacs > 0:
-        file.write('  // get pressure modifications to reaction rates\n'
-                   '  double pres_mod[{}];\n'.format(num_dep_reacs) +
-                   '  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) +
-                   ', pres, conc, pres_mod);\n'
-                   )
-    else:
-        file.write('  double* pres_mod = 0;\n')
-    file.write('\n')
-
-    # species rate of change of molar concentration
-    file.write('  // evaluate species molar net production rates\n')
-    file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
-               '&dy[1]);\n\n'
-               )
-
-    # evaluate specific heat
-    file.write('  // local array holding constant pressure specific heat\n'
-               '  double cp[{}];\n'.format(len(specs)) +
-               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp);\n\n'
-               )
-
-    file.write('  // constant pressure mass-average specific heat\n')
-    line = '  double cp_avg = '
-    isfirst = True
-    for isp, sp in enumerate(specs):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '             '
-
-        if not isfirst: line += ' + '
-
-        line += '(' + utils.get_array(lang, 'cp', isp) + \
-                ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
-
-        isfirst = False
-
-    line += ';\n\n'
-    file.write(line)
-
-    file.write('  // local array for species enthalpies\n'
-               '  double h[{}];\n'.format(len(specs)))
-    file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', h);\n')
-
-    # energy equation
-    file.write('  // rate of change of temperature\n')
-    line = ('  ' + utils.get_array(lang, 'dy', 0) +
-            ' = (-1.0 / (rho * cp_avg)) * ( '
-            )
-    isfirst = True
-    for isp, sp in enumerate(specs):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '       '
-
-        if not isfirst: line += ' + '
-
-        line += '(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' + \
-                utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
-
-        isfirst = False
-
-    line += ' );\n\n'
-    file.write(line)
-
-    # rate of change of species mass fractions
-    file.write('  // calculate rate of change of species mass fractions\n')
-    for idx, sp in enumerate(specs):
-        file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
-                   ' *= ({} / rho);\n'.format(sp.mw)
-                   )
-    file.write('\n')
-
-    file.write('} // end dydt\n\n')
-
-    # constant volume
-    file.write('#elif defined(CONV)\n\n')
-
-    file.write(pre + 'void dydt (const double t, const double rho, '
-                     'const double * y, double * dy) {\n\n'
-               )
-
-    # calculation of pressure
-    file.write('  // pressure\n'
-               '  double pres;\n'
-               )
-    line = '  pres = '
-    isfirst = True
-    for isp, sp in enumerate(specs):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '      '
-
-        if not isfirst: line += ' + '
-        line += ('(' + utils.get_array(lang, 'y', isp + 1) +
-                 ' / {:.16e})'.format(sp.mw)
-                 )
-
-        isfirst = False
-
-    line += ';\n'
-    file.write(line)
-    file.write('  pres = rho * {:.8e} * '.format(chem.RU) +
-               utils.get_array(lang, 'y', 0) + ' * pres;\n\n'
-               )
-
-    # calculation of species molar concentrations
-    file.write('  // species molar concentrations\n'
-               '  double conc[{}];\n'.format(len(specs))
-               )
-
-    # Simply call subroutine
-    file.write('  eval_conc (' + utils.get_array(lang, 'conc', isp) +
-               ', pres, &' + utils.get_array(lang, 'y', isp + 1) +
-               ', conc);\n\n'
+    file.write('  eval_conc (' + utils.get_array(lang, 'y', 0) +
+               'pres, &' + utils.get_array(lang, 'y', 1) + ', '
+               '&y_N, &mw_avg, &rho, conc);\n\n'
                )
 
     # evaluate reaction rates
@@ -1922,8 +1958,128 @@ def write_derivs(path, lang, specs, reacs):
 
     # species rate of change of molar concentration
     file.write('  // evaluate species molar net production rates\n'
+               '  double dy_N;\n'
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
-               '&' + utils.get_array(lang, 'dy', 1) + ');\n\n'
+               '&' + utils.get_array(lang, 'dy', 1) + ', &dy_N);\n\n'
+               )
+
+    # evaluate specific heat
+    file.write('  // local array holding constant pressure specific heat\n'
+               '  double cp[{}];\n'.format(len(specs)) +
+               '  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp);\n\n'
+               )
+
+    file.write('  // constant pressure mass-average specific heat\n')
+    line = '  double cp_avg = '
+    isfirst = True
+    for isp, sp in enumerate(specs[:-1]):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '             '
+
+        if not isfirst: line += ' + '
+
+        line += '(' + utils.get_array(lang, 'cp', isp) + \
+                ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
+
+        isfirst = False
+    line += '(' + utils.get_array(lang, 'cp', len(specs)) + ' * y_N)'
+    file.write(line + utils.line_end[lang] + '\n')
+
+    file.write('  // local array for species enthalpies\n'
+               '  double h[{}];\n'.format(len(specs)))
+    file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', h);\n')
+
+    # energy equation
+    file.write('  // rate of change of temperature\n')
+    line = ('  ' + utils.get_array(lang, 'dy', 0) +
+            ' = (-1.0 / (rho * cp_avg)) * ('
+            )
+    isfirst = True
+    for isp, sp in enumerate(specs[:-1]):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '       '
+
+        if not isfirst: line += ' + '
+
+        line += ('(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' +
+                 utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
+                 )
+
+        isfirst = False
+    line += (' + (dy_N' + utils.get_array(lang, 'h', len(specs)) +
+             ' * {:.16e})'.format(specs[-1].mw)
+             )
+    line += ')' + utils.line_end[lang] + '\n'
+    file.write(line)
+
+    # rate of change of species mass fractions
+    file.write('  // calculate rate of change of species mass fractions\n')
+    for idx, sp in enumerate(specs[:-1]):
+        file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
+                   ' *= ({} / rho);\n'.format(sp.mw)
+                   )
+    file.write('\n')
+
+    file.write('} // end dydt\n\n')
+
+    ##################################################################
+    # constant volume
+    ##################################################################
+    file.write('#elif defined(CONV)\n\n')
+
+    file.write(pre + 'void dydt (const double t, const double rho, '
+                     'const double * y, double * dy) {\n\n'
+               )
+
+    # calculation of species molar concentrations
+    file.write('  // species molar concentrations\n'
+               '  double conc[{}];\n'.format(len(specs))
+               )
+
+    file.write('  double y_N;\n')
+    file.write('  double mw_avg;\n')
+    file.write('  double pres;\n')
+
+    # Simply call subroutine
+    file.write('  eval_conc_rho (' + utils.get_array(lang, 'y', 0) +
+               'rho, &' + utils.get_array(lang, 'y', 1) + ', '
+               '&y_N, &mw_avg, &pres, conc);\n\n'
+               )
+
+    # evaluate reaction rates
+    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
+    file.write('  // local arrays holding reaction rates\n'
+               '  double fwd_rates[{}];\n'.format(len(reacs))
+               )
+    if rev_reacs:
+        file.write('  double rev_rates[{}];\n'.format(len(rev_reacs)))
+    else:
+        file.write('  double* rev_rates = 0;\n')
+    file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', '
+               'pres, conc, fwd_rates, rev_rates);\n\n'
+               )
+
+    # reaction pressure dependence
+    num_dep_reacs = sum([rxn.thd_body or rxn.pdep for rxn in reacs])
+    if num_dep_reacs > 0:
+        file.write('  // get pressure modifications to reaction rates\n'
+                   '  double pres_mod[{}];\n'.format(num_dep_reacs) +
+                   '  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) +
+                   ', pres, conc, pres_mod);\n'
+                   )
+    else:
+        file.write('  double* pres_mod = 0;\n')
+    file.write('\n')
+
+    # species rate of change of molar concentration
+    file.write('  // evaluate species molar net production rates\n'
+               '  double dy_N;\n'
+               '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
+               '&' + utils.get_array(lang, 'dy', 1) + ', &dy_N);\n\n'
                )
 
     # evaluate specific heat
@@ -1934,7 +2090,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // constant volume mass-average specific heat\n')
     line = '  double cv_avg = '
     isfirst = True
-    for idx, sp in enumerate(specs):
+    for idx, sp in enumerate(specs[:-1]):
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -1945,8 +2101,8 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-
-    file.write(line + ';\n\n')
+    line += '(' + utils.get_array(lang, 'cv', len(specs)) + ' * y_N)'
+    file.write(line + utils.line_end[lang] + '\n')
 
     # evaluate internal energy
     file.write('  // local array for species internal energies\n'
@@ -1957,10 +2113,10 @@ def write_derivs(path, lang, specs, reacs):
     # energy equation
     file.write('  // rate of change of temperature\n')
     line = ('  ' + utils.get_array(lang, 'dy', 0) +
-            ' = (-1.0 / (rho * cv_avg)) * ( '
+            ' = (-1.0 / (rho * cv_avg)) * ('
             )
     isfirst = True
-    for idx, sp in enumerate(specs):
+    for idx, sp in enumerate(specs[:-1]):
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -1971,13 +2127,15 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-
-    line += ' );\n\n'
+    line += (' + (dy_N' + utils.get_array(lang, 'u', len(specs)) +
+             ' * {:.16e})'.format(specs[-1].mw)
+             )
+    line += ')' + utils.line_end[lang] + '\n'
     file.write(line)
 
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
-    for isp, sp in enumerate(specs):
+    for isp, sp in enumerate(specs[:-1]):
         file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
@@ -2050,18 +2208,18 @@ def write_mass_mole(path, lang, specs):
                    )
     elif lang == 'fortran':
         file.write(
-            '!-----------------------------------------------------------------\n'
-            '!> Subroutine converting species mole fractions to mass fractions.\n'
-            '!! @param[in]  X  array of species mole fractions\n'
-            '!! @param[out] Y  array of species mass fractions\n'
-            '!-----------------------------------------------------------------\n'
-            'subroutine mole2mass (X, Y)\n'
-            '  implicit none\n'
-            '  double, dimension(:), intent(in) :: X\n'
-            '  double, dimension(:), intent(out) :: X\n'
-            '  double :: mw_avg\n'
-            '\n'
-            )
+        '!-----------------------------------------------------------------\n'
+        '!> Subroutine converting species mole fractions to mass fractions.\n'
+        '!! @param[in]  X  array of species mole fractions\n'
+        '!! @param[out] Y  array of species mass fractions\n'
+        '!-----------------------------------------------------------------\n'
+        'subroutine mole2mass (X, Y)\n'
+        '  implicit none\n'
+        '  double, dimension(:), intent(in) :: X\n'
+        '  double, dimension(:), intent(out) :: X\n'
+        '  double :: mw_avg\n'
+        '\n'
+        )
 
     # calculate molecular weight
     if lang in ['c', 'cuda']:
@@ -2276,9 +2434,11 @@ def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
     num_threads : int, optional
         The target number of threads / blck to achieve for cuda
     no_shared : bool, optional
-        If true, do not use the shared_memory_manager to attempt to optimize for CUDA
+        If true, do not use the shared_memory_manager to attempt
+        to optimize for CUDA
     L1_preferred : bool, optional
-        If true, prefer a larger L1 cache and a smaller shared memory size for CUDA
+        If true, prefer a larger L1 cache and a smaller shared memory
+        size for CUDA
     multi_thread : int, optional
         The number of threads to use during optimization
 

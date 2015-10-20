@@ -1398,6 +1398,7 @@ def write_chem_utils(path, lang, specs):
                  )
     file.write(line)
 
+    isfirst = True
     # Get mass fraction of last species
     file.write('  // mass fraction of final species\n')
     line = '  *y_N = 1.0 - ('

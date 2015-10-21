@@ -1377,13 +1377,13 @@ def write_chem_utils(path, lang, specs):
     line = pre
     if lang in ['c', 'cuda']:
         line += ('void eval_conc (const double T, const double pres, '
-                 'const double * mass_frac, double * y_N, double * mw_avg, '
+                 'const double * y, double * y_N, double * mw_avg, '
                  'double * rho, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
         line += (
             # fortran needs type declarations
-            'subroutine eval_conc (T, pres, mass_frac, y_N, '
+            'subroutine eval_conc (T, pres, y, y_N, '
             'mw_avg, rho, conc)\n\n'
             '  implicit none\n'
             '  double precision, intent(in) :: T, pres, '
@@ -1393,7 +1393,7 @@ def write_chem_utils(path, lang, specs):
             '\n'
         )
     elif lang == 'matlab':
-        line += ('function conc = eval_conc (T, pres, mass_frac, y_N, '
+        line += ('function conc = eval_conc (T, pres, y, y_N, '
                  'mw_avg, rho, conc)\n\n'
                  )
     file.write(line)
@@ -1427,16 +1427,16 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += ('(mass_frac[{}] * {:.16e})'.format(isp,
+            line += ('(y[{}] * {:.16e})'.format(isp,
                      1.0 / sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
-            line += ('(mass_frac[{}] * {:.16e})'.format(isp + 1,
+            line += ('(y[{}] * {:.16e})'.format(isp + 1,
                      1.0 / sp.mw)
                      )
 
         isfirst = False
-    line += ' + (y_N * {:16e})'.format(1.0 / specs[-1].mw)
+    line += ' + ((*y_N) * {:16e})'.format(1.0 / specs[-1].mw)
     line += utils.line_end[lang]
     file.write(line)
     file.write('  *mw_avg = 1.0 / *mw_avg;\n')
@@ -1452,14 +1452,14 @@ def write_chem_utils(path, lang, specs):
     for isp, sp in enumerate(specs[:-1]):
         line = '  conc'
         if lang in ['c', 'cuda']:
-            line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
+            line += '[{0}] = (*rho) * y[{0}] * '.format(isp)
         elif lang in ['fortran', 'matlab']:
-            line += '({0}) = (*rho) * mass_frac({0}) * '.format(isp + 1)
+            line += '({0}) = (*rho) * y({0}) * '.format(isp + 1)
         line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
     line = '  conc'
     if lang in ['c', 'cuda']:
-        line += '[{0}] = (*rho) * y_N * '.format(len(specs))
+        line += '[{0}] = (*rho) * (*y_N) * '.format(len(specs))
     elif lang in ['fortran', 'matlab']:
         line += '({0}) = (*rho) * y_N * '.format(len(specs) + 1)
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
@@ -1526,11 +1526,11 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
         if lang in ['c', 'cuda']:
-            line += ('(mass_frac[{}] * {:.16e})'.format(isp,
+            line += ('(y[{}] * {:.16e})'.format(isp,
                      1.0 / sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
-            line += ('(mass_frac[{}] * {})'.format(isp + 1,
+            line += ('(y[{}] * {})'.format(isp + 1,
                      1.0 / sp.mw)
                      )
 
@@ -1551,14 +1551,14 @@ def write_chem_utils(path, lang, specs):
     for isp, sp in enumerate(specs[:-1]):
         line = '  conc'
         if lang in ['c', 'cuda']:
-            line += '[{0}] = (*rho) * mass_frac[{0}] * '.format(isp)
+            line += '[{0}] = (*rho) * y[{0}] * '.format(isp)
         elif lang in ['fortran', 'matlab']:
-            line += '({0}) = (*rho) * mass_frac({0}) * '.format(isp + 1)
+            line += '({0}) = (*rho) * y({0}) * '.format(isp + 1)
         line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
     line = '  conc'
     if lang in ['c', 'cuda']:
-        line += '[{0}] = (*rho) * y_N * '.format(len(specs))
+        line += '[{0}] = (*rho) * (*y_N) * '.format(len(specs))
     elif lang in ['fortran', 'matlab']:
         line += '({0}) = (*rho) * y_N * '.format(len(specs) + 1)
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
@@ -1928,7 +1928,7 @@ def write_derivs(path, lang, specs, reacs):
 
     # Simply call subroutine
     file.write('  eval_conc (' + utils.get_array(lang, 'y', 0) +
-               'pres, &' + utils.get_array(lang, 'y', 1) + ', '
+               ', pres, &' + utils.get_array(lang, 'y', 1) + ', '
                '&y_N, &mw_avg, &rho, conc);\n\n'
                )
 
@@ -1985,6 +1985,8 @@ def write_derivs(path, lang, specs, reacs):
                 ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
 
         isfirst = False
+
+    if not isfirst: line += ' + '
     line += '(' + utils.get_array(lang, 'cp', len(specs)) + ' * y_N)'
     file.write(line + utils.line_end[lang] + '\n')
 
@@ -2011,7 +2013,7 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-    line += (' + (dy_N' + utils.get_array(lang, 'h', len(specs)) +
+    line += (' + (dy_N * ' + utils.get_array(lang, 'h', len(specs)) +
              ' * {:.16e})'.format(specs[-1].mw)
              )
     line += ')' + utils.line_end[lang] + '\n'

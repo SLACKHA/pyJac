@@ -185,11 +185,11 @@ def reassign_species_lists(reacs, specs):
 
 def is_integer(val):
     """Returns whether a value is an integer regardless of whether it's a float or it's an int"""
-    if isinstance(val, int):
-        return True
-    elif isinstance(val, float) and val.is_integer():
-        return True
-    else:
+    try:
+        return val.is_integer()
+    except:
+        if isinstance(val, int):
+            return True
         #last ditch effort
         try:
             return int(val) == float(val)

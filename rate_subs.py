@@ -1481,7 +1481,7 @@ def write_chem_utils(path, lang, specs):
     line = pre
     if lang in ['c', 'cuda']:
         line += ('void eval_conc_rho (const double T, const double rho, '
-                 'const double * mass_frac, double * y_N, double * mw_avg, '
+                 'const double * y, double * y_N, double * mw_avg, '
                  'double * pres, double * conc) {\n\n'
                  )
     elif lang == 'fortran':
@@ -1497,7 +1497,7 @@ def write_chem_utils(path, lang, specs):
             '\n'
             )
     elif lang == 'matlab':
-        line += ('function conc = eval_conc (temp, rho, mass_frac, y_N, '
+        line += ('function conc = eval_conc_rho (temp, rho, mass_frac, y_N, '
                  'mw_avg, pres, conc)\n\n'
                  )
     file.write(line)
@@ -1505,6 +1505,7 @@ def write_chem_utils(path, lang, specs):
     # Get mass fraction of last species
     file.write('  // mass fraction of final species\n')
     line = '  *y_N = 1.0 - ('
+    isfirst = True
     for isp in range(len(specs[:-1])):
         if len(line) > 70:
             line += '\n'
@@ -1539,7 +1540,7 @@ def write_chem_utils(path, lang, specs):
                      )
 
         isfirst = False
-    line += ' + (y_N * {})'.format(1.0 / specs[-1].mw)
+    line += ' + ((*y_N) * {})'.format(1.0 / specs[-1].mw)
     line += utils.line_end[lang]
     file.write(line)
     file.write('  *mw_avg = 1.0 / *mw_avg;\n')
@@ -1555,16 +1556,16 @@ def write_chem_utils(path, lang, specs):
     for isp, sp in enumerate(specs[:-1]):
         line = '  conc'
         if lang in ['c', 'cuda']:
-            line += '[{0}] = (*rho) * y[{0}] * '.format(isp)
+            line += '[{0}] = rho * y[{0}] * '.format(isp)
         elif lang in ['fortran', 'matlab']:
-            line += '({0}) = (*rho) * y({0}) * '.format(isp + 1)
+            line += '({0}) = rho * y({0}) * '.format(isp + 1)
         line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
     line = '  conc'
     if lang in ['c', 'cuda']:
-        line += '[{0}] = (*rho) * (*y_N) * '.format(len(specs))
+        line += '[{0}] = rho * (*y_N) * '.format(len(specs))
     elif lang in ['fortran', 'matlab']:
-        line += '({0}) = (*rho) * y_N * '.format(len(specs) + 1)
+        line += '({0}) = rho * y_N * '.format(len(specs) + 1)
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
     file.write(line)
 

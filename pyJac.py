@@ -939,7 +939,10 @@ def write_dcp_dt(file, lang, specs):
             sp = specs[isp]
             if T_mid_buckets[T_mid].index(isp):
                 line += '\n    + '
-            line += '(' + utils.get_array(lang, 'y', isp + 1)
+
+            y_str = utils.get_array(lang, 'y', isp + 1) if isp + 1 != len(specs) \
+                        else 'y_N'
+            line += '(' + y_str
             line += (' * {:.16e} * ('.format(chem.RU / sp.mw) +
                      '{:.16e} + '.format(sp.lo[1]) +
                      'T * ({:.16e} + '.format(2.0 * sp.lo[2]) +
@@ -966,7 +969,10 @@ def write_dcp_dt(file, lang, specs):
             sp = specs[isp]
             if T_mid_buckets[T_mid].index(isp):
                 line += '\n    + '
-            line += '(' + utils.get_array(lang, 'y', isp + 1)
+
+            y_str = utils.get_array(lang, 'y', isp + 1) if isp + 1 != len(specs) \
+                        else 'y_N'
+            line += '(' + y_str
             line += (' * {:.16e} * ('.format(chem.RU / sp.mw) +
                      '{:.16e} + '.format(sp.hi[1]) +
                      'T * ({:.16e} + '.format(2.0 * sp.hi[2]) +
@@ -1284,7 +1290,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
     file.write(utils.line_start + '}\n')
 
 
-def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array):
+def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, get_array):
     for k_sp, sp_k in enumerate(specs[:-1]):
         line = utils.line_start
         lin_index = (num_s) * (k_sp + 1)
@@ -1306,14 +1312,14 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offs
             line += ('' + get_array(lang, 'h', isp) + ' * ('
                      '' + get_array(lang, 'jac', isp + 1 + (num_s) * (k_sp + 1)) +
                      ' * cp_avg * rho' +
-                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset) +
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp) +
                      ' * {:.8e}))'.format(sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
             line += ('' + get_array(lang, 'h', isp) + ' * ('
                      '' + get_array(lang, 'jac', isp + 1, twod=k_sp + 1) +
                      ' * cp_avg * rho' +
-                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp + offset) +
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp) +
                      ' * {:.8e}))'.format(sp.mw)
                      )
         line += ')' + utils.line_end[lang]
@@ -1341,7 +1347,7 @@ def write_dt_y_division(file, lang, specs, num_s, get_array):
     file.write('\n')
 
 
-def write_dt_completion(file, lang, specs, offset, get_array):
+def write_dt_completion(file, lang, specs, get_array):
     line = utils.line_start + utils.comment[lang]
     line += ('Complete dT wrt T calculations\n')
     file.write(line)
@@ -1356,7 +1362,7 @@ def write_dt_completion(file, lang, specs, offset, get_array):
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += utils.line_start + '  + '
-        line += ('' + get_array(lang, 'dy', k_sp + offset) +
+        line += ('' + get_array(lang, 'dy', k_sp) +
                  ' * {:.8e}'.format(sp_k.mw) + ' * '
                  )
         line += ('(-working_temp * ' + get_array(lang, 'h', k_sp) +
@@ -1628,8 +1634,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     if lang == 'cuda':
         line = '__device__ '
 
-    offset = 0
-
     if lang in ['c', 'cuda']:
         line += ('void eval_jacob (const double t, const double pres, '
                  'const double * y, double * jac) {\n\n')
@@ -1687,7 +1691,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     elif lang == 'matlab':
         file.write(utils.line_start + 'conc = zeros({},1);\n'.format(num_s)
                    )
-    file.write(utils.line_start + 'eval_conc (y[0], pres, &y[1], &mw_avg, &rho, conc);\n\n')
+    file.write(utils.line_start + 'double y_N' + utils.line_end[lang])
+    file.write(utils.line_start + 'eval_conc (y[0], pres, &y[1], &y_N, &mw_avg, &rho, conc);\n\n')
 
     rate_list = ['fwd_rates']
     if len(rev_reacs):
@@ -1740,15 +1745,16 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    'concentration\n')
     if lang in ['c', 'cuda']:
         file.write(utils.line_start + 'double dy[{}];\n'.format(num_s))
+        file.write(utils.line_start + 'double dy_N;\n')
         file.write(utils.line_start + 'eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy);\n'
+                   'pres_mod, dy, &dy_N);\n'
                    )
     elif lang == 'fortran':
         file.write(utils.line_start + 'call eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy)\n'
+                   'pres_mod, dy, dy_N)\n'
                    )
     elif lang == 'matlab':
-        file.write(utils.line_start + 'dy = eval_spec_rates(fwd_rates, '
+        file.write(utils.line_start + 'dy, dy_N = eval_spec_rates(fwd_rates, '
                    'rev_rates, pres_mod);\n'
                    )
     file.write('\n')
@@ -2060,7 +2066,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         # now loop through each species
         for j_sp, sp_j in enumerate(specs[:-1]):
             for k_sp in set(rxn.reac + rxn.prod):
-                if k_sp == len(specs) - 1:
+                if k_sp + 1 == num_s:
                     continue
                 sp_k = specs[k_sp]
 
@@ -2184,7 +2190,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     line = utils.line_start + 'cp_avg = '
     isfirst = True
-    for sp in specs:
+    for sp in specs[:-1]:
         if len(line) > 70:
             if lang in ['c', 'cuda']:
                 line += '\n'
@@ -2198,9 +2204,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         isp = specs.index(sp)
         if not isfirst:
             line += ' + '
-        line += ('(' + get_array(lang, 'y', isp + 1) + ' * ' + '' + get_array(lang, 'cp', isp) + ')')
+        line += ('(' + get_array(lang, 'y', isp + 1) + ' * ' + get_array(lang, 'cp', isp) + ')')
 
         isfirst = False
+    line += ('(' + 'y_N' + ' * ' + get_array(lang, 'cp', len(specs) - 1) + ')')
     line += utils.line_end[lang]
     file.write(line)
 
@@ -2232,7 +2239,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)
     for k_sp, sp_k in enumerate(specs):
-        if do_unroll and k_sp == next_fn_index and k_sp != len(specs) - 1:
+        if do_unroll and k_sp == next_fn_index:
             store_file = file
             file = write_dy_intros(os.path.join(path, 'jacobs'), lang, jac_count)
             unroll_len = CParams.C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
@@ -2248,9 +2255,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 line = utils.line_start
                 # zero out if unused
                 if lang in ['c', 'cuda'] and not lin_index in sparse_indicies:
-                    file.write(get_array(lang, 'jac', lin_index) + ' = 0.0' + utils.line_end[lang])
+                    file.write(utils.line_start + get_array(lang, 'jac', lin_index) + ' = 0.0' + utils.line_end[lang])
                 elif lang in ['fortran', 'matlab'] and not (k_sp + 1, j_sp + 1) in sparse_indicies:
-                    file.write(get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = 0.0' + utils.line_end[lang])
+                    file.write(utils.line_start + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' = 0.0' + utils.line_end[lang])
                 else:
                     # need to finish
                     if lang in ['c', 'cuda']:
@@ -2258,7 +2265,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     elif lang in ['fortran', 'matlab']:
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
-                    line += '(' + get_array(lang, 'dy', k_sp + offset)
+
+                    dy_str = get_array(lang, 'dy', k_sp) if k_sp + 1 != num_s else 'dy_N'
+                    line += '(' + dy_str
                     line += ' * mw_avg * {:.16e} * rho_inv)'.format(sp_k.mw / sp_j.mw)
                     line += utils.line_end[lang]
                     file.write(line)
@@ -2287,6 +2296,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             else:
                 line += ' {}= -('.format('+' if touched[my_index] else '')
             touched[my_index] = True
+
+            dy_str = get_array(lang, 'dy', k_sp) if k_sp + 1 != num_s else 'dy_N'
             #the num_s + 1, j + 1 jacobian entry is non-existant,
             #so skip it
             if lang in ['c', 'cuda']:
@@ -2296,7 +2307,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                              else '-') +
                          '((' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                         ' * ' + get_array(lang, 'dy', k_sp + offset) +
+                         ' * ' + dy_str +
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             elif lang in ['fortran', 'matlab']:
@@ -2306,7 +2317,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                              else '-') +
                          ' - ((' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                        ' * ' + get_array(lang, 'dy', k_sp + offset) +
+                        ' * ' + dy_str +
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             line += ')' + utils.line_end[lang]
@@ -2330,7 +2341,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # Derivative with respect to species
     ######################################
     # write_dt_y_comment(file, lang, sp)
-    # write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, offset, get_array)
+    # write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, get_array)
 
     file.write('\n')
 
@@ -2338,7 +2349,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     write_dt_y_division(file, lang, specs, num_s, get_array)
 
     # finish the dT entry
-    write_dt_completion(file, lang, specs, offset, get_array)
+    write_dt_completion(file, lang, specs, get_array)
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_jacob\n\n')

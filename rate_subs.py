@@ -1992,7 +1992,7 @@ def write_derivs(path, lang, specs, reacs):
         isfirst = False
 
     if not isfirst: line += ' + '
-    line += '(' + utils.get_array(lang, 'cp', len(specs)) + ' * y_N)'
+    line += '(' + utils.get_array(lang, 'cp', len(specs) - 1) + ' * y_N)'
     file.write(line + utils.line_end[lang] + '\n')
 
     file.write('  // local array for species enthalpies\n'
@@ -2018,7 +2018,7 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-    line += (' + (dy_N * ' + utils.get_array(lang, 'h', len(specs)) +
+    line += (' + (dy_N * ' + utils.get_array(lang, 'h', len(specs) - 1) +
              ' * {:.16e})'.format(specs[-1].mw)
              )
     line += ')' + utils.line_end[lang] + '\n'
@@ -2109,7 +2109,7 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-    line += '(' + utils.get_array(lang, 'cv', len(specs)) + ' * y_N)'
+    line += '(' + utils.get_array(lang, 'cv', len(specs) - 1) + ' * y_N)'
     file.write(line + utils.line_end[lang] + '\n')
 
     # evaluate internal energy
@@ -2135,7 +2135,7 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-    line += (' + (dy_N' + utils.get_array(lang, 'u', len(specs)) +
+    line += (' + (dy_N' + utils.get_array(lang, 'u', len(specs) - 1) +
              ' * {:.16e})'.format(specs[-1].mw)
              )
     line += ')' + utils.line_end[lang] + '\n'

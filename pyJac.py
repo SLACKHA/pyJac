@@ -1362,19 +1362,19 @@ def write_dt_completion(file, lang, specs, get_array):
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += utils.line_start + '  + '
-        line += ('' + get_array(lang, 'dy', k_sp) +
+        if k_sp + 1 == len(specs):
+            j_str = 'J_nplusone'
+        else:
+            j_str = get_array(lang, 'jac', k_sp + 1, twod=0)
+        line += (get_array(lang, 'dy', k_sp) +
                  ' * {:.8e}'.format(sp_k.mw) + ' * '
                  )
         line += ('(-working_temp * ' + get_array(lang, 'h', k_sp) +
                  ' / cp_avg + ' + '' + get_array(lang, 'cp', k_sp) + ')'
                  )
-        if k_sp < len(specs) - 1:
-            #skip the last jacobian entry
-            #as it's technically zero for this species
-            #but it's not actually included in the jacobian
-            line += (' + ' + get_array(lang, 'jac', k_sp + 1, twod=0) + ' * ' +
-                     get_array(lang, 'h', k_sp) + ' * rho'
-                     )
+        line += (' + ' + j_str + ' * ' +
+                 get_array(lang, 'h', k_sp) + ' * rho'
+                 )
         if k_sp != len(specs) - 1:
             if lang == 'fortran':
                 line += ' &'
@@ -1745,16 +1745,15 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                    'concentration\n')
     if lang in ['c', 'cuda']:
         file.write(utils.line_start + 'double dy[{}];\n'.format(num_s))
-        file.write(utils.line_start + 'double dy_N;\n')
         file.write(utils.line_start + 'eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy, &dy_N);\n'
+                   'pres_mod, dy, &dy[NSP - 1]);\n'
                    )
     elif lang == 'fortran':
         file.write(utils.line_start + 'call eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy, dy_N)\n'
+                   'pres_mod, dy, dy(NSP - 1))\n'
                    )
     elif lang == 'matlab':
-        file.write(utils.line_start + 'dy, dy_N = eval_spec_rates(fwd_rates, '
+        file.write(utils.line_start + 'dy = eval_spec_rates(fwd_rates, '
                    'rev_rates, pres_mod);\n'
                    )
     file.write('\n')
@@ -1868,6 +1867,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
         file.write(line)
 
+    file.write(utils.line_start + 'double J_nplusone = 0' + utils.line_end[lang])
+
     # variables for equilibrium constant derivatives, if needed
     dBdT_flag = [False for sp in specs]
 
@@ -1882,6 +1883,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # whether this jacobian index has been modified
     touched = [False for i in range(len(specs) * len(specs))]
+    J_nplusone_touched = False
     sparse_indicies = []
 
     last_split_index = None
@@ -2013,15 +2015,16 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
 
         for k_sp in set(rxn.reac + rxn.prod):
-            if k_sp + 1 == num_s:
-                continue
             sp_k = specs[k_sp]
             line = utils.line_start
             nu = utils.get_nu(k_sp, rxn)
             if nu == 0:
                 continue
+            if k_sp + 1 == num_s:
+                J_nplusone_touched = True
             if lang in ['c', 'cuda']:
-                line += (get_array(lang, 'jac', k_sp + 1) +
+                j_str = 'J_nplusone' if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1)
+                line += (j_str +
                          ' {}= {}j_temp{} * {:.16e}'.format('+' if touched[k_sp + 1] else '',
                                                            '' if nu == 1 else ('-' if nu == -1 else ''),
                                                            ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
@@ -2031,8 +2034,9 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 # NOTE: I believe there was a bug here w/ the previous
                 # fortran/matlab code (as it looks like it would be zero
                 # indexed)
-                line += (get_array(lang, 'jac', k_sp + 1, twod=0) + ' = ' +
-                         (get_array(lang, 'jac', k_sp + 1, twod=0) + ' + ' if touched[k_sp + 1] else '') +
+                j_str = 'J_nplusone' if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1, twod=0)
+                line += (j_str + ' = ' +
+                         (j_str + ' + ' if touched[k_sp + 1] else '') +
                          ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
                                                        ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
                                                        sp_k.mw)
@@ -2202,9 +2206,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             line = utils.line_start + '   '
 
         isp = specs.index(sp)
-        if not isfirst:
-            line += ' + '
         line += ('(' + get_array(lang, 'y', isp + 1) + ' * ' + get_array(lang, 'cp', isp) + ')')
+        line += ' + '
 
         isfirst = False
     line += ('(' + 'y_N' + ' * ' + get_array(lang, 'cp', len(specs) - 1) + ')')
@@ -2266,8 +2269,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
 
-                    dy_str = get_array(lang, 'dy', k_sp) if k_sp + 1 != num_s else 'dy_N'
-                    line += '(' + dy_str
+                    line += '(' + get_array(lang, 'dy', k_sp)
                     line += ' * mw_avg * {:.16e} * rho_inv)'.format(sp_k.mw / sp_j.mw)
                     line += utils.line_end[lang]
                     file.write(line)
@@ -2297,23 +2299,23 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 line += ' {}= -('.format('+' if touched[my_index] else '')
             touched[my_index] = True
 
-            dy_str = get_array(lang, 'dy', k_sp) if k_sp + 1 != num_s else 'dy_N'
             #the num_s + 1, j + 1 jacobian entry is non-existant,
             #so skip it
+            touch = touched[lin_index] if in_bounds else J_nplusone_touched
             if lang in ['c', 'cuda']:
                 line += (get_array(lang, 'h', k_sp) + ' * (' +
-                         (get_array(lang, 'jac', lin_index) +
-                         ' * cp_avg * rho - ' if in_bounds and touched[lin_index]
+                         ((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone' + 
+                         ' * cp_avg * rho - ') if touch
                              else '-') +
                          '((' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                         ' * ' + dy_str +
+                         ' * ' + get_array(lang, 'dy', k_sp) +
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             elif lang in ['fortran', 'matlab']:
                 line += (get_array(lang, 'h', k_sp) + ' * (' +
-                         (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
-                         ' * cp_avg * rho - ' if in_bounds and touched[lin_index]
+                         ((get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if in_bounds else 'J_nplusone' + 
+                         ' * cp_avg * rho - ') if touch
                              else '-') +
                          ' - ((' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +

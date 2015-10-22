@@ -46,24 +46,31 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
         nu = rxn.reac_nu[i]
         if nu - 1 > 0:
             reac_usages[i] += 1
-        for i2, sp2 in enumerate(rxn.reac):
-            if sp == sp2:
-                continue
+        for sp2 in range(len(specs)):
+            if nu - 1 > 0:
+                reac_usages[i] += nu - 1
             if rxn.pdep or rxn.thd_body:
                 pres_mod_usage += 1
-            reac_usages[i2] += 1
+            if sp == sp2:
+                continue
+            ind = next((ind for ind, spec in enumerate(rxn.reac) if spec==sp2), None)
+            if ind is not None:
+                reac_usages[ind] += 1
 
     if rxn.rev:
         for i, sp in enumerate(rxn.prod):
             nu = rxn.prod_nu[i]
-            if nu - 1 > 0:
-                prod_usages[i] += 1
-            for i2, sp2 in enumerate(rxn.prod):
+            for sp2 in range(len(specs)):
+                if nu - 1 > 0:
+                    prod_usages[i] += nu - 1
+#already counted in reac
+#                if rxn.pdep or rxn.thd_body:
+#                    pres_mod_usage += 1
                 if sp == sp2:
                     continue
-                if rxn.pdep or rxn.thd_body:
-                    pres_mod_usage += 1
-                prod_usages[i2] += 1
+                ind = next((ind for ind, spec in enumerate(rxn.prod) if spec==sp2), None)
+                if ind is not None:
+                    prod_usages[ind] += 1
 
     usages.append(fwd_usage)
     if rxn.rev:

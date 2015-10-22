@@ -105,34 +105,35 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
 
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     # write the T_Pr and T_Fi terms if needed
-    if rxn.pdep:
+    if rxn.pdep or rxn.thd_body:
         jline = utils.line_start + 'pres_mod_temp = '
-        jline += get_array(lang, 'pres_mod', pind) + ' * ('
-        # dPr/dYj contribution
-        if rxn.low:
-            # unimolecular/recombination
-            jline += '(1.0 / (1.0 + Pr))'
-        elif rxn.high:
-            # chem-activated bimolecular
-            jline += '(-Pr / (1.0 + Pr))'
-        if rxn.troe:
-            jline += (' - log(Fcent) * 2.0 * A * (B * '
-                      '{:.16}'.format(1.0 / math.log(10.0)) +
-                      ' + A * '
-                      '{:.16}) / '.format(0.14 / math.log(10.0)) +
-                      '(B * B * B * (1.0 + A * A / (B * B)) '
-                      '* (1.0 + A * A / (B * B)))'
-                      )
-        elif rxn.sri:
-            jline += ('- X * X * '
-                      '{:.16} * '.format(2.0 / math.log(10.0)) +
-                      'log10(Pr) * '
-                      'log({:.4} * '.format(rxn.sri_par[0]) +
-                      'exp({:.4} / T) + '.format(-rxn.sri_par[1]) +
-                      'exp(T / {:.4}))'.format(-rxn.sri_par[2])
-                      )
+        if rxn.pdep:
+            jline += '('
+            # dPr/dYj contribution
+            if rxn.low:
+                # unimolecular/recombination
+                jline += '(1.0 / (1.0 + Pr))'
+            elif rxn.high:
+                # chem-activated bimolecular
+                jline += '(-Pr / (1.0 + Pr))'
+            if rxn.troe:
+                jline += (' - log(Fcent) * 2.0 * A * (B * '
+                          '{:.16}'.format(1.0 / math.log(10.0)) +
+                          ' + A * '
+                          '{:.16}) / '.format(0.14 / math.log(10.0)) +
+                          '(B * B * B * (1.0 + A * A / (B * B)) '
+                          '* (1.0 + A * A / (B * B)))'
+                          )
+            elif rxn.sri:
+                jline += ('- X * X * '
+                          '{:.16} * '.format(2.0 / math.log(10.0)) +
+                          'log10(Pr) * '
+                          'log({:.4} * '.format(rxn.sri_par[0]) +
+                          'exp({:.4} / T) + '.format(-rxn.sri_par[1]) +
+                          'exp(T / {:.4}))'.format(-rxn.sri_par[2])
+                          )
 
-        jline += ') * '
+            jline += ') * '
         if rxn.rev:
             jline += '(' + get_array(lang, 'fwd_rates', rind)
             jline += ' - ' + \
@@ -142,13 +143,14 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += get_array(lang, 'fwd_rates', rind)
         file.write(jline + utils.line_end[lang])
 
-    file.write('  j_temp = -mw_avg * rho_inv * (')
-    jline = ''
+    jline = '  j_temp = -mw_avg * rho_inv * '
     # next, contribution from dR/dYj
     # namely the T_dy independent term
     if rxn.pdep or rxn.thd_body:
         jline += get_array(lang, 'pres_mod', pind)
         jline += ' * ('
+    else:
+        jline += '('
 
     reac_nu = 0
     prod_nu = 0
@@ -164,17 +166,13 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         prod_nu += sum(rxn.prod_nu)
 
     if reac_nu != 0:
-        if reac_nu == -1:
-            jline += '-'
-        elif reac_nu != 1:
+        if reac_nu != 1:
             jline += '{} * '.format(float(reac_nu))
         jline += '' + get_array(lang, 'fwd_rates', rind)
 
     if prod_nu != 0:
         if prod_nu == 1:
             jline += ' - '
-        elif prod_nu == -1:
-            jline += ' + '
         else:
             jline += ' - {} * '.format(float(prod_nu))
         jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rind))
@@ -192,7 +190,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
 
     # now handle third body / pdep parts if needed
-    if rxn.thd_body:
+    if rxn.pdep or rxn.thd_body:
         jline += '))'
         if alphaij_hat is not None:
             if alphaij_hat == 1.0:
@@ -201,30 +199,11 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                 jline += ' - '
             else:
                 jline += ' + {} * '.format(alphaij_hat)
-            if rxn.rev:
-                jline += '(' + get_array(lang, 'fwd_rates', rind)
-                jline += ' - ' + \
-                         get_array(lang, 'rev_rates', rev_reacs.index(rind))
-                jline += ')'
-            else:
-                jline += get_array(lang, 'fwd_rates', rind)
-    elif rxn.pdep:
-        jline += ') + pres_mod_temp'
-        jline += ')'
-        if alphaij_hat is not None:
-            if alphaij_hat == 1.0:
-                jline += ' + '
-            elif alphaij_hat == -1.0:
-                jline += ' - '
-            else:
-                jline += ' + {} * '.format(alphaij_hat)
-            jline += '(pres_mod_temp / conc_temp)'
+            jline += 'pres_mod_temp'
     else:
         jline += ')'
     file.write(jline + utils.line_end[lang])
 
-    if rxn.pdep and rxn.pdep_sp == '':
-        file.write('  pres_mod_temp /= conc_temp' + utils.line_end[lang])
     return alphaij_hat
 
 
@@ -282,11 +261,18 @@ def write_rates(file, lang, rxn):
 
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
     jline = 'j_temp'
-    if rxn.pdep and rxn.pdep_sp == '' and alphaij_hat is not None:
+    last_spec = len(specs) - 1
+    mw_frac = sp_j.mw / specs[-1].mw
+    jline += ' * {:.16e}'.format(1. - mw_frac)
+    if ((rxn.pdep and rxn.pdep_sp == '') or rxn.thd_body) and alphaij_hat is not None:
         alphaij = next((thd[1] for thd in rxn.thd_body_eff
-                        if thd[0] == j_sp and thd[1] != 1.0), None)
+                        if thd[0] == j_sp), None)
         if alphaij is None:
             alphaij = 1.0
+        alphai_nspec = next((thd[1] for thd in rxn.thd_body_eff
+                        if thd[0] == last_spec), None)
+        if alphai_nspec is not None:
+            alphaij -= alphai_nspec * mw_frac
         if alphaij != alphaij_hat:
             diff = alphaij - alphaij_hat
             if diff != 1:
@@ -296,110 +282,87 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                     jline += ' + {} * pres_mod_temp'.format(diff)
             else:
                 jline += ' + pres_mod_temp'
-    elif rxn.pdep and rxn.pdep_sp == j_sp:
-        jline += ' + pres_mod_temp / (rho * {})'.format(get_array(lang, 'y', j_sp))
-    elif rxn.thd_body and not rxn.pdep and alphaij_hat is not None:
-        alphaij = next((thd[1] for thd in rxn.thd_body_eff
-                        if thd[0] == j_sp and thd[1] != 1.0), None)
-        if alphaij is None:
-            alphaij = 1.0
-        if alphaij != alphaij_hat:
-            diff = alphaij - alphaij_hat
-            if diff != 0:
-                if diff != 1:
-                    if diff == -1:
-                        jline += ' - '
-                    else:
-                        jline += ' + {} * '.format(diff)
-                else:
-                    jline += ' + '
+    elif rxn.pdep and (rxn.pdep_sp == j_sp or rxn.pdep_sp == last_spec):
+        if rxn.pdep_sp == j_sp:
+            jline += ' + pres_mod_temp'
+        else:
+            jline += ' - pres_mod_temp * {:.16e}'.format(mw_frac)
 
-                if rxn.rev:
-                    jline += '(' + get_array(lang, 'fwd_rates', rind)
-                    jline += ' - ' + \
-                             get_array(lang, 'rev_rates', rev_reacs.index(rind))
-                    jline += ')'
-                else:
-                    jline += get_array(lang, 'fwd_rates', rind)
-    if (rxn.pdep or rxn.thd_body) and (j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod)):
-        jline += ' + ' + get_array(lang, 'pres_mod', pind)
-        jline += ' * '
+    s_term = ''
+    if (rxn.pdep or rxn.thd_body) and ((j_sp in rxn.reac or last_spec in rxn.reac)
+            or (rxn.rev and (j_sp in rxn.prod or last_spec in rxn.prod))):
+        s_term += ' + ' + get_array(lang, 'pres_mod', pind)
+        s_term += ' * ('
 
-    if j_sp in rxn.reac:
-        if not rxn.pdep and not rxn.thd_body:
-            jline += ' + '
-        nu = rxn.reac_nu[rxn.reac.index(j_sp)]
+    def __get_s_term(rxn, j_sp, reac=True):
+        jline = ''
+        if reac:
+            nu = rxn.reac_nu[rxn.reac.index(j_sp)]
+        else:
+            nu = rxn.prod_nu[rxn.prod.index(j_sp)]
         if nu != 1:
-            if nu == -1:
-                jline += '-'
-            else:
-                jline += '{} * '.format(float(nu))
-        jline += 'kf'
+            jline += '{}'.format(float(nu))
+
         if (nu - 1) > 0:
             if utils.is_integer(nu):
                 # integer, so just use multiplication
                 for i in range(int(nu) - 1):
-                    jline += ' * ' + get_array(lang, 'conc', j_sp)
+                    if jline: jline += ' * '
+                    jline += get_array(lang, 'conc', j_sp)
             else:
-                jline += (' * pow(' + get_array(lang, 'conc', j_sp) +
+                if jline: jline += ' * '
+                jline += ('pow(' + get_array(lang, 'conc', j_sp) +
                           ', {})'.format(nu - 1)
                           )
 
+        the_list = rxn.reac if reac else rxn.prod
         # loop through remaining reactants
-        for i, isp in enumerate(rxn.reac):
+        for i, isp in enumerate(the_list):
             if isp == j_sp:
                 continue
 
-            nu = rxn.reac_nu[i]
+            nu = rxn.reac_nu[i] if reac else rxn.prod_nu[i]
             if utils.is_integer(nu):
                 # integer, so just use multiplication
                 for i in range(int(nu)):
-                    jline += ' * ' + get_array(lang, 'conc', isp)
+                    if jline: jline += ' * '
+                    jline += get_array(lang, 'conc', isp)
             else:
-                jline += (' * pow(' + get_array(lang, 'conc', isp) +
+                if jline: jline += ' * '
+                jline += ('pow(' + get_array(lang, 'conc', isp) +
                           ', ' + str(nu) + ')'
                           )
+        return jline
 
-    if rxn.rev and j_sp in rxn.prod:
-        if not rxn.pdep and not rxn.thd_body and not j_sp in rxn.reac:
-            jline += ' + '
-        elif j_sp in rxn.reac:
-            jline += ' + '
+    if j_sp in rxn.reac or last_spec in rxn.reac:
+        add = ''
+        if j_sp in rxn.reac:
+            add += __get_s_term(rxn, j_sp, True)
+            if last_spec in rxn.reac:
+                add += ' - '
+        if last_spec in rxn.reac:
+            add += __get_s_term(rxn, last_spec, True)
+        if add:
+            if not s_term:
+                s_term += ' + '
+            s_term += 'kf * (' + add + ')'
 
-        nu = rxn.prod_nu[rxn.prod.index(j_sp)]
-        if nu != -1:
-            if nu == 1:
-                jline += '-'
+    if j_sp in rxn.prod or last_spec in rxn.prod:
+        add = ''
+        if j_sp in rxn.prod:
+            add += __get_s_term(rxn, j_sp, False)
+        if last_spec in rxn.prod:
+            if j_sp in rxn.reac:
+                add += ' - '
+            add += __get_s_term(rxn, last_spec, False)
+        if add:
+            if s_term and s_term[-1] == '(':
+                s_term += '-'
             else:
-                jline += '{} * '.format(float(-1 * nu))
+                s_term += ' - '
+            s_term += 'kr * (' + add + ')'
 
-        jline += 'kr'
-        if (nu - 1) > 0:
-            if utils.is_integer(nu):
-                # integer, so just use multiplication
-                for i in range(int(nu) - 1):
-                    jline += ' * ' + get_array(lang, 'conc', j_sp)
-            else:
-                jline += (' * pow(' + get_array(lang, 'conc', j_sp) +
-                          ', {})'.format(nu - 1)
-                          )
-
-        # loop through remaining products
-        for i, isp in enumerate(rxn.prod):
-            if isp == j_sp:
-                continue
-
-            nu = rxn.prod_nu[i]
-            if utils.is_integer(nu):
-                # integer, so just use multiplication
-                jline += (''.join([' * ' +
-                          get_array(lang, 'conc', isp) for i in range(int(nu))])
-                          )
-            else:
-                jline += ' * pow(' + get_array(lang, 'conc', isp)
-                jline += ', {})'.format(nu)
-
-    return jline
+    return jline + s_term
 
 
 def write_kc(file, lang, specs, rxn):
@@ -1494,7 +1457,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
-    if this_pdep:
+    if this_pdep or this_thd:
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -1835,7 +1798,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     else:
         line = ''
 
-    if any(rxn.pdep for rxn in reacs) and not do_unroll:
+    if any(rxn.pdep or rxn.thd_body for rxn in reacs) and not do_unroll:
         line = utils.line_start
         if lang == 'c':
             line += 'double '

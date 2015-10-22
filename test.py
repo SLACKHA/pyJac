@@ -148,7 +148,7 @@ class analytic_eval_jacob:
     def dydt(self, y):
         dy = np.zeros_like(y)
         self.jac.py_dydt(0, self.pres, y, dy)
-        return dy
+        return dy[:-1]
 
     def eval_jacobian(self, gas, order):
         """Evaluate finite difference Jacobian.

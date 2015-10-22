@@ -1414,7 +1414,7 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
 
-        line += utils.get_array(lang, 'y', isp + 1)
+        line += utils.get_array(lang, 'y', isp)
 
         isfirst = False
     line += ')'
@@ -1514,7 +1514,7 @@ def write_chem_utils(path, lang, specs):
 
         if not isfirst: line += ' + '
 
-        line += utils.get_array(lang, 'y', isp + 1)
+        line += utils.get_array(lang, 'y', isp)
 
         isfirst = False
     line += ')'

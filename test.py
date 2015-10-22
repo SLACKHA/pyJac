@@ -159,7 +159,7 @@ class analytic_eval_jacob:
         #abs_tol = 1.e-20
         #rel_tol = 1.e-8
 
-        y = np.hstack((gas.T, gas.Y))
+        y = np.hstack((gas.T, gas.Y[:-1]))
         #step = np.array([1e-15 for x in range(len(y))])
         #step[0] = abs_tol
 

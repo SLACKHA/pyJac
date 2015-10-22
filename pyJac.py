@@ -2304,7 +2304,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             touch = touched[lin_index] if in_bounds else J_nplusone_touched
             if lang in ['c', 'cuda']:
                 line += (get_array(lang, 'h', k_sp) + ' * (' +
-                         ((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone' + 
+                         (((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone') + 
                          ' * cp_avg * rho - ') if touch
                              else '-') +
                          '((' + get_array(lang, 'cp', j_sp) +
@@ -2314,7 +2314,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                          )
             elif lang in ['fortran', 'matlab']:
                 line += (get_array(lang, 'h', k_sp) + ' * (' +
-                         ((get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if in_bounds else 'J_nplusone' + 
+                         (((get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if in_bounds else 'J_nplusone') + 
                          ' * cp_avg * rho - ') if touch
                              else '-') +
                          ' - ((' + get_array(lang, 'cp', j_sp) +

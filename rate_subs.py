@@ -1357,7 +1357,7 @@ def write_chem_utils(path, lang, specs):
                '#include "header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                '{0}void eval_conc (const double, const double, '
-               'const double*, double*, double*, double*);\n'
+               'const double*, double*, double*, double*, double*);\n'
                '{0}void eval_h (const double, double*);\n'
                '{0}void eval_u (const double, double*);\n'
                '{0}void eval_cv (const double, double*);\n'

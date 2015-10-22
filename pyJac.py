@@ -28,9 +28,9 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     # need to figure out shared memory stuff
     variable_list = []
     usages = []
-    fwd_usage = 2
-    rev_usage = 0 if not rxn.rev else 2
-    pres_mod_usage = 0 if not (rxn.pdep or rxn.thd_body) else (4 if rxn.thd_body else 2)
+    fwd_usage = 3
+    rev_usage = 3
+    pres_mod_usage = 0 if not (rxn.pdep or rxn.thd_body) else (3 if rxn.thd_body else 2)
     reac_usages = [0 for i in range(len(rxn.reac))]
     prod_usages = [0 for i in range(len(rxn.prod))]
     # add variables
@@ -42,30 +42,15 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff]):
         variable_list.append(shared.variable('conc', sp))
 
-    alphaij_count = 0
-    # calculate usages
-    if rxn.thd_body or rxn.pdep:
-        fwd_usage += 1
-        if rxn.rev:
-            rev_usage += 1
-        for i, thd in enumerate(rxn.thd_body_eff):
-            # check alphaij
-            alphaij = thd[1]
-            if alphaij is not None and alphaij != 1.0:
-                alphaij_count += 1
-        fwd_usage += alphaij_count
-        if rxn.rev:
-            rev_usage += alphaij_count
-
     for i, sp in enumerate(rxn.reac):
         nu = rxn.reac_nu[i]
         if nu - 1 > 0:
             reac_usages[i] += 1
-            if rxn.thd_body:
-                pres_mod_usage += 1
         for i2, sp2 in enumerate(rxn.reac):
             if sp == sp2:
                 continue
+            if rxn.pdep or rxn.thd_body:
+                pres_mod_usage += 1
             reac_usages[i2] += 1
 
     if rxn.rev:
@@ -76,6 +61,8 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
             for i2, sp2 in enumerate(rxn.prod):
                 if sp == sp2:
                     continue
+                if rxn.pdep or rxn.thd_body:
+                    pres_mod_usage += 1
                 prod_usages[i2] += 1
 
     usages.append(fwd_usage)

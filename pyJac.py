@@ -344,7 +344,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
         if j_sp in rxn.prod:
             add += __get_s_term(rxn, j_sp, False)
         if last_spec in rxn.prod:
-            if j_sp in rxn.reac:
+            if j_sp in rxn.prod:
                 add += ' - '
             add += __get_s_term(rxn, last_spec, False)
         if s_term and s_term[-1] == '(':

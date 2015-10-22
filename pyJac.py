@@ -89,6 +89,18 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
 
     return variable_list, usages
 
+def get_alphaij_hat(rxn, nspec):
+    alphaij_hat = None
+    counter = {}
+    counter[1.0] = 0
+    if rxn.thd_body_eff:
+        for spec, efficiency in rxn.thd_body_eff:
+            if not efficiency in counter:
+                counter[efficiency] = 0
+            counter[efficiency] += 1
+        counter[1.0] += (nspec - len(rxn.thd_body_eff))
+        alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
+    return alphaij_hat
 
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     # write the T_Pr and T_Fi terms if needed
@@ -165,16 +177,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
         jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rind))
 
     # find alphaij_hat
-    alphaij_hat = None
-    counter = {}
-    counter[1.0] = 0
-    if rxn.thd_body_eff:
-        for spec, efficiency in rxn.thd_body_eff:
-            if not efficiency in counter:
-                counter[efficiency] = 0
-            counter[efficiency] += 1
-        counter[1.0] += (nspec - len(rxn.thd_body_eff))
-        alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
+    alphaij_hat = get_alphaij_hat(rxn, nspec)
 
     # now handle third body / pdep parts if needed
     if rxn.pdep or rxn.thd_body:

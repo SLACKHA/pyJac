@@ -138,6 +138,9 @@ def get_array(lang, name, index, twod=None):
     twod : int, optional
         If not None and the lang is fortan or matlab this will be formatted as a second index in the array
     """
+    if index is None:
+        #a dummy call to see if it's in shared memory
+        return name
 
     if lang in ['fortran', 'matlab']:
         if twod is not None:

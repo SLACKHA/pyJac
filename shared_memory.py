@@ -12,12 +12,16 @@ class variable(object):
         self.last_use_count = 0
         self.lang = lang
     def __eq__(self, other):
+        if self.index is None:
+            return self.base == other.base
         return self.base == other.base and self.index == other.index
     def reset(self):
         self.last_use_count = 0
     def update(self):
         self.last_use_count += 1
     def to_string(self):
+        if self.index is None:
+            return self.base
         return utils.get_array(self.lang, self.base, self.index)
 
 class shared_memory_manager(object):

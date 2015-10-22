@@ -1198,13 +1198,14 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
         cuda_unloaded = [False for spec in specs]
         def __on_eviction(sp, shared):
+            index = len(specs) - 1 if sp.index is None else sp.index
             file.write('  {} {}= {}'.format(sp.to_string(), '+'
-                                    if cuda_unloaded[sp.index] or
-                                    cuda_loaded[sp.index] else '',
+                                    if cuda_unloaded[index] or
+                                    cuda_loaded[index] else '',
                                     shared
                                     )
                                     + utils.line_end[lang])
-            cuda_unloaded[sp.index] = True
+            cuda_unloaded[index] = True
 
         smm.set_on_eviction(__on_eviction)
 
@@ -1221,7 +1222,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             #get allowed species
             my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
             if lang == 'cuda' and smm is not None:
-                the_vars = [shared.variable('sp_rates', sp) for sp in my_specs]
+                def __get_var(sp):
+                    return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
+                        else shared.variable('(*dy_N)', None)
+                the_vars = [__get_var(sp) for sp in my_specs]
                 # estimate usages
                 usages = []
                 for sp in set(rxn.reac + rxn.prod):
@@ -1248,7 +1252,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
                 sign = '-' if nu < 0 else '+'
                 if spind == len(specs) - 1:
-                    line = '  dy_N'
+                    line = '  ' + get_array(lang, '(*dy_N)', None)
                 else:
                     line = '  ' + get_array(lang, 'sp_rates', spind)
                 if lang == 'cuda':

@@ -341,7 +341,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
         test_pres_mod = czeros((num_cond,len(self.idx_pmod)))
         test_spec_rates = czeros((num_cond,gas.n_species))
         test_dydt = czeros((num_cond,gas.n_species + 1))
-        test_jacob = czeros((num_cond,(gas.n_species + 1) * (gas.n_species + 1)))
+        test_jacob = czeros((num_cond,(gas.n_species) * (gas.n_species)))
 
         mw_avg = czeros(num_cond)
         rho = czeros(num_cond)
@@ -366,7 +366,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.test_pres_mod = reshaper(test_pres_mod, (num_cond, len(self.idx_pmod)), self.pdep_rxn_map)
         self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.sp_map)
         self.test_dydt = reshaper(test_dydt, (num_cond,gas.n_species + 1), self.dydt_map)
-        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species + 1) * (gas.n_species + 1)),
+        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species) * (gas.n_species)),
                             self.jac_map)
         self.index = 0
 
@@ -530,7 +530,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         test_pres_mod = np.zeros(len(idx_pmod))
         test_spec_rates = np.zeros(gas.n_species)
         test_dydt = np.zeros(gas.n_species + 1)
-        test_jacob = np.zeros((gas.n_species + 1) * (gas.n_species + 1))
+        test_jacob = np.zeros((gas.n_species) * (gas.n_species))
 
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))

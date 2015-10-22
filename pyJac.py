@@ -279,7 +279,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
                 if diff == -1:
                     jline += ' - pres_mod_temp'
                 else:
-                    jline += ' + {} * pres_mod_temp'.format(diff)
+                    jline += ' + {:.16e} * pres_mod_temp'.format(diff)
             else:
                 jline += ' + pres_mod_temp'
     elif rxn.pdep and (rxn.pdep_sp == j_sp or rxn.pdep_sp == last_spec):
@@ -346,8 +346,10 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
             if not s_term:
                 s_term += ' + '
             s_term += 'kf * (' + add + ')'
+        else:
+            s_term += 'kf'
 
-    if j_sp in rxn.prod or last_spec in rxn.prod:
+    if rxn.rev and (j_sp in rxn.prod or last_spec in rxn.prod):
         add = ''
         if j_sp in rxn.prod:
             add += __get_s_term(rxn, j_sp, False)
@@ -355,12 +357,17 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, r
             if j_sp in rxn.reac:
                 add += ' - '
             add += __get_s_term(rxn, last_spec, False)
+        if s_term and s_term[-1] == '(':
+            s_term += '-'
+        else:
+            s_term += ' - '
         if add:
-            if s_term and s_term[-1] == '(':
-                s_term += '-'
-            else:
-                s_term += ' - '
             s_term += 'kr * (' + add + ')'
+        else:
+            s_term += 'kr'
+
+    if (rxn.pdep or rxn.thd_body) and s_term:
+        s_term += ')'
 
     return jline + s_term
 

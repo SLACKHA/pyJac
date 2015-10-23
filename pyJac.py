@@ -529,6 +529,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
         template = 'dBdT[{}]'
     else:
         template = 'dBdT_{}'
+    t_mid = {}
     for i_rxn in rev_reacs:
         rxn = reacs[i_rxn]
         # only reactions with no reverse Arrhenius parameters
@@ -543,26 +544,35 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
                 continue
 
             dBdT_flag[sp_ind] = True
+            if not specs[sp_ind].Trange[1] in t_mid:
+                t_mid[specs[sp_ind].Trange[1]] = []
+            t_mid[specs[sp_ind].Trange[1]].append(sp_ind)
 
             if lang in ['c', 'cuda']:
                 dBdT = template.format(sp_ind)
             elif lang in ['fortran', 'matlab']:
                 dBdT = template.format(sp_ind + 1)
+            line = '    '
             # declare dBdT
             if not (lang == 'cuda' or do_unroll):
-                file.write('  double ' + dBdT + utils.line_end[lang])
+                file.write(utils.line_start + 'double ' + dBdT + utils.line_end[lang]);
 
-            # dB/dT evaluation (with temperature conditional)
-            line = utils.line_start + 'if (T <= {:})'.format(specs[sp_ind].Trange[1])
+    for mid_temp in t_mid:
+        # dB/dT evaluation (with temperature conditional)
+        line = utils.line_start + 'if (T <= {:})'.format(mid_temp)
+        if lang in ['c', 'cuda']:
+            line += ' {\n'
+        elif lang == 'fortran':
+            line += ' then\n'
+        elif lang == 'matlab':
+            line += '\n'
+        file.write(line)
+        for sp_ind in sorted(t_mid[mid_temp]):
             if lang in ['c', 'cuda']:
-                line += ' {\n'
-            elif lang == 'fortran':
-                line += ' then\n'
-            elif lang == 'matlab':
-                line += '\n'
-            file.write(line)
-
-            line = ('    ' + dBdT +
+                dBdT = template.format(sp_ind)
+            elif lang in ['fortran', 'matlab']:
+                dBdT = template.format(sp_ind + 1)
+            line = (utils.line_start * 2 + dBdT +
                     ' = ({:.16e}'.format(specs[sp_ind].lo[0] - 1.0) +
                     ' + {:.16e} / T) / T'.format(specs[sp_ind].lo[5]) +
                     ' + {:.16e} + T'.format(specs[sp_ind].lo[1] / 2.0) +
@@ -573,12 +583,17 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
                     )
             file.write(line)
 
-            if lang in ['c', 'cuda']:
-                file.write('  } else {\n')
-            elif lang in ['fortran', 'matlab']:
-                file.write('  else\n')
+        if lang in ['c', 'cuda']:
+            file.write('  } else {\n')
+        elif lang in ['fortran', 'matlab']:
+            file.write('  else\n')
 
-            line = ('    ' + dBdT +
+        for sp_ind in sorted(t_mid[mid_temp]):
+            if lang in ['c', 'cuda']:
+                dBdT = template.format(sp_ind)
+            elif lang in ['fortran', 'matlab']:
+                dBdT = template.format(sp_ind + 1)
+            line = (utils.line_start * 2 +  dBdT +
                     ' = ({:.16e}'.format(specs[sp_ind].hi[0] - 1.0) +
                     ' + {:.16e} / T) / T'.format(specs[sp_ind].hi[5]) +
                     ' + {:.16e} + T'.format(specs[sp_ind].hi[1] / 2.0) +
@@ -589,12 +604,12 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
                     )
             file.write(line)
 
-            if lang in ['c', 'cuda']:
-                file.write('  }\n\n')
-            elif lang == 'fortran':
-                file.write('  end if\n\n')
-            elif lang == 'matlab':
-                file.write('  end\n\n')
+        if lang in ['c', 'cuda']:
+            file.write('  }\n\n')
+        elif lang == 'fortran':
+            file.write('  end if\n\n')
+        elif lang == 'matlab':
+            file.write('  end\n\n')
 
 def get_db_dt(lang, specs, rxn, do_unroll):
     if lang == 'cuda' or do_unroll:

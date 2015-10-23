@@ -1896,6 +1896,11 @@ def write_derivs(path, lang, specs, reacs):
                '\n'
                '{0}void dydt (const double, const double, '
                'const double*, double*);\n'
+               '{0}inline void dydt (const double t, const double pres, '
+               'const double* y, double* dy) {{\n'
+               '    double dy_N = 0;\n'
+               '    dydt(t, pres, y, dy, &dy_N);\n'
+               '}}\n'
                '\n'
                '#endif\n'.format(pre)
                )
@@ -1919,7 +1924,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('#if defined(CONP)\n\n')
 
     line = (pre + 'void dydt (const double t, const double pres, '
-                  'const double * y, double * dy) {\n\n'
+                  'const double * y, double * dy, double * dy_N) {\n\n'
             )
     file.write(line)
 
@@ -1964,9 +1969,8 @@ def write_derivs(path, lang, specs, reacs):
 
     # species rate of change of molar concentration
     file.write('  // evaluate species molar net production rates\n'
-               '  double dy_N;\n'
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
-               '&' + utils.get_array(lang, 'dy', 1) + ', &dy_N);\n\n'
+               '&' + utils.get_array(lang, 'dy', 1) + ', dy_N);\n\n'
                )
 
     # evaluate specific heat
@@ -2018,7 +2022,7 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-    line += (' + (dy_N * ' + utils.get_array(lang, 'h', len(specs) - 1) +
+    line += (' + ((*dy_N) * ' + utils.get_array(lang, 'h', len(specs) - 1) +
              ' * {:.16e})'.format(specs[-1].mw)
              )
     line += ')' + utils.line_end[lang] + '\n'
@@ -2028,8 +2032,11 @@ def write_derivs(path, lang, specs, reacs):
     file.write('  // calculate rate of change of species mass fractions\n')
     for idx, sp in enumerate(specs[:-1]):
         file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
-                   ' *= ({} / rho);\n'.format(sp.mw)
+                   ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
+    file.write('  ' + '(*dy_N)' +
+       ' *= ({:.16e} / rho);\n'.format(sp.mw)
+       )
     file.write('\n')
 
     file.write('} // end dydt\n\n')
@@ -2040,7 +2047,7 @@ def write_derivs(path, lang, specs, reacs):
     file.write('#elif defined(CONV)\n\n')
 
     file.write(pre + 'void dydt (const double t, const double rho, '
-                     'const double * y, double * dy) {\n\n'
+                     'const double * y, double * dy, double* dy_N) {\n\n'
                )
 
     # calculation of species molar concentrations
@@ -2085,9 +2092,8 @@ def write_derivs(path, lang, specs, reacs):
 
     # species rate of change of molar concentration
     file.write('  // evaluate species molar net production rates\n'
-               '  double dy_N;\n'
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
-               '&' + utils.get_array(lang, 'dy', 1) + ', &dy_N);\n\n'
+               '&' + utils.get_array(lang, 'dy', 1) + ', dy_N);\n\n'
                )
 
     # evaluate specific heat
@@ -2135,7 +2141,7 @@ def write_derivs(path, lang, specs, reacs):
                  )
 
         isfirst = False
-    line += (' + (dy_N' + utils.get_array(lang, 'u', len(specs) - 1) +
+    line += (' + ((*dy_N) * ' + utils.get_array(lang, 'u', len(specs) - 1) +
              ' * {:.16e})'.format(specs[-1].mw)
              )
     line += ')' + utils.line_end[lang] + '\n'
@@ -2147,6 +2153,9 @@ def write_derivs(path, lang, specs, reacs):
         file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
+    file.write('  ' + '(*dy_N) ' +
+           ' *= ({:.16e} / rho);\n'.format(sp.mw)
+           )
     file.write('\n')
 
     file.write('} // end dydt\n\n')

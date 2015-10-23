@@ -4,7 +4,7 @@ import numpy as np
 cimport numpy as np
 
 cdef extern from "out/dydt.h":
-    void dydt(double t, double pres, double* y, double* dy, double* dy_N)
+    void dydt(double t, double pres, double* y, double* dy)
 
 cdef extern from "out/jacob.h":
     void eval_jacob (const double t, const double pres, const double* y, double* jac)

@@ -1466,9 +1466,9 @@ def write_chem_utils(path, lang, specs):
         file.write(line)
     line = '  conc'
     if lang in ['c', 'cuda']:
-        line += '[{0}] = (*rho) * (*y_N) * '.format(len(specs))
+        line += '[{0}] = (*rho) * (*y_N) * '.format(len(specs) - 1)
     elif lang in ['fortran', 'matlab']:
-        line += '({0}) = (*rho) * y_N * '.format(len(specs) + 1)
+        line += '({0}) = (*rho) * y_N * '.format(len(specs))
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
     file.write(line + '\n')
 
@@ -1566,9 +1566,9 @@ def write_chem_utils(path, lang, specs):
         file.write(line)
     line = '  conc'
     if lang in ['c', 'cuda']:
-        line += '[{0}] = rho * (*y_N) * '.format(len(specs))
+        line += '[{0}] = rho * (*y_N) * '.format(len(specs) - 1)
     elif lang in ['fortran', 'matlab']:
-        line += '({0}) = rho * y_N * '.format(len(specs) + 1)
+        line += '({0}) = rho * y_N * '.format(len(specs))
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
     file.write(line)
 

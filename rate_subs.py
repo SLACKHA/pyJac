@@ -1209,6 +1209,12 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
         smm.set_on_eviction(__on_eviction)
 
+    def __get_var(spind):
+        if spind + 1 == len(specs):
+            line = '  ' + get_array(lang, '(*dy_N)', None)
+        else:
+            line = '  ' + get_array(lang, 'sp_rates', spind)
+        return line
     new_loads = []
     cuda_loaded = [False for spec in specs]
     seen = [False for spec in specs]
@@ -1251,10 +1257,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
                     continue
 
                 sign = '-' if nu < 0 else '+'
-                if spind == len(specs) - 1:
-                    line = '  ' + get_array(lang, '(*dy_N)', None)
-                else:
-                    line = '  ' + get_array(lang, 'sp_rates', spind)
+                line = __get_var(spind)
                 if lang == 'cuda':
                     valin = spind in new_loads
                     #if we're loading it and it's already been touched
@@ -1304,7 +1307,7 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
-            file.write('  ' + get_array(lang, 'sp_rates', i) +
+            file.write(__get_var(i) +
                        ' = 0.0' + utils.line_end[lang]
                        )
 
@@ -1964,7 +1967,7 @@ def write_derivs(path, lang, specs, reacs):
 
     # species rate of change of molar concentration
     file.write('  // evaluate species molar net production rates\n'
-               '  double dy_N;'
+               '  double dy_N;\n'
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, '
                '&' + utils.get_array(lang, 'dy', 1) + ', &dy_N);\n\n'
                )

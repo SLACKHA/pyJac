@@ -21,7 +21,7 @@ def py_dydt(np.double_t t,
             np.double_t pres,
             np.ndarray[np.double_t] y,
             np.ndarray[np.double_t] dy):
-    dydt(t, pres, &y[0], &dy[0], &dy[-1])
+    dydt(t, pres, &y[0], &dy[0])
 
 def py_eval_jacobian(np.double_t t,
             np.double_t pres,
@@ -40,7 +40,7 @@ def py_eval_spec_rates(np.ndarray[np.double_t] fwd_rxn_rates,
             np.ndarray[np.double_t] rev_rxn_rates,
             np.ndarray[np.double_t] pres_mod,
             np.ndarray[np.double_t] sp_rates):
-    eval_spec_rates(&fwd_rxn_rates[0], &rev_rxn_rates[0], &pres_mod[0], &sp_rates[0], &sp_rates[-1])
+    eval_spec_rates(&fwd_rxn_rates[0], &rev_rxn_rates[0], &pres_mod[0], &sp_rates[0], &sp_rates[sp_rates.shape[0] - 1])
 
 def py_get_rxn_pres_mod(np.double_t T,
             np.double_t pres,

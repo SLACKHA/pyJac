@@ -9,8 +9,8 @@ import subprocess
 import pickle
 from argparse import ArgumentParser
 
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_pdf import PdfPages
+#import matplotlib.pyplot as plt
+#from matplotlib.backends.backend_pdf import PdfPages
 
 # More Python 2 compatibility
 if sys.version_info.major == 3:
@@ -66,14 +66,11 @@ class ReactorConstPres(object):
         self.gas = gas
         self.P = gas.P
 
-    def __call__(self, y=None):
+    def __call__(self):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
         # Only set state if something is input
-        if y is not None:
-            self.gas.set_unnormalized_mass_fractions(y[1:])
-            self.gas.TP = y[0], self.P
         rho = self.gas.density
 
         wdot = self.gas.net_production_rates
@@ -93,14 +90,11 @@ class ReactorConstVol(object):
         self.gas = gas
         self.density = gas.density
 
-    def __call__(self, y=None):
+    def __call__(self):
         """the ODE function, y' = f(t,y) """
 
         # State vector is [T, Y_1, Y_2, ... Y_K]
         # Only set state if something is input
-        if y is not None:
-            self.gas.set_unnormalized_mass_fractions(y[1:])
-            self.gas.TD = y[0], self.density
 
         wdot = self.gas.net_production_rates
         dTdt = - (np.dot(self.gas.partial_molar_int_energies, wdot) /
@@ -529,7 +523,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         test_rev_rates = np.zeros(len(idx_rev))
         test_pres_mod = np.zeros(len(idx_pmod))
         test_spec_rates = np.zeros(gas.n_species)
-        test_dydt = np.zeros(gas.n_species + 1)
+        test_dydt = np.zeros(gas.n_species)
         test_jacob = np.zeros((gas.n_species) * (gas.n_species))
 
         print()
@@ -625,8 +619,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pyjacob.dydt(0, pres, y_dummy, test_dydt)
         non_zero = np.where(test_dydt != 0.)[0]
         zero = np.where(test_dydt == 0.)[0]
-        err = abs((test_dydt[non_zero] - ode()[non_zero]) /
-                  ode()[non_zero]
+        err = abs((test_dydt[non_zero] - ode()[:-1][non_zero]) /
+                  ode()[:-1][non_zero]
                   )
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
@@ -636,7 +630,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Max error in non-zero dydt: {:.2e}% '
               '@ index {}'.format(max_err * 100., loc)
               )
-        err = np.linalg.norm(test_dydt[zero] - ode()[zero])
+        err = np.linalg.norm(test_dydt[zero] - ode()[:-1][zero])
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 

@@ -1228,10 +1228,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             #get allowed species
             my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
             if lang == 'cuda' and smm is not None:
-                def __get_var(sp):
+                def __get_smm_var(sp):
                     return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
                         else shared.variable('(*dy_N)', None)
-                the_vars = [__get_var(sp) for sp in my_specs]
+                the_vars = [__get_smm_var(sp) for sp in my_specs]
                 # estimate usages
                 usages = []
                 for sp in set(rxn.reac + rxn.prod):

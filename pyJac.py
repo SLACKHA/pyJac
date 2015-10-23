@@ -186,6 +186,8 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     # find alphaij_hat
     alphaij_hat = get_alphaij_hat(rxn, nspec)
 
+    if rxn.pdep:
+        jline += ' + pres_mod_temp'
     jline += ')'
     # now handle third body / pdep parts if needed
     if rxn.pdep or rxn.thd_body:

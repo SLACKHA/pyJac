@@ -1312,14 +1312,14 @@ def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, get_
             line += ('' + get_array(lang, 'h', isp) + ' * ('
                      '' + get_array(lang, 'jac', isp + 1 + (num_s) * (k_sp + 1)) +
                      ' * cp_avg * rho' +
-                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp) +
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'spec_rates', isp) +
                      ' * {:.8e}))'.format(sp.mw)
                      )
         elif lang in ['fortran', 'matlab']:
             line += ('' + get_array(lang, 'h', isp) + ' * ('
                      '' + get_array(lang, 'jac', isp + 1, twod=k_sp + 1) +
                      ' * cp_avg * rho' +
-                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'dy', isp) +
+                     ' - (' + get_array(lang, 'cp', k_sp) + ' * ' + get_array(lang, 'spec_rates', isp) +
                      ' * {:.8e}))'.format(sp.mw)
                      )
         line += ')' + utils.line_end[lang]
@@ -1744,16 +1744,16 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write(utils.line_start + utils.comment[lang] + ' evaluate rate of change of species molar '
                    'concentration\n')
     if lang in ['c', 'cuda']:
-        file.write(utils.line_start + 'double dy[{}];\n'.format(num_s + 1))
+        file.write(utils.line_start + 'double spec_rates[{}];\n'.format(num_s))
         file.write(utils.line_start + 'eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy, &dy[{}]);\n'.format(num_s)
+                   'pres_mod, spec_rates, &spec_rates[{}]);\n'.format(num_s - 1)
                    )
     elif lang == 'fortran':
         file.write(utils.line_start + 'call eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy, dy({}))\n'.format(num_s)
+                   'pres_mod, spec_rates, spec_rates({}))\n'.format(num_s - 1)
                    )
     elif lang == 'matlab':
-        file.write(utils.line_start + 'dy = eval_spec_rates(fwd_rates, '
+        file.write(utils.line_start + 'spec_rates = eval_spec_rates(fwd_rates, '
                    'rev_rates, pres_mod);\n'
                    )
     file.write('\n')
@@ -2269,7 +2269,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                         line += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
                                  ' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' + ')
 
-                    line += '(' + get_array(lang, 'dy', k_sp)
+                    line += '(' + get_array(lang, 'spec_rates', k_sp)
                     line += ' * mw_avg * {:.16e} * rho_inv)'.format(sp_k.mw / sp_j.mw)
                     line += utils.line_end[lang]
                     file.write(line)
@@ -2305,21 +2305,21 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             if lang in ['c', 'cuda']:
                 line += (get_array(lang, 'h', k_sp) + ' * (' +
                          (((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone') + 
-                         ' * cp_avg * rho - ') if touch
+                         ' - ') if touch
                              else '-') +
-                         '((' + get_array(lang, 'cp', j_sp) +
+                         '(j_temp * (' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                         ' * ' + get_array(lang, 'dy', k_sp) +
+                         ' * ' + get_array(lang, 'spec_rates', k_sp) +
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             elif lang in ['fortran', 'matlab']:
                 line += (get_array(lang, 'h', k_sp) + ' * (' +
                          (((get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if in_bounds else 'J_nplusone') + 
-                         ' * cp_avg * rho - ') if touch
+                         ' - ') if touch
                              else '-') +
-                         ' - ((' + get_array(lang, 'cp', j_sp) +
+                         ' - (j_temp * (' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                        ' * ' + dy_str +
+                         ' * ' + get_array(lang, 'spec_rates', k_sp) +
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             line += ')' + utils.line_end[lang]

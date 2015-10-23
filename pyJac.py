@@ -96,19 +96,6 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
 
     return variable_list, usages
 
-def get_alphaij_hat(rxn, nspec):
-    alphaij_hat = None
-    counter = {}
-    counter[1.0] = 0
-    if rxn.thd_body_eff:
-        for spec, efficiency in rxn.thd_body_eff:
-            if not efficiency in counter:
-                counter[efficiency] = 0
-            counter[efficiency] += 1
-        counter[1.0] += (nspec - len(rxn.thd_body_eff))
-        alphaij_hat = max(counter.keys(), key=lambda x: counter[x])
-    return alphaij_hat
-
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     # write the T_Pr and T_Fi terms if needed
     if rxn.pdep or rxn.thd_body:
@@ -183,26 +170,11 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += ' - {} * '.format(float(prod_nu))
         jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rind))
 
-    # find alphaij_hat
-    alphaij_hat = get_alphaij_hat(rxn, nspec)
-
     if rxn.pdep:
         jline += ' + pres_mod_temp'
     jline += ')'
-    # now handle third body / pdep parts if needed
-    if rxn.pdep or rxn.thd_body:
-        if alphaij_hat is not None:
-            if alphaij_hat == 1.0:
-                jline += ' + '
-            elif alphaij_hat == -1.0:
-                jline += ' - '
-            else:
-                jline += ' + {} * '.format(alphaij_hat)
-            jline += 'pres_mod_temp'
 
     file.write(jline + utils.line_end[lang])
-
-    return alphaij_hat
 
 
 def write_rates(file, lang, rxn):
@@ -257,27 +229,24 @@ def write_rates(file, lang, rxn):
                    )
 
 
-def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs, get_array):
+def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, rind, rev_reacs, get_array):
     jline = 'j_temp'
     last_spec = len(specs) - 1
-    mw_frac = sp_j.mw / specs[-1].mw
+    mw_frac = sp_j.mw / specs[last_spec].mw
     jline += ' * {:.16e}'.format(1. - mw_frac)
-    if ((rxn.pdep and rxn.pdep_sp == '') or rxn.thd_body) and alphaij_hat is not None:
+    if ((rxn.pdep and rxn.pdep_sp == '') or rxn.thd_body):
         alphaij = next((thd[1] for thd in rxn.thd_body_eff
-                        if thd[0] == j_sp), None)
-        if alphaij is None:
-            alphaij = 1.0
+                        if thd[0] == j_sp), 0)
         alphai_nspec = next((thd[1] for thd in rxn.thd_body_eff
-                        if thd[0] == last_spec), None)
-        if alphai_nspec is not None:
+                        if thd[0] == last_spec), 0)
+        if alphai_nspec != 0:
             alphaij -= alphai_nspec * mw_frac
-        if alphaij != alphaij_hat:
-            diff = alphaij - alphaij_hat
-            if diff != 1:
-                if diff == -1:
+        if alphaij != 0:
+            if alphaij != 1:
+                if alphaij == -1:
                     jline += ' - pres_mod_temp'
                 else:
-                    jline += ' + {:.16e} * pres_mod_temp'.format(diff)
+                    jline += ' + {:.16e} * pres_mod_temp'.format(alphaij)
             else:
                 jline += ' + pres_mod_temp'
     elif rxn.pdep and (rxn.pdep_sp == j_sp or rxn.pdep_sp == last_spec):
@@ -2065,7 +2034,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             write_kc(file, lang, specs, rxn)
 
         # need to write the dr/dy parts (independent of any species)
-        alphaij_hat = write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, len(specs), get_array)
+        write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, len(specs), get_array)
 
         # write the forward / backwards rates:
         write_rates(file, lang, rxn)
@@ -2092,7 +2061,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                         sparse_indicies.append((k_sp + 1, j_sp + 1))
 
                 working_temp = ''
-                mw_frac = (sp_k.mw / sp_j.mw)* float(nu)
+                mw_frac = (sp_k.mw / sp_j.mw) * float(nu)
                 if mw_frac == -1.0:
                     working_temp += ' -'
                 elif mw_frac != 1.0:
@@ -2102,7 +2071,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
                 working_temp += '('
 
-                working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, alphaij_hat, rind, rev_reacs,
+                working_temp += write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, rind, rev_reacs,
                                                     get_array)
 
                 working_temp += ')'

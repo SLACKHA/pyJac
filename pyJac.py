@@ -1744,13 +1744,13 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write(utils.line_start + utils.comment[lang] + ' evaluate rate of change of species molar '
                    'concentration\n')
     if lang in ['c', 'cuda']:
-        file.write(utils.line_start + 'double dy[{}];\n'.format(num_s))
+        file.write(utils.line_start + 'double dy[{}];\n'.format(num_s + 1))
         file.write(utils.line_start + 'eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy, &dy[NSP - 1]);\n'
+                   'pres_mod, dy, &dy[{}]);\n'.format(num_s)
                    )
     elif lang == 'fortran':
         file.write(utils.line_start + 'call eval_spec_rates (fwd_rates, rev_rates, '
-                   'pres_mod, dy, dy(NSP - 1))\n'
+                   'pres_mod, dy, dy({}))\n'.format(num_s)
                    )
     elif lang == 'matlab':
         file.write(utils.line_start + 'dy = eval_spec_rates(fwd_rates, '

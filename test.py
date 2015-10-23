@@ -142,7 +142,7 @@ class analytic_eval_jacob:
     def dydt(self, y):
         dy = np.zeros_like(y)
         self.jac.py_dydt(0, self.pres, y, dy)
-        return dy[:-1]
+        return dy
 
     def eval_jacobian(self, gas, order):
         """Evaluate finite difference Jacobian.
@@ -153,7 +153,9 @@ class analytic_eval_jacob:
         #abs_tol = 1.e-20
         #rel_tol = 1.e-8
 
-        y = np.hstack((gas.T, gas.Y[:-1]))
+        y_dummy = np.zeros(gas.Y.shape[0] - 1)
+        y_dummy[:] = gas.Y[:-1]
+        y = np.hstack((gas.T, y_dummy))
         #step = np.array([1e-15 for x in range(len(y))])
         #step[0] = abs_tol
 

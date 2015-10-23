@@ -1347,7 +1347,7 @@ def write_dt_y_division(file, lang, specs, num_s, get_array):
     file.write('\n')
 
 
-def write_dt_completion(file, lang, specs, get_array):
+def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
     line = utils.line_start + utils.comment[lang]
     line += ('Complete dT wrt T calculations\n')
     file.write(line)
@@ -1362,19 +1362,20 @@ def write_dt_completion(file, lang, specs, get_array):
     for k_sp, sp_k in enumerate(specs):
         if k_sp:
             line += utils.line_start + '  + '
-        if k_sp + 1 == len(specs):
-            j_str = 'J_nplusone'
-        else:
-            j_str = get_array(lang, 'jac', k_sp + 1, twod=0)
-        line += (get_array(lang, 'dy', k_sp) +
+        line += (get_array(lang, 'spec_rates', k_sp) +
                  ' * {:.8e}'.format(sp_k.mw) + ' * '
                  )
         line += ('(-working_temp * ' + get_array(lang, 'h', k_sp) +
                  ' / cp_avg + ' + '' + get_array(lang, 'cp', k_sp) + ')'
                  )
-        line += (' + ' + j_str + ' * ' +
-                 get_array(lang, 'h', k_sp) + ' * rho'
-                 )
+        if k_sp + 1 == len(specs):
+            j_str = 'J_nplusone'
+        else:
+            j_str = get_array(lang, 'jac', k_sp + 1, twod=0)
+        if k_sp + 1 < len(specs) or J_nplusone_touched:
+            line += (' + ' + j_str + ' * ' +
+                     get_array(lang, 'h', k_sp) + ' * rho'
+                     )
         if k_sp != len(specs) - 1:
             if lang == 'fortran':
                 line += ' &'
@@ -2235,8 +2236,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         line += 'double '
     elif lang == 'cuda':
         line += 'register double '
-    line += 'working_temp = 0.0' + utils.line_end[lang]
+    line += 'working_temp = (1.0 / cp_avg)' + utils.line_end[lang]
     file.write(line)
+
+    file.write(utils.line_start + 'j_temp = 1.0 / (rho * cp_avg * cp_avg)' + utils.line_end[lang])
 
     next_fn_index = 0
     # need to finish the dYk/dYj's
@@ -2296,14 +2299,15 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                                  + ' +' if touched[my_index] else ''
                                  ) + ' -('
             else:
-                line += ' {}= -('.format('+' if touched[my_index] else '')
+                line += ' {}= {}('.format('-' if touched[my_index] else '',
+                                          '' if touched[my_index] else '-')
             touched[my_index] = True
 
             #the num_s + 1, j + 1 jacobian entry is non-existant,
             #so skip it
             touch = touched[lin_index] if in_bounds else J_nplusone_touched
             if lang in ['c', 'cuda']:
-                line += (get_array(lang, 'h', k_sp) + ' * (' +
+                line += (get_array(lang, 'h', k_sp) + ' * (working_temp * ' +
                          (((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone') + 
                          ' - ') if touch
                              else '-') +
@@ -2313,7 +2317,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             elif lang in ['fortran', 'matlab']:
-                line += (get_array(lang, 'h', k_sp) + ' * (' +
+                line += (get_array(lang, 'h', k_sp) + ' * (working_temp * ' +
                          (((get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if in_bounds else 'J_nplusone') + 
                          ' - ') if touch
                              else '-') +
@@ -2348,10 +2352,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write('\n')
 
     # next need to divide everything out
-    write_dt_y_division(file, lang, specs, num_s, get_array)
+    #write_dt_y_division(file, lang, specs, num_s, get_array)
 
     # finish the dT entry
-    write_dt_completion(file, lang, specs, get_array)
+    write_dt_completion(file, lang, specs, J_nplusone_touched, get_array)
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_jacob\n\n')

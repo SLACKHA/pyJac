@@ -4,7 +4,7 @@ import numpy as np
 cimport numpy as np
 
 cdef extern from "out/dydt.h":
-    void dydt(double t, double pres, double* y, double* dy)
+    void dydt(double t, double pres, double* y, double* dy, double* dy_N)
 
 cdef extern from "out/jacob.h":
     void eval_jacob (const double t, const double pres, const double* y, double* jac)
@@ -21,7 +21,7 @@ def py_dydt(np.double_t t,
             np.double_t pres,
             np.ndarray[np.double_t] y,
             np.ndarray[np.double_t] dy):
-    dydt(t, pres, &y[0], &dy[0])
+    dydt(t, pres, &y[0], &dy[0], &dy[-1])
 
 def py_eval_jacobian(np.double_t t,
             np.double_t pres,

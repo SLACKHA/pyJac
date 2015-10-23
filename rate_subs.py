@@ -1895,7 +1895,7 @@ def write_derivs(path, lang, specs, reacs):
                '#include "header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                '{0}void dydt (const double, const double, '
-               'const double*, double*);\n'
+               'const double*, double*, double*);\n'
                '{0}inline void dydt_noN (const double t, const double pres, '
                'const double* y, double* dy) {{\n'
                '    double dy_N = 0;\n'

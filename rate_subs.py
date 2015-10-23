@@ -1896,7 +1896,7 @@ def write_derivs(path, lang, specs, reacs):
                '\n'
                '{0}void dydt (const double, const double, '
                'const double*, double*);\n'
-               '{0}inline void dydt (const double t, const double pres, '
+               '{0}inline void dydt_noN (const double t, const double pres, '
                'const double* y, double* dy) {{\n'
                '    double dy_N = 0;\n'
                '    dydt(t, pres, y, dy, &dy_N);\n'

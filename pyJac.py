@@ -9,8 +9,9 @@ from __future__ import print_function
 # Standard libraries
 import sys
 import math
-from argparse import ArgumentParser
 import os
+
+from utils import get_parser
 
 # Local imports
 import chem_utilities as chem
@@ -2462,7 +2463,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                     initial_state="", num_blocks=8, num_threads=64,
                     no_shared=False, L1_preferred=True, multi_thread=None,
-                    force_optimize=False, build_path='./out/'
+                    force_optimize=False, build_path='./out/', skip_jac=False
                     ):
     """Create Jacobian subroutine from mechanism.
 
@@ -2587,94 +2588,28 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                                      reverse_spec_mapping, reverse_rxn_mapping,
                                      optimize_cache)
 
-    # write Jacobian subroutine
-    sparse_indicies = write_jacobian(build_path, lang, specs, reacs, splittings, smm)
+    if skip_jac == False:
+        # write Jacobian subroutine
+        sparse_indicies = write_jacobian(build_path, lang, specs, reacs, splittings, smm)
 
-    write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
+        write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
 
     return 0
 
 
 if __name__ == "__main__":
-    # command line arguments
-    parser = ArgumentParser(description='pyJac: Generates source code '
-                                        'for analytical Jacobian.')
-    parser.add_argument('-l', '--lang',
-                        type=str,
-                        choices=utils.langs,
-                        required=True,
-                        help='Programming language for output '
-                             'source files.')
-    parser.add_argument('-i', '--input',
-                        type=str,
-                        required=True,
-                        help='Input mechanism filename (e.g., mech.dat).')
-    parser.add_argument('-t', '--thermo',
-                        type=str,
-                        default=None,
-                        help='Thermodynamic database filename (e.g., '
-                             'therm.dat), or nothing if in mechanism.')
-    parser.add_argument('-ic', '--initial-conditions',
-                        type=str,
-                        dest='initial_conditions',
-                        default='',
-                        required=False,
-                        help='A comma separated list of initial initial conditions to set in the '
-                             'set_same_initial_conditions method. \
-                                Expected Form: T,P,Species1=...,Species2=...,...\n\
-                                Temperature in K\n\
-                                Pressure in Atm\n\
-                                Species in moles')
-    # cuda specific
-    parser.add_argument('-nco', '--no-cache-optimizer',
-                        dest='cache_optimizer',
-                        action='store_false',
-                        default=True,
-                        help='Do not attempt to optimize cache store/loading via use '
-                             'of a greedy selection algorithm.')
-    parser.add_argument('-nosmem', '--no-shared-memory',
-                        dest='no_shared',
-                        action='store_true',
-                        default=False,
-                        help='Use this option to turn off attempted shared memory acceleration for CUDA')
-    parser.add_argument('-pshare', '--prefer-shared',
-                        dest='L1_preferred',
-                        action='store_false',
-                        default=True,
-                        help='Use this option to allocate more space for shared memory than the L1 cache for CUDA')
-    parser.add_argument('-nb', '--num-blocks',
-                        type=int,
-                        dest='num_blocks',
-                        default=8,
-                        required=False,
-                        help='The target number of blocks / sm to achieve for CUDA.')
-    parser.add_argument('-nt', '--num-threads',
-                        type=int,
-                        dest='num_threads',
-                        default=64,
-                        required=False,
-                        help='The target number of threads / block to achieve for CUDA.')
-    parser.add_argument('-mt', '--multi-threaded',
-                        type=int,
-                        dest='multi_thread',
-                        default=None,
-                        required=False,
-                        help='The number of threads to use during the optimization process')
-    parser.add_argument('-fopt', '--force-optimize',
-                        dest='force_optimize',
-                        action='store_true',
-                        default=False,
-                        help='Use this option to force a reoptimization of the mechanism (usually only happens when '
-                             'generating for a different mechanism)')
-    parser.add_argument('-b', '--build_path',
-                        required=False,
-                        default='./out/',
-                        help='The folder to generate the mechanism in')
+    args = get_parser()
 
-    args = parser.parse_args()
-
-    create_jacobian(args.lang, args.input, args.thermo, args.cache_optimizer,
-                    args.initial_conditions, args.num_blocks,
-                    args.num_threads, args.no_shared, args.L1_preferred,
-                    args.multi_thread, args.force_optimize, args.build_path
+    create_jacobian(lang=args.lang, 
+                    mech_name=args.input,
+                    therm_name=args.thermo,
+                    optimize_cache=args.cache_optimizer,
+                    initial_state=args.initial_conditions, 
+                    num_blocks=args.num_blocks,
+                    num_threads=args.num_threads,
+                    no_shared=args.no_shared,
+                    L1_preferred=args.L1_preferred,
+                    multi_thread=args.multi_thread, 
+                    force_optimize=args.force_optimize,
+                    build_path=args.build_path
                     )

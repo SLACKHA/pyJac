@@ -228,7 +228,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     return ''.join(line_list)
 
 
-def write_rxn_rates(path, lang, specs, reacs, ordering, smm=None):
+def write_rxn_rates(path, lang, specs, reacs, old_rxn_order, smm=None):
     """Write reaction rate subroutine.
 
     Includes conditionals for reversible reactions.
@@ -2412,233 +2412,20 @@ def write_mass_mole(path, lang, specs):
     file.close()
     return
 
-
-def create_rate_subs(lang, mech_name, therm_name=None, optimize_cache=True,
-                     initial_state="", num_blocks=8, num_threads=64,
-                     no_shared=False, L1_preferred=True, multi_thread=1,
-                     force_optimize=False):
-    """Create rate subroutines from mechanism.
-
-    Parameters
-    ----------
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
-        Language type.
-    mech_name : str
-        Reaction mechanism filename (e.g. 'mech.dat').
-    therm_name : str, optional
-        Thermodynamic database filename (e.g. 'therm.dat')
-        or nothing if info in mechanism file.
-    optimize_cache : bool, optional
-        If true, use the greedy optimizer to attempt to
-        improve cache hit rates
-    initial_state : str, optional
-        A comma separated list of the initial conditions to use
-        in form T,P,X (e.g. 800,1,H2=1.0,O2=0.5)
-        Temperature in K, P in atm
-    num_blocks : int, optional
-        The target number of blocks / sm to achieve for cuda
-    num_threads : int, optional
-        The target number of threads / blck to achieve for cuda
-    no_shared : bool, optional
-        If true, do not use the shared_memory_manager to attempt
-        to optimize for CUDA
-    L1_preferred : bool, optional
-        If true, prefer a larger L1 cache and a smaller shared memory
-        size for CUDA
-    multi_thread : int, optional
-        The number of threads to use during optimization
-
-    Returns
-    -------
-    None
-
-    """
-
-    lang = lang.lower()
-    if lang not in utils.langs:
-        print('Error: language needs to be one of: ')
-        for l in utils.langs:
-            print(l)
-        sys.exit(2)
-
-    # create output directory if none exists
-    build_path = './out/'
-    utils.create_dir(build_path)
-
-    # Interpret reaction mechanism file, depending on Cantera or
-    # Chemkin format.
-    if mech_name.endswith(tuple(['.cti', '.xml'])):
-        [elems, specs, reacs] = mech.read_mech_ct(mech_name)
-    else:
-        [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
-
-    if optimize_cache:
-        splittings, specs, reacs, rxn_rate_order, pdep_rate_order, \
-        spec_rate_order, old_spec_order, \
-        old_rxn_order = cache.greedy_optimizer(lang, specs, reacs,
-                                               multi_thread, force_optimize,
-                                               build_path
-                                               )
-    else:
-        spec_rate_order = [(range(len(specs)), range(len(reacs)))]
-        rxn_rate_order = range(len(reacs))
-        if any(r.pdep or r.thd_body for r in reacs):
-            pdep_rate_order = [x for x in range(len(reacs))
-                               if reacs[x].pdep or reacs[x].thd_body
-                               ]
-        else:
-            pdep_rate_order = None
-        the_len = len(reacs)
-        splittings = []
-        while the_len > 0:
-            splittings.append(min(CUDAParams.Jacob_Unroll, the_len))
-            the_len -= CUDAParams.Jacob_Unroll
-        old_spec_order = range(len(specs))
-        old_rxn_order = range(len(reacs))
-
-    if lang == 'cuda':
-        CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads,
-                                       L1_preferred, no_shared
-                                       )
-    smm = None
-    if lang == 'cuda' and not no_shared:
-        smm = shared.shared_memory_manager(num_blocks, num_threads,
-                                           L1_preferred
-                                           )
-
-    #Reassign the reaction's product / reactant / third body list
-    # to integer indexes for speed.
-    utils.reassign_species_lists(reacs, specs)
-
-    # now begin writing subroutines
-
-    # print reaction rate subroutine
-    write_rxn_rates(build_path, lang, specs, reacs, rxn_rate_order, smm)
-
-    # if third-body/pressure-dependent reactions,
-    # print modification subroutine
-    if any([r for r in reacs if r.thd_body or r.pdep]):
-        write_rxn_pressure_mod(build_path, lang, specs, reacs,
-                               pdep_rate_order, smm
-                               )
-
-    # write species rates subroutine
-    write_spec_rates(build_path, lang, specs, reacs, spec_rate_order, smm)
-
-    # write chem_utils subroutines
-    write_chem_utils(build_path, lang, specs)
-
-    # write derivative subroutines
-    write_derivs(build_path, lang, specs, reacs)
-
-    # write mass-mole fraction conversion subroutine
-    write_mass_mole(build_path, lang, specs)
-
-    # write header file
-    aux.write_header(build_path, lang)
-
-    # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs,
-                                     initial_moles, old_spec_order,
-                                     old_rxn_order, optimize_cache
-                                     )
-
-    return 0
-
-
 if __name__ == "__main__":
-    import argparse
-
-    # command line arguments
-    parser = argparse.ArgumentParser(description='Generates source code '
-                                                 'for species and '
-                                                 'reaction rates.'
-                                     )
-    parser.add_argument('-l', '--lang',
-                        type=str,
-                        choices=utils.langs,
-                        required=True,
-                        help='Programming language for output '
-                             'source files.'
-                        )
-    parser.add_argument('-i', '--input',
-                        type=str,
-                        required=True,
-                        help='Input mechanism filename (e.g., mech.dat).'
-                        )
-    parser.add_argument('-t', '--thermo',
-                        type=str,
-                        default=None,
-                        help='Thermodynamic database filename (e.g., '
-                             'therm.dat), or nothing if in mechanism.'
-                        )
-    parser.add_argument('-x', '--initial-moles',
-                        type=str,
-                        dest='initial_moles',
-                        default='',
-                        required=False,
-                        help='A comma separated list of initial moles to set '
-                             'in the set_same_initial_conditions method.'
-                        )
-    # cuda specific
-    parser.add_argument('-nco', '--no-cache-optimizer',
-                        dest='cache_optimizer',
-                        action='store_false',
-                        default=True,
-                        help='Attempt to optimize cache store/loading via '
-                             'use of a greedy selection algorithm.'
-                        )
-    parser.add_argument('-nosmem', '--no-shared-memory',
-                        dest='no_shared',
-                        action='store_true',
-                        default=False,
-                        help='Use this option to turn off attempted shared '
-                             'memory acceleration for CUDA'
-                        )
-    parser.add_argument('-pshare', '--prefer-shared',
-                        dest='L1_preferred',
-                        action='store_false',
-                        default=True,
-                        help='Use this option to allocate more space for '
-                             'shared memory than the L1 cache for CUDA'
-                        )
-    parser.add_argument('-nb', '--num-blocks',
-                        type=int,
-                        dest='num_blocks',
-                        default=8,
-                        required=False,
-                        help='The target number of blocks / sm '
-                             'to achieve for CUDA.'
-                        )
-    parser.add_argument('-nt', '--num-threads',
-                        type=int,
-                        dest='num_threads',
-                        default=64,
-                        required=False,
-                        help='The target number of threads / block '
-                             'to achieve for CUDA.'
-                        )
-    parser.add_argument('-mt', '--multi-threaded',
-                        type=int,
-                        dest='multi_thread',
-                        default=1,
-                        required=False,
-                        help='The number of threads to use during '
-                             'the optimization process'
-                        )
-    parser.add_argument('-fopt', '--force-optimize',
-                        dest='force_optimize',
-                        action='store_true',
-                        default=False,
-                        help='Use this option to force a reoptimization of '
-                             'the mechanism (usually only happens when '
-                             'generating for a different mechanism)'
-                        )
-
-    args = parser.parse_args()
-
-    create_rate_subs(args.lang, args.input, args.thermo, args.cache_optimizer,
-                     args.initial_moles, args.num_blocks, args.num_threads,
-                     args.no_shared, args.L1_preferred, args.multi_thread,
-                     args.force_optimize
-                     )
+    from pyJac import create_jacobian
+    args = utils.get_parser()
+    create_jacobian(lang=args.lang, 
+                mech_name=args.input,
+                therm_name=args.thermo,
+                optimize_cache=args.cache_optimizer,
+                initial_state=args.initial_conditions, 
+                num_blocks=args.num_blocks,
+                num_threads=args.num_threads,
+                no_shared=args.no_shared,
+                L1_preferred=args.L1_preferred,
+                multi_thread=args.multi_thread, 
+                force_optimize=args.force_optimize,
+                build_path=args.build_path,
+                skip_jac=True
+                )

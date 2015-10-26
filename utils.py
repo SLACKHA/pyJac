@@ -5,6 +5,7 @@
 import os
 import errno
 from math import log10, floor
+from argparse import ArgumentParser
 
 # local includes
 import CUDAParams
@@ -198,3 +199,82 @@ def is_integer(val):
             return int(val) == float(val)
         except:
             return False
+
+def get_parser():
+    # command line arguments
+    parser = ArgumentParser(description='pyJac: Generates source code '
+                                        'for analytical Jacobian.')
+    parser.add_argument('-l', '--lang',
+                        type=str,
+                        choices=langs,
+                        required=True,
+                        help='Programming language for output '
+                             'source files.')
+    parser.add_argument('-i', '--input',
+                        type=str,
+                        required=True,
+                        help='Input mechanism filename (e.g., mech.dat).')
+    parser.add_argument('-t', '--thermo',
+                        type=str,
+                        default=None,
+                        help='Thermodynamic database filename (e.g., '
+                             'therm.dat), or nothing if in mechanism.')
+    parser.add_argument('-ic', '--initial-conditions',
+                        type=str,
+                        dest='initial_conditions',
+                        default='',
+                        required=False,
+                        help='A comma separated list of initial initial conditions to set in the '
+                             'set_same_initial_conditions method. \
+                                Expected Form: T,P,Species1=...,Species2=...,...\n\
+                                Temperature in K\n\
+                                Pressure in Atm\n\
+                                Species in moles')
+    # cuda specific
+    parser.add_argument('-nco', '--no-cache-optimizer',
+                        dest='cache_optimizer',
+                        action='store_false',
+                        default=True,
+                        help='Do not attempt to optimize cache store/loading via use '
+                             'of a greedy selection algorithm.')
+    parser.add_argument('-nosmem', '--no-shared-memory',
+                        dest='no_shared',
+                        action='store_true',
+                        default=False,
+                        help='Use this option to turn off attempted shared memory acceleration for CUDA')
+    parser.add_argument('-pshare', '--prefer-shared',
+                        dest='L1_preferred',
+                        action='store_false',
+                        default=True,
+                        help='Use this option to allocate more space for shared memory than the L1 cache for CUDA')
+    parser.add_argument('-nb', '--num-blocks',
+                        type=int,
+                        dest='num_blocks',
+                        default=8,
+                        required=False,
+                        help='The target number of blocks / sm to achieve for CUDA.')
+    parser.add_argument('-nt', '--num-threads',
+                        type=int,
+                        dest='num_threads',
+                        default=64,
+                        required=False,
+                        help='The target number of threads / block to achieve for CUDA.')
+    parser.add_argument('-mt', '--multi-threaded',
+                        type=int,
+                        dest='multi_thread',
+                        default=None,
+                        required=False,
+                        help='The number of threads to use during the optimization process')
+    parser.add_argument('-fopt', '--force-optimize',
+                        dest='force_optimize',
+                        action='store_true',
+                        default=False,
+                        help='Use this option to force a reoptimization of the mechanism (usually only happens when '
+                             'generating for a different mechanism)')
+    parser.add_argument('-b', '--build_path',
+                        required=False,
+                        default='./out/',
+                        help='The folder to generate the mechanism in')
+
+    args = parser.parse_args()
+    return args

@@ -139,6 +139,15 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     #now set up score function
     score_matrix = Matrix(len(specs), len(reacs), 2)
 
+    class rxn_comp(Expression):
+        def __init__ (self, reac1, reac2):
+            Expression.__init__(self, "rxn_comp")
+            self.set_children(reac1, reac2)
+            self.cols = [reac1, reac2]
+
+        def decompose(self):
+            return [ Sum ([v1 < v2 for v1, v2 in zip(self.cols[0], self.cols[1])]) ]
+
     #set up the r_to_s constraints
     for i, rxn in enumerate(rxn_order):
         for sp in range(len(specs)):
@@ -146,24 +155,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             model.add(score_matrix[sp, rxn] == val)
 
     score_list = []
-    for j in range(len(reacs) - 1):
-        for i in range(len(specs)):
-            score_list.append(score_matrix[i, j] < score_matrix[i, j + 1])
-
-    #finally constain the reaction with the largest sum
-    #as first
-    largeVal = None
-    firstReac = None
     for i in range(len(reacs)):
-        val = set()
-        for sp in r_to_s[i]:
-            val = val.union(s_to_r[sp])
-        val = len(val)
-        if largeVal is None or val < largeVal:
-            largeVal = val
-            firstReac = i
-
-    model.add(rxn_order[firstReac] == 0)
+        if i + 1 == len(reacs):
+            continue
+        score_list.append(rxn_comp(score_matrix.col[i], score_matrix.col[i + 1]))
 
     score = Sum(score_list)
     model.add(Minimize(score))

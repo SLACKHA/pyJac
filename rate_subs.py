@@ -1218,90 +1218,87 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     new_loads = []
     cuda_loaded = [False for spec in specs]
     seen = [False for spec in specs]
-    for order in ordering:
-        i_reacs = order[1]
-
-        #loop through reaction
-        for rind in i_reacs:
-            rxn = reacs[rind]
-            #get allowed species
-            my_specs = set(rxn.reac + rxn.prod)
-            if lang == 'cuda' and smm is not None:
-                def __get_smm_var(sp):
-                    return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
-                        else shared.variable('(*dy_N)', None)
-                the_vars = [__get_smm_var(sp) for sp in my_specs]
-                # estimate usages
-                usages = []
-                for sp in set(rxn.reac + rxn.prod):
-                    temp = rind + 1
-                    while (temp < len(i_reacs) and
-                          (sp in reacs[i_reacs[temp]].reac or
-                           sp in reacs[i_reacs[temp]].prod)
-                           ):
-                        temp += 1
-                    usages.append(temp - rind - 1)
-                new_loads = smm.load_into_shared(file, the_vars,
-                                                 usages, load=False
-                                                 )
-                new_loads = [x.index for x in new_loads]
-
-            # loop through species
-            for spind in my_specs:
-                sp = specs[spind]
-
-                #find nu
-                nu = utils.get_nu(spind, rxn)
-                if nu == 0.0:
-                    continue
-
-                sign = '-' if nu < 0 else '+'
-                line = __get_var(spind)
-                if lang == 'cuda':
-                    valin = spind in new_loads
-                    #if we're loading it and it's already been touched
-                    #we need to do a += when we unload
-                    cuda_loaded[spind] |= valin and seen[spind]
-                    line += ' {}= {}'.format(sign if not valin and
-                                             seen[spind] else '',
-                                             sign if (valin or
-                                             not seen[spind]) and
-                                             nu < 0 else ''
+    #loop through reaction
+    for rind in ordering:
+        rxn = reacs[rind]
+        #get allowed species
+        my_specs = set(rxn.reac + rxn.prod)
+        if lang == 'cuda' and smm is not None:
+            def __get_smm_var(sp):
+                return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
+                    else shared.variable('(*dy_N)', None)
+            the_vars = [__get_smm_var(sp) for sp in my_specs]
+            # estimate usages
+            usages = []
+            for sp in set(rxn.reac + rxn.prod):
+                temp = rind + 1
+                while (temp < len(ordering) and
+                      (sp in reacs[ordering[temp]].reac or
+                       sp in reacs[ordering[temp]].prod)
+                       ):
+                    temp += 1
+                usages.append(temp - rind - 1)
+            new_loads = smm.load_into_shared(file, the_vars,
+                                             usages, load=False
                                              )
+            new_loads = [x.index for x in new_loads]
+
+        # loop through species
+        for spind in my_specs:
+            sp = specs[spind]
+
+            #find nu
+            nu = utils.get_nu(spind, rxn)
+            if nu == 0.0:
+                continue
+
+            sign = '-' if nu < 0 else '+'
+            line = __get_var(spind)
+            if lang == 'cuda':
+                valin = spind in new_loads
+                #if we're loading it and it's already been touched
+                #we need to do a += when we unload
+                cuda_loaded[spind] |= valin and seen[spind]
+                line += ' {}= {}'.format(sign if not valin and
+                                         seen[spind] else '',
+                                         sign if (valin or
+                                         not seen[spind]) and
+                                         nu < 0 else ''
+                                         )
+            else:
+                line += ' {}= '.format(sign if seen[spind] else '')
+                if not seen[spind] and nu < 0:
+                    line += sign
+            nu = abs(nu)
+            if nu != 1.0:
+                if utils.is_integer(nu):
+                    line += '{} * '.format(float(nu))
                 else:
-                    line += ' {}= '.format(sign if seen[spind] else '')
-                    if not seen[spind] and nu < 0:
-                        line += sign
-                nu = abs(nu)
-                if nu != 1.0:
-                    if utils.is_integer(nu):
-                        line += '{} * '.format(float(nu))
-                    else:
-                        line += '{:3} * '.format(nu)
-                if rxn.rev:
-                    rxn_out = (
-                        '(' + get_array(lang, 'fwd_rates', rind) +
-                        ' - ' + get_array(lang, 'rev_rates',
-                                    rev_reacs.index(rind)) + ')'
-                        )
-                else:
-                    rxn_out = get_array(lang, 'fwd_rates', rind)
+                    line += '{:3} * '.format(nu)
+            if rxn.rev:
+                rxn_out = (
+                    '(' + get_array(lang, 'fwd_rates', rind) +
+                    ' - ' + get_array(lang, 'rev_rates',
+                                rev_reacs.index(rind)) + ')'
+                    )
+            else:
+                rxn_out = get_array(lang, 'fwd_rates', rind)
 
-                seen[spind] = True
+            seen[spind] = True
 
-                # pressure dependence modification
-                if rxn.thd_body or rxn.pdep:
-                    pind = pdep_reacs.index(rind)
-                    rxn_out += ' * ' + get_array(lang, 'pres_mod', pind)
+            # pressure dependence modification
+            if rxn.thd_body or rxn.pdep:
+                pind = pdep_reacs.index(rind)
+                rxn_out += ' * ' + get_array(lang, 'pres_mod', pind)
 
-                # if lang == 'cuda':
-                #    rxn_out = get_array(lang, rxn_out, None, preformed=True)
-                line += rxn_out
+            # if lang == 'cuda':
+            #    rxn_out = get_array(lang, rxn_out, None, preformed=True)
+            line += rxn_out
 
-                # done with this species
-                line += utils.line_end[lang]
-                file.write(line)
-            file.write('\n')
+            # done with this species
+            line += utils.line_end[lang]
+            file.write(line)
+        file.write('\n')
 
 
     for i, seen_sp in enumerate(seen):

@@ -155,10 +155,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                 old_specs = pickle.load(file)
                 old_reacs = pickle.load(file)
                 rxn_rate_order = pickle.load(file)
-                spec_rate_order = pickle.load(file)
                 pdep_rate_order = pickle.load(file)
-                spec_ordering = pickle.load(file)
-                rxn_ordering = pickle.load(file)
+                spec_rate_order = pickle.load(file)
+                print_spec_ordering = pickle.load(file)
+                print_rxn_ordering = pickle.load(file)
             same_mech = all(any(s == sp for sp in specs) for s in old_specs) and \
                         len(specs) == len(old_specs) and \
                         all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
@@ -169,8 +169,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         if same_mech:
             print('Old optimization file matching current mechanism found... returning previous optimization')
             # we have to do the spec_rate_order each time
-            return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
-                   rxn_ordering
+            return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
+                    print_spec_ordering, print_rxn_ordering
 
     print('Beginning Reaction Cache Locality Reordering')
     #get the mappings
@@ -229,16 +229,16 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     else:
         raise Exception('No solution found, try a longer timelimit')
 
-    print([x for x in enumerate(ordering)])
     pre = __rxn_score_check(r_to_s, range(len(reacs)))
     post = __rxn_score_check(r_to_s, ordering)
     print('Reaction Cache Locality Heuristic changed from {} to {}'.format(pre, post))
 
     if post >= pre:
-        print('Using newly optimized reaction order')
+        print('Using newly optimized reaction order:\n' + ', '.join(
+                [str(x) for x in enumerate(ordering)]))
         rxn_ordering = ordering[:]
     else:
-        print('Using original reaction order')
+        print('Using original reaction order:')
         rxn_ordering = range(len(reacs))
 
 
@@ -271,7 +271,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     solver.setThreadCount(multi_thread)
     solver.setVerbosity(verbosity)
     solver.setTimeLimit(time_lim * 60)
-    print("Solution Found: {}\nSolution Optimal: {}\n".format(solved, solver.is_opt()))
 
     def __sp_score_check(s_to_r, ordering):
         the_sum = 0
@@ -303,14 +302,14 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     print('Species Cache Locality Heuristic changed from {} to {}'.format(pre, post))
 
     if post >= pre:
-        print('Using newly optimized species order')
-        spec_ordering[:] = ordering
+        print('Using newly optimized species order:\n' + ', '.join(
+            [str(x) for x in enumerate(ordering)]))
+        spec_ordering = ordering[:]
     else:
         print('Using original species order')
         spec_ordering = range(len(specs))
 
-    reordered = [reacs[i] for i in rxn_ordering]
-    pdep_rate_order = [i for i, rxn in reordered if rxn.pdep or rxn.thd_body]
+    pdep_rate_order = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
     print_spec_order = []
     # finally reorder the spec and rxn orderings to fix for printing
     for spec_ind in range(len(spec_ordering)):
@@ -328,11 +327,11 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     with open(build_path + 'optimized.pickle', 'wb') as file:
         pickle.dump(specs, file)
         pickle.dump(reacs, file)
-        pickle.dump(rxn_rate_order, file)
-        pickle.dump(spec_rate_order, file)
+        pickle.dump(rxn_ordering, file)
         pickle.dump(pdep_rate_order, file)
+        pickle.dump(spec_ordering, file)
         pickle.dump(print_spec_order, file)
         pickle.dump(print_rxn_order, file)
 
     # complete, so now return
-    return specs, reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, print_spec_order, print_rxn_order
+    return specs, reacs, rxn_ordering, pdep_rate_order, spec_ordering, print_spec_order, print_rxn_order

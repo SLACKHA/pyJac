@@ -21,6 +21,9 @@ except Exception, e:
     HAVE_NJ = False
     print(e)
     print('Cache-optimization support disabled...')
+    class Variable(object):
+        def __init__(self, lb, ub, name):
+            pass
 
 def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False):
     r_to_s = [set() for i in range(len(reacs))]

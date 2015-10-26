@@ -2527,7 +2527,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                                                build_path
                                                )
     else:
-        spec_rate_order = [(range(len(specs)), range(len(reacs)))]
+        spec_rate_order = range(len(specs))
         rxn_rate_order = range(len(reacs))
         if any(r.pdep or r.thd_body for r in reacs):
             pdep_rate_order = [x for x in range(len(reacs))

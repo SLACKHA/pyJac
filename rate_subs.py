@@ -1219,14 +1219,13 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     cuda_loaded = [False for spec in specs]
     seen = [False for spec in specs]
     for order in ordering:
-        i_specs = order[0]
         i_reacs = order[1]
 
         #loop through reaction
         for rind in i_reacs:
             rxn = reacs[rind]
             #get allowed species
-            my_specs = set(rxn.reac + rxn.prod).intersection(i_specs)
+            my_specs = set(rxn.reac + rxn.prod)
             if lang == 'cuda' and smm is not None:
                 def __get_smm_var(sp):
                     return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \

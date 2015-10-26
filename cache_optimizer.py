@@ -40,6 +40,37 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
 
     return r_to_s, s_to_r
 
+class rxn_comp(Variable):
+    def __init__(self, c1, c2, lb=0, ub=None):
+        ub = len(c1)
+        Variable.__init__(self, lb, ub, "rxn_comp")
+        self.children = c1 + c2
+        self.c1 = c1
+        self.c2 = c2
+
+    def decompose(self):
+        '''
+        Decompose must return either a list containing a list of expressions
+        '''
+
+        return [ Sum([self.c1[i] < self.c2[i] for i in range(len(self.c1))]) ]
+
+
+class sp_comp(Variable):
+    def __init__(self, r1, r2, lb=0, ub=None):
+        ub = len(r1)
+        Variable.__init__(self, lb, ub, "rxn_comp")
+        self.children = r1 + r2
+        self.r1 = r1
+        self.r2 = r2
+
+    def decompose(self):
+        '''
+        Decompose must return either a list containing a list of expressions
+        '''
+
+        return [ Sum([self.r1[i] < self.r2[i] for i in range(len(self.r1))]) ]
+
 
 def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path, time_lim=60):
     """
@@ -99,7 +130,19 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     if not HAVE_NJ:
         print("Cache-optimization disabled, returning original mechanism")
-        return None
+        spec_rate_order = range(len(specs))
+        rxn_rate_order = range(len(reacs))
+        if any(r.pdep or r.thd_body for r in reacs):
+            pdep_rate_order = [x for x in range(len(reacs))
+                               if reacs[x].pdep or reacs[x].thd_body
+                               ]
+        else:
+            pdep_rate_order = None
+        old_spec_order = range(len(specs))
+        old_rxn_order = range(len(reacs))
+
+        return specs, reacs, rxn_rate_order, spec_rate_order, pdep_rate_order, old_spec_order, \
+                old_rxn_order
 
     unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
@@ -139,15 +182,6 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     #now set up score function
     score_matrix = Matrix(len(specs), len(reacs), 2)
 
-    class rxn_comp(Expression):
-        def __init__ (self, reac1, reac2):
-            Expression.__init__(self, "rxn_comp")
-            self.set_children(reac1, reac2)
-            self.cols = [reac1, reac2]
-
-        def decompose(self):
-            return [ Sum ([v1 < v2 for v1, v2 in zip(self.cols[0], self.cols[1])]) ]
-
     #set up the r_to_s constraints
     for i, rxn in enumerate(rxn_order):
         for sp in range(len(specs)):
@@ -155,9 +189,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             model.add(score_matrix[sp, rxn] == val)
 
     score_list = []
-    for i in range(len(reacs)):
-        if i + 1 == len(reacs):
-            continue
+    for i in range(len(reacs) - 1):
         score_list.append(rxn_comp(score_matrix.col[i], score_matrix.col[i + 1]))
 
     score = Sum(score_list)
@@ -165,13 +197,14 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     solver = model.load('SCIP')
     solver.setThreadCount(multi_thread)
     solver.setTimeLimit(time_lim * 60)
-    solver.setVerbosity(2)
+    solver.setVerbosity(0)
 
     def __rxn_score_check(r_to_s, ordering):
         the_sum = 0
         for i in range(len(r_to_s) - 1):
             the_sum += len(r_to_s[ordering[i + 1]].difference(r_to_s[ordering[i]]))
-
+        
+        assert len(set(ordering)) == len(ordering)
         return the_sum
 
     solved = solver.solve()
@@ -221,15 +254,13 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     score_list = []
     for i in range(len(specs) - 1):
-        sp = sp_order[i]
-        for j in range(len(reacs)):
-            score_list.append(score_matrix[sp, j] < score_matrix[sp + 1, j])
+        score_list.append(sp_comp(score_matrix.row[i], score_matrix.row[i + 1]))
 
     score = Sum(score_list)
     model.add(Minimize(score))
     solver = model.load('SCIP')
     solver.setThreadCount(multi_thread)
-    solver.setVerbosity(2)
+    solver.setVerbosity(0)
     solver.setTimeLimit(time_lim * 60)
     print(solver.solve(), solver.is_opt())
     solver.printStatistics()
@@ -239,10 +270,23 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         for i in range(len(s_to_r) - 1):
             the_sum += len(s_to_r[ordering[i + 1]].difference(s_to_r[ordering[i]]))
 
+        assert len(set(ordering)) == len(ordering)
         return the_sum
 
-    ordering = [x.get_value() for x in sp_order]
-    assert len(set(ordering)) == len(ordering)
+    solved = solver.solve()
+    solns = [x for x in solver.solutions()]
+    print(solved, solver.is_opt(), len(solns))
+    if solved and solver.is_opt():
+        ordering = [x.get_value() for x in rxn_order]
+    elif solved:
+        bestVal = None
+        for solution in solns:
+            val = __rxn_score_check(r_to_s, solution)
+            if bestVal is None or val < bestVal:
+                ordering[:] = solution
+                bestVal = val
+    else:
+        raise Exception('No solution found, try a longer timelimit')
 
     pre = __sp_score_check(s_to_r, range(len(specs)))
     post = __sp_score_check(s_to_r, ordering)
@@ -255,6 +299,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         print('Using original species order')
         spec_ordering = range(len(specs))
 
+    reordered = [reacs[i] for i in rxn_ordering]
+    pdep_rate_order = [i for i, rxn in reordered if rxn.pdep or rxn.thd_body]
     print_spec_order = []
     # finally reorder the spec and rxn orderings to fix for printing
     for spec_ind in range(len(spec_ordering)):

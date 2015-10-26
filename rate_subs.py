@@ -1454,7 +1454,7 @@ def write_chem_utils(path, lang, specs):
                      )
 
         isfirst = False
-    line += ' + ((*y_N) * {:16e})'.format(1.0 / specs[-1].mw)
+    line += ' + ((*y_N) * {:.16e})'.format(1.0 / specs[-1].mw)
     line += utils.line_end[lang]
     file.write(line)
     file.write('  *mw_avg = 1.0 / *mw_avg;\n')
@@ -1554,7 +1554,7 @@ def write_chem_utils(path, lang, specs):
                      )
 
         isfirst = False
-    line += ' + ((*y_N) * {})'.format(1.0 / specs[-1].mw)
+    line += ' + ((*y_N) * {:.16e})'.format(1.0 / specs[-1].mw)
     line += utils.line_end[lang]
     file.write(line)
     file.write('  *mw_avg = 1.0 / *mw_avg;\n')

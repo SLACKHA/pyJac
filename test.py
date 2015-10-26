@@ -194,7 +194,7 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
     return state_data
 
 class cpyjac_evaluator(object):
-    def check_optimized(self, build_dir, filename='mechanism.h'):
+    def check_optimized(self, build_dir, gas, filename='mechanism.h'):
         with open(os.path.join(build_dir, filename), 'r') as file:
             opt = False
             for line in file.readlines():
@@ -204,68 +204,57 @@ class cpyjac_evaluator(object):
         self.cache_opt = opt
         if self.cache_opt:
             with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
-                specs = pickle.load(file)
-                reacs = pickle.load(file)
-                self.fwd_rxn_map = np.array(pickle.load(file))
-                self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if reacs[i].rev])
-                self.fwd_pdep_map = np.array(pickle.load(file))
+                dummy = pickle.load(file)
+                dummy = pickle.load(file)
                 self.fwd_spec_map = np.array(pickle.load(file))
+                self.fwd_rxn_map = np.array(pickle.load(file))
+                self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
+                            gas.reaction(i).reversible])
                 self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
-                spec_ordering = pickle.load(file)
-                rxn_ordering = pickle.load(file)
+                back_spec_map = pickle.load(file)
+                back_rxn_map = pickle.load(file)
 
-            self.sp_map = np.array(spec_ordering)
-            self.rxn_map = np.array(rxn_ordering)
+            n_spec = gas.n_species
+            n_reac = gas.n_reactions
+            self.back_spec_map = np.array(back_spec_map)
+            self.back_rxn_map = np.array(back_rxn_map)
 
-            rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
-            if rev_reacs:
-                self.rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in rev_reacs])
-            else:
-                self.rev_rxn_map = np.array([])
+            rev_reacs = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
+            self.back_rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in rev_reacs])
 
-            pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
-            if pdep_reacs:
-                self.pdep_rxn_map = np.array([pdep_reacs.index(rxn) for rxn in pdep_reacs])
-            else:
-                self.pdep_rxn_map = np.array([])
+            pdep_reacs = [i for i, rxn in enumerate(gas.reactions()) if is_pdep(rxn)]
+            self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in pdep_reacs]
+            self.fwd_pdep_map = np.array([x[0] for x in 
+                        sorted(enumerate(self.fwd_pdep_map), 
+                        key=lambda k:k[1])])
+            self.back_pdep_rxn_map = np.array([self.fwd_pdep_map[self.fwd_pdep_map[i]] 
+                                for i in range(len(pdep_reacs))])
 
-            self.dydt_map = np.array([0] + spec_ordering)
+            self.back_dydt_map = np.array([0] + self.back_spec_map)
             #handle jacobian map separately
             #dT/dT doesn't change
             self.jac_map = [0]
             #updated species map (+ 1 to account for dT entry)
-            self.jac_map.extend([x + 1 for x in self.sp_map])
-            for i in range(len(self.sp_map)):
+            self.jac_map.extend([x + 1 for x in self.fwd_spec_map])
+            for i in range(n_spec - 1):
                 #dT / dY entry
-                self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1))
-                for j in range(len(self.sp_map)):
-                    self.jac_map.append((self.sp_map[i] + 1) * (len(specs) + 1) + self.sp_map[j] + 1)
+                self.jac_map.append((self.fwd_spec_map[i] + 1) * n_spec)
+                for j in range(n_spec - 1):
+                    self.jac_map.append((self.fwd_spec_map[i] + 1) * n_spec + self.fwd_spec_map[j] + 1)
             self.jac_map = np.array(self.jac_map)
-        else:
-            self.sp_map = None
-            self.rxn_map = None
-            self.rev_rxn_map = None
-            self.pdep_rxn_map = None
-            self.dydt_map = None
-            self.jac_map = None
 
         
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
-        self.idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
-        self.idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
-                is_pdep(rxn)
-                ]
-        self.check_optimized(build_dir, filename)
+        self.check_optimized(build_dir, gas, filename)
         self.pyjac = __import__(module_name)
-
 
     def eval_conc(self, temp, pres, mass_frac, conc):
         mw_avg = 0
         rho = 0
         if self.cache_opt:
-            mass_frac[:] = mass_frac[self.sp_map]
+            mass_frac[:] = mass_frac[self.fwd_spec_map]
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
-            conc[:] = conc[self.sp_map]
+            conc[:] = conc[self.back_spec_map]
         else:
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
@@ -273,15 +262,15 @@ class cpyjac_evaluator(object):
             test_conc = conc[self.fwd_spec_map][:]
             self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
              fwd_rates, rev_rates)
-            fwd_rates[:] = fwd_rates[self.rxn_map]
-            rev_rates[:] = rev_rates[self.rev_rxn_map]
+            fwd_rates[:] = fwd_rates[self.back_rxn_map]
+            rev_rates[:] = rev_rates[self.back_rev_rxn_map]
         else:
             self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
         if self.cache_opt:
             test_conc = conc[self.fwd_spec_map][:]
             self.pyjac.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
-            pres_mod[:] = pres_mod[self.pdep_rxn_map]
+            pres_mod[:] = pres_mod[self.back_pdep_rxn_map]
         else:
             self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
@@ -290,14 +279,14 @@ class cpyjac_evaluator(object):
             test_rev = rev_rates[self.fwd_rev_rxn_map][:]
             test_pdep = pres_mod[self.fwd_pdep_map][:]
             self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
-            spec_rates[:] = spec_rates[self.sp_map]
+            spec_rates[:] = spec_rates[self.back_spec_map]
         else:
             self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
     def dydt(self, t, pres, y, dydt):
         if self.cache_opt:
             test_y = y[self.fwd_dydt_map][:]
             self.pyjac.py_dydt(t, pres, test_y, dydt)
-            dydt[:] = dydt[self.dydt_map]
+            dydt[:] = dydt[self.back_dydt_map]
         else:   
             self.pyjac.py_dydt(t, pres, y, dydt)
     def eval_jacobian(self, t, pres, y, jacob):

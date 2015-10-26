@@ -8,37 +8,19 @@ from __future__ import division
 from __future__ import print_function
 from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
 from CParams import C_Jacob_Unroll
+import utils
 import multiprocessing
 import pickle
+import timeit
 
-
-def get_nu(species, rxn):
-    if species.name in rxn.prod and species.name in rxn.reac:
-        nu = (rxn.prod_nu[rxn.prod.index(species.name)] -
-              rxn.reac_nu[rxn.reac.index(species.name)])
-    elif species.name in rxn.prod:
-        nu = rxn.prod_nu[rxn.prod.index(species.name)]
-    elif species.name in rxn.reac:
-        nu = -rxn.reac_nu[rxn.reac.index(species.name)]
-    else:
-        # doesn't participate in reaction
-        return None
-    return nu
-
-
-def get_nu_name(sp_name, rxn):
-    if sp_name in rxn.prod and sp_name in rxn.reac:
-        nu = (rxn.prod_nu[rxn.prod.index(sp_name)] -
-              rxn.reac_nu[rxn.reac.index(sp_name)])
-    elif sp_name in rxn.prod:
-        nu = rxn.prod_nu[rxn.prod.index(sp_name)]
-    elif sp_name in rxn.reac:
-        nu = -rxn.reac_nu[rxn.reac.index(sp_name)]
-    else:
-        # doesn't participate in reaction
-        return None
-    return nu
-
+try:
+    from Numberjack import *
+    Model().load('SCIP')
+    HAVE_NJ = True
+except Exception, e:
+    HAVE_NJ = False
+    print(e)
+    print('Cache-optimization support disabled...')
 
 def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False):
     r_to_s = [set() for i in range(len(reacs))]
@@ -47,11 +29,11 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
         for rind, rxn in enumerate(reacs):
             the_set = set(rxn.reac + rxn.prod)
             if consider_thd:
-                thd_sp = [thd[0] for thd in rxn.thd_body_eff if thd[1] - 1.0 != 0]
+                thd_sp = [thd[0] for thd in rxn.thd_body_eff if thd[1] != 0]
                 if thd_sp:
                     the_set = the_set.union(set(thd_sp))
             if any(sp.name == x for x in the_set):
-                nu = get_nu(sp, rxn)
+                nu = utils.get_nu(sp, rxn)
                 if (nu is not None and nu != 0) or load_non_participating:
                     r_to_s[rind].add(sind)
                     s_to_r[sind].add(rind)
@@ -59,143 +41,7 @@ def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False)
     return r_to_s, s_to_r
 
 
-def __greedy_loop(seed, selection_pool, score_fn, additional_args, size=None, multi_thread=None):
-    """
-    The work horse of the greedy_optimizer
-
-    Notes
-    -----
-    This method will start a list with the seed object, and greedily select the best object from the selection_pool (
-    based on the score fn) until the list reaches the supplied size
-
-    Parameters
-    ----------
-    seed : object
-        The starting object
-    selection_pool : list of object
-        The pool to select from
-    score_fn : function(list, object, additional_args) -> float
-        Given the current list, and a potential object, this returns a score estimating how good of a choice this
-        object is
-        A large score should indicate a better choice
-    additional_args : object
-        Additional arguements to pass to the score_fn, can be None
-    updater : function(obj)
-        Given the selected obj, this will perform any updates needed for the score_fn
-    size : int, optional
-        If supplied, the returned list will be of this size, else the entire selection_pool will be used
-    """
-
-    if multi_thread is not None:
-        Pool = multiprocessing.Pool(multi_thread)
-    else:
-        Pool = multiprocessing.Pool()
-    size = min(size, len(selection_pool)) if size is not None else len(selection_pool)
-    the_list = [seed]
-    size_offset = 1
-    if seed in selection_pool:
-        selection_pool.remove(seed)
-        size_offset = 0
-
-    while len(the_list) < size + size_offset:
-        max_score = None
-        best_candidate = None
-        score_list = []
-        for i, obj in enumerate(selection_pool):
-            if obj in the_list:
-                continue
-            score_list.append((i, Pool.apply_async(score_fn, args=(the_list, obj, additional_args))))
-        score_list = [(score[0], score[1].get()) for score in score_list]
-        for score in score_list:
-            if max_score is None or score[1] > max_score:
-                max_score = score[1]
-                best_candidate = selection_pool[score[0]]
-        the_list.append(best_candidate)
-        selection_pool.remove(best_candidate)
-        # updater(best_candidate)
-    return the_list
-
-    # a score function that compares the percentage of shared species between reactions
-
-
-def __shared_specs_score(the_list, candidate, additional_args):
-    reacs = additional_args['reacs']
-    r_to_s = additional_args['r_to_s']
-    ind_1 = reacs.index(the_list[-1])
-    ind_2 = reacs.index(candidate)
-    return len(r_to_s[ind_1].intersection(r_to_s[ind_2])) / len(r_to_s[ind_1])
-
-
-def __conc_temp(rxn, specs):
-    ret_list = []
-    for thd_sp in rxn.thd_body_eff:
-        isp = specs.index(next((s for s in specs
-                                if s.name == thd_sp[0]), None))
-        val = thd_sp[1] - 1.0
-        if val != 0.0:
-            ret_list.append(isp)
-    return ret_list
-
-    # a score function that compares the percentage of shared species between
-
-
-def __shared_specs_score_pdep(the_list, candidate, additional_args):
-    reacs = additional_args['reacs']
-    ind_1 = reacs.index(the_list[-1])
-    ind_2 = reacs.index(candidate)
-    misses = 0
-    for spec, val in reacs[ind_1].thd_body_eff:
-        other_val = next((sp[1] for sp in reacs[ind_2].thd_body_eff if sp[0] == spec), None)
-        if other_val is None or other_val != val:
-            misses += 1
-    for spec, val in reacs[ind_2].thd_body_eff:
-        if not any(sp[0] == spec for sp in reacs[ind_1].thd_body_eff):
-            misses += 1
-    for sp in set(reacs[ind_1].reac + reacs[ind_1].prod):
-        nu_1 = get_nu_name(sp, reacs[ind_1])
-        nu_2 = get_nu_name(sp, reacs[ind_2])
-        if nu_1 is not None and nu_1 != 0 and (nu_2 is None or nu_2 == 0):
-            misses += 1
-    for sp in set(reacs[ind_2].reac + reacs[ind_2].prod):
-        nu_1 = get_nu_name(sp, reacs[ind_1])
-        nu_2 = get_nu_name(sp, reacs[ind_2])
-        if nu_2 is not None and nu_2 != 0 and (nu_1 is None or nu_1 == 0):
-            misses += 1
-
-    return (1.0 - misses / len(set(reacs[ind_1].reac + reacs[ind_1].prod +
-            reacs[ind_2].reac + reacs[ind_2].prod +
-            [thd[0] for thd in reacs[ind_1].thd_body_eff] +
-            [thd[0] for thd in reacs[ind_2].thd_body_eff]))
-            )
-
-
-def __get_positioning_score(reac_index, candidate_index, rxn_rate_order, r_to_s):
-    # candidate is a potential list index for the reaction 'reac_index'
-    # test between candidate and candidate + 1
-    ind_1 = rxn_rate_order[candidate_index]
-    val_1 = len(r_to_s[ind_1].intersection(r_to_s[reac_index])) / len(r_to_s[ind_1])
-    if candidate_index + 1 < len(rxn_rate_order):
-        ind_2 = rxn_rate_order[candidate_index + 1]
-        val_2 = len(r_to_s[ind_2].intersection(r_to_s[reac_index])) / len(r_to_s[ind_2])
-        val_1 = (val_1 + val_2) / 2.0
-    return val_1
-
-
-def __get_max_rxn(the_list, reacs, spec_scores, reac_scores):
-    reac_inds = [reacs.index(reac) for reac in the_list]
-    max_score = None
-    max_rxn = None
-    for rxn in reac_inds:
-        the_count = 0
-        for spec in reac_scores[rxn]:
-            the_count += len(spec_scores[spec].intersection(reac_inds))
-        if max_score is None or the_count > max_score:
-            max_score = the_count
-            max_rxn = rxn
-    return reacs[max_rxn]
-
-
-def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path):
+def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path, time_lim=60):
     """
     An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as
     long as possible
@@ -223,6 +69,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         If true, reoptimize even if past data is available
     build_path : str
         The path to the build directory
+    time_lim : int
+        The time limit for optimization operations in minutes
 
     Returns
     _______
@@ -249,6 +97,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
 
+    if not HAVE_NJ:
+        print("Cache-optimization disabled, returning original mechanism")
+        return None
+
     unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
     if not force_optimize:
@@ -273,62 +125,140 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
                    rxn_ordering
 
-    # First find pdep reacs
-    pdep_reacs = []
-    for reac in reacs:
-        if reac.thd_body or reac.pdep:
-            # add reaction index to list
-            pdep_reacs.append(reac)
+    #get the mappings
+    r_to_s, s_to_r = get_mappings(specs, reacs, consider_thd=False, load_non_participating=True)
 
-    rxn_ordering = []
-    r_to_s, s_to_r = get_mappings(specs, reacs)
-    args = {'r_to_s': r_to_s, 'reacs': reacs}
-    reac_list = reacs[:]
-    # and finally order the rest of the reactions
-    while len(reac_list):
-        if len(rxn_ordering) and not ResetOnJacUnroll:
-            max_rxn = reacs[rxn_ordering[-1]]
-        else:
-            max_rxn = __get_max_rxn(reac_list, reacs, s_to_r, r_to_s)
-        order = __greedy_loop(max_rxn, reac_list, __shared_specs_score, additional_args=args, size=unroll_len,
-                              multi_thread=multi_thread)
-        # remove the seed, it was already added
-        if len(rxn_ordering) and not ResetOnJacUnroll:
-            order = order[1:]
-        rxn_ordering.extend([reacs.index(reac) for reac in order])
-        reac_list = [reac for reac in reac_list if not reac in order]
+    #set up the Numberjack constraint problem to optimize reaction order
+    model = Model()
 
-    # the reactions order is now determined, so let's reorder them
-    temp = reacs[:]
-    reacs = [temp[i] for i in rxn_ordering]
+    rxn_order = [Variable(0, len(reacs), "rxn_{}".format(i)) for i in range(len(reacs))]
 
-    # up next we will reorder the species so they are stored in the order that we will be loading them in the jacobian
-    spec_ordering = []
-    for reac in reacs:
-        for spec_name in set(reac.reac + reac.prod):
-            spec = next(sp for sp in specs if sp.name == spec_name)
-            if get_nu(spec, reac):
-                isp = specs.index(spec)
-                if isp not in spec_ordering:
-                    spec_ordering.append(isp)
+    #set up the constraints to ensure unique rxn placement
+    model.add(AllDiff(rxn_order))
 
-    # make sure we have them all (i.e. 3rd body only)
-    for isp in range(len(specs)):
-        if not isp in spec_ordering:
-            spec_ordering.append(isp)
+    #now set up score function
+    score_matrix = Matrix(len(specs), len(reacs), 2)
 
-    # now reorder
-    temp = specs[:]
-    specs = [temp[i] for i in spec_ordering]
+    #set up the r_to_s constraints
+    for i, rxn in enumerate(rxn_order):
+        for sp in range(len(specs)):
+            val = 1 if sp in r_to_s[i] else 0
+            model.add(score_matrix[sp, rxn] == val)
 
-    # we have to update our mappings now that things are reordered
-    r_to_s, s_to_r = get_mappings(specs, reacs)
+    score_list = []
+    for j in range(len(reacs) - 1):
+        for i in range(len(specs)):
+            score_list.append(score_matrix[i, j] < score_matrix[i, j + 1])
 
-    rxn_rate_order = range(len(reacs))
-    pdep_rate_order = [reacs.index(reac) for reac in pdep_reacs]
-    spec_rate_order = []
+    #finally constain the reaction with the largest sum
+    #as first
+    largeVal = None
+    firstReac = None
     for i in range(len(reacs)):
-        spec_rate_order.append((list(sorted(r_to_s[i])), [i]))
+        val = set()
+        for sp in r_to_s[i]:
+            val = val.union(s_to_r[sp])
+        val = len(val)
+        if largeVal is None or val < largeVal:
+            largeVal = val
+            firstReac = i
+
+    model.add(rxn_order[firstReac] == 0)
+
+    score = Sum(score_list)
+    model.add(Minimize(score))
+    solver = model.load('SCIP')
+    solver.setThreadCount(multi_thread)
+    solver.setTimeLimit(time_lim * 60)
+    solver.setVerbosity(2)
+
+    def __rxn_score_check(r_to_s, ordering):
+        the_sum = 0
+        for i in range(len(r_to_s) - 1):
+            the_sum += len(r_to_s[ordering[i + 1]].difference(r_to_s[ordering[i]]))
+
+        return the_sum
+
+    solved = solver.solve()
+    solns = [x for x in solver.solutions()]
+    print(solved, solver.is_opt(), len(solns))
+    if solved and solver.is_opt():
+        ordering = [x.get_value() for x in rxn_order]
+    elif solved:
+        bestVal = None
+        for solution in solns:
+            val = __rxn_score_check(r_to_s, solution)
+            if bestVal is None or val < bestVal:
+                ordering[:] = solution
+                bestVal = val
+    else:
+        raise Exception('No solution found, try a longer timelimit')
+
+    print([x for x in enumerate(ordering)])
+    pre = __rxn_score_check(r_to_s, range(len(reacs)))
+    post = __rxn_score_check(r_to_s, ordering)
+    print('Reaction Cache Locality Heuristic changed from {} to {}'.format(pre, post))
+
+    if post >= pre:
+        print('Using newly optimized reaction order')
+        rxn_ordering = ordering[:]
+    else:
+        print('Using original reaction order')
+        rxn_ordering = range(len(reacs))
+
+    #now set up the species optimization problem
+    #set up the Numberjack constraint problem to optimize reaction order
+    model = Model()
+
+    sp_order = [Variable(0, len(specs), "sp_{}".format(i)) for i in range(len(specs))]
+
+    #set up the constraints to ensure unique rxn placement
+    model.add(AllDiff(sp_order))
+
+    #now set up score function
+    score_matrix = Matrix(len(specs), len(reacs), 2)
+
+    #set up the r_to_s constraints
+    for i, sp in enumerate(sp_order):
+        for rxn in range(len(reacs)):
+            val = 1 if rxn in s_to_r[i] else 0
+            model.add(score_matrix[sp, rxn] == val)
+
+    score_list = []
+    for i in range(len(specs) - 1):
+        sp = sp_order[i]
+        for j in range(len(reacs)):
+            score_list.append(score_matrix[sp, j] < score_matrix[sp + 1, j])
+
+    score = Sum(score_list)
+    model.add(Minimize(score))
+    solver = model.load('SCIP')
+    solver.setThreadCount(multi_thread)
+    solver.setVerbosity(2)
+    solver.setTimeLimit(time_lim * 60)
+    print(solver.solve(), solver.is_opt())
+    solver.printStatistics()
+
+    def __sp_score_check(s_to_r, ordering):
+        the_sum = 0
+        for i in range(len(s_to_r) - 1):
+            the_sum += len(s_to_r[ordering[i + 1]].difference(s_to_r[ordering[i]]))
+
+        return the_sum
+
+    ordering = [x.get_value() for x in sp_order]
+    assert len(set(ordering)) == len(ordering)
+
+    pre = __sp_score_check(s_to_r, range(len(specs)))
+    post = __sp_score_check(s_to_r, ordering)
+    print('Species Cache Locality Heuristic changed from {} to {}'.format(pre, post))
+
+    if post >= pre:
+        print('Using newly optimized species order')
+        spec_ordering[:] = ordering
+    else:
+        print('Using original species order')
+        spec_ordering = range(len(specs))
 
     print_spec_order = []
     # finally reorder the spec and rxn orderings to fix for printing

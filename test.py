@@ -206,29 +206,29 @@ class cpyjac_evaluator(object):
             with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
                 dummy = pickle.load(file)
                 dummy = pickle.load(file)
-                self.fwd_spec_map = np.array(pickle.load(file))
-                self.fwd_rxn_map = np.array(pickle.load(file))
+                self.fwd_spec_map = pickle.load(file)
+                self.fwd_rxn_map = pickle.load(file)
                 self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
                             gas.reaction(i).reversible])
                 self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
-                back_spec_map = pickle.load(file)
-                back_rxn_map = pickle.load(file)
+                self.back_spec_map = pickle.load(file)
+                self.back_rxn_map = pickle.load(file)
 
             n_spec = gas.n_species
             n_reac = gas.n_reactions
-            self.back_spec_map = np.array(back_spec_map)
-            self.back_rxn_map = np.array(back_rxn_map)
 
-            rev_reacs = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
-            self.back_rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in rev_reacs])
+            rev_reacs = self.fwd_rev_rxn_map.shape[0]
+            self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == i)[0][0] for i in
+                        range(rev_reacs)])
 
-            pdep_reacs = [i for i, rxn in enumerate(gas.reactions()) if is_pdep(rxn)]
-            self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in pdep_reacs]
-            self.fwd_pdep_map = np.array([x[0] for x in 
-                        sorted(enumerate(self.fwd_pdep_map), 
-                        key=lambda k:k[1])])
-            self.back_pdep_rxn_map = np.array([self.fwd_pdep_map[self.fwd_pdep_map[i]] 
-                                for i in range(len(pdep_reacs))])
+            self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in range(n_reac)
+                                    if is_pdep(gas.reaction(self.fwd_rxn_map[i]))]
+            pdep_reacs = len(self.fwd_pdep_map)
+            self.back_pdep_map = sorted(self.fwd_pdep_map)
+            self.back_pdep_map = np.array([self.fwd_pdep_map.index(x) 
+                                    for x in self.back_pdep_map])
+            self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0] 
+                                    for x in range(pdep_reacs)])
 
             self.back_dydt_map = np.array([0] + self.back_spec_map)
             #handle jacobian map separately
@@ -252,8 +252,8 @@ class cpyjac_evaluator(object):
         mw_avg = 0
         rho = 0
         if self.cache_opt:
-            mass_frac[:] = mass_frac[self.fwd_spec_map]
-            self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
+            test_mass_frac = mass_frac[self.fwd_spec_map][:]
+            self.pyjac.py_eval_conc(temp, pres, test_mass_frac, mw_avg, rho, conc)
             conc[:] = conc[self.back_spec_map]
         else:
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
@@ -270,7 +270,7 @@ class cpyjac_evaluator(object):
         if self.cache_opt:
             test_conc = conc[self.fwd_spec_map][:]
             self.pyjac.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
-            pres_mod[:] = pres_mod[self.back_pdep_rxn_map]
+            pres_mod[:] = pres_mod[self.back_pdep_map]
         else:
             self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):

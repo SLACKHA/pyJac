@@ -228,7 +228,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     return ''.join(line_list)
 
 
-def write_rxn_rates(path, lang, specs, reacs, old_rxn_order, smm=None):
+def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
     """Write reaction rate subroutine.
 
     Includes conditionals for reversible reactions.
@@ -243,8 +243,8 @@ def write_rxn_rates(path, lang, specs, reacs, old_rxn_order, smm=None):
         List of species in the mechanism.
     reacs : list of ReacInfo
         List of reactions in the mechanism.
-    ordering : List of integers
-        The order to iterate through the reactions
+    fwd_rxn_mapping : List of integers
+        The index of the reaction in the original mechanism
     smm : shared_memory_manager, optional
         If not None, the shared_memory_manager to use for CUDA optimizations
 
@@ -436,7 +436,9 @@ def write_rxn_rates(path, lang, specs, reacs, old_rxn_order, smm=None):
                     ]
         return lo_array, hi_array
 
-    for i_rxn in ordering:
+    for i_rxn in range(len(reacs)):
+        file.write(utils.line_start + utils.comment[lang] + 
+                    'rxn {}'.format(fwd_rxn_mapping[i_rxn]) + '\n')
         rxn = reacs[i_rxn]
 
         if lang == 'cuda' and smm is not None:
@@ -720,7 +722,7 @@ def write_rxn_rates(path, lang, specs, reacs, old_rxn_order, smm=None):
     return
 
 
-def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
+def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
     """Write subroutine to for reaction pressure dependence modifications.
 
     Parameters
@@ -733,8 +735,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
         List of species in mechanism.
     reacs : list of ReacInfo
         List of reactions in mechanism.
-    ordering : List of integers
-        The order to iterate through the reactions
+    fwd_rxn_mapping : List of integers
+        The order of the reaction in the original mechanism
     smm : shared_memory_manager, optional
         If not None, the shared_memory_manager to use for CUDA optimizations
 
@@ -899,17 +901,22 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
 
     file.write('\n')
 
+    pind = 0
     # loop through third-body and pressure-dependent reactions
-    for pind, rind in enumerate(ordering):
+    for rind in range(len(reacs)):
         reac = reacs[rind]  # index in reaction list
 
+        if not (reac.pdep or reac.thd_body):
+            continue
+
+        printind = fwd_rxn_mapping[rind]
         # print reaction index
         if lang in ['c', 'cuda']:
-            line = '  // reaction ' + str(rind)
+            line = '  // reaction ' + str(printind)
         elif lang == 'fortran':
-            line = '  ! reaction ' + str(rind + 1)
+            line = '  ! reaction ' + str(printind + 1)
         elif lang == 'matlab':
-            line = '  % reaction ' + str(rind + 1)
+            line = '  % reaction ' + str(printind + 1)
         line += utils.line_end[lang]
         file.write(line)
 
@@ -1100,6 +1107,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
 
         # space in between each reaction
         file.write('\n')
+        pind += 1
 
     if lang in ['c', 'cuda']:
         file.write('} // end get_rxn_pres_mod\n\n')
@@ -1113,7 +1121,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     return
 
 
-def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
+def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping, smm=None):
     """Write subroutine to evaluate species rates of production.
 
     Parameters
@@ -1126,9 +1134,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
         List of species in mechanism.
     reacs : list of ReacInfo
         List of reactions in mechanism.
-    ordering : List of tuples
-        The order to iterate through the species / reactions
-        The tuple order should be ([list of species], [list of reactions])
+    fwd_spec_mapping : list of int
+        the index of the species in the original mechanism
+    fwd_rxn_mapping : list of int
+        the index of the reactions in the original mechanism
     smm : shared_memory_manager, optional
         If not None, the shared_memory_manager to use for CUDA optimizations
 
@@ -1217,7 +1226,10 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
     cuda_loaded = [False for spec in specs]
     seen = [False for spec in specs]
     #loop through reaction
-    for rind in ordering:
+    for rind in range(len(reacs)):
+        print_ind = fwd_rxn_mapping[rind]
+        file.write(utils.line_start + utils.comment[lang] + 
+                    'rxn {}'.format(print_ind) + '\n')
         rxn = reacs[rind]
         #get allowed species
         my_specs = set(rxn.reac + rxn.prod)
@@ -1230,9 +1242,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             usages = []
             for sp in set(rxn.reac + rxn.prod):
                 temp = rind + 1
-                while (temp < len(ordering) and
-                      (sp in reacs[ordering[temp]].reac or
-                       sp in reacs[ordering[temp]].prod)
+                while (temp < len(reacs) and
+                      (sp in reacs[temp].reac or
+                       sp in reacs[temp].prod)
                        ):
                     temp += 1
                 usages.append(temp - rind - 1)
@@ -1249,6 +1261,9 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
             nu = utils.get_nu(spind, rxn)
             if nu == 0.0:
                 continue
+
+            file.write(utils.line_start + utils.comment[lang] + 
+                'sp {}'.format(fwd_spec_mapping[spind]) + '\n')
 
             sign = '-' if nu < 0 else '+'
             line = __get_var(spind)
@@ -1301,6 +1316,8 @@ def write_spec_rates(path, lang, specs, reacs, ordering, smm=None):
 
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
+            file.write(utils.line_start + utils.comment[lang] + 
+                'sp {}'.format(fwd_spec_mapping[i]) + '\n')
             file.write(__get_var(i) +
                        ' = 0.0' + utils.line_end[lang]
                        )

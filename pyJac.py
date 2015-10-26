@@ -177,6 +177,10 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
 
     file.write(jline + utils.line_end[lang])
 
+    if rxn.pdep:
+        file.write(utils.line_start + 
+            'pres_mod_temp *= (' + get_array(lang, 'pres_mod', pind) +
+                            ' / conc_temp)' + utils.line_end[lang])
 
 def write_rates(file, lang, rxn):
     if not (rxn.cheb or rxn.plog):

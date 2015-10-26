@@ -69,7 +69,7 @@ class sp_comp(Variable):
         Decompose must return either a list containing a list of expressions
         '''
 
-        return [ Sum([self.r1[i] < self.r2[i] for i in range(len(self.r1))]) ]
+        return [ Sum([self.r2[i] < self.r1[i] for i in range(len(self.r1))]) ]
 
 
 def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path, time_lim=60, verbosity=1):

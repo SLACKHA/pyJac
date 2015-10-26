@@ -139,7 +139,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         reverse_spec_mapping = range(len(specs))
         reverse_rxn_mapping = range(len(reacs))
 
-        return specs, reacs, rxn_rate_order, fwd_spec_mapping, fwd_rxn_mapping, \
+        return specs, reacs, fwd_spec_mapping, fwd_rxn_mapping, \
                     reverse_spec_mapping, reverse_rxn_mapping
 
     unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll

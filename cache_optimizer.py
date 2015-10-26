@@ -310,6 +310,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         spec_ordering = range(len(specs))
 
     pdep_rate_order = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
+    pdep_rate_order = [rxn_ordering.index(i) for i in pdep_rate_order]
     print_spec_order = []
     # finally reorder the spec and rxn orderings to fix for printing
     for spec_ind in range(len(spec_ordering)):

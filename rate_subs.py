@@ -900,10 +900,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, ordering, smm=None):
     file.write('\n')
 
     # loop through third-body and pressure-dependent reactions
-    for i_rxn, rind in enumerate(ordering):
+    for pind, rind in enumerate(ordering):
         reac = reacs[rind]  # index in reaction list
-        # index in list of third/pressure-dep reactions
-        pind = pdep_reacs.index(rind)
 
         # print reaction index
         if lang in ['c', 'cuda']:

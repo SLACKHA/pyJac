@@ -72,7 +72,7 @@ class sp_comp(Variable):
         return [ Sum([self.r1[i] < self.r2[i] for i in range(len(self.r1))]) ]
 
 
-def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path, time_lim=60):
+def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path, time_lim=60, verbosity=1):
     """
     An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as
     long as possible
@@ -128,6 +128,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         A list indicating the positioning of the reactions in the original mechanism, used in rate testing
     """
 
+    print('Beginning Cache-optimization process...')
     if not HAVE_NJ:
         print("Cache-optimization disabled, returning original mechanism")
         spec_rate_order = range(len(specs))
@@ -147,6 +148,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
     if not force_optimize:
+        print('Checking for old optimization')
         try:
             same_mech = False
             with open(build_path + 'optimized.pickle', 'rb') as file:
@@ -162,12 +164,15 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
                         all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
                         len(reacs) == len(old_reacs)
         except Exception, e:
+            print('Old optimization file not found, or does not match current mechanism... forcing optimization')
             same_mech = False
         if same_mech:
+            print('Old optimization file matching current mechanism found... returning previous optimization')
             # we have to do the spec_rate_order each time
             return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, spec_ordering,\
                    rxn_ordering
 
+    print('Beginning Reaction Cache Locality Reordering')
     #get the mappings
     r_to_s, s_to_r = get_mappings(specs, reacs, consider_thd=False, load_non_participating=True)
 
@@ -197,7 +202,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     solver = model.load('SCIP')
     solver.setThreadCount(multi_thread)
     solver.setTimeLimit(time_lim * 60)
-    solver.setVerbosity(0)
+    solver.setVerbosity(verbosity)
 
     def __rxn_score_check(r_to_s, ordering):
         the_sum = 0
@@ -209,10 +214,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     solved = solver.solve()
     solns = [x for x in solver.solutions()]
-    print(solved, solver.is_opt(), len(solns))
+    print("Solution Found: {}\nSolution Optimal: {}\n".format(solved, solver.is_opt()))
     if solved and solver.is_opt():
+        print('Checking optimal solution')
         ordering = [x.get_value() for x in rxn_order]
     elif solved:
+        print('Checking other {} solutions'.format(len(solns)))
         bestVal = None
         for solution in solns:
             val = __rxn_score_check(r_to_s, solution)
@@ -234,6 +241,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         print('Using original reaction order')
         rxn_ordering = range(len(reacs))
 
+
+    print('Beginning Species Cache Locality reordering')
     #now set up the species optimization problem
     #set up the Numberjack constraint problem to optimize reaction order
     model = Model()
@@ -260,10 +269,9 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     model.add(Minimize(score))
     solver = model.load('SCIP')
     solver.setThreadCount(multi_thread)
-    solver.setVerbosity(0)
+    solver.setVerbosity(verbosity)
     solver.setTimeLimit(time_lim * 60)
-    print(solver.solve(), solver.is_opt())
-    solver.printStatistics()
+    print("Solution Found: {}\nSolution Optimal: {}\n".format(solved, solver.is_opt()))
 
     def __sp_score_check(s_to_r, ordering):
         the_sum = 0
@@ -275,13 +283,15 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     solved = solver.solve()
     solns = [x for x in solver.solutions()]
-    print(solved, solver.is_opt(), len(solns))
+    print("Solution Found: {}\nSolution Optimal: {}\n".format(solved, solver.is_opt()))
     if solved and solver.is_opt():
-        ordering = [x.get_value() for x in rxn_order]
+        print('Checking optimal solution')
+        ordering = [x.get_value() for x in sp_order]
     elif solved:
+        print('Checking other {} solutions'.format(len(solns)))
         bestVal = None
         for solution in solns:
-            val = __rxn_score_check(r_to_s, solution)
+            val = __sp_score_check(s_to_r, solution)
             if bestVal is None or val < bestVal:
                 ordering[:] = solution
                 bestVal = val

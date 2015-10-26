@@ -131,19 +131,13 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     print('Beginning Cache-optimization process...')
     if not HAVE_NJ:
         print("Cache-optimization disabled, returning original mechanism")
-        spec_rate_order = range(len(specs))
-        rxn_rate_order = range(len(reacs))
-        if any(r.pdep or r.thd_body for r in reacs):
-            pdep_rate_order = [x for x in range(len(reacs))
-                               if reacs[x].pdep or reacs[x].thd_body
-                               ]
-        else:
-            pdep_rate_order = None
-        old_spec_order = range(len(specs))
-        old_rxn_order = range(len(reacs))
+        fwd_spec_mapping = range(len(specs))
+        fwd_rxn_mapping = range(len(reacs))
+        reverse_spec_mapping = range(len(specs))
+        reverse_rxn_mapping = range(len(reacs))
 
-        return specs, reacs, rxn_rate_order, spec_rate_order, pdep_rate_order, old_spec_order, \
-                old_rxn_order
+        return specs, reacs, rxn_rate_order, fwd_spec_mapping, fwd_rxn_mapping, \
+                    reverse_spec_mapping, reverse_rxn_mapping
 
     unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
@@ -154,11 +148,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             with open(build_path + 'optimized.pickle', 'rb') as file:
                 old_specs = pickle.load(file)
                 old_reacs = pickle.load(file)
-                rxn_rate_order = pickle.load(file)
-                pdep_rate_order = pickle.load(file)
-                spec_rate_order = pickle.load(file)
-                print_spec_ordering = pickle.load(file)
-                print_rxn_ordering = pickle.load(file)
+                fwd_spec_mapping = pickle.load(file)
+                fwd_rxn_mapping = pickle.load(file)
+                reverse_spec_mapping = pickle.load(file)
+                reverse_rxn_mapping = pickle.load(file)
             same_mech = all(any(s == sp for sp in specs) for s in old_specs) and \
                         len(specs) == len(old_specs) and \
                         all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
@@ -169,8 +162,8 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         if same_mech:
             print('Old optimization file matching current mechanism found... returning previous optimization')
             # we have to do the spec_rate_order each time
-            return old_specs, old_reacs, rxn_rate_order, pdep_rate_order, spec_rate_order, \
-                    print_spec_ordering, print_rxn_ordering
+            return old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping, \
+                    reverse_spec_mapping, reverse_rxn_mapping
 
     print('Beginning Reaction Cache Locality Reordering')
     #get the mappings
@@ -236,10 +229,10 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     if post >= pre:
         print('Using newly optimized reaction order:\n' + ', '.join(
                 [str(x) for x in enumerate(ordering)]))
-        rxn_ordering = ordering[:]
+        fwd_rxn_mapping = ordering[:]
     else:
         print('Using original reaction order:')
-        rxn_ordering = range(len(reacs))
+        fwd_rxn_mapping = range(len(reacs))
 
 
     print('Beginning Species Cache Locality reordering')
@@ -304,35 +297,37 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     if post >= pre:
         print('Using newly optimized species order:\n' + ', '.join(
             [str(x) for x in enumerate(ordering)]))
-        spec_ordering = ordering[:]
+        fwd_spec_mapping = ordering[:]
     else:
         print('Using original species order')
-        spec_ordering = range(len(specs))
+        fwd_spec_mapping = range(len(specs))
 
-    pdep_rate_order = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
-    pdep_rate_order = [rxn_ordering.index(i) for i in pdep_rate_order]
-    print_spec_order = []
+    spec_temp = specs[:]
+    specs = [specs[i] for i in fwd_spec_mapping]
+    reac_temp = reacs[:]
+    reacs = [reacs[i] for i in fwd_rxn_mapping]
+
+    reverse_spec_mapping = []
     # finally reorder the spec and rxn orderings to fix for printing
-    for spec_ind in range(len(spec_ordering)):
-        print_spec_order.append(
-            spec_ordering.index(spec_ind)
+    for spec_ind in range(len(fwd_spec_mapping)):
+        reverse_spec_mapping.append(
+            fwd_spec_mapping.index(spec_ind)
         )
 
-    print_rxn_order = []
-    for rxn_ind in range(len(rxn_ordering)):
-        print_rxn_order.append(
-            rxn_ordering.index(rxn_ind)
+    reverse_rxn_mapping = []
+    for rxn_ind in range(len(fwd_rxn_mapping)):
+        reverse_rxn_mapping.append(
+            fwd_rxn_mapping.index(rxn_ind)
         )
 
     # save to avoid reoptimization if possible
     with open(build_path + 'optimized.pickle', 'wb') as file:
         pickle.dump(specs, file)
         pickle.dump(reacs, file)
-        pickle.dump(rxn_ordering, file)
-        pickle.dump(pdep_rate_order, file)
-        pickle.dump(spec_ordering, file)
-        pickle.dump(print_spec_order, file)
-        pickle.dump(print_rxn_order, file)
+        pickle.dump(fwd_spec_mapping, file)
+        pickle.dump(fwd_rxn_mapping, file)
+        pickle.dump(reverse_spec_mapping, file)
+        pickle.dump(reverse_rxn_mapping, file)
 
     # complete, so now return
-    return specs, reacs, rxn_ordering, pdep_rate_order, spec_ordering, print_spec_order, print_rxn_order
+    return specs, reacs, fwd_rxn_mapping, fwd_spec_mapping, reverse_spec_mapping, reverse_rxn_mapping

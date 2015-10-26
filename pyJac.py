@@ -2520,23 +2520,18 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
     if optimize_cache:
-        specs, reacs, rxn_rate_order, pdep_rate_order, \
-        spec_rate_order, old_spec_order, \
-        old_rxn_order = cache.greedy_optimizer(lang, specs, reacs,
-                                               multi_thread, force_optimize,
-                                               build_path
-                                               )
+        specs, reacs, \
+        fwd_spec_mapping, fwd_rxn_mapping, \
+        reverse_spec_mapping, reverse_rxn_mapping = \
+                cache.greedy_optimizer(lang, specs, reacs,
+                                           multi_thread, force_optimize,
+                                           build_path
+                                           )
     else:
-        spec_rate_order = range(len(specs))
-        rxn_rate_order = range(len(reacs))
-        if any(r.pdep or r.thd_body for r in reacs):
-            pdep_rate_order = [x for x in range(len(reacs))
-                               if reacs[x].pdep or reacs[x].thd_body
-                               ]
-        else:
-            pdep_rate_order = None
-        old_spec_order = range(len(specs))
-        old_rxn_order = range(len(reacs))
+        fwd_spec_mapping = range(len(specs))
+        fwd_rxn_mapping = range(len(reacs))
+        reverse_spec_mapping = range(len(specs))
+        reverse_rxn_mapping = range(len(reacs))
 
     the_len = len(reacs)
     splittings = []
@@ -2562,17 +2557,18 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     ## now begin writing subroutines
 
     # print reaction rate subroutine
-    rate.write_rxn_rates(build_path, lang, specs, reacs, rxn_rate_order, smm)
+    rate.write_rxn_rates(build_path, lang, specs, reacs, fwd_rxn_mapping, smm)
 
     # if third-body/pressure-dependent reactions,
     # print modification subroutine
     if next((r for r in reacs if (r.thd_body or r.pdep)), None):
-        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs,
-                                    pdep_rate_order, smm
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, 
+                                    fwd_rxn_mapping, smm
                                     )
 
     # write species rates subroutine
-    rate.write_spec_rates(build_path, lang, specs, reacs, spec_rate_order, smm)
+    rate.write_spec_rates(build_path, lang, specs, reacs, 
+                    reverse_spec_mapping, fwd_rxn_mapping, smm)
 
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs)
@@ -2587,7 +2583,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     aux.write_header(build_path, lang)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, old_spec_order, old_rxn_order,
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, 
+                                     reverse_spec_mapping, reverse_rxn_mapping,
                                      optimize_cache)
 
     # write Jacobian subroutine

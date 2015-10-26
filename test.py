@@ -292,7 +292,7 @@ class cpyjac_evaluator(object):
     def eval_jacobian(self, t, pres, y, jacob):
         if self.cache_opt:
             test_y = y[self.fwd_dydt_map][:]
-            self.pyjac.py_eval_jacobian(pres, test_y, jacob)
+            self.pyjac.py_eval_jacobian(t, pres, test_y, jacob)
             jacob[:] = jacob[self.jac_map]
         else:
             self.pyjac.py_eval_jacobian(t, pres, y, jacob)

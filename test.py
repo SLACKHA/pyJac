@@ -208,8 +208,8 @@ class cpyjac_evaluator(object):
                 reacs = pickle.load(file)
                 self.fwd_rxn_map = np.array(pickle.load(file))
                 self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if reacs[i].rev])
-                self.fwd_spec_map = np.array(pickle.load(file))
                 self.fwd_pdep_map = np.array(pickle.load(file))
+                self.fwd_spec_map = np.array(pickle.load(file))
                 self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
                 spec_ordering = pickle.load(file)
                 rxn_ordering = pickle.load(file)
@@ -219,15 +219,13 @@ class cpyjac_evaluator(object):
 
             rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
             if rev_reacs:
-                old_rev_order = [i for i in old_rxn_order if reacs[i].rev]
-                self.rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in old_rev_order])
+                self.rev_rxn_map = np.array([rev_reacs.index(rxn) for rxn in rev_reacs])
             else:
                 self.rev_rxn_map = np.array([])
 
             pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.pdep or rxn.thd_body]
             if pdep_reacs:
-                old_pdep_order = [rxn for rxn in old_rxn_order if reacs[rxn].pdep or reacs[rxn].thd_body]
-                self.pdep_rxn_map = np.array([pdep_reacs.index(rxn) for rxn in old_pdep_order])
+                self.pdep_rxn_map = np.array([pdep_reacs.index(rxn) for rxn in pdep_reacs])
             else:
                 self.pdep_rxn_map = np.array([])
 
@@ -265,14 +263,14 @@ class cpyjac_evaluator(object):
         mw_avg = 0
         rho = 0
         if self.cache_opt:
-            test_mf[:] = mass_frac[self.sp_map]
+            mass_frac[:] = mass_frac[self.sp_map]
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
             conc[:] = conc[self.sp_map]
         else:
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
         if self.cache_opt:
-            test_conc[:] = conc[self.fwd_spec_map]
+            test_conc = conc[self.fwd_spec_map][:]
             self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
              fwd_rates, rev_rates)
             fwd_rates[:] = fwd_rates[self.rxn_map]
@@ -281,30 +279,30 @@ class cpyjac_evaluator(object):
             self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
         if self.cache_opt:
-            test_conc[:] = conc[self.fwd_spec_map]
-            pyjacob.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
+            test_conc = conc[self.fwd_spec_map][:]
+            self.pyjac.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
             pres_mod[:] = pres_mod[self.pdep_rxn_map]
         else:
             self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
         if self.cache_opt:
-            test_fwd[:] = fwd_rates[self.fwd_rxn_map]
-            test_rev[:] = rev_rates[self.fwd_rev_rxn_map]
-            test_pdep[:] = pres_mod[self.fwd_pdep_map]
+            test_fwd = fwd_rates[self.fwd_rxn_map][:]
+            test_rev = rev_rates[self.fwd_rev_rxn_map][:]
+            test_pdep = pres_mod[self.fwd_pdep_map][:]
             self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
             spec_rates[:] = spec_rates[self.sp_map]
         else:
             self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
     def dydt(self, t, pres, y, dydt):
         if self.cache_opt:
-            test_y[:] = y[self.fwd_dydt_map]
-            pyjacob.py_dydt(t, pres, test_y, dydt)
+            test_y = y[self.fwd_dydt_map][:]
+            self.pyjac.py_dydt(t, pres, test_y, dydt)
             dydt[:] = dydt[self.dydt_map]
         else:   
             self.pyjac.py_dydt(t, pres, y, dydt)
     def eval_jacobian(self, t, pres, y, jacob):
         if self.cache_opt:
-            test_y[:] = y[self.fwd_dydt_map]
+            test_y = y[self.fwd_dydt_map][:]
             self.pyjac.py_eval_jacobian(pres, test_y, jacob)
             jacob[:] = jacob[self.jac_map]
         else:

@@ -241,9 +241,9 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, rind, rev_reacs, get
     jline += ' * {:.16e}'.format(1. - mw_frac)
     if ((rxn.pdep and rxn.pdep_sp == '') or rxn.thd_body):
         alphaij = next((thd[1] for thd in rxn.thd_body_eff
-                        if thd[0] == j_sp), 0)
+                        if thd[0] == j_sp), 1.0)
         alphai_nspec = next((thd[1] for thd in rxn.thd_body_eff
-                        if thd[0] == last_spec), 0)
+                        if thd[0] == last_spec), 1.0)
         if alphai_nspec != 0:
             alphaij -= alphai_nspec * mw_frac
         if alphaij != 0:

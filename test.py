@@ -209,7 +209,7 @@ class cpyjac_evaluator(object):
                     break
 
         self.cache_opt = opt
-        self.dydt_mask = np.array([0] + [x + 1 for x in range(len(gas.n_species)) if x != last_spec])
+        self.dydt_mask = np.array([0] + [x + 1 for x in range(gas.n_species) if x != last_spec])
         if self.cache_opt:
             with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
                 dummy = pickle.load(file)
@@ -314,7 +314,7 @@ class cpyjac_evaluator(object):
         if self.cache_opt:
             test_y = y[self.fwd_dydt_map][:]
             self.pyjac.py_dydt(t, pres, test_y, dydt)
-            dydt[:] = dydt[self.back_dydt_map]
+            dydt[self.dydt_mask][:] = dydt[self.back_dydt_map]
         else:   
             self.pyjac.py_dydt(t, pres, y, dydt)
     def eval_jacobian(self, t, pres, y, jacob):
@@ -541,7 +541,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         test_rev_rates = np.zeros(len(idx_rev))
         test_pres_mod = np.zeros(len(idx_pmod))
         test_spec_rates = np.zeros(gas.n_species)
-        test_dydt = np.zeros(gas.n_species)
+        test_dydt = np.zeros(gas.n_species + 1)
         test_jacob = np.zeros((gas.n_species) * (gas.n_species))
 
         print()

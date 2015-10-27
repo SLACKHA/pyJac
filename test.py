@@ -195,6 +195,10 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
     return state_data
 
 class cpyjac_evaluator(object):
+    def __copy(self, B):
+        A = np.empty_like(B)
+        A[:] = B
+        return A
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
         with open(os.path.join(build_dir, filename), 'r') as file:
             opt = False
@@ -276,14 +280,14 @@ class cpyjac_evaluator(object):
         mw_avg = 0
         rho = 0
         if self.cache_opt:
-            test_mass_frac = mass_frac[self.fwd_spec_map][:]
+            test_mass_frac = self.__copy(mass_frac[self.fwd_spec_map])
             self.pyjac.py_eval_conc(temp, pres, test_mass_frac, mw_avg, rho, conc)
             conc[:] = conc[self.back_spec_map]
         else:
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
         if self.cache_opt:
-            test_conc = conc[self.fwd_spec_map][:]
+            test_conc = self.__copy(conc[self.fwd_spec_map])
             self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
              fwd_rates, rev_rates)
             fwd_rates[:] = fwd_rates[self.back_rxn_map]
@@ -292,23 +296,23 @@ class cpyjac_evaluator(object):
             self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
         if self.cache_opt:
-            test_conc = conc[self.fwd_spec_map][:]
+            test_conc = self.__copy(conc[self.fwd_spec_map])
             self.pyjac.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
             pres_mod[:] = pres_mod[self.back_pdep_map]
         else:
             self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
         if self.cache_opt:
-            test_fwd = fwd_rates[self.fwd_rxn_map][:]
-            test_rev = rev_rates[self.fwd_rev_rxn_map][:]
-            test_pdep = pres_mod[self.fwd_pdep_map][:]
+            test_fwd = self.__copy(fwd_rates[self.fwd_rxn_map])
+            test_rev = self.__copy(rev_rates[self.fwd_rev_rxn_map])
+            test_pdep = self.__copy(pres_mod[self.fwd_pdep_map])
             self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
             spec_rates[:] = spec_rates[self.back_spec_map]
         else:
             self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
     def dydt(self, t, pres, y, dydt):
         if self.cache_opt:
-            test_y = y[self.fwd_dydt_map][:]
+            test_y = self.__copy(y[self.fwd_dydt_map])
             test_dydt = np.zeros_like(test_y)
             self.pyjac.py_dydt(t, pres, test_y, test_dydt)
             dydt[self.dydt_mask] = test_dydt[self.back_dydt_map[self.dydt_mask]]
@@ -316,7 +320,7 @@ class cpyjac_evaluator(object):
             self.pyjac.py_dydt(t, pres, y, dydt)
     def eval_jacobian(self, t, pres, y, jacob):
         if self.cache_opt:
-            test_y = y[self.fwd_dydt_map][:]
+            test_y = self.__copy(y[self.fwd_dydt_map][:])
             self.pyjac.py_eval_jacobian(t, pres, test_y, jacob)
             jacob[:] = jacob[self.jac_map]
         else:

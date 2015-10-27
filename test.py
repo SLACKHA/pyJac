@@ -634,20 +634,26 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         y_dummy = np.hstack((temp, mass_frac))
         pyjacob.dydt(0, pres, y_dummy, test_dydt)
-        non_zero = np.where(test_dydt != 0.)[0]
-        zero = np.where(test_dydt == 0.)[0]
-        err = abs((test_dydt[non_zero] - ode()[:-1][non_zero]) /
-                  ode()[:-1][non_zero]
+
+        #need to mask the resulting dydt vectors to avoid comparison
+        #of the new last species
+        t_dydt = test_dydt[pyjacob.dydt_mask]
+        ode_dydt = ode()[test_dydt]
+
+        non_zero = np.where(t_dydt != 0.)[0]
+        zero = np.where(t_dydt == 0.)[0]
+        err = abs((test_dydt[non_zero] - ode_dydt[non_zero]) /
+                  ode_dydt[non_zero]
                   )
         max_err = np.max(err)
-        loc = non_zero[np.argmax(err)]
+        loc = pyjacob.dydt_mask[non_zero[np.argmax(err)]]
         err = np.linalg.norm(err) * 100.
         err_dydt[i] = err
         print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
         print('Max error in non-zero dydt: {:.2e}% '
               '@ index {}'.format(max_err * 100., loc)
               )
-        err = np.linalg.norm(test_dydt[zero] - ode()[:-1][zero])
+        err = np.linalg.norm(t_dydt[zero] - ode_dydt[zero])
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 

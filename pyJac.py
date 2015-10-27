@@ -2580,11 +2580,11 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         reverse_rxn_mapping = range(len(reacs))
 
         #pick up the last_spec and drop it at the end
-        fwd_spec_mapping[last_spec + 1:] = fwd_spec_mapping[last_spec:-1]
-        fwd_spec_mapping[last_spec] = len(specs) - 1
+        reverse_spec_mapping[last_spec + 1:] = reverse_spec_mapping[last_spec:-1]
+        reverse_spec_mapping[last_spec] = len(specs) - 1
 
-        reverse_spec_mapping[last_spec:-1] = reverse_spec_mapping[last_spec + 1:]
-        reverse_spec_mapping[-1] = last_spec
+        fwd_spec_mapping[last_spec:-1] = fwd_spec_mapping[last_spec + 1:]
+        fwd_spec_mapping[-1] = last_spec
 
         temp = specs[last_spec]
         specs[last_spec:-1] = specs[last_spec + 1:]

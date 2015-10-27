@@ -135,8 +135,9 @@ def convert_mech(mech_filename, therm_filename=None):
 
 
 class analytic_eval_jacob:
-    def __init__(self, pressure):
+    def __init__(self, pressure, last_spec):
         self.pres = pressure
+        self.last_spec = last_spec
         import pyjacob
         self.jac = pyjacob
 
@@ -155,8 +156,7 @@ class analytic_eval_jacob:
         #rel_tol = 1.e-8
 
         y_dummy = np.zeros(gas.Y.shape[0] - 1)
-        y_dummy[:] = gas.Y[:-1]
-        y = np.hstack((gas.T, y_dummy))
+        y = np.hstack((gas.T, gas.Y[:self.last_spec], gas.Y[self.last_spec + 1:]))
         #step = np.array([1e-15 for x in range(len(y))])
         #step[0] = abs_tol
 
@@ -208,16 +208,17 @@ class cpyjac_evaluator(object):
                 if opt and last_spec is not None:
                     break
 
+        self.last_spec = last_spec
         self.cache_opt = opt
         self.dydt_mask = np.array([0] + [x + 1 for x in range(gas.n_species) if x != last_spec])
         if self.cache_opt:
             with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
                 dummy = pickle.load(file)
                 dummy = pickle.load(file)
-                self.fwd_spec_map = pickle.load(file)
-                self.fwd_rxn_map = pickle.load(file)
-                self.back_spec_map = pickle.load(file)
-                self.back_rxn_map = pickle.load(file)
+                self.fwd_spec_map = np.array(pickle.load(file))
+                self.fwd_rxn_map = np.array(pickle.load(file))
+                self.back_spec_map = np.array(pickle.load(file))
+                self.back_rxn_map = np.array(pickle.load(file))
         elif last_spec != gas.n_species - 1:
             #still need to treat it as a cache optimizied
             self.cache_opt = True
@@ -240,7 +241,7 @@ class cpyjac_evaluator(object):
             n_spec = gas.n_species
             n_reac = gas.n_reactions
 
-            self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
+            self.fwd_dydt_map = np.array([0] + [x + 1 for x in self.fwd_spec_map])
             self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
                     gas.reaction(i).reversible])
 
@@ -257,18 +258,13 @@ class cpyjac_evaluator(object):
             self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0] 
                                     for x in range(pdep_reacs)])
 
-            self.back_dydt_map = np.array([0] + self.back_spec_map)
+            self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
             #handle jacobian map separately
             #dT/dT doesn't change
-            self.jac_map = [0]
+            self.jac_map = []
             #updated species map (+ 1 to account for dT entry)
-            the_map = [x for x in self.fwd_spec_map if x != last_spec]
-            self.jac_map.extend([x + 1 for x in the_map])
-            for i in the_map:
-                #dT / dY entry
-                self.jac_map.append((i + 1) * n_spec)
-                for j in the_map:
-                    self.jac_map.append((i + 1) * n_spec + j + 1)
+            for i in range(gas.n_species):
+                self.jac_map.extend([i * gas.n_species + x for x in self.back_dydt_map[self.dydt_mask]])
             self.jac_map = np.array(self.jac_map)
 
         
@@ -313,8 +309,9 @@ class cpyjac_evaluator(object):
     def dydt(self, t, pres, y, dydt):
         if self.cache_opt:
             test_y = y[self.fwd_dydt_map][:]
-            self.pyjac.py_dydt(t, pres, test_y, dydt)
-            dydt[self.dydt_mask][:] = dydt[self.back_dydt_map]
+            test_dydt = np.zeros_like(test_y)
+            self.pyjac.py_dydt(t, pres, test_y, test_dydt)
+            dydt[self.dydt_mask] = test_dydt[self.back_dydt_map[self.dydt_mask]]
         else:   
             self.pyjac.py_dydt(t, pres, y, dydt)
     def eval_jacobian(self, t, pres, y, jacob):
@@ -533,7 +530,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pres = state[2]
         mass_frac = state[3:]
 
-        ajac = analytic_eval_jacob(pres)
+        ajac = analytic_eval_jacob(pres, pyjacob.last_spec)
 
         #init vectors
         test_conc = np.zeros(gas.n_species)
@@ -778,7 +775,7 @@ if __name__ == '__main__':
                         default=None,
                         help='An optional saved .npy file that has the '
                              'resulting PaSR data (to speed testing)')
-    parser.add_argument('-ls', '--last_species',
+    parser.add_argument('-ls', '--last_spec',
                         type=str,
                         default=None,
                         help='The last species, to pass to pyJac')
@@ -793,5 +790,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
          args.generate_jacob, args.seed, args.pasr_output,
-         args.last_species, args.cache_optimization, args.no_shared
+         args.last_spec, args.cache_optimization, args.no_shared
          )

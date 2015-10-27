@@ -262,12 +262,13 @@ class cpyjac_evaluator(object):
             #dT/dT doesn't change
             self.jac_map = [0]
             #updated species map (+ 1 to account for dT entry)
-            self.jac_map.extend([x + 1 for x in self.fwd_spec_map])
-            for i in range(n_spec - 1):
+            the_map = [x for x in self.fwd_spec_map if x != last_spec]
+            self.jac_map.extend([x + 1 for x in the_map])
+            for i in the_map:
                 #dT / dY entry
-                self.jac_map.append((self.fwd_spec_map[i] + 1) * n_spec)
-                for j in range(n_spec - 1):
-                    self.jac_map.append((self.fwd_spec_map[i] + 1) * n_spec + self.fwd_spec_map[j] + 1)
+                self.jac_map.append((i + 1) * n_spec)
+                for j in the_map:
+                    self.jac_map.append((i + 1) * n_spec + j + 1)
             self.jac_map = np.array(self.jac_map)
 
         

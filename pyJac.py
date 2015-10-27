@@ -2590,9 +2590,6 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         specs[last_spec:-1] = specs[last_spec + 1:]
         specs[-1] = temp
 
-        print(fwd_spec_mapping)
-        print(reverse_spec_mapping)
-
 
     the_len = len(reacs)
     splittings = []

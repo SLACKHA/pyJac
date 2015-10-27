@@ -644,7 +644,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         non_zero = np.where(t_dydt != 0.)[0]
         zero = np.where(t_dydt == 0.)[0]
-        err = abs((test_dydt[non_zero] - ode_dydt[non_zero]) /
+        err = abs((t_dydt[non_zero] - ode_dydt[non_zero]) /
                   ode_dydt[non_zero]
                   )
         max_err = np.max(err)

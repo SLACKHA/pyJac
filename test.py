@@ -135,9 +135,9 @@ def convert_mech(mech_filename, therm_filename=None):
 
 
 class analytic_eval_jacob:
-    def __init__(self, pressure, last_spec):
+    def __init__(self, pressure, fwd_spec_map):
         self.pres = pressure
-        self.last_spec = last_spec
+        self.fwd_spec_map = fwd_spec_map
         import pyjacob
         self.jac = pyjacob
 
@@ -155,8 +155,7 @@ class analytic_eval_jacob:
         #abs_tol = 1.e-20
         #rel_tol = 1.e-8
 
-        y_dummy = np.zeros(gas.Y.shape[0] - 1)
-        y = np.hstack((gas.T, gas.Y[:self.last_spec], gas.Y[self.last_spec + 1:]))
+        y = np.hstack((gas.T, gas.Y[self.fwd_spec_map][:-1]))
         #step = np.array([1e-15 for x in range(len(y))])
         #step[0] = abs_tol
 
@@ -200,6 +199,7 @@ class cpyjac_evaluator(object):
         A[:] = B
         return A
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
+        self.fwd_spec_map = np.array(range(gas.n_species))
         with open(os.path.join(build_dir, filename), 'r') as file:
             opt = False
             last_spec = None
@@ -224,7 +224,7 @@ class cpyjac_evaluator(object):
                 self.back_spec_map = np.array(pickle.load(file))
                 self.back_rxn_map = np.array(pickle.load(file))
         elif last_spec != gas.n_species - 1:
-            #still need to treat it as a cache optimizied
+            #still need to treat it as a cache optimized
             self.cache_opt = True
 
             self.fwd_spec_map = range(gas.n_species)
@@ -263,13 +263,6 @@ class cpyjac_evaluator(object):
                                     for x in range(pdep_reacs)])
 
             self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
-            #handle jacobian map separately
-            #dT/dT doesn't change
-            self.jac_map = []
-            #updated species map (+ 1 to account for dT entry)
-            for i in range(gas.n_species):
-                self.jac_map.extend([i * gas.n_species + x for x in self.back_dydt_map[self.dydt_mask]])
-            self.jac_map = np.array(self.jac_map)
 
         
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
@@ -322,7 +315,6 @@ class cpyjac_evaluator(object):
         if self.cache_opt:
             test_y = self.__copy(y[self.fwd_dydt_map][:])
             self.pyjac.py_eval_jacobian(t, pres, test_y, jacob)
-            jacob[:] = jacob[self.jac_map]
         else:
             self.pyjac.py_eval_jacobian(t, pres, y, jacob)
     def update(self, index):
@@ -534,7 +526,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pres = state[2]
         mass_frac = state[3:]
 
-        ajac = analytic_eval_jacob(pres, pyjacob.last_spec)
+        ajac = analytic_eval_jacob(pres, pyjacob.fwd_spec_map)
 
         #init vectors
         test_conc = np.zeros(gas.n_species)

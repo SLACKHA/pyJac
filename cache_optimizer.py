@@ -310,20 +310,15 @@ def optimize_cache(specs, reacs, multi_thread,
     print('Species Cache Locality Heuristic changed from {} to {}'.format(pre, post))
 
     if post >= pre:
-        print_arr = [x for x in enumerate(ordering)]
-        print_arr = [x if x[0] < last_spec else (x[0] + 1, x[1]) 
-                        for x in print_arr]
-        print_arr = [str(x) for x in print_arr]
-        print_arr.insert(last_spec, str((last_spec, len(specs) - 1)))
-        print('Using newly optimized species order:\n' + ', '.join(
-            print_arr))
-
         fwd_spec_mapping = ordering[:]
+        #the last species is the last_spec
         fwd_spec_mapping.insert(last_spec, len(specs) - 1)
+        print('Using newly optimized species order:\n' + ', '.join(
+            [str(x) for x in enumerate(fwd_spec_mapping)]))
     else:
         print('Using original species order')
         fwd_spec_mapping = range(len(specs))
-        fwd_spec_mapping[last_spec] = len(specs) - 1
+        fwd_spec_mapping[last_spec:-1] = fwd_spec_mapping[last_spec + 1:]
         fwd_spec_mapping[-1] = last_spec
 
     #swap the last species back, for simplicity in reordering

@@ -639,7 +639,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         #need to mask the resulting dydt vectors to avoid comparison
         #of the new last species
         t_dydt = test_dydt[pyjacob.dydt_mask]
-        ode_dydt = ode()[test_dydt]
+        ode_dydt = ode()[pyjacob.dydt_mask]
 
         non_zero = np.where(t_dydt != 0.)[0]
         zero = np.where(t_dydt == 0.)[0]
@@ -783,12 +783,10 @@ if __name__ == '__main__':
                         default=None,
                         help='The last species, to pass to pyJac')
     parser.add_argument('-co', '--cache_optimization',
-                        type=bool,
                         default=False,
                         action='store_true',
                         help='Use to enable cache optimization in pyJac')
     parser.add_argument('-nosmem', '--no_shared',
-                        type=bool,
                         default=False,
                         action='store_true',
                         help='Use to disable shared memory usage in pyJac (CUDA only)')

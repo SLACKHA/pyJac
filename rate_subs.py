@@ -2444,5 +2444,6 @@ if __name__ == "__main__":
                 multi_thread=args.multi_thread, 
                 force_optimize=args.force_optimize,
                 build_path=args.build_path,
-                skip_jac=True
+                skip_jac=True,
+                last_spec=args.last_species
                 )

@@ -246,7 +246,8 @@ def get_parser():
                         dest='L1_preferred',
                         action='store_false',
                         default=True,
-                        help='Use this option to allocate more space for shared memory than the L1 cache for CUDA')
+                        help='Use this option to allocate more space for '
+                             'shared memory than the L1 cache for CUDA (not recommended)')
     parser.add_argument('-nb', '--num-blocks',
                         type=int,
                         dest='num_blocks',
@@ -269,12 +270,19 @@ def get_parser():
                         dest='force_optimize',
                         action='store_true',
                         default=False,
-                        help='Use this option to force a reoptimization of the mechanism (usually only happens when '
-                             'generating for a different mechanism)')
+                        help='Use this option to force a reoptimization of the mechanism '
+                             '(usually only happens when generating for a different mechanism)')
     parser.add_argument('-b', '--build_path',
                         required=False,
                         default='./out/',
                         help='The folder to generate the mechanism in')
+    parser.add_argument('-ls', '--last_species',
+                        required=False,
+                        type=str,
+                        default=None,
+                        help='The name of the species to set as the last in the mechanism.  '
+                             'If not specifed, defaults to thge first of N2, AR, and HE '
+                             'in the mechanism')
 
     args = parser.parse_args()
     return args

@@ -75,24 +75,15 @@ class sp_comp(Variable):
         return [ Sum([self.r2[i] < self.r1[i] for i in range(len(self.r1))]) ]
 
 
-def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_path, time_lim=60, verbosity=1):
+def optimize_cache(specs, reacs, multi_thread, 
+                    force_optimize, build_path, 
+                     last_spec, time_lim=60, verbosity=1):
     """
-    An optimization method that reorders the species and reactions in a method to attempt to keep data in cache as
-    long as possible
-
-    Notes
-    -----
-    This method optimizes based on Jacobian matrix generation, as this is the most important and time consuming step
-    of the reaction rate subroutines
-    Species and reactions are reordered to optimize the cache rates for this.
-
-    Next orderings for the evaluation of reactions, pressure dependent reactions and species rates are determined in
-    order to optimize the various rate routines
+    Utilizes the Numberjack package to optimize species
+    and reaction orders in the mechanism to attempt to improve cache hit rates.
 
     Parameters
     ----------
-    lang : str
-        The language
     specs : list of SpecInfo
         List of species in the mechanism.
     reacs : list of ReacInfo
@@ -103,8 +94,12 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         If true, reoptimize even if past data is available
     build_path : str
         The path to the build directory
+    last_spec : int
+        The index of the species that should be placed last
     time_lim : int
         The time limit for optimization operations in minutes
+    verbosity : int
+        The verbosity of the Numberjack solvers
 
     Returns
     _______
@@ -115,20 +110,17 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     reacs : list of ReacInfo
         the reordered list of reacs in the mechanism
 
-    rxn_rate_order : list of int
-        A list indicating the order to evaluate reaction rates in rxn_rates subroutine
+    fwd_spec_mapping : list of int
+        A mapping of the original mechanism to the new species order
 
-    pdep_rate_order : list of int
-        A list indicating the order to evaluate pressure dependent rates in rxn_rates_pres_mod subroutine
+    fwd_rxn_mapping : list of int
+        A mapping of the original mechanism to the new reaction order
 
-    spec_rate_order : list of int
-        A list indicated the order to evaluate species rates in spec_rates subroutine
+    reverse_spec_mapping : list of int
+        A mapping of the new species order to the original mechanism
 
-    old_species_order : list of int
-        A list indicating the positioning of the species in the original mechanism, used in rate testing
-
-     old_rxn_order : list of int
-        A list indicating the positioning of the reactions in the original mechanism, used in rate testing
+    reverse_rxn_mapping : list of int
+        A mapping of the new reaction order to the original mechanism
     """
 
     print('Beginning Cache-optimization process...')
@@ -139,10 +131,19 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
         reverse_spec_mapping = range(len(specs))
         reverse_rxn_mapping = range(len(reacs))
 
+        fwd_spec_mapping[last_spec] = len(specs) - 1
+        fwd_spec_mapping[-1] = last_spec
+
+        reverse_spec_mapping[last_spec] = len(specs) - 1
+        reverse_spec_mapping[-1] = last_spec
+
+        temp = spec[last_spec]
+        spec[last_spec] = specs[-1]
+        specs[-1] = temp
+
         return specs, reacs, fwd_spec_mapping, fwd_rxn_mapping, \
                     reverse_spec_mapping, reverse_rxn_mapping
 
-    unroll_len = C_Jacob_Unroll if lang == 'c' else Jacob_Unroll
     # first try to load past data
     if not force_optimize:
         print('Checking for old optimization')
@@ -167,6 +168,11 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             # we have to do the spec_rate_order each time
             return old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping, \
                     reverse_spec_mapping, reverse_rxn_mapping
+
+    #otherwise swap the last_spec
+    temp = specs[last_spec]
+    specs[last_spec] = specs[-1]
+    specs[-1] = temp
 
     print('Beginning Reaction Cache Locality Reordering')
     #get the mappings
@@ -243,13 +249,13 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     #set up the Numberjack constraint problem to optimize reaction order
     model = Model()
 
-    sp_order = [Variable(0, len(specs), "sp_{}".format(i)) for i in range(len(specs))]
+    sp_order = [Variable(0, len(specs) - 1, "sp_{}".format(i)) for i in range(len(specs) - 1)]
 
     #set up the constraints to ensure unique rxn placement
     model.add(AllDiff(sp_order))
 
     #now set up score function
-    score_matrix = Matrix(len(specs), len(reacs), 2)
+    score_matrix = Matrix(len(specs) - 1, len(reacs), 2)
 
     #set up the r_to_s constraints
     for i, sp in enumerate(sp_order):
@@ -258,7 +264,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
             model.add(score_matrix[sp, rxn] == val)
 
     score_list = []
-    for i in range(len(specs) - 1):
+    for i in range(len(specs) - 2):
         score_list.append(sp_comp(score_matrix.row[i], score_matrix.row[i + 1]))
 
     score = Sum(score_list)
@@ -270,7 +276,7 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
 
     def __sp_score_check(s_to_r, ordering):
         the_sum = 0
-        for i in range(len(s_to_r) - 1):
+        for i in range(len(s_to_r) - 2):
             the_sum += len(s_to_r[ordering[i + 1]].difference(s_to_r[ordering[i]]))
 
         assert len(set(ordering)) == len(ordering)
@@ -298,13 +304,29 @@ def greedy_optimizer(lang, specs, reacs, multi_thread, force_optimize, build_pat
     print('Species Cache Locality Heuristic changed from {} to {}'.format(pre, post))
 
     if post >= pre:
+        print(last_spec)
+        print_arr = [x for x in enumerate(ordering)]
+        print_arr = [x if x[0] < last_spec else (x[0] + 1, x[1]) 
+                        for x in print_arr]
+        print_arr = [str(x) for x in print_arr]
+        print_arr.insert(last_spec, str((last_spec, len(specs) - 1)))
         print('Using newly optimized species order:\n' + ', '.join(
-            [str(x) for x in enumerate(ordering)]))
+            print_arr))
+
         fwd_spec_mapping = ordering[:]
+        fwd_spec_mapping.insert(last_spec, len(specs) - 1)
     else:
         print('Using original species order')
         fwd_spec_mapping = range(len(specs))
+        fwd_spec_mapping[last_spec] = len(specs) - 1
+        fwd_spec_mapping[-1] = last_spec
 
+    #swap the last species back, for simplicity in reordering
+    temp = specs[last_spec]
+    specs[last_spec] = specs[-1]
+    specs[-1] = temp
+
+    #reorder the species and reactions in the appropriate order
     spec_temp = specs[:]
     specs = [specs[i] for i in fwd_spec_mapping]
     reac_temp = reacs[:]

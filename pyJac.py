@@ -2467,7 +2467,8 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                     initial_state="", num_blocks=8, num_threads=64,
                     no_shared=False, L1_preferred=True, multi_thread=None,
-                    force_optimize=False, build_path='./out/', skip_jac=False
+                    force_optimize=False, build_path='./out/', last_spec=None,
+                    skip_jac=False
                     ):
     """Create Jacobian subroutine from mechanism.
 
@@ -2489,7 +2490,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     num_blocks : int, optional
         The target number of blocks / sm to achieve for cuda
     num_threads : int, optional
-        The target number of threads / blck to achieve for cuda
+        The target number of threads / block to achieve for cuda
     no_shared : bool, optional
         If true, do not use the shared_memory_manager to attempt to optimize for CUDA
     L1_preferred : bool, optional
@@ -2500,6 +2501,11 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         If true, redo the cache optimization even if the same mechanism
     build_path : str, optional
         The output directory for the jacobian files
+    last_spec : str, optional
+        If specified, the species to assign to the last index.
+        Typically should be N2, Ar, He or another inert bath gas
+    skip_jac : bool, optional
+        If True, only the reaction raet subroutines will be generated
 
     Returns
     -------
@@ -2524,19 +2530,64 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     else:
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
+    #check to see if the last_spec is specified
+    if last_spec is not None:
+        #find the index if possible
+        isp = next((i for i, sp in enumerate(specs)
+                        if sp.name.lower() == last_spec.lower().strip()),
+                        None)
+        if isp is None:
+            print('Warning: User specified last species {} not found in mechanism.'
+                  '  Attempting to find a default species.'.format(last_spec))
+            last_spec = None
+        else:
+            last_spec = isp
+    else:
+        print('User specified last species not found or not specified.  '
+              'Attempting to find a default species')
+    if last_spec is None:
+        wt = chem.get_elem_wt()
+        #check for N2, Ar, He, etc.
+        candidates = [('N2', wt['n'] * 2.), ('Ar', wt['ar']),
+                        ('He', wt['he'])]
+        for sp in candidates:
+            match = next((isp for isp, spec in enumerate(specs) 
+                          if sp[0].lower() == spec.name.lower() and
+                          sp[1] == spec.mw),
+                            None)
+            if match is not None:
+                last_spec = match
+                break
+        print('Default last species {} found.'.format(specs[last_spec].name))
+    if last_spec is None:
+        print('Warning: Neither a user specified or default last species '
+              'could be found. Proceeding using the last species in the '
+              'base mechanism: {}'.format(specs[-1].name))
+        last_spec = len(specs) - 1
+
     if optimize_cache:
         specs, reacs, \
         fwd_spec_mapping, fwd_rxn_mapping, \
         reverse_spec_mapping, reverse_rxn_mapping = \
-                cache.greedy_optimizer(lang, specs, reacs,
-                                           multi_thread, force_optimize,
-                                           build_path
-                                           )
+                cache.optimize_cache(specs, reacs,
+                                       multi_thread, force_optimize,
+                                       build_path, last_spec
+                                       )
     else:
         fwd_spec_mapping = range(len(specs))
         fwd_rxn_mapping = range(len(reacs))
         reverse_spec_mapping = range(len(specs))
         reverse_rxn_mapping = range(len(reacs))
+
+        fwd_spec_mapping[last_spec] = len(specs) - 1
+        fwd_spec_mapping[-1] = last_spec
+
+        reverse_spec_mapping[last_spec] = len(specs) - 1
+        reverse_spec_mapping[-1] = last_spec
+
+        temp = spec[last_spec]
+        spec[last_spec] = specs[-1]
+        specs[-1] = temp
 
     the_len = len(reacs)
     splittings = []
@@ -2615,5 +2666,6 @@ if __name__ == "__main__":
                     L1_preferred=args.L1_preferred,
                     multi_thread=args.multi_thread, 
                     force_optimize=args.force_optimize,
-                    build_path=args.build_path
+                    build_path=args.build_path,
+                    last_spec=args.last_species
                     )

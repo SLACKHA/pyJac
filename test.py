@@ -402,7 +402,8 @@ class cupyjac_evaluator(cpyjac_evaluator):
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
-         seed=None, pasr_output_file=None):
+         seed=None, pasr_output_file=None, last_spec=None,
+         cache_optimization=False, no_shared=False):
     """
     """
 
@@ -432,8 +433,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     if generate_jacob:
         # Create Jacobian and supporting source code files
         create_jacobian(lang, mech_filename, therm_name=therm_filename,
-                        optimize_cache=False, build_path=build_dir,
-                        no_shared=True
+                        optimize_cache=cache_optimization, build_path=build_dir,
+                        no_shared=no_shared, last_spec=last_spec
                         )
 
     # Interpret reaction mechanism file, depending on Cantera or
@@ -777,7 +778,22 @@ if __name__ == '__main__':
                         default=None,
                         help='An optional saved .npy file that has the '
                              'resulting PaSR data (to speed testing)')
+    parser.add_argument('-ls', '--last_species',
+                        type=str,
+                        default=None,
+                        help='The last species, to pass to pyJac')
+    parser.add_argument('-co', '--cache_optimization',
+                        type=bool,
+                        default=False,
+                        action='store_true',
+                        help='Use to enable cache optimization in pyJac')
+    parser.add_argument('-nosmem', '--no_shared',
+                        type=bool,
+                        default=False,
+                        action='store_true',
+                        help='Use to disable shared memory usage in pyJac (CUDA only)')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
-         args.generate_jacob, args.seed, args.pasr_output
+         args.generate_jacob, args.seed, args.pasr_output,
+         args.last_species, args.cache_optimization, args.no_shared
          )

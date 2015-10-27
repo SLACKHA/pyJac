@@ -124,26 +124,6 @@ def optimize_cache(specs, reacs, multi_thread,
     """
 
     print('Beginning Cache-optimization process...')
-    if not HAVE_NJ:
-        print("Cache-optimization disabled, returning original mechanism")
-        fwd_spec_mapping = range(len(specs))
-        fwd_rxn_mapping = range(len(reacs))
-        reverse_spec_mapping = range(len(specs))
-        reverse_rxn_mapping = range(len(reacs))
-
-        fwd_spec_mapping[last_spec] = len(specs) - 1
-        fwd_spec_mapping[-1] = last_spec
-
-        reverse_spec_mapping[last_spec] = len(specs) - 1
-        reverse_spec_mapping[-1] = last_spec
-
-        temp = spec[last_spec]
-        spec[last_spec] = specs[-1]
-        specs[-1] = temp
-
-        return specs, reacs, fwd_spec_mapping, fwd_rxn_mapping, \
-                    reverse_spec_mapping, reverse_rxn_mapping
-
     # first try to load past data
     if not force_optimize:
         print('Checking for old optimization')

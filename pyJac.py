@@ -2565,6 +2565,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
               'base mechanism: {}'.format(specs[-1].name))
         last_spec = len(specs) - 1
 
+    optimize_cache = optimize_cache and cache.HAVE_NJ
     if optimize_cache:
         specs, reacs, \
         fwd_spec_mapping, fwd_rxn_mapping, \

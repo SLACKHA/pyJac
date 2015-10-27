@@ -33,6 +33,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         # make cache optimized easy to recognize
         if cache_optimized:
             file.write('//Cache Optimized\n')
+        file.write('//last_spec {}\n'.format(last_spec))
 
         # convience: write species indexes
         file.write('/* Species Indexes\n')

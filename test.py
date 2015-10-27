@@ -4,6 +4,7 @@ from __future__ import print_function
 
 # Standard libraries
 import os
+import re
 import sys
 import subprocess
 import pickle
@@ -197,25 +198,51 @@ class cpyjac_evaluator(object):
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
         with open(os.path.join(build_dir, filename), 'r') as file:
             opt = False
+            last_spec = None
             for line in file.readlines():
                 if 'Cache Optimized' in line:
                     opt = True
+                match = re.search(r'^//last_spec (\d+)$', line)
+                if match:
+                    last_spec = int(match.group(1))
+                if opt and last_spec is not None:
                     break
+
         self.cache_opt = opt
+        self.dydt_mask = np.array([0] + [x + 1 for x in range(len(gas.n_species)) if x != last_spec])
         if self.cache_opt:
             with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
                 dummy = pickle.load(file)
                 dummy = pickle.load(file)
                 self.fwd_spec_map = pickle.load(file)
                 self.fwd_rxn_map = pickle.load(file)
-                self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
-                            gas.reaction(i).reversible])
-                self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
                 self.back_spec_map = pickle.load(file)
                 self.back_rxn_map = pickle.load(file)
+        elif last_spec != gas.n_species - 1:
+            #still need to treat it as a cache optimizied
+            self.cache_opt = True
+            
+            self.fwd_spec_map = range(gas.n_species)
+            self.fwd_spec_map[last_spec + 1:] = self.fwd_spec_map[last_spec:-1]
+            self.fwd_spec_map[last_spec] = gas.n_species - 1
+            self.fwd_spec_map = np.array(self.fwd_spec_map)
 
+            self.back_spec_map = range(gas.n_species)
+            self.back_spec_map[last_spec:-1] = self.back_spec_map[last_spec + 1:]
+            self.back_spec_map[-1] = last_spec
+            self.back_spec_map = np.array(self.back_spec_map)
+
+            self.fwd_rxn_map = np.array(range(gas.n_reactions))
+            self.back_rxn_map = np.array(range(gas.n_reactions))
+
+        if self.cache_opt:
+            #assign the rest
             n_spec = gas.n_species
             n_reac = gas.n_reactions
+
+            self.fwd_dydt_map = np.array([0] + self.fwd_spec_map)
+            self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
+                    gas.reaction(i).reversible])
 
             rev_reacs = self.fwd_rev_rxn_map.shape[0]
             self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == i)[0][0] for i in

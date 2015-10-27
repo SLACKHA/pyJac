@@ -2585,8 +2585,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         reverse_spec_mapping[last_spec] = len(specs) - 1
         reverse_spec_mapping[-1] = last_spec
 
-        temp = spec[last_spec]
-        spec[last_spec] = specs[-1]
+        temp = specs[last_spec]
+        specs[last_spec] = specs[-1]
         specs[-1] = temp
 
     the_len = len(reacs)

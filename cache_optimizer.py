@@ -160,6 +160,12 @@ def optimize_cache(specs, reacs, multi_thread,
                         len(specs) == len(old_specs) and \
                         all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
                         len(reacs) == len(old_reacs)
+            if fwd_spec_mapping[last_spec] != len(specs) - 1:
+                print('Different last species detected, old species was {} and new species is {}'.format(
+                    specs[fwd_spec_mapping[-1]].name, specs[last_spec].name))
+                print('Forcing reoptimization...')
+                same_mech = False
+
         except Exception, e:
             print('Old optimization file not found, or does not match current mechanism... forcing optimization')
             same_mech = False
@@ -304,7 +310,6 @@ def optimize_cache(specs, reacs, multi_thread,
     print('Species Cache Locality Heuristic changed from {} to {}'.format(pre, post))
 
     if post >= pre:
-        print(last_spec)
         print_arr = [x for x in enumerate(ordering)]
         print_arr = [x if x[0] < last_spec else (x[0] + 1, x[1]) 
                         for x in print_arr]
@@ -355,4 +360,4 @@ def optimize_cache(specs, reacs, multi_thread,
         pickle.dump(reverse_rxn_mapping, file)
 
     # complete, so now return
-    return specs, reacs, fwd_rxn_mapping, fwd_spec_mapping, reverse_spec_mapping, reverse_rxn_mapping
+    return specs, reacs, fwd_spec_mapping, fwd_rxn_mapping, reverse_spec_mapping, reverse_rxn_mapping

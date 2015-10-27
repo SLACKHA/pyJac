@@ -2579,15 +2579,20 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         reverse_spec_mapping = range(len(specs))
         reverse_rxn_mapping = range(len(reacs))
 
+        #pick up the last_spec and drop it at the end
+        fwd_spec_mapping[last_spec + 1:] = fwd_spec_mapping[last_spec:-1]
         fwd_spec_mapping[last_spec] = len(specs) - 1
-        fwd_spec_mapping[-1] = last_spec
 
-        reverse_spec_mapping[last_spec] = len(specs) - 1
+        reverse_spec_mapping[last_spec:-1] = reverse_spec_mapping[last_spec + 1:]
         reverse_spec_mapping[-1] = last_spec
 
         temp = specs[last_spec]
-        specs[last_spec] = specs[-1]
+        specs[last_spec:-1] = specs[last_spec + 1:]
         specs[-1] = temp
+
+        print(fwd_spec_mapping)
+        print(reverse_spec_mapping)
+
 
     the_len = len(reacs)
     splittings = []
@@ -2641,7 +2646,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     # write mechanism initializers and testing methods
     aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, 
                                      reverse_spec_mapping, reverse_rxn_mapping,
-                                     optimize_cache)
+                                     optimize_cache, last_spec)
 
     if skip_jac == False:
         # write Jacobian subroutine

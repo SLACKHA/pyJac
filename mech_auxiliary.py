@@ -13,14 +13,10 @@ import chem_utilities as chem
 import utils
 
 def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='',
-                                 old_spec_order=None, old_rxn_order=None, cache_optimized=False):
+                                 old_spec_order=None, old_rxn_order=None, 
+                                 cache_optimized=False, last_spec=None):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
-
-    if old_spec_order is None:
-        old_spec_order = range(len(specs))
-    if old_rxn_order is None:
-        old_rxn_order = range(len(reacs))
 
     # some information variables
     have_rev_rxns = any(reac.rev for reac in reacs)

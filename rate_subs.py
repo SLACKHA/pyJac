@@ -448,9 +448,9 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             usages = []
             for sp_i in indexes:
                 temp = i_rxn + 1
-                while (temp < len(ordering) and
-                       sp_i in set(reacs[ordering[temp]].reac +
-                                   reacs[ordering[temp]].prod)
+                while (temp < len(reacs) and
+                       sp_i in set(reacs[temp].reac +
+                                   reacs[temp].prod)
                        ):
                     temp += 1
                 usages.append(temp - i_rxn - 1)
@@ -931,15 +931,17 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
                 usages = []
                 for sp_i in indexes:
                     temp = i_rxn + 1
-                    while temp < len(ordering):
-                        rxn = reacs[ordering[temp]]
+                    count = 0
+                    while temp < len(reacs):
+                        rxn = reacs[temp]
                         if sp_i in set([x[0] for x in rxn.thd_body_eff
                                        if sp[1] != 1.0]
                                        ):
-                            temp += 1
+                            count += 1
                         else:
                             break
-                    usages.append(temp - i_rxn - 1)
+                        temp += 1
+                    usages.append(count)
                 smm.load_into_shared(file, the_vars, usages)
 
         # third-body reaction

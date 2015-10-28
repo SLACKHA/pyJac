@@ -333,7 +333,7 @@ void k_dydt(const int num, const double t, const double* pres, const double* y, 
 		}
 
 		double dy_local[NN];
-		dydt(t, pres[T_ID], y_local, dy_local, &dy_local[NSP]);
+		dydt(t, pres[T_ID], y_local, dy_local);
 
 		#pragma unroll
 		for (int i = 0; i < NN; ++i)

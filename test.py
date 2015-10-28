@@ -336,13 +336,15 @@ class cupyjac_evaluator(cpyjac_evaluator):
         if not self.cache_opt:
             self.fwd_spec_map = np.arange(gas.n_species)
 
+        num_rev = np.array([rxn.reversible for rxn in gas.reactions()]).sum()
+        num_pdep = np.array([is_pdep(rxn) for rxn in gas.reactions()]).sum()
         cuda_state = state_data[:, 1:]
         num_cond = cuda_state.shape[0]
         #init vectors
         test_conc = czeros((num_cond, gas.n_species))
         test_fwd_rates = czeros((num_cond,gas.n_reactions))
-        test_rev_rates = czeros((num_cond,len(self.idx_rev)))
-        test_pres_mod = czeros((num_cond,len(self.idx_pmod)))
+        test_rev_rates = czeros((num_cond,num_rev))
+        test_pres_mod = czeros((num_cond,num_pdep))
         test_spec_rates = czeros((num_cond,gas.n_species))
         test_dydt = czeros((num_cond,gas.n_species + 1))
         test_jacob = czeros((num_cond,(gas.n_species) * (gas.n_species)))
@@ -366,10 +368,10 @@ class cupyjac_evaluator(cpyjac_evaluator):
         #reshape for comparison
         self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.sp_map)
         self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.rxn_map)
-        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, len(self.idx_rev)), self.rev_rxn_map)
-        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, len(self.idx_pmod)), self.pdep_rxn_map)
+        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, num_rev), self.rev_rxn_map)
+        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, num_pdep), self.pdep_rxn_map)
         self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.sp_map)
-        self.test_dydt = reshaper(test_dydt, (num_cond,gas.n_species + 1), self.dydt_map)
+        self.test_dydt = reshaper(test_dydt, (num_cond, gas.n_species), self.dydt_map)
         self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species) * (gas.n_species)),
                             self.jac_map)
         self.index = 0

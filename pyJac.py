@@ -1864,6 +1864,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         file.write(line)
 
     file.write(utils.line_start + 'double J_nplusone = 0' + utils.line_end[lang])
+    file.write(utils.line_start + 'double J_nplusjplus[NSP]' + utils.line_end[lang])
 
     # variables for equilibrium constant derivatives, if needed
     dBdT_flag = [False for sp in specs]
@@ -1880,6 +1881,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     # whether this jacobian index has been modified
     touched = [False for i in range(len(specs) * len(specs))]
     J_nplusone_touched = False
+    J_nplusjplus_touched = [False for i in range(len(specs))]
     sparse_indicies = []
 
     last_split_index = None
@@ -2066,8 +2068,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         # now loop through each species
         for j_sp, sp_j in enumerate(specs[:-1]):
             for k_sp in set(rxn.reac + rxn.prod):
-                if k_sp + 1 == num_s:
-                    continue
                 sp_k = specs[k_sp]
 
                 nu = utils.get_nu(k_sp, rxn)
@@ -2075,14 +2075,35 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 if nu == 0:
                     continue
 
-                lin_index = k_sp + 1 + (num_s) * (j_sp + 1)
-                # sparse indexes
-                if lang in ['c', 'cuda']:
-                    if lin_index not in sparse_indicies:
-                        sparse_indicies.append(lin_index)
-                elif lang in ['fortran', 'matlab']:
-                    if (k_sp + 1, j_sp + 1) not in sparse_indicies:
-                        sparse_indicies.append((k_sp + 1, j_sp + 1))
+                jline = utils.line_start
+                if k_sp + 1 < num_s:
+                    lin_index = k_sp + 1 + (num_s) * (j_sp + 1)
+                    # sparse indexes
+                    if lang in ['c', 'cuda']:
+                        if lin_index not in sparse_indicies:
+                            sparse_indicies.append(lin_index)
+                        jline += (get_array(lang, 'jac', lin_index) +
+                              ' {}= '.format('+' if touched[lin_index] else '')
+                              )
+                    elif lang in ['fortran', 'matlab']:
+                        if (k_sp + 1, j_sp + 1) not in sparse_indicies:
+                            sparse_indicies.append((k_sp + 1, j_sp + 1))
+                        jline += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
+                              (' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if touched[k_sp + 1] else '')
+                              + ' + ')
+
+                    touched[lin_index] = True
+                else:
+                    if lang in ['c', 'cuda']:
+                        jline += (get_array(lang, 'J_nplusjplus', j_sp) +      
+                            ' {}= '.format('+' if J_nplusjplus_touched[j_sp] else '')
+                            )
+                    elif lang in ['fortran', 'matlab']:
+                        jline += (get_array(lang, 'J_nplusjplus', j_sp) +
+                                    (' = ' + get_array(lang, 'J_nplusjplus', j_sp) 
+                                    if J_nplusjplus_touched[j_sp] else '') + ' + ')
+
+                    J_nplusjplus_touched[j_sp] = True
 
                 working_temp = ''
                 mw_frac = (sp_k.mw / sp_j.mw) * float(nu)
@@ -2099,20 +2120,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                                                     get_array)
 
                 working_temp += ')'
-
-                
-                jline = utils.line_start
-                if lang in ['c', 'cuda']:
-                    jline += (get_array(lang, 'jac', lin_index) +
-                              ' {}= '.format('+' if touched[lin_index] else '')
-                              )
-                elif lang in ['fortran', 'matlab']:
-                    jline += (get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) +
-                              (' = ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if touched[k_sp + 1] else '')
-                              + ' + ')
-
-                if not touched[lin_index]:
-                    touched[lin_index] = True
 
                 jline += working_temp
                 jline += utils.line_end[lang]
@@ -2298,25 +2305,37 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                                           '' if touched[my_index] else '-')
             touched[my_index] = True
 
-            #the num_s + 1, j + 1 jacobian entry is non-existant,
-            #so skip it
-            touch = touched[lin_index] if in_bounds else J_nplusone_touched
+            
+            jac_part = ''
+            if k_sp + 1 < num_s:
+                #still in the actual jacobian
+                if touched[lin_index]:
+                    if lang in ['c', 'cuda']:
+                        jac_part = 'working_temp * ' + get_array(lang, 'jac', lin_index) + ' - '
+                    if lang in ['fortran', 'matlab']:
+                        jac_part = 'working_temp * ' + get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) + ' - '
+                else:
+                    jac_part = '-'
+            else:
+                #out of bounds, so need to check the
+                #Jnplusjplus ones
+                if J_nplusjplus_touched[j_sp]:
+                    if lang in ['c', 'cuda']:
+                        jac_part = 'working_temp * ' + get_array(lang, 'J_nplusjplus', j_sp) + ' - '
+                    if lang in ['fortran', 'matlab']:
+                        jac_part = 'working_temp * ' + get_array(lang, 'J_nplusjplus', j_sp + 1) + ' - '
+                else:
+                    jac_part = '-'
+
             if lang in ['c', 'cuda']:
-                line += (get_array(lang, 'h', k_sp) + ' * (' +
-                         ('working_temp * ' + 
-                            ((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone') + 
-                                ' - ') if touch
-                             else '-') +
+                line += (get_array(lang, 'h', k_sp) + ' * (' + jac_part +
                          '(j_temp * (' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
                          ' * ' + get_array(lang, 'spec_rates', k_sp) +
                          ' * {:.8e}))'.format(sp_k.mw)
                          )
             elif lang in ['fortran', 'matlab']:
-                line += (get_array(lang, 'h', k_sp) + ' * (working_temp * ' +
-                         (((get_array(lang, 'jac', k_sp + 1, twod=j_sp + 1) if in_bounds else 'J_nplusone') + 
-                         ' - ') if touch
-                             else '-') +
+                line += (get_array(lang, 'h', k_sp) + jac_part +
                          ' - (j_temp * (' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
                          ' * ' + get_array(lang, 'spec_rates', k_sp) +

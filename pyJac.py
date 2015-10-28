@@ -317,6 +317,8 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, rind, rev_reacs, get
         if rxn.rev and j_sp in rxn.prod:
             if not s_term:
                 add += ' - '
+            elif s_term[-1] == '(':
+                add += '-'
             add += __get_s_term(rxn, j_sp, False)
         s_term += add
 

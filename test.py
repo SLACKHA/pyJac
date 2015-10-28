@@ -370,14 +370,13 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.pyjac.py_eval_jacobian(num_cond, 0, pres, y_dummy, test_jacob)
 
         #reshape for comparison
-        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.sp_map)
-        self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.rxn_map)
-        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, num_rev), self.rev_rxn_map)
-        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, num_pdep), self.pdep_rxn_map)
-        self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.sp_map)
-        self.test_dydt = reshaper(test_dydt, (num_cond, gas.n_species), self.dydt_map)
-        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species) * (gas.n_species)),
-                            self.jac_map)
+        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.back_spec_map)
+        self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.back_rxn_map)
+        self.test_rev_rates = reshaper(test_rev_rates, (num_cond, num_rev), self.back_rev_rxn_map)
+        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, num_pdep), self.back_pdep_map)
+        self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.back_spec_map)
+        self.test_dydt = reshaper(test_dydt, (num_cond, gas.n_species), self.back_dydt_map)
+        self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species) * (gas.n_species)))
         self.index = 0
 
     def update(self, index):

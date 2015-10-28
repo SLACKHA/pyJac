@@ -32,7 +32,7 @@ void k_eval_conc(const int num, const double* T, const double* pres,
 	{
 		double mass_local[NSP];
 		#pragma unroll
-		for (int i = 0; i < NSP; ++i)
+		for (int i = 0; i < NSP - 1; ++i)
 		{
 			mass_local[i] = *((double*)((char*)dMass + i * pitch1) + T_ID);
 		}
@@ -41,7 +41,7 @@ void k_eval_conc(const int num, const double* T, const double* pres,
 		double rho = 0;
 		double conc_local[NSP] = {0};
 
-		eval_conc(T[T_ID], pres[T_ID], mass_local, &mass_local[NSP], &mw_avg, &rho, conc_local);
+		eval_conc(T[T_ID], pres[T_ID], mass_local, &mass_local[NSP - 1], &mw_avg, &rho, conc_local);
 
 		dMw[T_ID] = mw_avg;
 		dRho[T_ID] = rho;
@@ -268,7 +268,7 @@ void k_eval_spec_rates(const int num, const double* fwd_rates, size_t pitch1, co
 		#endif
 
 		double spec_rates_local[NSP];
-		eval_spec_rates(fwd_local, rev_local, pres_mod_local, spec_rates_local, &spec_rates_local[NSP]);
+		eval_spec_rates(fwd_local, rev_local, pres_mod_local, spec_rates_local, &spec_rates_local[NSP - 1]);
 
 		#pragma unroll
 		for (int i = 0; i < NSP; ++i)
@@ -325,14 +325,17 @@ void k_dydt(const int num, const double t, const double* pres, const double* y, 
 {
 	if (T_ID < num)
 	{
-		double y_local[NN];
+		double y_local[NSP];
 		#pragma unroll
-		for (int i = 0; i < NN; ++i)
+		for (int i = 0; i < NSP; ++i)
 		{
 			y_local[i] = *((double*)((char*)y + i * pitch1) + T_ID);
 		}
 
-		double dy_local[NN];
+		//leave this as NN so that a 0
+		//is copied back
+		//just for safety
+		double dy_local[NN] = {0};
 		dydt(t, pres[T_ID], y_local, dy_local);
 
 		#pragma unroll

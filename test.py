@@ -350,7 +350,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
         test_rev_rates = czeros((num_cond,num_rev))
         test_pres_mod = czeros((num_cond,num_pdep))
         test_spec_rates = czeros((num_cond,gas.n_species))
-        test_dydt = czeros((num_cond,gas.n_species + 1))
+        test_dydt = czeros((num_cond, gas.n_species + 1))
         test_jacob = czeros((num_cond,(gas.n_species) * (gas.n_species)))
 
         mw_avg = czeros(num_cond)
@@ -371,11 +371,14 @@ class cupyjac_evaluator(cpyjac_evaluator):
 
         #reshape for comparison
         self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.back_spec_map)
+        print(self.test_conc[:3])
+        sys.exit(1)
         self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.back_rxn_map)
         self.test_rev_rates = reshaper(test_rev_rates, (num_cond, num_rev), self.back_rev_rxn_map)
         self.test_pres_mod = reshaper(test_pres_mod, (num_cond, num_pdep), self.back_pdep_map)
         self.test_spec_rates = reshaper(test_spec_rates, (num_cond,gas.n_species), self.back_spec_map)
-        self.test_dydt = reshaper(test_dydt, (num_cond, gas.n_species), self.back_dydt_map)
+        self.test_dydt = np.zeros((num_cond, gas.n_species + 1))
+        self.test_dydt[:, self.back_dydt_map] = reshaper(test_dydt, (num_cond, gas.n_species + 1))
         self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species) * (gas.n_species)))
         self.index = 0
 

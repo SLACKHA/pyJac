@@ -405,8 +405,8 @@ void cu_eval_jacob (const int num, const double t, const double* pres, const dou
 	double* dP;
 	size_t pitch1, pitch2;
 	
-	cudaErrorCheck( cudaMallocPitch((void**)&dY, &pitch1, num * sizeof(double), NSP) );
-	cudaErrorCheck( cudaMemcpy2D(dY, pitch1, y, num * sizeof(double), num * sizeof(double), NSP, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dY, &pitch1, num * sizeof(double), NN) );
+	cudaErrorCheck( cudaMemcpy2D(dY, pitch1, y, num * sizeof(double), num * sizeof(double), NN, cudaMemcpyHostToDevice) );
 
 	cudaErrorCheck( cudaMalloc((void**)&dP, num * sizeof(double)) );
 	cudaErrorCheck( cudaMemcpy(dP, pres, num * sizeof(double), cudaMemcpyHostToDevice) );

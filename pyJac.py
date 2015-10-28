@@ -2302,9 +2302,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             #so skip it
             touch = touched[lin_index] if in_bounds else J_nplusone_touched
             if lang in ['c', 'cuda']:
-                line += (get_array(lang, 'h', k_sp) + ' * (working_temp * ' +
-                         (((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone') + 
-                         ' - ') if touch
+                line += (get_array(lang, 'h', k_sp) + ' * (' +
+                         ('working_temp * ' + 
+                            ((get_array(lang, 'jac', lin_index) if in_bounds else 'J_nplusone') + 
+                                ' - ') if touch
                              else '-') +
                          '(j_temp * (' + get_array(lang, 'cp', j_sp) +
                          ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +

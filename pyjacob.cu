@@ -376,18 +376,18 @@ void k_eval_jacob(const int num, const double t, const double* pres, const doubl
 {
 	if (T_ID < num)
 	{
-		double y_local[NN];
+		double y_local[NSP];
 		#pragma unroll
-		for (int i = 0; i < NN; ++i)
+		for (int i = 0; i < NSP; ++i)
 		{
 			y_local[i] = *((double*)((char*)y + i * pitch1) + T_ID);
 		}
 
-		double jac_local[NN * NN] = {0};
+		double jac_local[NSP * NSP] = {0};
 		eval_jacob(t, pres[T_ID], y_local, jac_local);
 
 		#pragma unroll
-		for (int i = 0; i < NN * NN; ++i)
+		for (int i = 0; i < NSP * NSP; ++i)
 		{
 			*((double*)((char*)jac + i * pitch2) + T_ID) = jac_local[i];
 		}
@@ -402,19 +402,19 @@ void cu_eval_jacob (const int num, const double t, const double* pres, const dou
 	double* dP;
 	size_t pitch1, pitch2;
 	
-	cudaErrorCheck( cudaMallocPitch((void**)&dY, &pitch1, num * sizeof(double), NN) );
-	cudaErrorCheck( cudaMemcpy2D(dY, pitch1, y, num * sizeof(double), num * sizeof(double), NN, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dY, &pitch1, num * sizeof(double), NSP) );
+	cudaErrorCheck( cudaMemcpy2D(dY, pitch1, y, num * sizeof(double), num * sizeof(double), NSP, cudaMemcpyHostToDevice) );
 
 	cudaErrorCheck( cudaMalloc((void**)&dP, num * sizeof(double)) );
 	cudaErrorCheck( cudaMemcpy(dP, pres, num * sizeof(double), cudaMemcpyHostToDevice) );
 
 
-	cudaErrorCheck( cudaMallocPitch((void**)&dJac, &pitch2, num * sizeof(double), NN * NN) );
+	cudaErrorCheck( cudaMallocPitch((void**)&dJac, &pitch2, num * sizeof(double), NSP * NSP) );
 	//run
 	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, t, dP, dY, pitch1, dJac, pitch2);
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(jac, num * sizeof(double), dJac, pitch2, num * sizeof(double), NN * NN, cudaMemcpyDeviceToHost) );
+	cudaErrorCheck( cudaMemcpy2D(jac, num * sizeof(double), dJac, pitch2, num * sizeof(double), NSP * NSP, cudaMemcpyDeviceToHost) );
 
 	cudaErrorCheck(cudaFree(dY));
 	cudaErrorCheck(cudaFree(dJac));

@@ -239,30 +239,34 @@ class cpyjac_evaluator(object):
 
             self.fwd_rxn_map = np.array(range(gas.n_reactions))
             self.back_rxn_map = np.array(range(gas.n_reactions))
+        else:
+            self.fwd_spec_map = range(gas.n_species)
+            self.back_spec_map = range(gas.n_species)
+            self.fwd_rxn_map = np.array(range(gas.n_reactions))
+            self.back_rxn_map = np.array(range(gas.n_reactions))
 
-        if self.cache_opt:
-            #assign the rest
-            n_spec = gas.n_species
-            n_reac = gas.n_reactions
+        #assign the rest
+        n_spec = gas.n_species
+        n_reac = gas.n_reactions
 
-            self.fwd_dydt_map = np.array([0] + [x + 1 for x in self.fwd_spec_map])
-            self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
-                    gas.reaction(i).reversible])
+        self.fwd_dydt_map = np.array([0] + [x + 1 for x in self.fwd_spec_map])
+        self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
+                gas.reaction(i).reversible])
 
-            rev_reacs = self.fwd_rev_rxn_map.shape[0]
-            self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == i)[0][0] for i in
-                        range(rev_reacs)])
+        rev_reacs = self.fwd_rev_rxn_map.shape[0]
+        self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == i)[0][0] for i in
+                    range(rev_reacs)])
 
-            self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in range(n_reac)
-                                    if is_pdep(gas.reaction(self.fwd_rxn_map[i]))]
-            pdep_reacs = len(self.fwd_pdep_map)
-            self.back_pdep_map = sorted(self.fwd_pdep_map)
-            self.back_pdep_map = np.array([self.fwd_pdep_map.index(x) 
-                                    for x in self.back_pdep_map])
-            self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0] 
-                                    for x in range(pdep_reacs)])
+        self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in range(n_reac)
+                                if is_pdep(gas.reaction(self.fwd_rxn_map[i]))]
+        pdep_reacs = len(self.fwd_pdep_map)
+        self.back_pdep_map = sorted(self.fwd_pdep_map)
+        self.back_pdep_map = np.array([self.fwd_pdep_map.index(x) 
+                                for x in self.back_pdep_map])
+        self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0] 
+                                for x in range(pdep_reacs)])
 
-            self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
+        self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
 
         
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):

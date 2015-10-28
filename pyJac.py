@@ -267,13 +267,13 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, rind, rev_reacs, get
         s_term += ' * ('
 
     def __get_s_term(rxn, j_sp, reac=True):
-        jline = ''
+        jline = 'kf' if reac else 'kr'
         if reac:
             nu = rxn.reac_nu[rxn.reac.index(j_sp)]
         else:
             nu = rxn.prod_nu[rxn.prod.index(j_sp)]
         if nu != 1:
-            jline += '{}'.format(float(nu))
+            jline += ' * {}'.format(float(nu))
 
         if (nu - 1) > 0:
             if utils.is_integer(nu):
@@ -306,37 +306,39 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j, rind, rev_reacs, get
                           )
         return jline
 
-    if j_sp in rxn.reac or last_spec in rxn.reac:
+    j_sp_add = False
+    if j_sp in rxn.reac or (rxn.rev and j_sp in rxn.prod):
+        j_sp_add = True
         add = ''
         if j_sp in rxn.reac:
+            if not s_term:
+                add += ' + '
             add += __get_s_term(rxn, j_sp, True)
-            if last_spec in rxn.reac:
+        if rxn.rev and j_sp in rxn.prod:
+            if not s_term:
                 add += ' - '
+            add += __get_s_term(rxn, j_sp, False)
+        s_term += add
+
+    if last_spec in rxn.reac or (rxn.rev and last_spec in rxn.prod):
+        pre = '{:.16e}'.format(mw_frac)
+        add = ''
+        if j_sp_add:
+            s_term += ' - '
+        else:
+            if s_term and s_term[-1] == '(':
+                pre = '-' + pre
+            else:
+                pre = ' - ' + pre
         if last_spec in rxn.reac:
             add += __get_s_term(rxn, last_spec, True)
-        if add:
-            if not s_term:
-                s_term += ' + '
-            s_term += 'kf * (' + add + ')'
-        else:
-            s_term += 'kf'
-
-    if rxn.rev and (j_sp in rxn.prod or last_spec in rxn.prod):
-        add = ''
-        if j_sp in rxn.prod:
-            add += __get_s_term(rxn, j_sp, False)
-        if last_spec in rxn.prod:
-            if j_sp in rxn.prod:
+        if rxn.rev and last_spec in rxn.prod:
+            if add:
                 add += ' - '
+            else:
+                add += '-'
             add += __get_s_term(rxn, last_spec, False)
-        if s_term and s_term[-1] == '(':
-            s_term += '-'
-        else:
-            s_term += ' - '
-        if add:
-            s_term += 'kr * (' + add + ')'
-        else:
-            s_term += 'kr'
+        s_term += pre + ' * (' + add + ')'
 
     if (rxn.pdep or rxn.thd_body) and s_term:
         s_term += ')'

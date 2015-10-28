@@ -502,6 +502,23 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                         state_data.shape[1],
                                         state_data.shape[2]
                                         )
+
+    # The test data from Cantera does not use the 1 - Yn approach
+    # and thus mass is not explicitly, strictly conserved
+    # Although this effect is typically very small e.g. O(1e-16)
+    # it can have a large effect on the error in certain cases
+    # e.g. if you designate a radical like OH as the last species
+    # and that radical also has a mass fraction on that order of
+    # magnitude
+    # --------------------------------------------------------------
+    # Therefore to maintain 100% consistancy and to ensure the mass
+    # fractions we put into our code (which does not normalize)
+    # are strictly equal to unity, we renormalize them now by running
+    # them through Cantera again
+
+    for i in range(len(state_data)):
+        gas.TPY = state_data[i, 1], state_data[i, 2], state_data[i, 3:]
+        state_data[i, 3:] = gas.Y
     
     if lang == 'cuda':
         pyjacob = cupyjac_evaluator(build_dir, gas, state_data)

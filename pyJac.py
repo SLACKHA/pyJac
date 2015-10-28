@@ -2255,11 +2255,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         for j_sp, sp_j in enumerate(specs):
             lin_index = k_sp + 1 + (num_s) * (j_sp + 1)
-            #the num_s + 1 rows and columns are non-existant (and technically zero) 
-            #so skip em if they pop up
-            in_bounds = k_sp + 1 < num_s and j_sp + 1 < num_s
-            # see if this combo matters
-            if in_bounds and touched[lin_index]:
+            #the num_s + 1 row is zero
+            #so skip
+            if j_sp + 1 == num_s:
+                continue
+
+            if k_sp + 1 < num_s and touched[lin_index]:
+                #still in the actual jacobian
+                #and this combo matters
                 line = utils.line_start
                 # zero out if unused
                 if lang in ['c', 'cuda'] and not lin_index in sparse_indicies:
@@ -2278,14 +2281,26 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     line += ' * mw_avg * {:.16e} * rho_inv)'.format((sp_k.mw / sp_j.mw) * (1. - sp_j.mw / specs[-1].mw))
                     line += utils.line_end[lang]
                     file.write(line)
+            elif k_sp + 1 == num_s and J_nplusjplus_touched[j_sp]:
+                #out of bounds in the Jnplusjplus ones
+                #and this combo matters
+                line = utils.line_start
+                # need to finish
+                if lang in ['c', 'cuda']:
+                    line += get_array(lang, 'J_nplusjplus', j_sp) + ' += '
+                elif lang in ['fortran', 'matlab']:
+                    line += (get_array(lang, 'J_nplusjplus', j_sp) +
+                             ' = ' + get_array(lang, 'jac', j_sp) + ' + ')
+
+                line += '(' + get_array(lang, 'spec_rates', k_sp)
+                line += ' * mw_avg * {:.16e} * rho_inv)'.format((sp_k.mw / sp_j.mw) * (1. - sp_j.mw / specs[-1].mw))
+                line += utils.line_end[lang]
+                file.write(line)
 
 
             ######################################
             # Derivative with respect to species
             ######################################
-            #skip the last row
-            if j_sp + 1 == num_s:
-                continue
             line = utils.line_start
             my_index = (num_s) * (j_sp + 1)
             if lang in ['c', 'cuda']:

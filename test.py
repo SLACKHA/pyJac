@@ -371,8 +371,6 @@ class cupyjac_evaluator(cpyjac_evaluator):
 
         #reshape for comparison
         self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.back_spec_map)
-        print(self.test_conc[:3])
-        sys.exit(1)
         self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.back_rxn_map)
         self.test_rev_rates = reshaper(test_rev_rates, (num_cond, num_rev), self.back_rev_rxn_map)
         self.test_pres_mod = reshaper(test_pres_mod, (num_cond, num_pdep), self.back_pdep_map)

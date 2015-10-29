@@ -300,15 +300,13 @@ def write_tc_tester(file, path, mechfile, thermofile):
       /* Initialize TC library */
       int withtab = 0;
       TC_initChem( mechfile, thermofile, withtab, 1.0) ; 
-
-      unsigned int useJacAnl = 1 ; /* use analytic Jacobian */
       
       double jac[NN * NN] = {0};
       StartTimer();
       for(int tid = 0; tid < num_odes; ++tid)
       {
           TC_setThermoPres(var_host[tid]) ;
-          TC_getJacTYN ( &y_host[tid * NN], NSP, jac, useJacAnl ) ;
+          TC_getJacTYNanl ( &y_host[tid * NN], NSP, jac ) ;
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);
@@ -344,7 +342,7 @@ def write_c_tester(file, path):
         """.format(the_file))
     file.write(
     """
-        double jac[NN * NN] = {0};
+        double jac[NSP * NSP] = {0};
         StartTimer();
         for(int tid = 0; tid < num_odes; ++tid)
         {
@@ -387,7 +385,7 @@ def write_cuda_tester(file, path):
         {
             double y_local[NN];
             double pr_local = pres[T_ID];
-            double jac_local[NN * NN] = {0};
+            double jac_local[NSP * NSP] = {0};
 
         #pragma unroll
             for (int i = 0; i < NN; i++)
@@ -528,7 +526,7 @@ pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]
 #premixed = ['premixed', 'non-premixed']
 
-cache_opt = [False]#[True, False]
+cache_opt = [True, False]
 shared = [True, False]
 num_threads = [1]#[1, 12]
 
@@ -589,11 +587,7 @@ for mechanism in mechanism_list:
 
             with open("test/data.bin", "ab") as file:
                 state_data.tofile(file)
-            #if mechanism['name'] == 'USC':
-            #    for i in range(4):
-            #        with open("test/data.bin", "ab") as file:
-            #            state_data.tofile(file)
-            #        num_conditions += state_data.shape[0]
+
             num_conditions += state_data.shape[0]
             print(num_conditions)
             index += 1

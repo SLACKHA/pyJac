@@ -11,7 +11,7 @@ from CParams import C_Jacob_Unroll
 import utils
 import multiprocessing
 import pickle
-import timeit
+import os
 
 try:
     from Numberjack import *

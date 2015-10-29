@@ -5,6 +5,7 @@ from __future__ import division
 from __future__ import print_function
 
 # Standard libraries
+import os
 import sys
 import itertools
 
@@ -13,7 +14,7 @@ import chem_utilities as chem
 import utils
 
 def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='',
-                                 old_spec_order=None, old_rxn_order=None, 
+                                 old_spec_order=None, old_rxn_order=None,
                                  cache_optimized=False, last_spec=None):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
@@ -24,7 +25,8 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
     # the mechanism header defines a number of useful preprocessor defines, as
     # well as defining method stubs for setting initial conditions
-    with open(path + 'mechanism{}'.format(utils.header_ext[lang]), 'w') as file:
+    with open(os.path.join(path, 'mechanism{}'.format(utils.header_ext[lang])),
+              'w') as file:
 
         file.write('#ifndef MECHANISM_{}\n'.format(utils.header_ext[lang][1:]) +
                    '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang][1:])
@@ -77,9 +79,9 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
         reversed_specs.append(old_spec_order.index(i))
 
     # now the mechanism file
-    with open(path + 'mechanism' + utils.file_ext[lang], 'w') as file:
+    with open(os.path.join(path, 'mechanism' + utils.file_ext[lang]), 'w') as file:
         file.write('#include "mass_mole{}"\n'.format(
-          utils.header_ext[lang]) + 
+          utils.header_ext[lang]) +
         '#include <stdio.h>\n')
 
         if lang == 'cuda':
@@ -252,7 +254,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 
     if lang == 'cuda':
         mem_template = 'double* {};'
-        with open(path + 'gpu_memory.cuh', 'w') as file:
+        with open(os.path.join(path, 'gpu_memory.cuh'), 'w') as file:
             file.write('#ifndef GPU_MEMORY_CUH\n'
                        '#define GPU_MEMORY_CUH\n'
                        '\n'
@@ -272,7 +274,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        '\n'
                        '#endif\n')
 
-        with open(path + 'gpu_memory.cu', 'w') as file:
+        with open(os.path.join(path, 'gpu_memory.cu'), 'w') as file:
             init_template = 'initialize_pointer(&{}, {});'
             free_template = 'cudaErrorCheck(cudaFree({}));'
             file.write('#include "gpu_memory.cuh"\n'
@@ -316,7 +318,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                        )
 
     if lang == 'cuda':
-        with open(path + 'gpu_macros.cuh', 'w') as file:
+        with open(os.path.join(path, 'gpu_macros.cuh'), 'w') as file:
             file.write('#ifndef GPU_MACROS_CUH\n'
                        '#define GPU_MACROS_CUH\n'
                        '#include <stdio.h>\n'
@@ -350,7 +352,7 @@ def write_header(path, lang):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
 
-    with open(path + 'header' + utils.header_ext[lang], 'w') as file:
+    with open(os.path.join(path, 'header' + utils.header_ext[lang]), 'w') as file:
         file.write('#ifndef HEAD\n'
                    '#define HEAD\n'
                    '#include <stdlib.h>\n'

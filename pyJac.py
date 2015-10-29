@@ -178,7 +178,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     file.write(jline + utils.line_end[lang])
 
     if rxn.pdep:
-        file.write(utils.line_start + 
+        file.write(utils.line_start +
             'pres_mod_temp *= (' + get_array(lang, 'pres_mod', pind) +
                             ' / conc_temp)' + utils.line_end[lang])
 
@@ -1393,7 +1393,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
-                   '#include "../header{}"\n'.format(utils.header_ext[lang]) + 
+                   '#include "../header{}"\n'.format(utils.header_ext[lang]) +
                    '\n' + ('__device__ ' if lang == 'cuda' else '') +
                    ''
                    'void eval_jacob_{} ('.format(number)
@@ -1523,7 +1523,7 @@ def write_dy_intros(path, lang, number):
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
-                   '#include "../header{}"\n'.format(utils.header_ext[lang]) + 
+                   '#include "../header{}"\n'.format(utils.header_ext[lang]) +
                    '\n' +
                    ('__device__ ' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
@@ -1585,7 +1585,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         utils.create_dir(os.path.join(path, 'jacobs'))
 
     # first write header file
-    file = open(path + 'jacob' + utils.header_ext[lang], 'w')
+    file = open(os.path.join(path, 'jacob' + utils.header_ext[lang]), 'w')
     file.write('#ifndef JACOB_HEAD\n'
                '#define JACOB_HEAD\n'
                '\n'
@@ -1621,7 +1621,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
     # create file depending on language
     filename = 'jacob' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     # header files
     file.write('#include "jacob{}"\n\n'.format(utils.header_ext[lang]))
@@ -1933,7 +1933,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
             file = write_sub_intro(os.path.join(path, 'jacobs'), lang, jac_count,
-                                    rate_list, rev, pdep, pdep_thd_eff, 
+                                    rate_list, rev, pdep, pdep_thd_eff,
                                     thd, troe, sri,
                                     cheb, dim, plog, smm is None
                                     )
@@ -2095,12 +2095,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     touched[lin_index] = True
                 else:
                     if lang in ['c', 'cuda']:
-                        jline += (get_array(lang, 'J_nplusjplus', j_sp) +      
+                        jline += (get_array(lang, 'J_nplusjplus', j_sp) +
                             ' {}= '.format('+' if J_nplusjplus_touched[j_sp] else '')
                             )
                     elif lang in ['fortran', 'matlab']:
                         jline += (get_array(lang, 'J_nplusjplus', j_sp) +
-                                    (' = ' + get_array(lang, 'J_nplusjplus', j_sp) 
+                                    (' = ' + get_array(lang, 'J_nplusjplus', j_sp)
                                     if J_nplusjplus_touched[j_sp] else '') + ' + ')
 
                     J_nplusjplus_touched[j_sp] = True
@@ -2320,7 +2320,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                                           '' if touched[my_index] else '-')
             touched[my_index] = True
 
-            
+
             jac_part = ''
             if k_sp + 1 < num_s:
                 #still in the actual jacobian
@@ -2436,14 +2436,14 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 
     sorted_and_cleaned = sorted(list(set(sparse_indicies)))
     # first write header file
-    file = open(path + 'sparse_multiplier{}'.format(utils.header_ext[lang]), 'w')
+    file = open(os.path.join(path, 'sparse_multiplier{}'.format(utils.header_ext[lang])), 'w')
     file.write('#ifndef SPARSE_HEAD\n'
                '#define SPARSE_HEAD\n')
     file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
     file.write(
         '\n'
         '#include "header{}"\n'.format(utils.header_ext[lang]) +
-        '\n' + 
+        '\n' +
         ('__device__\n' if lang == 'cuda' else '') +
         'void sparse_multiplier (const double *, const double *, double*);\n'
         '\n'
@@ -2457,7 +2457,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
 
     # create file depending on language
     filename = 'sparse_multiplier' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     file.write('#include "sparse_multiplier{}"\n\n'.format(utils.header_ext[lang]))
 
@@ -2590,7 +2590,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         candidates = [('N2', wt['n'] * 2.), ('Ar', wt['ar']),
                         ('He', wt['he'])]
         for sp in candidates:
-            match = next((isp for isp, spec in enumerate(specs) 
+            match = next((isp for isp, spec in enumerate(specs)
                           if sp[0].lower() == spec.name.lower() and
                           sp[1] == spec.mw),
                             None)
@@ -2660,12 +2660,12 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     # if third-body/pressure-dependent reactions,
     # print modification subroutine
     if next((r for r in reacs if (r.thd_body or r.pdep)), None):
-        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs, 
+        rate.write_rxn_pressure_mod(build_path, lang, specs, reacs,
                                     fwd_rxn_mapping, smm
                                     )
 
     # write species rates subroutine
-    rate.write_spec_rates(build_path, lang, specs, reacs, 
+    rate.write_spec_rates(build_path, lang, specs, reacs,
                     reverse_spec_mapping, fwd_rxn_mapping, smm)
 
     # write chem_utils subroutines
@@ -2681,7 +2681,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     aux.write_header(build_path, lang)
 
     # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state, 
+    aux.write_mechanism_initializers(build_path, lang, specs, reacs, initial_state,
                                      reverse_spec_mapping, reverse_rxn_mapping,
                                      optimize_cache, last_spec)
 
@@ -2697,16 +2697,16 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
 if __name__ == "__main__":
     args = get_parser()
 
-    create_jacobian(lang=args.lang, 
+    create_jacobian(lang=args.lang,
                     mech_name=args.input,
                     therm_name=args.thermo,
                     optimize_cache=args.cache_optimizer,
-                    initial_state=args.initial_conditions, 
+                    initial_state=args.initial_conditions,
                     num_blocks=args.num_blocks,
                     num_threads=args.num_threads,
                     no_shared=args.no_shared,
                     L1_preferred=args.L1_preferred,
-                    multi_thread=args.multi_thread, 
+                    multi_thread=args.multi_thread,
                     force_optimize=args.force_optimize,
                     build_path=args.build_path,
                     last_spec=args.last_species

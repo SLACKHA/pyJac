@@ -75,8 +75,8 @@ class sp_comp(Variable):
         return [ Sum([self.r2[i] < self.r1[i] for i in range(len(self.r1))]) ]
 
 
-def optimize_cache(specs, reacs, multi_thread, 
-                    force_optimize, build_path, 
+def optimize_cache(specs, reacs, multi_thread,
+                    force_optimize, build_path,
                      last_spec, time_lim=60, verbosity=1):
     """
     Utilizes the Numberjack package to optimize species
@@ -129,7 +129,7 @@ def optimize_cache(specs, reacs, multi_thread,
         print('Checking for old optimization')
         try:
             same_mech = False
-            with open(build_path + 'optimized.pickle', 'rb') as file:
+            with open(os.path.join(build_path, 'optimized.pickle'), 'rb') as file:
                 old_specs = pickle.load(file)
                 old_reacs = pickle.load(file)
                 fwd_spec_mapping = pickle.load(file)
@@ -196,7 +196,7 @@ def optimize_cache(specs, reacs, multi_thread,
         the_sum = 0
         for i in range(len(r_to_s) - 1):
             the_sum += len(r_to_s[ordering[i + 1]].difference(r_to_s[ordering[i]]))
-        
+
         assert len(set(ordering)) == len(ordering)
         return the_sum
 
@@ -326,7 +326,7 @@ def optimize_cache(specs, reacs, multi_thread,
         )
 
     # save to avoid reoptimization if possible
-    with open(build_path + 'optimized.pickle', 'wb') as file:
+    with open(os.path.join(build_path, 'optimized.pickle'), 'wb') as file:
         pickle.dump(specs, file)
         pickle.dump(reacs, file)
         pickle.dump(fwd_spec_mapping, file)

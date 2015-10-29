@@ -11,6 +11,7 @@ from __future__ import print_function
 # Standard libraries
 import sys
 import math
+import os
 
 # Local imports
 import chem_utilities as chem
@@ -261,7 +262,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
     pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd_body or rxn.pdep]
 
     pre  = '__device__ ' if lang == 'cuda' else ''
-    file = open(path + 'rates' + utils.header_ext[lang], 'w')
+    file = open(os.path.join(path, 'rates' + utils.header_ext[lang]), 'w')
     file.write('#ifndef RATES_HEAD\n'
                '#define RATES_HEAD\n'
                '\n'
@@ -284,7 +285,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
     file.close()
 
     filename = 'rxn_rates' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     line = ''
     if lang == 'cuda': line = '__device__ '
@@ -437,7 +438,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
         return lo_array, hi_array
 
     for i_rxn in range(len(reacs)):
-        file.write(utils.line_start + utils.comment[lang] + 
+        file.write(utils.line_start + utils.comment[lang] +
                     'rxn {}'.format(fwd_rxn_mapping[i_rxn]) + '\n')
         rxn = reacs[i_rxn]
 
@@ -746,7 +747,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
 
     """
     filename = 'rxn_rates_pres_mod' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     # headers
     if lang in ['c', 'cuda']:
@@ -1150,7 +1151,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
     """
 
     filename = 'spec_rates' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang])
@@ -1230,7 +1231,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
     #loop through reaction
     for rind in range(len(reacs)):
         print_ind = fwd_rxn_mapping[rind]
-        file.write(utils.line_start + utils.comment[lang] + 
+        file.write(utils.line_start + utils.comment[lang] +
                     'rxn {}'.format(print_ind) + '\n')
         rxn = reacs[rind]
         #get allowed species
@@ -1264,7 +1265,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
             if nu == 0.0:
                 continue
 
-            file.write(utils.line_start + utils.comment[lang] + 
+            file.write(utils.line_start + utils.comment[lang] +
                 'sp {}'.format(fwd_spec_mapping[spind]) + '\n')
 
             sign = '-' if nu < 0 else '+'
@@ -1318,7 +1319,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
 
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
-            file.write(utils.line_start + utils.comment[lang] + 
+            file.write(utils.line_start + utils.comment[lang] +
                 'sp {}'.format(fwd_spec_mapping[i]) + '\n')
             file.write(__get_var(i) +
                        ' = 0.0' + utils.line_end[lang]
@@ -1366,7 +1367,7 @@ def write_chem_utils(path, lang, specs):
     num_s = len(specs)
 
     pre = '__device__ ' if lang == 'cuda' else ''
-    file = open(path + 'chem_utils' + utils.header_ext[lang], 'w')
+    file = open(os.path.join(path, 'chem_utils' + utils.header_ext[lang]), 'w')
     file.write('#ifndef CHEM_UTILS_HEAD\n'
                '#define CHEM_UTILS_HEAD\n'
                '\n'
@@ -1384,7 +1385,7 @@ def write_chem_utils(path, lang, specs):
     file.close()
 
     filename = 'chem_utils' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
@@ -1904,7 +1905,7 @@ def write_derivs(path, lang, specs, reacs):
     if lang == 'cuda': pre = '__device__ '
 
     # first write header file
-    file = open(path + 'dydt' + utils.header_ext[lang], 'w')
+    file = open(os.path.join(path, 'dydt' + utils.header_ext[lang]), 'w')
     file.write('#ifndef DYDT_HEAD\n'
                '#define DYDT_HEAD\n'
                '\n'
@@ -1918,7 +1919,7 @@ def write_derivs(path, lang, specs, reacs):
     file.close()
 
     filename = 'dydt' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
 
@@ -2194,8 +2195,8 @@ def write_mass_mole(path, lang, specs):
 
     # Create header file
     if lang in ['c', 'cuda']:
-        file = open(path + 'mass_mole{}'.format(
-            utils.header_ext[lang]), 'w')
+        file = open(os.path.join(path, 'mass_mole{}'.format(
+            utils.header_ext[lang])), 'w')
 
         file.write(
             '#ifndef MASS_MOLE_HEAD\n'
@@ -2213,7 +2214,7 @@ def write_mass_mole(path, lang, specs):
 
     # Open file; both C and CUDA programs use C file (only used on host)
     filename = 'mass_mole' + utils.file_ext[lang]
-    file = open(path + filename, 'w')
+    file = open(os.path.join(path, filename), 'w')
 
     if lang in ['c', 'cuda']:
         file.write('#include "mass_mole{}"\n\n'.format(
@@ -2434,16 +2435,16 @@ def write_mass_mole(path, lang, specs):
 if __name__ == "__main__":
     from pyJac import create_jacobian
     args = utils.get_parser()
-    create_jacobian(lang=args.lang, 
+    create_jacobian(lang=args.lang,
                 mech_name=args.input,
                 therm_name=args.thermo,
                 optimize_cache=args.cache_optimizer,
-                initial_state=args.initial_conditions, 
+                initial_state=args.initial_conditions,
                 num_blocks=args.num_blocks,
                 num_threads=args.num_threads,
                 no_shared=args.no_shared,
                 L1_preferred=args.L1_preferred,
-                multi_thread=args.multi_thread, 
+                multi_thread=args.multi_thread,
                 force_optimize=args.force_optimize,
                 build_path=args.build_path,
                 skip_jac=True,

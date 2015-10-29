@@ -434,6 +434,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                         optimize_cache=cache_optimization, build_path=build_dir,
                         no_shared=no_shared, last_spec=last_spec
                         )
+        if lang == 'cuda':
+            #if it's cuda, we need to make sure the c files
+            #are generated using the same manner
+            #as we're going to use the c interface for testing the jacobian
+            create_jacobian('c', mech_filename, therm_name=therm_filename,
+                        optimize_cache=cache_optimization, build_path=build_dir,
+                        no_shared=no_shared, last_spec=last_spec
+                        )
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.

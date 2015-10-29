@@ -7,8 +7,9 @@ from __future__ import division
 # Standard libraries
 import sys
 import math
-import numpy as np
 import re
+
+import numpy as np
 
 # Local imports
 import chem_utilities as chem

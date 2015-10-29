@@ -1,6 +1,9 @@
 """Handles shared memory usage to accelerate memory accesses for CUDA"""
 
+# Standard libraries
 from math import floor
+
+# Local imports
 import CUDAParams
 import utils
 import os
@@ -40,7 +43,7 @@ class shared_memory_manager(object):
 
     def force_eviction(self):
         key_copy = [x for x in self.shared_dict.iterkeys()]
-        for shared_index in key_copy: 
+        for shared_index in key_copy:
             self.evict(shared_index)
 
     def evict_longest_gap(self):
@@ -71,7 +74,7 @@ class shared_memory_manager(object):
         self.on_eviction = None
 
     def write_init(self, file, indent=4):
-        file.write(''.join([' ' for i in range(indent)]) + 'extern __shared__ double ' + 
+        file.write(''.join([' ' for i in range(indent)]) + 'extern __shared__ double ' +
                    self.skeleton.format('') + utils.line_end['cuda'])
 
     def load_into_shared(self, file, variables, estimated_usage=None, indent=2, load=True):

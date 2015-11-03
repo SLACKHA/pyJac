@@ -2263,6 +2263,7 @@ def write_mass_mole(path, lang, specs):
 
         isfirst = False
     line += ')'
+    file.write(line + utils.line_end[lang])
 
     # calculate molecular weight
     if lang in ['c', 'cuda']:
@@ -2358,6 +2359,7 @@ def write_mass_mole(path, lang, specs):
 
         isfirst = False
     line += ')'
+    file.write(line + utils.line_end[lang])
 
     # calculate average molecular weight
     if lang in ['c', 'cuda']:
@@ -2453,6 +2455,7 @@ def write_mass_mole(path, lang, specs):
 
         isfirst = False
     line += ')'
+    file.write(line + utils.line_end[lang])
 
     # get molecular weight
     if lang in ['c', 'cuda']:

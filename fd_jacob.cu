@@ -27,7 +27,7 @@ void eval_jacob (const double t, const double pres, const double * cy, double * 
   
   #pragma unroll
   for (int i = 0; i < NSP; ++i) {
-    error[i] = ATOL + (RTOL * fabs(cy[i]));
+    ewt[i] = ATOL + (RTOL * fabs(cy[i]));
     y[i] = cy[i];
   }
 
@@ -39,7 +39,7 @@ void eval_jacob (const double t, const double pres, const double * cy, double * 
   double sum = 0.0;
   #pragma unroll
   for (int i = 0; i < NSP; ++i) {
-    sum += (error[i] * dy[i]) * (error[i] * dy[i]);
+    sum += (ewt[i] * dy[i]) * (ewt[i] * dy[i]);
   }
   double fac = sqrt(sum / ((double)(NSP)));
   double r0 = 1000.0 * RTOL * DBL_EPSILON * ((double)(NSP)) * fac;
@@ -48,7 +48,7 @@ void eval_jacob (const double t, const double pres, const double * cy, double * 
   #pragma unroll
   for (int j = 0; j < NSP; ++j) {
     double yj_orig = y[j];
-    double r = fmax(srur * fabs(yj_orig), r0 / error[j]);
+    double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
     
     #if FD_ORD == 1
       y[j] = yj_orig + r;

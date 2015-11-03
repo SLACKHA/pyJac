@@ -2247,14 +2247,35 @@ def write_mass_mole(path, lang, specs):
         '\n'
         )
 
+    file.write('  // mole fraction of final species\n')
+    file.write(utils.line_start + 'double X_N' + utils.line_end[lang])
+    line = '  X_N = 1.0 - ('
+    isfirst = True
+    for isp in range(len(specs) - 1):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '               '
+
+        if not isfirst: line += ' + '
+
+        line += utils.get_array(lang, 'X', isp)
+
+        isfirst = False
+    line += ')'
+
     # calculate molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n'
                    '  double mw_avg = 0.0;\n'
                    )
-        for isp, sp in enumerate(specs):
+        for isp in range(len(specs) - 1):
+            sp = specs[isp]
             file.write('  mw_avg += X[{}] * '.format(isp) +
                        '{:.16e};\n'.format(sp.mw)
+                       )
+        file.write(utils.line_start + 'mw_avg += X_N * ' +
+                       '{:.16e};\n'.format(specs[-1].mw)
                        )
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n'
@@ -2270,7 +2291,8 @@ def write_mass_mole(path, lang, specs):
     # calculate mass fractions
     if lang in ['c', 'cuda']:
         file.write('  // calculate mass fractions\n')
-        for isp, sp in enumerate(specs):
+        for isp in range(len(specs) - 1):
+            sp = specs[isp]
             file.write('  Y[{0}] = X[{0}] * '.format(isp) +
                        '{:.16e} / mw_avg;\n'.format(sp.mw)
                        )
@@ -2319,13 +2341,34 @@ def write_mass_mole(path, lang, specs):
                    '\n'
                    )
 
+    # calculate Y_N
+    file.write('  // mass fraction of final species\n')
+    file.write(utils.line_start + 'double Y_N' + utils.line_end[lang])
+    line = '  Y_N = 1.0 - ('
+    isfirst = True
+    for isp in range(len(specs) - 1):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '               '
+
+        if not isfirst: line += ' + '
+
+        line += utils.get_array(lang, 'Y', isp)
+
+        isfirst = False
+    line += ')'
+
     # calculate average molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n')
         file.write('  double mw_avg = 0.0;\n')
-        for isp, sp in enumerate(specs):
+        for isp in range(len(specs) - 1):
             file.write('  mw_avg += Y[{}] / '.format(isp) +
-                       '{:.16e};\n'.format(sp.mw)
+                       '{:.16e};\n'.format(specs[isp].mw)
+                       )
+        file.write('  mw_avg += Y_N / ' +
+                       '{:.16e};\n'.format(specs[-1].mw)
                        )
         file.write('  mw_avg = 1.0 / mw_avg;\n')
     elif lang == 'fortran':
@@ -2338,12 +2381,12 @@ def write_mass_mole(path, lang, specs):
                        )
     file.write('\n')
 
-    # calculate mass fractions
+    # calculate mole fractions
     if lang in ['c', 'cuda']:
-        file.write('  // calculate mass fractions\n')
-        for isp, sp in enumerate(specs):
+        file.write('  // calculate mole fractions\n')
+        for isp in range(len(specs) - 1):
             file.write('  X[{0}] = Y[{0}] * '.format(isp) +
-                       'mw_avg / {:.16e};\n'.format(sp.mw)
+                       'mw_avg / {:.16e};\n'.format(specs[isp].mw)
                        )
         file.write('\n'
                    '} // end mass2mole\n'
@@ -2394,14 +2437,31 @@ def write_mass_mole(path, lang, specs):
                    '\n'
                    )
 
+    file.write('  // mole fraction of final species\n')
+    file.write(utils.line_start + 'double X_N' + utils.line_end[lang])
+    line = '  X_N = 1.0 - ('
+    isfirst = True
+    for isp in range(len(specs) - 1):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '               '
+
+        if not isfirst: line += ' + '
+
+        line += utils.get_array(lang, 'X', isp)
+
+        isfirst = False
+    line += ')'
+
     # get molecular weight
     if lang in ['c', 'cuda']:
         file.write('  // average molecular weight\n'
                    '  double mw_avg = 0.0;\n'
                    )
-        for isp, sp in enumerate(specs):
+        for isp in range(len(specs) - 1):
             file.write('  mw_avg += X[{}] * '.format(isp) +
-                       '{:.16e};\n'.format(sp.mw)
+                       '{:.16e};\n'.format(specs[isp].mw)
                        )
         file.write('\n')
     elif lang == 'fortran':

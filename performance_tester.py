@@ -526,7 +526,7 @@ pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]
 #premixed = ['premixed', 'non-premixed']
 
-cache_opt = [True, False]
+cache_opt = [False]#[True, False]
 shared = [True, False]
 num_threads = [1]#[1, 12]
 

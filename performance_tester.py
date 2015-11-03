@@ -705,6 +705,10 @@ for mechanism in mechanism_list:
             with open(build_dir + 'test.c', 'w') as file:
                 write_c_tester(file, the_path)
 
+            #and copy the FD Jacobian
+            shutil.copy(os.path.join(home, 'fd_jacob.c'),
+                        os.path.join(build_dir, 'fd_jacob.c'))
+
             write_timer()
 
             #get the cantera object
@@ -912,6 +916,11 @@ for mechanism in mechanism_list:
 
             with open(build_dir + 'test.cu', 'w') as file:
                 write_cuda_tester(file, the_path)
+
+            #and copy the FD Jacobian
+            shutil.copy(os.path.join(home, 'fd_jacob.cu'),
+                        os.path.join(build_dir, 'fd_jacob.cu'))
+
 
             write_timer()
 

@@ -6,6 +6,7 @@ from __future__ import print_function
 import sys
 from itertools import product
 from argparse import ArgumentParser
+
 # More Python 2 compatibility
 if sys.version_info.major == 2:
     from itertools import izip as zip

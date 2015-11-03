@@ -1,12 +1,13 @@
 """Module containing parameters that control CUDA code generation
 """
+
+# Standard libraries
 import os
 from math import floor
 
 
 class JacRatesCacheStrat:
     Include, Exclude = range(2)
-
 
 JacRateStrat = JacRatesCacheStrat.Include
 ResetOnJacUnroll = True

@@ -7,8 +7,9 @@ from __future__ import division
 # Standard libraries
 import sys
 import math
-import numpy as np
 import re
+
+import numpy as np
 
 # Local imports
 import chem_utilities as chem
@@ -152,10 +153,10 @@ def read_mech(mech_filename, therm_filename):
                     print('Otherwise leave blank for moles and cal/mole.')
                     sys.exit(1)
 
-            if units_E == 'molecules':
-                print('Error: molecules units not supported, sorry.')
-                sys.exit(1)
-
+            if units_A == 'molecules':
+                raise NotImplementedError('Molecules units not '
+                                          'supported, sorry.'
+                                          )
             continue
         elif line[0:4].lower() == 'ther':
             # thermo data is in mechanism file
@@ -480,6 +481,19 @@ def read_mech(mech_filename, therm_filename):
 
                     # Convert reverse activation energy units
                     par3 *= act_energy_fact[units_E]
+
+                    # Convert reverse pre-exponential factor
+                    if units_A == 'moles':
+                        reac_ord = sum(reacs[-1].prod_nu)
+                        if thd:
+                            par1 /= 1000. ** reac_ord
+                        elif pdep:
+                            # Low- (chemically activated bimolecular reaction) or
+                            # high-pressure (fall-off reaction) limit parameters
+                            par1 /= 1000. ** (reac_ord - 1.)
+                        else:
+                            # Elementary reaction
+                            par1 /= 1000. ** (reac_ord - 1.)
 
                     reacs[-1].rev_par.append(par1)
                     reacs[-1].rev_par.append(par2)

@@ -7,7 +7,7 @@ import errno
 from math import log10, floor
 from argparse import ArgumentParser
 
-# local includes
+# Local imports
 import CUDAParams
 
 line_start = '  '

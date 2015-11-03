@@ -2466,6 +2466,8 @@ def write_mass_mole(path, lang, specs):
             file.write('  mw_avg += X[{}] * '.format(isp) +
                        '{:.16e};\n'.format(specs[isp].mw)
                        )
+        file.write(utils.line_start + 'mw_avg += X_N * ' +
+               '{:.16e};\n'.format(specs[-1].mw))
         file.write('\n')
     elif lang == 'fortran':
         file.write('  ! average molecular weight\n'

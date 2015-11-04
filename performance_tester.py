@@ -552,9 +552,9 @@ for lang in cmd_compile:
     version[lang] = v.replace('.', '')
     os.remove('temp')
 
-do_cuda = False
-do_c = False
-do_tchem = False
+do_cuda = True
+do_c = True
+do_tchem = True
 do_fd = True
 #make sure the performance directory exists
 subprocess.check_call(['mkdir', '-p', 'performance'])

@@ -10,15 +10,6 @@ import subprocess
 import pickle
 from argparse import ArgumentParser
 
-#import matplotlib.pyplot as plt
-#from matplotlib.backends.backend_pdf import PdfPages
-
-# More Python 2 compatibility
-if sys.version_info.major == 3:
-    from itertools import zip
-elif sys.version_info.major == 2:
-    from itertools import izip as zip
-
 # Related modules
 import numpy as np
 
@@ -250,8 +241,8 @@ class cpyjac_evaluator(object):
         n_reac = gas.n_reactions
 
         self.fwd_dydt_map = np.array([0] + [x + 1 for x in self.fwd_spec_map])
-        
-        self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
+
+        self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if
                 gas.reaction(i).reversible])
         rev_reacs = self.fwd_rev_rxn_map.shape[0]
         self.back_rev_rxn_map = np.sort(self.fwd_rev_rxn_map)
@@ -264,14 +255,14 @@ class cpyjac_evaluator(object):
                                 if is_pdep(gas.reaction(self.fwd_rxn_map[i]))]
         pdep_reacs = len(self.fwd_pdep_map)
         self.back_pdep_map = sorted(self.fwd_pdep_map)
-        self.back_pdep_map = np.array([self.fwd_pdep_map.index(x) 
+        self.back_pdep_map = np.array([self.fwd_pdep_map.index(x)
                                 for x in self.back_pdep_map])
-        self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0] 
+        self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0]
                                 for x in range(pdep_reacs)])
 
         self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
 
-        
+
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
         self.check_optimized(build_dir, gas, filename)
         self.pyjac = __import__(module_name)
@@ -316,7 +307,7 @@ class cpyjac_evaluator(object):
             test_dydt = np.zeros_like(test_y)
             self.pyjac.py_dydt(t, pres, test_y, test_dydt)
             dydt[self.dydt_mask] = test_dydt[self.back_dydt_map[self.dydt_mask]]
-        else:   
+        else:
             self.pyjac.py_dydt(t, pres, y, dydt)
     def eval_jacobian(self, t, pres, y, jacob):
         if self.cache_opt:
@@ -468,7 +459,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     except:
         pass
     if lang == 'cuda':
-        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep + 
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
                                'pyjacob_cuda_setup.py', 'build_ext', '--inplace'
                                ])
 
@@ -535,7 +526,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     for i in range(len(state_data)):
         gas.TPY = state_data[i, 1], state_data[i, 2], state_data[i, 3:]
         state_data[i, 3:] = gas.Y
-    
+
     if lang == 'cuda':
         pyjacob = cupyjac_evaluator(build_dir, gas, state_data)
     else:
@@ -722,21 +713,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_jac_zero[i] = err
         print('L2 norm difference of "zero" Jacobian: '
               '{:.2e}'.format(err))
-
-    #plt.semilogy(state_data[:,1], err_jac_norm, 'o')
-    #plt.xlabel('Temperature [K]')
-    #plt.ylabel('Jacobian matrix norm error')
-    #pp = PdfPages('Jacobian_error_norm.pdf')
-    #pp.savefig()
-    #pp.close()
-
-    #plt.figure()
-    #plt.semilogy(state_data[:,1], err_jac, 'o')
-    #plt.xlabel('Temperature [K]')
-    #plt.ylabel('Jacobian matrix relative error norm [%]')
-    #pp = PdfPages('Jacobian_relative_error.pdf')
-    #pp.savefig()
-    #pp.close()
 
     # Save all error arrays
     np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm,

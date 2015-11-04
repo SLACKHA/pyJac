@@ -250,12 +250,15 @@ class cpyjac_evaluator(object):
         n_reac = gas.n_reactions
 
         self.fwd_dydt_map = np.array([0] + [x + 1 for x in self.fwd_spec_map])
+        
         self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if 
                 gas.reaction(i).reversible])
-
         rev_reacs = self.fwd_rev_rxn_map.shape[0]
-        self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == i)[0][0] for i in
-                    range(rev_reacs)])
+        self.back_rev_rxn_map = np.sort(self.fwd_rev_rxn_map)
+        self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == x)[0][0]
+                                    for x in self.back_rev_rxn_map])
+        self.fwd_rev_rxn_map = np.array([np.where(self.back_rev_rxn_map == x)[0][0]
+                                    for x in range(rev_reacs)])
 
         self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in range(n_reac)
                                 if is_pdep(gas.reaction(self.fwd_rxn_map[i]))]

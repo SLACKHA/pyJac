@@ -383,12 +383,12 @@ def write_cuda_tester(file, path):
     {
         if (T_ID < NUM)
         {
-            double y_local[NN];
+            double y_local[NSP];
             double pr_local = pres[T_ID];
             double jac_local[NSP * NSP] = {0};
 
         #pragma unroll
-            for (int i = 0; i < NN; i++)
+            for (int i = 0; i < NSP; i++)
             {
                 y_local[i] = y[T_ID + i * GRID_SIZE];
             }
@@ -430,7 +430,7 @@ def write_cuda_tester(file, path):
         dim3 dimGrid (g_num, 1 );
         dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-        cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NN * sizeof(double), cudaMemcpyHostToDevice));
+        cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
         StartTimer();
         #ifdef SHARED_SIZE
             jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device);

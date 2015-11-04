@@ -301,12 +301,12 @@ def write_tc_tester(file, path, mechfile, thermofile):
       int withtab = 0;
       TC_initChem( mechfile, thermofile, withtab, 1.0) ; 
       
-      double jac[NN * NN] = {0};
+      double jac[NSP * NSP] = {0};
       StartTimer();
       for(int tid = 0; tid < num_odes; ++tid)
       {
           TC_setThermoPres(var_host[tid]) ;
-          TC_getJacTYNanl ( &y_host[tid * NN], NSP, jac ) ;
+          TC_getJacTYNm1anl ( &y_host[tid * NN], NSP, jac ) ;
       }
       double runtime = GetTimer();
       printf("%d,%.15le\\n", num_odes, runtime);

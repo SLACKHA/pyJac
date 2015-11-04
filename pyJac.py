@@ -1372,7 +1372,8 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
 
 
 def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pdep_has_thd_eff, this_thd,
-                     this_troe, this_sri, this_cheb, cheb_dim, this_plog, no_shared
+                     this_troe, this_sri, this_cheb, cheb_dim, this_plog, no_shared,
+                     has_nsp
                      ):
     """
     Writes the header and definitions for of any of the various sub-functions
@@ -1394,6 +1395,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         if this_pdep and this_pdep_has_thd_eff:
             file.write(', const double')
         file.write(', const double, const double, const double*, const double, double*'
+                   + (', double*, double*' if has_nsp else '') +
                    ');\n'
                    '\n'
                    '#endif\n'
@@ -1412,7 +1414,10 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         line += ', const double* ' + rate
     if this_pdep and this_pdep_has_thd_eff:
         line += ', const double m'
-    line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac) {'
+    line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac' 
+    if has_nsp:
+        line += ', double* J_nplusone, double* J_nplusjplus'
+    line += ') {'
     file.write(line + '\n')
 
     if not no_shared and lang == 'cuda':
@@ -1508,7 +1513,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
     return file
 
 
-def write_dy_intros(path, lang, number):
+def write_dy_intros(path, lang, number, have_jnplus_jplus):
     with open(os.path.join(path, 'jacob_' + str(number) + utils.header_ext[lang]), 'w') as file:
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
@@ -1518,7 +1523,9 @@ def write_dy_intros(path, lang, number):
                    ('__device__ ' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
                    )
-        file.write('const double, const double, const double, const double*, const double*, const double*, double*);\n'
+        file.write('const double, const double, const double, const double*, const double*, const double*, double*'
+                   + (', double*' if have_jnplus_jplus else '') +
+                   ');\n'
                    '\n'
                    '#endif\n'
                    )
@@ -1530,15 +1537,22 @@ def write_dy_intros(path, lang, number):
     line = '__device__ ' if lang == 'cuda' else ''
 
     line += (
-        'void eval_jacob_{} (const double mw_avg, const double rho, const double cp_avg, const double* dy, '
-        'const double* h, const double* cp, double* jac) '.format(
-            number))
+        'void eval_jacob_{} (const double mw_avg, const double rho, '.format(number) +
+        'const double cp_avg, const double* spec_rates, '
+        'const double* h, const double* cp, double* jac' +
+        (', double* J_nplusjplus' if have_jnplus_jplus else '') +
+        ') ')
     line += '{\n'
     line += utils.line_start
     if lang == 'cuda':
         line += 'register '
-    line += 'double rho_inv = 1.0 / rho;'
+    line += 'double rho_inv = 1.0 / rho'
     file.write(line + utils.line_end[lang])
+
+    file.write(utils.line_start + 'double working_temp = (1.0 / cp_avg)' + utils.line_end[lang])
+
+    file.write(utils.line_start + 'double j_temp = 1.0 / (rho * cp_avg * cp_avg)' + utils.line_end[lang])
+
     return file
 
 
@@ -1685,7 +1699,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         rate_list.append('rev_rates')
     if len(pdep_reacs):
         rate_list.append('pres_mod')
-    rate_list.append('dy')
+    rate_list.append('spec_rates')
     file.write(utils.line_start + utils.comment[lang] + ' evaluate reaction rates\n')
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
@@ -1779,72 +1793,69 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
              )
     file.write(line)
 
-    line = utils.line_start
-    if lang == 'c':
-        line += 'double '
-    elif lang == 'cuda':
-        line += 'register double '
-    line += 'j_temp = 0.0' + utils.line_end[lang]
-    file.write(line)
-
-    line = utils.line_start
-    if lang == 'c':
-        line += 'double '
-    elif lang == 'cuda':
-        line += 'register double '
-    line += 'kf = 0.0' + utils.line_end[lang]
     if not do_unroll:
-        file.write(line)
-    else:
-        line = ''
-
-    if any(rxn.pdep or rxn.thd_body for rxn in reacs) and not do_unroll:
         line = utils.line_start
         if lang == 'c':
             line += 'double '
         elif lang == 'cuda':
             line += 'register double '
-        line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
+        line += 'j_temp = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    # if any reverse reactions, will need Kc
-    if rev_reacs and not do_unroll:
         line = utils.line_start
         if lang == 'c':
             line += 'double '
         elif lang == 'cuda':
             line += 'register double '
-        file.write(line + 'Kc = 0.0' + utils.line_end[lang])
-        file.write(line + 'kr = 0' + utils.line_end[lang])
-
-    # pressure-dependence variables
-    if any(rxn.pdep for rxn in reacs) and not do_unroll:
-        line = utils.line_start
-        if lang == 'c':
-            line += 'double '
-        elif lang == 'cuda':
-            line += 'register double '
-        line += 'Pr = 0.0' + utils.line_end[lang]
+        line += 'kf = 0.0' + utils.line_end[lang]
         file.write(line)
 
-    if any(rxn.troe for rxn in reacs) and not do_unroll:
-        line = ''.join(['  double {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
-        file.write(line)
+        if any(rxn.pdep or rxn.thd_body for rxn in reacs):
+            line = utils.line_start
+            if lang == 'c':
+                line += 'double '
+            elif lang == 'cuda':
+                line += 'register double '
+            line += 'pres_mod_temp = 0.0' + utils.line_end[lang]
+            file.write(line)
 
-    if any(rxn.sri for rxn in reacs) and not do_unroll:
-        line = utils.line_start + 'double X = 0.0' + utils.line_end[lang]
-        file.write(line)
+        # if any reverse reactions, will need Kc
+        if rev_reacs:
+            line = utils.line_start
+            if lang == 'c':
+                line += 'double '
+            elif lang == 'cuda':
+                line += 'register double '
+            file.write(line + 'Kc = 0.0' + utils.line_end[lang])
+            file.write(line + 'kr = 0' + utils.line_end[lang])
 
-    if any(rxn.cheb for rxn in reacs) and not do_unroll:
-        file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
-        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
-        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-        file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+        # pressure-dependence variables
+        if any(rxn.pdep for rxn in reacs):
+            line = utils.line_start
+            if lang == 'c':
+                line += 'double '
+            elif lang == 'cuda':
+                line += 'register double '
+            line += 'Pr = 0.0' + utils.line_end[lang]
+            file.write(line)
 
-    if any(rxn.plog for rxn in reacs) and not do_unroll:
-        file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
+        if any(rxn.troe for rxn in reacs):
+            line = ''.join(['  double {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
+            file.write(line)
 
-    if not do_unroll:
+        if any(rxn.sri for rxn in reacs):
+            line = utils.line_start + 'double X = 0.0' + utils.line_end[lang]
+            file.write(line)
+
+        if any(rxn.cheb for rxn in reacs):
+            file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
+            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
+            dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) + utils.line_end[lang])
+
+        if any(rxn.plog for rxn in reacs):
+            file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
+
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -1899,6 +1910,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             cheb = False
             plog = False
             pdep_thd_eff = False
+            has_jnplus_one = False
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
@@ -1916,6 +1928,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     cheb = True
                 if reacs[ind_next].plog:
                     plog = True
+                reac = reacs[ind_next]
+                if len(specs) - 1 in set(reac.reac + reac.prod) and \
+                    utils.get_nu(len(specs) - 1, reac):
+                    has_jnplus_one = True
+
             batch_has_m = pdep and pdep_thd_eff
 
             dim = None
@@ -1925,7 +1942,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             file = write_sub_intro(os.path.join(path, 'jacobs'), lang, jac_count,
                                     rate_list, rev, pdep, pdep_thd_eff,
                                     thd, troe, sri,
-                                    cheb, dim, plog, smm is None
+                                    cheb, dim, plog, smm is None,
+                                    has_jnplus_one
                                     )
 
         if lang == 'cuda' and smm is not None:
@@ -2011,7 +2029,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             if k_sp + 1 == num_s:
                 J_nplusone_touched = True
             if lang in ['c', 'cuda']:
-                j_str = 'J_nplusone' if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1)
+                j_str = '{}J_nplusone'.format('*' if do_unroll else '') if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1)
                 line += (j_str +
                          ' {}= {}j_temp{} * {:.16e}'.format('+' if touched[k_sp + 1] else '',
                                                            '' if nu == 1 else ('-' if nu == -1 else ''),
@@ -2134,7 +2152,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 line += ', ' + rate
             if batch_has_m:
                 line += ', m'
-            line += ', mw_avg, rho, dBdT, T, jac)'
+            line += ', mw_avg, rho, dBdT, T, jac'
+            if has_jnplus_one:
+                line += ', &J_nplusone, J_nplusjplus'
+            line += ')'
             file.write(line + utils.line_end[lang])
 
     ###################################
@@ -2223,15 +2244,18 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     line += utils.line_end[lang]
     file.write(line)
 
-    line = utils.line_start
-    if lang == 'c':
-        line += 'double '
-    elif lang == 'cuda':
-        line += 'register double '
-    line += 'working_temp = (1.0 / cp_avg)' + utils.line_end[lang]
-    file.write(line)
+    if not do_unroll:
+        line = utils.line_start
+        if lang == 'c':
+            line += 'double '
+        elif lang == 'cuda':
+            line += 'register double '
+        line += 'working_temp = (1.0 / cp_avg)' + utils.line_end[lang]
+        file.write(line)
 
-    file.write(utils.line_start + 'j_temp = 1.0 / (rho * cp_avg * cp_avg)' + utils.line_end[lang])
+        file.write(utils.line_start + 'j_temp = 1.0 / (rho * cp_avg * cp_avg)' + utils.line_end[lang])
+    else:
+        file.write(utils.line_start + 'double working_temp = 0' + utils.line_end[lang])
 
     next_fn_index = 0
     # need to finish the dYk/dYj's
@@ -2239,9 +2263,12 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     for k_sp, sp_k in enumerate(specs):
         if do_unroll and k_sp == next_fn_index:
             store_file = file
-            file = write_dy_intros(os.path.join(path, 'jacobs'), lang, jac_count)
             unroll_len = CParams.C_Jacob_Unroll if lang == 'c' else CUDAParams.Jacob_Unroll
             next_fn_index += min(unroll_len, len(specs) - k_sp)
+
+            have_jnplus_jplus = next_fn_index >= len(specs) and any(J_nplusjplus_touched)
+
+            file = write_dy_intros(os.path.join(path, 'jacobs'), lang, jac_count, have_jnplus_jplus)
 
         for j_sp, sp_j in enumerate(specs):
             lin_index = k_sp + 1 + (num_s) * (j_sp + 1)
@@ -2355,7 +2382,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             file = file_store
             file.write('  eval_jacob_{}('.format(jac_count))
             jac_count += 1
-            line = 'mw_avg, rho, cp_avg, dy, h, cp, jac)'
+            line = 'mw_avg, rho, cp_avg, spec_rates, h, cp, jac'
+            if have_jnplus_jplus:
+                line += ', J_nplusjplus'
+            line += ')'
             file.write(line + utils.line_end[lang])
 
     ######################################

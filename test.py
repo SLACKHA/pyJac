@@ -218,14 +218,8 @@ class cpyjac_evaluator(object):
             #still need to treat it as a cache optimized
             self.cache_opt = True
 
-            self.fwd_spec_map = range(gas.n_species)
-            self.fwd_spec_map[last_spec:-1] = self.fwd_spec_map[last_spec + 1:]
-            self.fwd_spec_map[-1] = last_spec
+            self.fwd_spec_map, self.back_spec_map = utils.get_species_mappings(gas.n_species, last_spec)
             self.fwd_spec_map = np.array(self.fwd_spec_map)
-
-            self.back_spec_map = range(gas.n_species)
-            self.back_spec_map[last_spec + 1:] = self.back_spec_map[last_spec:-1]
-            self.back_spec_map[last_spec] = gas.n_species - 1
             self.back_spec_map = np.array(self.back_spec_map)
 
             self.fwd_rxn_map = np.array(range(gas.n_reactions))

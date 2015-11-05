@@ -40,6 +40,31 @@ array_chars = dict(c="[{}]", cuda="[{}]",
                    fortran="({})", matlab="({})"
                    )
 
+def get_species_mappings(num_specs, last_species):
+    """
+    Consolidate the forward/backwards species mapping
+    in one place.  Only to be used 
+    """
+
+    fwd_species_map = range(num_specs)
+    back_species_map = range(num_specs)
+
+    #in the forward mapping process
+    #last_species -> end
+    #all entries after last_species are reduced by one
+    fwd_species_map[last_species + 1:] = fwd_species_map[last_species:-1]
+    fwd_species_map[last_species] = num_specs - 1
+
+    #in the backwards mapping
+    #end -> last_species
+    #all entries with value >= last_species are increased by one
+    ind = back_species_map.index(last_species)
+    back_species_map[ind:-1] = back_species_map[ind + 1:]
+    back_species_map[-1] = last_species
+
+    return fwd_species_map, back_species_map
+
+
 
 def get_nu(isp, rxn):
     """Returns the net nu of species isp for the reaction rxn

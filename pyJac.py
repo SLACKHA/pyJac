@@ -2634,21 +2634,15 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                                        build_path, last_spec
                                        )
     else:
-        fwd_spec_mapping = range(len(specs))
         fwd_rxn_mapping = range(len(reacs))
-        reverse_spec_mapping = range(len(specs))
         reverse_rxn_mapping = range(len(reacs))
 
+        fwd_spec_mapping, reverse_spec_mapping = utils.get_species_mappings(len(specs), last_spec)
+
         #pick up the last_spec and drop it at the end
-        reverse_spec_mapping[last_spec + 1:] = reverse_spec_mapping[last_spec:-1]
-        reverse_spec_mapping[last_spec] = len(specs) - 1
-
-        fwd_spec_mapping[last_spec:-1] = fwd_spec_mapping[last_spec + 1:]
-        fwd_spec_mapping[-1] = last_spec
-
-        temp = specs[last_spec]
-        specs[last_spec:-1] = specs[last_spec + 1:]
-        specs[-1] = temp
+        temp = specs[:]
+        for i in range(len(specs)):
+            specs[i] = temp[fwd_spec_mapping[i]]
 
 
     the_len = len(reacs)

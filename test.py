@@ -218,14 +218,8 @@ class cpyjac_evaluator(object):
             #still need to treat it as a cache optimized
             self.cache_opt = True
 
-            self.fwd_spec_map = range(gas.n_species)
-            self.fwd_spec_map[last_spec:-1] = self.fwd_spec_map[last_spec + 1:]
-            self.fwd_spec_map[-1] = last_spec
+            self.fwd_spec_map, self.back_spec_map = utils.get_species_mappings(gas.n_species, last_spec)
             self.fwd_spec_map = np.array(self.fwd_spec_map)
-
-            self.back_spec_map = range(gas.n_species)
-            self.back_spec_map[last_spec + 1:] = self.back_spec_map[last_spec:-1]
-            self.back_spec_map[last_spec] = gas.n_species - 1
             self.back_spec_map = np.array(self.back_spec_map)
 
             self.fwd_rxn_map = np.array(range(gas.n_reactions))
@@ -316,7 +310,7 @@ class cpyjac_evaluator(object):
         else:
             self.pyjac.py_eval_jacobian(t, pres, y, jacob)
     def update(self, index):
-        pass
+        self.index = index
 
 class cupyjac_evaluator(cpyjac_evaluator):
     def __init__(self, build_dir, gas, state_data):
@@ -373,8 +367,6 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.test_jacob = reshaper(test_jacob, (num_cond, (gas.n_species) * (gas.n_species)))
         self.index = 0
 
-    def update(self, index):
-        self.index = index
     def eval_conc(self, temp, pres, mass_frac, conc):
         conc[:] = self.test_conc[self.index, :]
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):

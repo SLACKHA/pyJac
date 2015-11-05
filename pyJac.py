@@ -2680,7 +2680,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
 
     # write species rates subroutine
     rate.write_spec_rates(build_path, lang, specs, reacs,
-                    reverse_spec_mapping, fwd_rxn_mapping, smm)
+                    fwd_spec_mapping, fwd_rxn_mapping, smm)
 
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs)

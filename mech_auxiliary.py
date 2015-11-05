@@ -134,7 +134,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
                    )
         file.write('{\n')
         if lang == 'cuda':
-            file.write('    int grid_size = round(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n')
+            file.write('    int grid_size = ceil(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n')
             file.write('    if (grid_size == 0)\n'
                        '        grid_size = 1;\n')
             # do cuda mem init and copying

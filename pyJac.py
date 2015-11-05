@@ -2709,7 +2709,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         # write Jacobian subroutine
         sparse_indicies = write_jacobian(build_path, lang, specs, reacs, splittings, smm)
 
-        write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs) + 1)
+        write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs))
 
     return 0
 

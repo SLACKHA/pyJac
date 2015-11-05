@@ -201,7 +201,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
             '        Xi[j] /= Xsum;\n'
             '    }\n\n'
             '    //convert to mass fractions\n'
-            '    double Yi[NSP] = {0.0};\n'
+            '    double Yi[NSP - 1] = {0.0};\n'
             '    mole2mass(Xi, Yi);\n\n'
             '    //set initial pressure, units [PA]\n' +
             '    double P = {};\n'.format(chem.PA * P) +

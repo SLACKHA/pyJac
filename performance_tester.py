@@ -36,10 +36,12 @@ import utils
 from pyJac import create_jacobian
 import partially_stirred_reactor as pasr
 
+
 def __is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
+
 
 def run_pasr(pasr_input, mech_filename, pasr_output_file):
     #try to load output file
@@ -65,6 +67,7 @@ def run_pasr(pasr_input, mech_filename, pasr_output_file):
         if pasr_output_file:
             np.save(pasr_output_file, state_data)
     return state_data
+
 
 def write_timer():
     with open('out/timer.h', 'w') as file:
@@ -126,7 +129,8 @@ double GetTimer()
 
 #endif // TIMER_H
         """
-            )
+)
+
 
 def write_cuda_reader(file):
     file.write(
@@ -191,7 +195,8 @@ def write_cuda_reader(file):
     return padded;
 }
     """
-    )
+)
+
 
 def write_c_reader(file):
     file.write(
@@ -256,6 +261,7 @@ def write_c_reader(file):
     """
     )
 
+
 def write_tc_tester(file, path, mechfile, thermofile):
     the_file = path + "data.bin"
     if thermofile == None:
@@ -277,7 +283,7 @@ def write_tc_tester(file, path, mechfile, thermofile):
       char mechfile[100] = "{}";
       char thermofile[100] = "{}";
       """.format(mechfile, thermofile)
-        )
+    )
     file.write(
     """
       int num_odes = 1;
@@ -299,8 +305,8 @@ def write_tc_tester(file, path, mechfile, thermofile):
 
       /* Initialize TC library */
       int withtab = 0;
-      TC_initChem( mechfile, thermofile, withtab, 1.0) ; 
-      
+      TC_initChem( mechfile, thermofile, withtab, 1.0) ;
+
       double jac[NSP * NSP] = {0};
       StartTimer();
       for(int tid = 0; tid < num_odes; ++tid)
@@ -316,6 +322,7 @@ def write_tc_tester(file, path, mechfile, thermofile):
     }
     """
     )
+
 
 def write_c_tester(file, path):
     the_file = path + "data.bin"
@@ -339,7 +346,8 @@ def write_c_tester(file, path):
     )
     file.write("""
         read_initial_conditions("{}", num_odes, &y_host, &var_host);
-        """.format(the_file))
+        """.format(the_file)
+        )
     file.write(
     """
         double jac[NSP * NSP] = {0};
@@ -355,7 +363,9 @@ def write_c_tester(file, path):
         return 0;
     }
     """
-        )
+    )
+
+
 def write_cuda_tester(file, path):
     the_file = path + "data.bin"
     file.write(
@@ -378,7 +388,7 @@ def write_cuda_tester(file, path):
 
     #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
     #define GRID_SIZE (blockDim.x * gridDim.x)
-    __global__ 
+    __global__
     void jac_driver(int NUM, double* pres, double* y)
     {
         if (T_ID < NUM)
@@ -451,9 +461,10 @@ def write_cuda_tester(file, path):
     """
     )
 
+
 def check_step_file(filename, steplist):
     #checks file for existing data
-    #and returns number of runs left to do 
+    #and returns number of runs left to do
     #for each # of does in steplist
     runs = {}
     for step in steplist:
@@ -475,6 +486,7 @@ def check_step_file(filename, steplist):
         return runs
     except:
         return runs
+
 
 def check_file(filename):
     #checks file for existing data
@@ -504,6 +516,7 @@ cmd_compile = dict(c='gcc',
                    cuda='nvcc'
                    )
 
+
 # Flags based on language
 flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                 '-fopenmp'],
@@ -511,16 +524,19 @@ flags = dict(c=['-std=c99', '-O3', '-mtune=native',
              cuda=['-O3', '-arch=sm_20',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
-                   '-dc'])
+                   '-dc']
+             )
 
 libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             cuda=['-arch=sm_20'],
-            icc=['-m64', '-ipo', '-lm', '-std=c99'])
+            icc=['-m64', '-ipo', '-lm', '-std=c99']
+            )
 
 mechanism_dir = '/home/nick/mechs/'
 mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2therm.dat'},
                   {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
-                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}]
+                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}
+                  ]
 
 pressure_list = [1, 10, 25]
 temp_list = [400, 600, 800]
@@ -567,7 +583,7 @@ for mechanism in mechanism_list:
     subprocess.check_call(['mkdir', '-p', test_dir])
     #get input
     pasr_input = pasr.parse_input_file(home + mechanism['input'])
-    
+
     with open("test/data.bin", "wb") as file:
         pass
 
@@ -580,10 +596,13 @@ for mechanism in mechanism_list:
             pasr_input['pressure'] = pressure
             pasr_input['temperature'] = temperature
             #pasr_input['premixed'] = premix
-            state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'], 'pasr_out_{}.npy'.format(index))
-            state_data = state_data.reshape(state_data.shape[0] * state_data.shape[1],
-                                state_data.shape[2]
-                                )
+            state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'],
+                                  'pasr_out_{}.npy'.format(index)
+                                  )
+            state_data = state_data.reshape(state_data.shape[0] *
+                                            state_data.shape[1],
+                                            state_data.shape[2]
+                                            )
 
             with open("test/data.bin", "ab") as file:
                 state_data.tofile(file)
@@ -606,7 +625,9 @@ for mechanism in mechanism_list:
             if num_completed >= repeats:
                 continue
             create_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
+                            optimize_cache=opt, multi_thread=12,
+                            build_path=build_dir
+                            )
 
             #now we need to write the reader and the tester
             with open(build_dir + 'read_initial_conditions.c', 'w') as file:
@@ -696,7 +717,9 @@ for mechanism in mechanism_list:
             if num_completed >= repeats:
                 continue
             create_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
+                            optimize_cache=opt, multi_thread=12,
+                            build_path=build_dir
+                            )
 
             #now we need to write the reader and the tester
             with open(build_dir + 'read_initial_conditions.c', 'w') as file:
@@ -741,7 +764,9 @@ for mechanism in mechanism_list:
                 try:
                     subprocess.check_call(args)
                 except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
+                    print('Error: compilation failed for ' + f +
+                          utils.file_ext['c']
+                          )
                     return -1
                 return 0
 
@@ -768,7 +793,8 @@ for mechanism in mechanism_list:
                 for i in range(repeats - num_completed):
                     print(i, '/', repeats - num_completed)
                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                     str(num_conditions)], stdout=file)
+                                          str(num_conditions)], stdout=file
+                                          )
 
     #do cuda
     #next we need to start writing the jacobians
@@ -793,10 +819,11 @@ for mechanism in mechanism_list:
                 continue
 
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, 
+                            optimize_cache=opt, multi_thread=12,
                             build_path=build_dir,
                             no_shared=not smem,
-                            num_blocks=8, num_threads=64)
+                            num_blocks=8, num_threads=64
+                            )
 
             with open('out/regcount') as file:
                 regcount = int(file.readline())
@@ -852,7 +879,7 @@ for mechanism in mechanism_list:
                     print('Error: compilation failed for ' + f + utils.file_ext['cuda'])
                     return -1
                 return 0
-            
+
             pool = multiprocessing.Pool()
             results = pool.map(compiler, files)
             pool.close()
@@ -902,10 +929,11 @@ for mechanism in mechanism_list:
                 continue
 
             create_jacobian('cuda', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, 
+                            optimize_cache=opt, multi_thread=12,
                             build_path=build_dir,
                             no_shared=not smem,
-                            num_blocks=8, num_threads=64)
+                            num_blocks=8, num_threads=64
+                            )
 
             with open('out/regcount') as file:
                 regcount = int(file.readline())
@@ -958,7 +986,7 @@ for mechanism in mechanism_list:
                     print('Error: compilation failed for ' + f + utils.file_ext['cuda'])
                     return -1
                 return 0
-            
+
             pool = multiprocessing.Pool()
             results = pool.map(compiler, files)
             pool.close()

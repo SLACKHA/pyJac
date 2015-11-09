@@ -5,8 +5,8 @@ from Cython.Distutils import build_ext
 import numpy
 import os
 
-sources = ['pyjacob_wrapper.pyx', 
-		       'out/dydt.c', 
+sources = ['pyjacob_wrapper.pyx',
+           'out/dydt.c',
            'out/rxn_rates.c',
            'out/rxn_rates_pres_mod.c',
            'out/spec_rates.c',
@@ -23,15 +23,15 @@ if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_c'):
     sources += ['out/jacobs/' + f for f in files]
     includes += ['out/jacobs/']
 
-ext_modules=[Extension("pyjacob", 
-	sources=sources,
-    include_dirs=includes + [numpy.get_include()],
-    extra_compile_args=['-frounding-math', '-fsignaling-nans'],
-    language='c',
-    )]
+ext_modules=[Extension("pyjacob",
+     sources=sources,
+     include_dirs=includes + [numpy.get_include()],
+     extra_compile_args=['-frounding-math', '-fsignaling-nans'],
+     language='c',
+     )]
 
 setup(
-	name='pyjacob',
-	ext_modules=ext_modules,
+    name='pyjacob',
+    ext_modules=ext_modules,
     cmdclass={'build_ext': build_ext}
 )

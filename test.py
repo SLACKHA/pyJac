@@ -157,10 +157,12 @@ class analytic_eval_jacob:
         fd = np.array(arr[0])
         return fd.T.flatten()
 
+
 def is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
+
 
 def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
     # Run PaSR to get data
@@ -183,6 +185,7 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
     if pasr_output_file:
         np.save(pasr_output_file, state_data)
     return state_data
+
 
 class cpyjac_evaluator(object):
     def __copy(self, B):
@@ -312,6 +315,7 @@ class cpyjac_evaluator(object):
     def update(self, index):
         self.index = index
 
+
 class cupyjac_evaluator(cpyjac_evaluator):
     def __init__(self, build_dir, gas, state_data):
         super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
@@ -382,6 +386,55 @@ class cupyjac_evaluator(cpyjac_evaluator):
         jacob[:] = self.test_jacob[self.index, :]
 
 
+class tchem_evaluator(cpyjac_evaluator):
+    def __init__(self, build_dir, gas, state_data, mechfile, thermofile,
+                 module_name='py_tchem', filename='mechanism.h'
+                 ):
+        self.tchem = __import__(module_name)
+
+        if thermofile == None:
+            thermofile = mechfile
+
+        with open(os.path.join(build_dir, filename), 'r') as file:
+            last_spec = None
+            for line in file.readlines():
+                match = re.search(r'^//last_spec (\d+)$', line)
+                if match:
+                    last_spec = int(match.group(1))
+                    break
+
+        self.last_spec = last_spec
+        self.y_mask = np.array([0] + [x + 2 for x in range(gas.n_species) if x != last_spec])
+        def czeros(shape):
+            arr = np.zeros(shape)
+            return arr.flatten(order='c')
+        def reshaper(arr, shape, reorder=None):
+            arr = arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
+            if reorder is not None:
+                arr = arr[:, reorder]
+            return arr
+
+        states = state_data[:, 1:]
+        num_cond = states.shape[0]
+        #init vectors
+        test_jacob = czeros((num_cond,(gas.n_species) * (gas.n_species)))
+
+        pres = states[:, 1].flatten(order='c')
+        y_dummy = states[:, [x for x in self.y_mask]
+                         ].flatten(order='f').astype(np.dtype('d'), order='c')
+
+        self.tchem.py_eval_jacobian(mechfile, thermofile, num_cond, 0.,
+                                    pres, y_dummy, test_jacob
+                                    )
+
+        #reshape for comparison
+        self.test_jacob = reshaper(test_jacob, (num_cond,
+                                   (gas.n_species) * (gas.n_species))
+                                   )
+        self.index = 0
+
+    def eval_jacobian(self, jacob):
+        jacob[:] = self.test_jacob[self.index, :]
 
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
@@ -431,9 +484,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
+    tchem_flag = True
     if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
+        ck_mech_filename = mech_filename
         mech_filename = convert_mech(mech_filename, therm_filename)
+    else:
+        tchem_flag = False
+        print('TChem validation disabled; '
+              'not compatible with Cantera mechanism.'
+              )
 
     #write and compile the dydt python wrapper
     try:
@@ -455,7 +515,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                'pyjacob_cuda_setup.py', 'build_ext', '--inplace'
                                ])
 
-    #get the cantera object
+    try:
+        os.remove('py_tchem.so')
+    except:
+        pass
+    if tchem_flag:
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
+                               'pytchem_setup.py', 'build_ext', '--inplace'
+                               ])
+
+    # get the cantera object
     gas = ct.Solution(mech_filename)
     pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
@@ -465,20 +534,29 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # Need to get reversible reactions and those for which
     # pressure modification applies.
     idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
-    idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if
-                is_pdep(rxn)
-                ]
+    idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if is_pdep(rxn)]
     # Index of element in idx_pmod that corresponds to reversible reaction
     idx_pmod_rev = [
-        i for i, idx in enumerate(idx_pmod) if gas.reaction(idx).reversible]
+        i for i, idx in enumerate(idx_pmod) if gas.reaction(idx).reversible
+        ]
     # Index of reversible reaction that also has pressure dependent
     # modification
-    idx_rev_pmod = [i for i, idx in enumerate(idx_rev) if
-                    isinstance(gas.reaction(idx), ct.ThreeBodyReaction) or
-                    isinstance(gas.reaction(idx), ct.FalloffReaction) or
-                    isinstance(
-        gas.reaction(idx), ct.ChemicallyActivatedReaction)
-    ]
+    idx_rev_pmod = [
+                i for i, idx in enumerate(idx_rev) if
+                isinstance(gas.reaction(idx), ct.ThreeBodyReaction) or
+                isinstance(gas.reaction(idx), ct.FalloffReaction) or
+                isinstance(gas.reaction(idx), ct.ChemicallyActivatedReaction)
+                ]
+
+    # Check mechanism for Plog or Chebyshev reactions... if any, can't
+    # compare Jacobian to TChem
+    if any([isinstance(rxn, ct.PlogReaction) or
+            isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
+            ]):
+        print('TChem comparison disabled; '
+              'not compatible with Plog or Chebyshev reactions.'
+              )
+        tchem_flag = False
 
     if pasr_output_file:
         #load old test data
@@ -524,6 +602,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     else:
         pyjacob = cpyjac_evaluator(build_dir, gas)
 
+    tchem_jac = None
+    if tchem_flag:
+        tchem_jac = tchem_evaluator(build_dir, gas, state_data,
+                                    ck_mech_filename, therm_filename
+                                    )
+
     num_trials = len(state_data)
 
     err_dydt = np.zeros(num_trials)
@@ -533,10 +617,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_thr = np.zeros(num_trials)
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
+    err_jac_tchem = np.zeros(num_trials)
 
     for i, state in enumerate(state_data):
         #update index in case we're using cuda
         pyjacob.update(i)
+
+        if tchem_flag:
+            tchem_jac.update(i)
 
         temp = state[1]
         pres = state[2]
@@ -706,9 +794,29 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('L2 norm difference of "zero" Jacobian: '
               '{:.2e}'.format(err))
 
+        # Compare against TChem, if enabled
+        if tchem_flag:
+            tchem_jacob = np.zeros(gas.n_species * gas.n_species)
+            tchem_jac.eval_jacobian(tchem_jacob)
+            non_zero = np.where(abs(tchem_jacob) > 1.e-30)[0]
+
+            err = abs((test_jacob[non_zero] - tchem_jacob[non_zero]) /
+                      tchem_jacob[non_zero]
+                      )
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('Max difference with non-zero TChem Jacobian: {:.2e}% '
+                  '@ index {}'.format(np.max(err) * 100., loc))
+            print('L2 norm of relative difference with TChem Jacobian: '
+                  '{:.2e} %'.format(err))
+            err_jac_tchem[i] = err
+
+
     # Save all error arrays
-    np.savez('error_arrays.npz', err_dydt=err_dydt, err_jac_norm=err_jac_norm,
-              err_jac=err_jac, err_jac_thr=err_jac_thr)
+    np.savez('error_arrays.npz',
+             err_dydt=err_dydt, err_jac_norm=err_jac_norm,
+             err_jac=err_jac, err_jac_thr=err_jac_thr
+             )
 
     # Cleanup all compiled files.
     for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
@@ -724,6 +832,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         for name in dirs:
             os.rmdir(os.path.join(root, name))
     os.rmdir('./build')
+
+    # Cleanup TChem periodic table file
+    if tchem_flag:
+        os.remove('periodictable.dat')
 
     return 0
 

@@ -661,26 +661,43 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         ajac = analytic_eval_jacob(pres, pyjacob.fwd_spec_map)
 
-        #init vectors
+        gas.TPY = temp, pres, mass_frac
+
+        #get conc
         test_conc = np.zeros(gas.n_species)
+        pyjacob.eval_conc(temp, pres, mass_frac, test_conc)
+
+        #get reaction rates of production
         test_fwd_rates = np.zeros(gas.n_reactions)
         test_rev_rates = np.zeros(len(idx_rev))
         test_pres_mod = np.zeros(len(idx_pmod))
+        pyjacob.eval_rxn_rates(temp, pres, test_conc,
+                                  test_fwd_rates, test_rev_rates
+                                  )
+        pyjacob.get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
+
+        # Species production rates
         test_spec_rates = np.zeros(gas.n_species)
+        pyjacob.eval_spec_rates(test_fwd_rates, test_rev_rates,
+                                test_pres_mod, test_spec_rates
+                                )
+
+        # Derivative source terms terms
         test_dydt = np.zeros(gas.n_species + 1)
+        y_dummy = np.hstack((temp, mass_frac))
+        pyjacob.dydt(0, pres, y_dummy, test_dydt)
+        ode = ReactorConstPres(gas)
+
+        # Jacobian matrix
         test_jacob = np.zeros((gas.n_species) * (gas.n_species))
+        pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
+        jacob = ajac.eval_jacobian(gas, 6)
+
 
         print()
         print('Testing condition {} / {}'.format(i + 1, num_trials))
 
-        gas.TPY = temp, pres, mass_frac
-
-        # Derivative source term
-        ode = ReactorConstPres(gas)
-
-        #get conc
-        pyjacob.eval_conc(temp, pres, mass_frac, test_conc)
-
+        # Calculate error in concentrations
         non_zero = np.where(test_conc > 0.)[0]
         err = abs((test_conc[non_zero] - gas.concentrations[non_zero]) /
                   gas.concentrations[non_zero]
@@ -691,12 +708,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
         print('Max error in non-zero concentration: {:.2e} % @ species {}'
             .format(max_err * 100., loc))
-
-        #get rates
-        pyjacob.eval_rxn_rates(temp, pres, test_conc,
-                                  test_fwd_rates, test_rev_rates
-                                  )
-        pyjacob.get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
@@ -733,11 +744,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
                   )
 
-        # Species production rates
-        pyjacob.eval_spec_rates(test_fwd_rates, test_rev_rates,
-                                test_pres_mod, test_spec_rates
-                                )
-
+        # Calculate error in species net production rates
         non_zero = np.where(test_spec_rates != 0.)[0]
         zero = np.where(test_spec_rates == 0.)[0]
         err = abs((test_spec_rates[non_zero] -
@@ -759,8 +766,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             'L2 norm difference of "zero" net production rates: {:.2e}'
             .format(err))
 
-        y_dummy = np.hstack((temp, mass_frac))
-        pyjacob.dydt(0, pres, y_dummy, test_dydt)
+        # Calculate error in derivative source terms
 
         #need to mask the resulting dydt vectors to avoid comparison
         #of the new last species
@@ -784,11 +790,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err_dydt_zero[i] = err
         print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
 
-        pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
+        # Calculate error in Jacobian matrix
         non_zero = np.where(abs(test_jacob) > 1.e-30)[0]
         zero = np.where(test_jacob == 0.)[0]
-
-        jacob = ajac.eval_jacobian(gas, 6)
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )

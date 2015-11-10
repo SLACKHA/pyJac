@@ -944,9 +944,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             os.rmdir(os.path.join(root, name))
     os.rmdir('./build')
 
-    # Cleanup TChem periodic table file
+    # Cleanup TChem crud
     if tchem_flag:
-        os.remove('periodictable.dat')
+        for f in ['periodictable.dat', 'kmod.echo', 'kmod.err', 'kmod.list',
+                  'kmod.out', 'math_elem.dat', 'math_falloff.dat',
+                  'math_nasapol7.dat', 'math_reac.dat', 'math_spec.dat',
+                  'math_trdbody.dat']:
+            os.remove(f)
 
     return 0
 

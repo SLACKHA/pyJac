@@ -395,21 +395,23 @@ class tchem_evaluator(cpyjac_evaluator):
         if thermofile == None:
             thermofile = mechfile
 
-        with open(os.path.join(build_dir, filename), 'r') as file:
-            last_spec = None
-            for line in file.readlines():
-                match = re.search(r'^//last_spec (\d+)$', line)
-                if match:
-                    last_spec = int(match.group(1))
-                    break
+#        with open(os.path.join(build_dir, filename), 'r') as file:
+#            last_spec = None
+#            for line in file.readlines():
+#                match = re.search(r'^//last_spec (\d+)$', line)
+#                if match:
+#                    last_spec = int(match.group(1))
+#                    break
 
-        self.last_spec = last_spec
-        self.y_mask = np.array([0] + [x + 2 for x in range(gas.n_species) if x != last_spec])
+#        self.last_spec = last_spec
+#        self.y_mask = np.array([0] + [x + 2 for x in range(gas.n_species) if x != last_spec])
+        # TChem needs array of full species mass fractions
+        self.y_mask = np.array([0] + [x + 2 for x in range(gas.n_species)])
         def czeros(shape):
             arr = np.zeros(shape)
             return arr.flatten(order='c')
         def reshaper(arr, shape, reorder=None):
-            arr = arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
+            arr = arr.reshape(shape, order='c').astype(np.dtype('d'), order='c')
             if reorder is not None:
                 arr = arr[:, reorder]
             return arr
@@ -417,23 +419,50 @@ class tchem_evaluator(cpyjac_evaluator):
         states = state_data[:, 1:]
         num_cond = states.shape[0]
         #init vectors
-        test_jacob = czeros((num_cond,(gas.n_species) * (gas.n_species)))
+        test_conc = czeros((num_cond, gas.n_species))
+        test_fwd_rates = czeros((num_cond,gas.n_reactions))
+        test_rev_rates = czeros((num_cond,gas.n_reactions))
+        test_spec_rates = czeros((num_cond,gas.n_species))
+        test_dydt = czeros((num_cond, gas.n_species + 1))
+        test_jacob = czeros((num_cond, (gas.n_species) * (gas.n_species)))
 
         pres = states[:, 1].flatten(order='c')
         y_dummy = states[:, [x for x in self.y_mask]
-                         ].flatten(order='f').astype(np.dtype('d'), order='c')
+                         ].flatten(order='c').astype(np.dtype('d'), order='c')
 
-        self.tchem.py_eval_jacobian(mechfile, thermofile, num_cond, 0.,
-                                    pres, y_dummy, test_jacob
+        self.tchem.py_eval_jacobian(mechfile, thermofile, num_cond,
+                                    pres, y_dummy, test_conc, test_fwd_rates,
+                                    test_rev_rates, test_spec_rates,
+                                    test_dydt, test_jacob
                                     )
 
         #reshape for comparison
+        self.test_conc = reshaper(test_conc, (num_cond, gas.n_species))
+        self.test_fwd_rates = reshaper(test_fwd_rates,
+                                       (num_cond, gas.n_reactions)
+                                       )
+        self.test_rev_rates = reshaper(test_rev_rates,
+                                       (num_cond, gas.n_reactions)
+                                       )
+        self.test_spec_rates = reshaper(test_spec_rates,
+                                        (num_cond, gas.n_species)
+                                        )
+        self.test_dydt = reshaper(test_dydt, (num_cond, gas.n_species + 1))
         self.test_jacob = reshaper(test_jacob, (num_cond,
                                    (gas.n_species) * (gas.n_species))
                                    )
         self.index = 0
 
-    def eval_jacobian(self, jacob):
+    def get_conc(self, conc):
+        conc[:] = self.test_conc[self.index, :]
+    def get_rxn_rates(self, fwd_rates, rev_rates):
+        fwd_rates[:] = self.test_fwd_rates[self.index, :]
+        rev_rates[:] = self.test_rev_rates[self.index, :]
+    def get_spec_rates(self, spec_rates):
+        spec_rates[:] = self.test_spec_rates[self.index, :]
+    def get_dydt(self, dydt):
+        dydt[:] = self.test_dydt[self.index, :-1]
+    def get_jacobian(self, jacob):
         jacob[:] = self.test_jacob[self.index, :]
 
 
@@ -796,17 +825,95 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         # Compare against TChem, if enabled
         if tchem_flag:
+            tchem_conc = np.zeros(gas.n_species)
+            tchem_jac.get_conc(tchem_conc)
+            non_zero = np.where(tchem_conc > 0.)[0]
+            err = abs((test_conc[non_zero] - tchem_conc[non_zero]) /
+                      tchem_conc[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm difference with TChem concentration: {:.2e} %'.format(err))
+            print('Max difference with TChem concentration: {:.2e} % @ species {}'
+                .format(max_err * 100., loc))
+
+            tchem_fwd_rates = np.zeros(gas.n_reactions)
+            tchem_rev_rates = np.zeros(gas.n_reactions)
+            tchem_jac.get_rxn_rates(tchem_fwd_rates, tchem_rev_rates)
+            non_zero = np.where(tchem_fwd_rates > 0.)[0]
+            err = abs((test_fwd_rates[non_zero] - tchem_fwd_rates[non_zero]) /
+                      tchem_fwd_rates[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm difference with TChem forward reaction rates: '
+                  '{:.2e}%'.format(err)
+                  )
+            print('Max difference with TChem forward reaction rates: '
+                  '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+                  )
+
+            if idx_rev:
+                non_zero = np.where(tchem_rev_rates > 0.)[0]
+                err = abs((test_rev_rates[non_zero] -
+                          (tchem_rev_rates[idx_rev])[non_zero]) /
+                          (tchem_rev_rates[idx_rev])[non_zero]
+                          )
+                max_err = np.max(err)
+                loc = non_zero[np.argmax(err)]
+                err = np.linalg.norm(err) * 100.
+                print('L2 norm difference with TChem reverse reaction rates: '
+                      '{:.2e}%'.format(err)
+                      )
+                print('Max difference with TChem reverse reaction rates: '
+                      '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+                      )
+
+            tchem_spec_rates = np.zeros(gas.n_species)
+            tchem_jac.get_spec_rates(tchem_spec_rates)
+            non_zero = np.where(tchem_spec_rates != 0.)[0]
+            err = abs((test_spec_rates[non_zero] - tchem_spec_rates[non_zero])
+                       / tchem_spec_rates[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm relative difference with TChem net production rates: '
+                  '{:.2e} %'.format(err)
+                  )
+            print('Max difference with TChem net production rates: {:.2e}% '
+                  '@ species {}'.format(max_err * 100., loc)
+                  )
+
+            tchem_dydt = np.zeros(gas.n_species)
+            tchem_jac.get_dydt(tchem_dydt)
+            non_zero = np.where(tchem_dydt != 0.)[0]
+            err = abs((test_dydt[non_zero] - tchem_dydt[non_zero]) /
+                       tchem_dydt[non_zero]
+                      )
+            max_err = np.max(err)
+            loc = non_zero[np.argmax(err)]
+            err = np.linalg.norm(err) * 100.
+            print('L2 norm relative difference with TChem dydt: '
+                  '{:.2e} %'.format(err)
+                  )
+            print('Max difference with TChem dydt: {:.2e}% '
+                  '@ species {}'.format(max_err * 100., loc)
+                  )
+
             tchem_jacob = np.zeros(gas.n_species * gas.n_species)
-            tchem_jac.eval_jacobian(tchem_jacob)
+            tchem_jac.get_jacobian(tchem_jacob)
             non_zero = np.where(abs(tchem_jacob) > 1.e-30)[0]
 
             err = abs((test_jacob[non_zero] - tchem_jacob[non_zero]) /
                       tchem_jacob[non_zero]
                       )
             loc = non_zero[np.argmax(err)]
-            err = np.linalg.norm(err) * 100.
             print('Max difference with non-zero TChem Jacobian: {:.2e}% '
                   '@ index {}'.format(np.max(err) * 100., loc))
+            err = np.linalg.norm(err) * 100.
             print('L2 norm of relative difference with TChem Jacobian: '
                   '{:.2e} %'.format(err))
             err_jac_tchem[i] = err

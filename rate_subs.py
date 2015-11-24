@@ -1375,6 +1375,8 @@ def write_chem_utils(path, lang, specs):
                '\n'
                '{0}void eval_conc (const double, const double, '
                'const double*, double*, double*, double*, double*);\n'
+               '{0}void eval_conc_rho (const double, const double, '
+               'const double*, double*, double*, double*, double*);\n'
                '{0}void eval_h (const double, double*);\n'
                '{0}void eval_u (const double, double*);\n'
                '{0}void eval_cv (const double, double*);\n'

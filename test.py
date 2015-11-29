@@ -517,7 +517,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         # Chemkin format; need to convert first.
         ck_mech_filename = mech_filename
         mech_filename = convert_mech(mech_filename, therm_filename)
-    else if tchem_flag:
+    elif tchem_flag:
         tchem_flag = False
         print('TChem validation disabled; '
               'not compatible with Cantera mechanism.'

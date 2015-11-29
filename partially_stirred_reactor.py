@@ -677,6 +677,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     times = times[:i_step + 1]
     temp_mean = temp_mean[:i_step + 1]
     particle_data = particle_data[:i_step + 1, :, :]
+
     return particle_data
 
 
@@ -747,20 +748,25 @@ if __name__ == "__main__":
                         )
     parser.add_argument('-m', '--mech',
                         type=str, required=True,
-                        help='Mechanism input file in either Cantera or '
-                             'Chemkin format.'
+                        help='Mechanism input file in either Cantera format.'
                         )
     parser.add_argument('-t', '--thermo',
                         type=str, required=False,
                         help='Thermodynamic input file, optional.'
                         )
+    parser.add_argument('-o', '--output',
+                        type=str, default='pasr_output.npy',
+                        help='PaSR results file (.npy).'
+                        )
     args = parser.parse_args()
 
     inputs = parse_input_file(args.input)
-    run_simulation(args.mech, inputs['case'], inputs['temperature'],
-                   inputs['pressure'], inputs['equivalence ratio'],
-                   inputs['fuel'], inputs['oxidizer'],
-                   inputs['complete products'], inputs['number of particles'],
-                   inputs['residence time'], inputs['mixing time'],
-                   inputs['pairing time'], inputs['number of residence times']
-                   )
+    particle_data = run_simulation(
+        args.mech, inputs['case'], inputs['temperature'],
+        inputs['pressure'], inputs['equivalence ratio'],
+        inputs['fuel'], inputs['oxidizer'],
+        inputs['complete products'], inputs['number of particles'],
+        inputs['residence time'], inputs['mixing time'],
+        inputs['pairing time'], inputs['number of residence times']
+        )
+    np.save(args.output, particle_data)

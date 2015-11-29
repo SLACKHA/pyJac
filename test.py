@@ -469,7 +469,7 @@ class tchem_evaluator(cpyjac_evaluator):
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
          seed=None, pasr_output_file=None, last_spec=None,
-         cache_optimization=False, no_shared=False):
+         cache_optimization=False, no_shared=False, tchem_flag=False):
     """
     """
 
@@ -513,12 +513,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
-    tchem_flag = True
     if not mech_filename.endswith(tuple(['.cti', '.xml'])):
         # Chemkin format; need to convert first.
         ck_mech_filename = mech_filename
         mech_filename = convert_mech(mech_filename, therm_filename)
-    else:
+    else if tchem_flag:
         tchem_flag = False
         print('TChem validation disabled; '
               'not compatible with Cantera mechanism.'
@@ -1011,8 +1010,12 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true',
                         help='Use to disable shared memory usage in pyJac (CUDA only)')
+    parser.add_argument('-tc', '--tchem',
+                        default=False,
+                        action='store_true',
+                        help='Activate TChem comparison (false by default).')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
          args.generate_jacob, args.seed, args.pasr_output,
-         args.last_spec, args.cache_optimization, args.no_shared
+         args.last_spec, args.cache_optimization, args.no_shared, args.tchem
          )

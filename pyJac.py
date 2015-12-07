@@ -1414,7 +1414,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         line += ', const double* ' + rate
     if this_pdep and this_pdep_has_thd_eff:
         line += ', const double m'
-    line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac' 
+    line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac'
     if has_nsp:
         line += ', double* J_nplusone, double* J_nplusjplus'
     line += ') {'
@@ -2564,7 +2564,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
         If specified, the species to assign to the last index.
         Typically should be N2, Ar, He or another inert bath gas
     skip_jac : bool, optional
-        If True, only the reaction raet subroutines will be generated
+        If True, only the reaction rate subroutines will be generated
 
     Returns
     -------

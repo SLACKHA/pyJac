@@ -395,16 +395,6 @@ class tchem_evaluator(cpyjac_evaluator):
         if thermofile == None:
             thermofile = mechfile
 
-#        with open(os.path.join(build_dir, filename), 'r') as file:
-#            last_spec = None
-#            for line in file.readlines():
-#                match = re.search(r'^//last_spec (\d+)$', line)
-#                if match:
-#                    last_spec = int(match.group(1))
-#                    break
-
-#        self.last_spec = last_spec
-#        self.y_mask = np.array([0] + [x + 2 for x in range(gas.n_species) if x != last_spec])
         # TChem needs array of full species mass fractions
         self.y_mask = np.array([0] + [x + 2 for x in range(gas.n_species)])
         def czeros(shape):
@@ -470,7 +460,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
          seed=None, pasr_output_file=None, last_spec=None,
          cache_optimization=False, no_shared=False, tchem_flag=False):
-    """
+    """Compares pyJac results against Cantera (and optionally TChem) using
+    state data from PaSR simulations.
+
     """
 
     if seed is not None:
@@ -952,6 +944,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             os.remove(f)
 
     return 0
+
 
 if __name__ == '__main__':
     parser = ArgumentParser(

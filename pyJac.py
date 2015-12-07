@@ -2617,7 +2617,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
             if match is not None:
                 last_spec = match
                 break
-        print('Default last species {} found.'.format(specs[last_spec].name))
+        if last_spec is not None:
+            print('Default last species {} found.'.format(specs[last_spec].name))
     if last_spec is None:
         print('Warning: Neither a user specified or default last species '
               'could be found. Proceeding using the last species in the '

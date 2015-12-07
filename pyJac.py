@@ -2026,8 +2026,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             nu = utils.get_nu(k_sp, rxn)
             if nu == 0:
                 continue
-            if k_sp + 1 == num_s:
-                J_nplusone_touched = True
             if lang in ['c', 'cuda']:
                 j_str = '{}J_nplusone'.format('*' if do_unroll else '') if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1)
                 line += (j_str +
@@ -2048,7 +2046,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                                                        sp_k.mw)
                          )
             file.write(line + utils.line_end[lang])
-            touched[k_sp + 1] = True
+            if k_sp + 1 == num_s:
+                J_nplusone_touched = True
+            else:
+                touched[k_sp + 1] = True
             if lang in ['c', 'cuda']:
                 if k_sp + 1 not in sparse_indicies:
                     sparse_indicies.append(k_sp + 1)

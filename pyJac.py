@@ -2026,8 +2026,6 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             nu = utils.get_nu(k_sp, rxn)
             if nu == 0:
                 continue
-            if k_sp + 1 == num_s:
-                J_nplusone_touched = True
             if lang in ['c', 'cuda']:
                 j_str = '{}J_nplusone'.format('*' if do_unroll else '') if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1)
                 line += (j_str +
@@ -2048,7 +2046,10 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                                                        sp_k.mw)
                          )
             file.write(line + utils.line_end[lang])
-            touched[k_sp + 1] = True
+            if k_sp + 1 == num_s:
+                J_nplusone_touched = True
+            else:
+                touched[k_sp + 1] = True
             if lang in ['c', 'cuda']:
                 if k_sp + 1 not in sparse_indicies:
                     sparse_indicies.append(k_sp + 1)
@@ -2589,6 +2590,14 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     else:
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
+    if not specs:
+        print('No species found in file: {}'.format(mech_name))
+        sys.exit(3)
+
+    if not reacs:
+        print('No reactions found in file: {}'.format(mech_name))
+        sys.exit(3)
+
     #check to see if the last_spec is specified
     if last_spec is not None:
         #find the index if possible
@@ -2617,7 +2626,8 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
             if match is not None:
                 last_spec = match
                 break
-        print('Default last species {} found.'.format(specs[last_spec].name))
+        if last_spec is not None:
+            print('Default last species {} found.'.format(specs[last_spec].name))
     if last_spec is None:
         print('Warning: Neither a user specified or default last species '
               'could be found. Proceeding using the last species in the '

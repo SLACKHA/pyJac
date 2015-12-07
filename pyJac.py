@@ -2589,6 +2589,14 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     else:
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 
+    if specs is None:
+        print('No species found in file: {}'.format(mech_name))
+        sys.exit(3)
+
+    if reacs is None:
+        print('No reactions found in file: {}'.format(mech_name))
+        sys.exit(3)
+
     #check to see if the last_spec is specified
     if last_spec is not None:
         #find the index if possible

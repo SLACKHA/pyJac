@@ -23,7 +23,7 @@ import mech_auxiliary as aux
 import shared_memory as shared
 
 
-def rxn_rate_const(idx, A, b, E):
+def rxn_rate_const(A, b, E):
     """Returns line with reaction rate calculation (after = sign).
 
     Notes
@@ -49,8 +49,6 @@ def rxn_rate_const(idx, A, b, E):
 
     Parameters
     ----------
-    idx : int
-        Index of reaction
     A : float
         Arrhenius pre-exponential coefficient
     b : float
@@ -137,7 +135,7 @@ def rxn_rate_const(idx, A, b, E):
                 line += ' * logT - ({:.16e} / T))'.format(E)
 
     else:
-      raise NotImplementedError('A = 0 for reaction ' + str(idx))
+      raise NotImplementedError
 
     return line
 
@@ -461,7 +459,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
 
         # if reversible, save forward rate constant for use
         if rxn.rev and not rxn.rev_par and not (rxn.cheb or rxn.plog):
-            line = ('  kf = ' + rxn_rate_const(i_rxn, rxn.A, rxn.b, rxn.E) +
+            line = ('  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E) +
                     utils.line_end[lang]
                     )
             file.write(line)
@@ -471,7 +469,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             # Special forward rate evaluation for Plog reacions
             vals = rxn.plog_par[0]
             file.write('  if (pres <= {:.4e}) {{\n'.format(vals[0]))
-            line = ('    kf = ' + rxn_rate_const(i_rxn, vals[1], vals[2], vals[3]))
+            line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
             file.write(line + utils.line_end[lang])
 
             for idx, vals in enumerate(rxn.plog_par[:-1]):
@@ -482,11 +480,11 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
                 file.write(line)
 
                 line = ('    kf = log(' +
-                        rxn_rate_const(i_rxn, vals[1], vals[2], vals[3]) + ')'
+                        rxn_rate_const(vals[1], vals[2], vals[3]) + ')'
                         )
                 file.write(line + utils.line_end[lang])
                 line = ('    kf2 = log(' +
-                        rxn_rate_const(i_rxn, vals2[1], vals2[2], vals2[3]) + ')'
+                        rxn_rate_const(vals2[1], vals2[2], vals2[3]) + ')'
                         )
                 file.write(line + utils.line_end[lang])
 
@@ -499,7 +497,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
 
             vals = rxn.plog_par[-1]
             file.write('  }} else if (pres > {:.4e}) {{\n'.format(vals[0]))
-            line = ('    kf = ' + rxn_rate_const(i_rxn, vals[1], vals[2], vals[3]))
+            line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
             file.write(line + utils.line_end[lang])
             file.write('  }\n')
 
@@ -524,7 +522,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
         if (rxn.rev and not rxn.rev_par) or rxn.plog or rxn.cheb:
             line += 'kf'
         else:
-            line += rxn_rate_const(i_rxn, rxn.A, rxn.b, rxn.E)
+            line += rxn_rate_const(rxn.A, rxn.b, rxn.E)
 
         line += utils.line_end[lang]
         file.write(line)
@@ -701,7 +699,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             # rate constant
             if rxn.rev_par:
                 # explicit reverse Arrhenius parameters
-                line += rxn_rate_const(i_rxn, rxn.rev_par[0],
+                line += rxn_rate_const(rxn.rev_par[0],
                                        rxn.rev_par[1],
                                        rxn.rev_par[2]
                                        )
@@ -982,12 +980,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             # low-pressure limit rate
             line = '  k0 = '
             if reac.low:
-                line += rxn_rate_const(rind, reac.low[0],
+                line += rxn_rate_const(reac.low[0],
                                        reac.low[1],
                                        reac.low[2]
                                        )
             else:
-                line += rxn_rate_const(rind, reac.A, reac.b, reac.E)
+                line += rxn_rate_const(reac.A, reac.b, reac.E)
 
             line += utils.line_end[lang]
             file.write(line)
@@ -995,12 +993,12 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             # high-pressure limit rate
             line = '  kinf = '
             if reac.high:
-                line += rxn_rate_const(rind, reac.high[0],
+                line += rxn_rate_const(reac.high[0],
                                        reac.high[1],
                                        reac.high[2]
                                        )
             else:
-                line += rxn_rate_const(rind, reac.A, reac.b, reac.E)
+                line += rxn_rate_const(reac.A, reac.b, reac.E)
 
             line += utils.line_end[lang]
             file.write(line)

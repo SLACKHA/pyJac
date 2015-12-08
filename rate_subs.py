@@ -974,8 +974,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
                     elif sp[1] < 1.0:
                         line += ' - {}'.format(1.0 - sp[1])
                     line += ' * ' + get_array(lang, 'C', sp[0])
-
-            file.write(line + utils.line_end[lang])
+                file.write(line + utils.line_end[lang])
 
             # low-pressure limit rate
             line = '  k0 = '

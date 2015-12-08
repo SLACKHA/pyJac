@@ -495,9 +495,13 @@ def read_mech(mech_filename, therm_filename):
                             # Elementary reaction
                             par1 /= 1000. ** (reac_ord - 1.)
 
-                    reacs[-1].rev_par.append(par1)
-                    reacs[-1].rev_par.append(par2)
-                    reacs[-1].rev_par.append(par3)
+                    # Ensure nonzero reverse coefficients
+                    if par1 != 0.0:
+                        reacs[-1].rev_par.append(par1)
+                        reacs[-1].rev_par.append(par2)
+                        reacs[-1].rev_par.append(par3)
+                    else:
+                        reacs[-1].rev = False
 
                 elif aux == 'low':
                     line = line.replace('/', ' ')

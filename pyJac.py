@@ -805,7 +805,7 @@ def write_sri(file, lang):
 def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
     beta_0minf, E_0minf, k0kinf = get_infs(rxn)
     jline = utils.line_start + 'j_temp = (' + get_array(lang, 'pres_mod', pind)
-    jline += ' * ((' + ('-Pr' if rxn.high else '')  # high -> chem-activated bimolecular rxn
+    jline += ' * ((' + ('-Pr * ' if rxn.high else '')  # high -> chem-activated bimolecular rxn
 
     # dPr/dT
     jline += ('({:.4e} + ('.format(beta_0minf) +

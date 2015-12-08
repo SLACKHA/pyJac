@@ -842,7 +842,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                file.write('  double x;\n'
+                file.write('  double X;\n'
                            '\n'
                            )
         elif lang == 'cuda':
@@ -863,7 +863,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                file.write('  register double x;\n'
+                file.write('  register double X;\n'
                            '\n')
         elif lang == 'fortran':
             file.write('  ! pressure dependence variable declarations\n'

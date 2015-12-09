@@ -1368,16 +1368,18 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
     file.write(line)
 
 
-def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pdep_has_thd_eff, this_thd,
-                     this_troe, this_sri, this_cheb, cheb_dim, this_plog, no_shared,
-                     has_nsp
-                     ):
+def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
+                    this_thd, this_troe, this_sri, this_cheb, cheb_dim,
+                    this_plog, no_shared, has_nsp
+                    ):
     """
     Writes the header and definitions for of any of the various sub-functions
 
     Returns the opened file
     """
-    with open(os.path.join(path, 'jacob_' + str(number) + utils.header_ext[lang]), 'w') as file:
+    with open(os.path.join(path, 'jacob_' + str(number) +
+              utils.header_ext[lang]), 'w'
+              ) as file:
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
@@ -1389,15 +1391,18 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         file.write('const double, const double*')
         for rate in rate_list:
             file.write(', const double*')
-        if this_pdep and this_pdep_has_thd_eff:
+        if this_pdep:
             file.write(', const double')
-        file.write(', const double, const double, const double*, const double, double*'
+        file.write(', const double, const double, const double*, '
+                   'const double, double*'
                    + (', double*, double*' if has_nsp else '') +
                    ');\n'
                    '\n'
                    '#endif\n'
                    )
-    file = open(os.path.join(path, 'jacob_' + str(number) + utils.file_ext[lang]), 'w')
+    file = open(os.path.join(path, 'jacob_' + str(number) +
+                utils.file_ext[lang]), 'w'
+                )
     file.write('#include <math.h>\n'
                '#include "../header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
@@ -1409,18 +1414,23 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
              'const double * conc')
     for rate in rate_list:
         line += ', const double* ' + rate
-    if this_pdep and this_pdep_has_thd_eff:
+    if this_pdep:
         line += ', const double m'
-    line += ', const double mw_avg, const double rho, const double* dBdT, const double T, double* jac'
+    line += (', const double mw_avg, const double rho, const double* dBdT, '
+             'const double T, double* jac'
+             )
     if has_nsp:
         line += ', double* J_nplusone, double* J_nplusjplus'
     line += ') {'
     file.write(line + '\n')
 
     if not no_shared and lang == 'cuda':
-        file.write(utils.line_start + 'extern __shared__ double shared_temp[]' + utils.line_end[lang])
+        file.write(utils.line_start +
+                   'extern __shared__ double shared_temp[]' +
+                   utils.line_end[lang]
+                   )
         # third-body variable needed for reactions
-    if this_pdep and this_pdep_has_thd_eff:
+    if this_pdep:
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -1490,7 +1500,10 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         file.write(line)
 
     if this_troe:
-        line = ''.join([utils.line_start + 'double {} = 0.0{}'.format(x, utils.line_end[lang]) for x in 'Fcent', 'A', 'B', 'lnF_AB'])
+        line = ''.join([utils.line_start +
+                       'double {} = 0.0{}'.format(x, utils.line_end[lang])
+                       for x in 'Fcent', 'A', 'B', 'lnF_AB']
+                       )
         file.write(line)
 
     if this_sri:
@@ -1498,20 +1511,30 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep, this_pde
         file.write(line)
 
     if this_cheb:
-        file.write(utils.line_start + 'double Tred, Pred' + utils.line_end[lang])
-        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' + utils.line_end[lang])
-        file.write(utils.line_start + 'double dot_prod[{}]'.format(cheb_dim) + utils.line_end[lang])
+        file.write(utils.line_start + 'double Tred, Pred' +
+                   utils.line_end[lang]
+                   )
+        file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
+                   utils.line_end[lang]
+                   )
+        file.write(utils.line_start + 'double dot_prod[{}]'.format(cheb_dim) +
+                   utils.line_end[lang]
+                   )
 
     if this_plog:
         file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
 
-    file.write(utils.line_start + 'double rho_inv = 1.0 / rho' + utils.line_end[lang])
+    file.write(utils.line_start + 'double rho_inv = 1.0 / rho' +
+               utils.line_end[lang]
+               )
 
     return file
 
 
 def write_dy_intros(path, lang, number, have_jnplus_jplus):
-    with open(os.path.join(path, 'jacob_' + str(number) + utils.header_ext[lang]), 'w') as file:
+    with open(os.path.join(path, 'jacob_' + str(number) +
+              utils.header_ext[lang]), 'w'
+              ) as file:
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
@@ -1520,13 +1543,16 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
                    ('__device__ ' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
                    )
-        file.write('const double, const double, const double, const double*, const double*, const double*, double*'
+        file.write('const double, const double, const double, const double*, '
+                   'const double*, const double*, double*'
                    + (', double*' if have_jnplus_jplus else '') +
                    ');\n'
                    '\n'
                    '#endif\n'
                    )
-    file = open(os.path.join(path, 'jacob_' + str(number) + utils.file_ext[lang]), 'w')
+    file = open(os.path.join(path, 'jacob_' + str(number) +
+                utils.file_ext[lang]), 'w'
+                )
     file.write('#include "../header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                )
@@ -1534,11 +1560,13 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
     line = '__device__ ' if lang == 'cuda' else ''
 
     line += (
-        'void eval_jacob_{} (const double mw_avg, const double rho, '.format(number) +
+        'void eval_jacob_{} '.format(number) +
+        '(const double mw_avg, const double rho, '
         'const double cp_avg, const double* spec_rates, '
         'const double* h, const double* cp, double* jac' +
         (', double* J_nplusjplus' if have_jnplus_jplus else '') +
-        ') ')
+        ') '
+        )
     line += '{\n'
     line += utils.line_start
     if lang == 'cuda':
@@ -1546,9 +1574,12 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
     line += 'double rho_inv = 1.0 / rho'
     file.write(line + utils.line_end[lang])
 
-    file.write(utils.line_start + 'double working_temp = (1.0 / cp_avg)' + utils.line_end[lang])
-
-    file.write(utils.line_start + 'double j_temp = 1.0 / (rho * cp_avg * cp_avg)' + utils.line_end[lang])
+    file.write(utils.line_start + 'double working_temp = (1.0 / cp_avg)' +
+               utils.line_end[lang]
+               )
+    file.write(utils.line_start + 'double j_temp = 1.0 / '
+               '(rho * cp_avg * cp_avg)' + utils.line_end[lang]
+               )
 
     return file
 
@@ -1936,12 +1967,11 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             if cheb:
                 dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
-            file = write_sub_intro(os.path.join(path, 'jacobs'), lang, jac_count,
-                                    rate_list, rev, pdep, pdep_thd_eff,
-                                    thd, troe, sri,
-                                    cheb, dim, plog, smm is None,
-                                    has_jnplus_one
-                                    )
+            file = write_sub_intro(os.path.join(path, 'jacobs'), lang,
+                                   jac_count, rate_list, rev, pdep, thd,
+                                   troe, sri, cheb, dim, plog, smm is None,
+                                   has_jnplus_one
+                                   )
 
         if lang == 'cuda' and smm is not None:
             variable_list, usages = calculate_shared_memory(rind, rxn, specs,

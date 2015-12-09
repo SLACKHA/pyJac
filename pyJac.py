@@ -688,14 +688,15 @@ def get_db_dt(lang, specs, rxn, do_unroll):
 
 def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_temp=None):
     # print lines for necessary pressure-dependent variables
-    line = utils.line_start + '{} = '.format('conc_temp' if rxn.thd_body_eff else 'Pr')
+    line = utils.line_start + 'conc_temp = '
     conc_temp_log = None
-    if rxn.thd_body_eff:
-        # take care of the conc_temp collapsing
-        conc_temp_log = []
     if rxn.pdep_sp != '':
         line += get_array(lang, 'conc', rxn.pdep_sp)
+    elif not rxn.thd_body_eff:
+        line += 'm'
     else:
+        # take care of the conc_temp collapsing
+        conc_temp_log = []
         line += '(m'
 
         for isp, eff in rxn.thd_body_eff:
@@ -708,10 +709,6 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
                 if conc_temp_log is not None:
                     conc_temp_log.append((isp, eff - 1.0))
         line += ')'
-
-        if not rxn.thd_body_eff:
-            # only depends on +m
-            conc_temp_log = []
 
         if last_conc_temp is not None:
             # need to update based on the last
@@ -753,8 +750,6 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
     if rxn.pdep:
         if rxn.thd_body_eff:
             line = utils.line_start + 'Pr = conc_temp'
-        elif not rxn.pdep_sp:
-            line = utils.line_start + 'Pr = m'
         beta_0minf, E_0minf, k0kinf = get_infs(rxn)
         # finish writing P_ri
         line += (' * (' + k0kinf + ')' +

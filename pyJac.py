@@ -974,7 +974,9 @@ def write_dcp_dt(file, lang, specs):
 
         first = False
 
-def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx, get_array, do_unroll):
+def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
+                          get_array, do_unroll
+                          ):
     """Write contribution from temperature derivative of reaction rate for
     elementary reaction.
 
@@ -1205,13 +1207,18 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
                           A_p1, b_p1, E_p1
                           )
 
-    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array, do_unroll))
+    file.write(utils.line_start + jline +
+               get_elementary_rxn_dt(lang, specs, rxn_p, rind,
+                                     rev_idx, get_array, do_unroll
+                                     )
+               )
 
     for idx, vals in enumerate(rxn.plog_par[:-1]):
         (p1, A_p1, b_p1, E_p1) = vals
         (p2, A_p2, b_p2, E_p2) = rxn.plog_par[idx + 1]
 
-        file.write(utils.line_start + '}} else if ((pres > {:.4e}) '.format(p1) +
+        file.write(utils.line_start + '}}
+                   else if ((pres > {:.4e}) '.format(p1) +
                    '&& (pres <= {:.4e})) {{\n'.format(p2)
                    )
 
@@ -1267,12 +1274,18 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
                           A_pn, b_pn, E_pn
                           )
 
-    file.write(utils.line_start + jline + get_elementary_rxn_dt(lang, specs, rxn_p, rind, rev_idx, get_array, do_unroll))
+    file.write(utils.line_start + jline +
+               get_elementary_rxn_dt(lang, specs, rxn_p, rind,
+                                     rev_idx, get_array, do_unroll
+                                     )
+               )
 
     file.write(utils.line_start + '}\n')
 
 
-def write_dt_y(file, lang, specs, sp, isp, num_s, touched, sparse_indicies, get_array):
+def write_dt_y(file, lang, specs, sp, isp, num_s,
+               touched, sparse_indicies, get_array
+               ):
     for k_sp, sp_k in enumerate(specs[:-1]):
         line = utils.line_start
         lin_index = (num_s) * (k_sp + 1)
@@ -2032,20 +2045,24 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         jline += ' / T) * ('
 
         if rxn.plog:
-
             write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
-                rev_reacs.index(rind) if rxn.rev else None, get_array, do_unroll)
+                              rev_reacs.index(rind) if rxn.rev else None,
+                              get_array, do_unroll
+                              )
 
         elif rxn.cheb:
             write_cheb_rxn_dt(file, lang, jline, rxn, rind,
-                rev_reacs.index(rind) if rxn.rev else None,
-                specs, get_array, do_unroll)
+                              rev_reacs.index(rind) if rxn.rev else None,
+                              specs, get_array, do_unroll
+                              )
 
         else:
-            jline += get_elementary_rxn_dt(lang, specs, rxn, rind,
-                rev_reacs.index(rind) if rxn.rev else None, get_array, do_unroll)
+            jline += get_elementary_rxn_dt(
+                lang, specs, rxn, rind,
+                rev_reacs.index(rind) if rxn.rev else None,
+                get_array, do_unroll
+                )
             file.write(jline)
-
 
         for k_sp in set(rxn.reac + rxn.prod):
             sp_k = specs[k_sp]
@@ -2054,24 +2071,36 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             if nu == 0:
                 continue
             if lang in ['c', 'cuda']:
-                j_str = '{}J_nplusone'.format('*' if do_unroll else '') if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1)
-                line += (j_str +
-                         ' {}= {}j_temp{} * {:.16e}'.format('+' if touched[k_sp + 1] else '',
-                                                           '' if nu == 1 else ('-' if nu == -1 else ''),
-                                                           ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
-                                                           sp_k.mw)
+                j_str = ('{}J_nplusone'.format('*' if do_unroll else '')
+                         if k_sp + 1 == num_s
+                         else get_array(lang, 'jac', k_sp + 1)
                          )
+                line += (
+                    j_str +
+                    ' {}= {}j_temp{} * {:.16e}'.format(
+                        '+' if touched[k_sp + 1] else '',
+                        '' if nu == 1 else ('-' if nu == -1 else ''),
+                        ' * {}'.format(float(nu))
+                        if nu != 1 and nu != -1 else '',
+                        sp_k.mw
+                        )
+                    )
             elif lang in ['fortran', 'matlab']:
                 # NOTE: I believe there was a bug here w/ the previous
                 # fortran/matlab code (as it looks like it would be zero
                 # indexed)
-                j_str = 'J_nplusone' if k_sp + 1 == num_s else get_array(lang, 'jac', k_sp + 1, twod=0)
-                line += (j_str + ' = ' +
-                         (j_str + ' + ' if touched[k_sp + 1] else '') +
-                         ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else ('-' if nu == -1 else ''),
-                                                       ' * {}'.format(float(nu)) if nu != 1 and nu != -1 else '',
-                                                       sp_k.mw)
+                j_str = ('J_nplusone' if k_sp + 1 == num_s
+                         else get_array(lang, 'jac', k_sp + 1, twod=0)
                          )
+                line += (
+                    j_str + ' = ' +
+                    (j_str + ' + ' if touched[k_sp + 1] else '') +
+                    ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else
+                        ('-' if nu == -1 else ''),
+                        ' * {}'.format(float(nu))
+                        if nu != 1 and nu != -1 else '', sp_k.mw
+                        )
+                    )
             file.write(line + utils.line_end[lang])
             if k_sp + 1 == num_s:
                 J_nplusone_touched = True

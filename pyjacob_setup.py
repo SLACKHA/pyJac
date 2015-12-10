@@ -18,7 +18,7 @@ def parallelCCompile(self, sources, output_dir=None, macros=None,
     cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
 
     # number of parallel compilations
-    N = 8
+    N = 16
 
     def _single_compile(obj):
         try: src, ext = build[obj]

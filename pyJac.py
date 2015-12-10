@@ -744,12 +744,11 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
             else:
                 line = ''
 
-    if rxn.thd_body_eff and len(line):
+    if len(line):
         file.write(line + utils.line_end[lang])
 
     if rxn.pdep:
-        if rxn.thd_body_eff:
-            line = utils.line_start + 'Pr = conc_temp'
+        line = utils.line_start + 'Pr = conc_temp'
         beta_0minf, E_0minf, k0kinf = get_infs(rxn)
         # finish writing P_ri
         line += (' * (' + k0kinf + ')' +

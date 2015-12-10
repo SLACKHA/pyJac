@@ -1217,10 +1217,10 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
         (p1, A_p1, b_p1, E_p1) = vals
         (p2, A_p2, b_p2, E_p2) = rxn.plog_par[idx + 1]
 
-        file.write(utils.line_start + '}}
-                   else if ((pres > {:.4e}) '.format(p1) +
-                   '&& (pres <= {:.4e})) {{\n'.format(p2)
-                   )
+        file.write(
+            utils.line_start + '}} else if ((pres > {:.4e}) '.format(p1) +
+            '&& (pres <= {:.4e})) {{\n'.format(p2)
+            )
 
         if A_p2 / A_p1 < 0:
             #MIT mechanisms occaisionally have (for some unknown reason)

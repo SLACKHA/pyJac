@@ -111,7 +111,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                 # chem-activated bimolecular
                 jline += '(-Pr / (1.0 + Pr))'
             if rxn.troe:
-                jline += (' - log(Fcent) * 2.0 * A * (B * '
+                jline += (' - log(fmax(Fcent, 1.0e-300)) * 2.0 * A * (B * '
                           '{:.16}'.format(1.0 / math.log(10.0)) +
                           ' + A * '
                           '{:.16}) / '.format(0.14 / math.log(10.0)) +
@@ -771,18 +771,19 @@ def write_troe(file, lang, rxn):
     line += utils.line_end[lang]
     file.write(line)
 
-    line = ('  A = log10(fmax(Pr, 1.0e-300)) - 0.67 * log10(Fcent) - 0.4' +
+    line = ('  A = log10(fmax(Pr, 1.0e-300)) - 0.67 * '
+            'log10(fmax(Fcent, 1.0e-300)) - 0.4' +
             utils.line_end[lang]
             )
     file.write(line)
 
-    line = ('  B = 0.806 - 1.1762 * log10(Fcent) - '
+    line = ('  B = 0.806 - 1.1762 * log10(fmax(Fcent, 1.0e-300)) - '
             '0.14 * log10(fmax(Pr, 1.0e-300))' +
             utils.line_end[lang]
             )
     file.write(line)
 
-    line = ('  lnF_AB = 2.0 * log(Fcent) * '
+    line = ('  lnF_AB = 2.0 * log(fmax(Fcent, 1.0e-300)) * '
             'A / (B * B * B * (1.0 + A * A / (B * B)) * '
             '(1.0 + A * A / (B * B)))' +
             utils.line_end[lang]

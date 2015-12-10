@@ -989,7 +989,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
         if dk_dt or nu != 1.0:
             #we actually need to do the dk/dt for both
-            line = get_array(lang, 'fwd_rates', rind)
+            jline = get_array(lang, 'fwd_rates', rind)
             jline += ' * ('
             if dk_dt:
                 jline += dk_dt

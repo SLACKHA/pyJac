@@ -1961,7 +1961,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     utils.get_nu(len(specs) - 1, reac):
                     has_jnplus_one = True
 
-            batch_has_m = pdep and pdep_thd_eff
+            batch_has_m = pdep
 
             dim = None
             if cheb:

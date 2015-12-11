@@ -477,18 +477,17 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
 
-    #remove the old jaclist
-    try:
-        os.remove('out/jacobs/jac_list_c')
-    except:
-        pass
-    try:
-        os.remove('out/jacobs/jac_list_cuda')
-    except:
-        pass
-
-
     if generate_jacob:
+        #remove the old jaclist
+        try:
+            os.remove(os.path.join(build_dir, 'jacobs/jac_list_c'))
+        except:
+            pass
+        try:
+            os.remove(os.path.join(build_dir, 'jacobs/jac_list_cuda'))
+        except:
+            pass
+
         # Create Jacobian and supporting source code files
         create_jacobian(lang, mech_filename, therm_name=therm_filename,
                         optimize_cache=cache_optimization, build_path=build_dir,

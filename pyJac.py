@@ -111,7 +111,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
                 # chem-activated bimolecular
                 jline += '(-Pr / (1.0 + Pr))'
             if rxn.troe:
-                jline += (' - log(Fcent) * 2.0 * A * (B * '
+                jline += (' - log(fmax(Fcent, 1.0e-300)) * 2.0 * A * (B * '
                           '{:.16}'.format(1.0 / math.log(10.0)) +
                           ' + A * '
                           '{:.16}) / '.format(0.14 / math.log(10.0)) +
@@ -121,7 +121,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             elif rxn.sri:
                 jline += ('- X * X * '
                           '{:.16} * '.format(2.0 / math.log(10.0)) +
-                          'log10(Pr) * '
+                          'log10(fmax(Pr, 1.0e-300)) * '
                           'log({:.4} * '.format(rxn.sri_par[0]) +
                           'exp({:.4} / T) + '.format(-rxn.sri_par[1]) +
                           'exp(T / {:.4}))'.format(-rxn.sri_par[2])
@@ -772,18 +772,19 @@ def write_troe(file, lang, rxn):
     line += utils.line_end[lang]
     file.write(line)
 
-    line = ('  A = log10(Pr) - 0.67 * log10(Fcent) - 0.4' +
+    line = ('  A = log10(fmax(Pr, 1.0e-300)) - 0.67 * '
+            'log10(fmax(Fcent, 1.0e-300)) - 0.4' +
             utils.line_end[lang]
             )
     file.write(line)
 
-    line = ('  B = 0.806 - 1.1762 * log10(Fcent) - '
-            '0.14 * log10(Pr)' +
+    line = ('  B = 0.806 - 1.1762 * log10(fmax(Fcent, 1.0e-300)) - '
+            '0.14 * log10(fmax(Pr, 1.0e-300))' +
             utils.line_end[lang]
             )
     file.write(line)
 
-    line = ('  lnF_AB = 2.0 * log(Fcent) * '
+    line = ('  lnF_AB = 2.0 * log(fmax(Fcent, 1.0e-300)) * '
             'A / (B * B * B * (1.0 + A * A / (B * B)) * '
             '(1.0 + A * A / (B * B)))' +
             utils.line_end[lang]
@@ -792,8 +793,8 @@ def write_troe(file, lang, rxn):
 
 
 def write_sri(file, lang):
-    line = ('  X = 1.0 / (1.0 + log10(Pr) * log10(Pr))' +
-            utils.line_end[lang]
+    line = ('  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * '
+            'log10(fmax(Pr, 1.0e-300)))' + utils.line_end[lang]
             )
     file.write(line)
 
@@ -841,7 +842,7 @@ def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
              'exp({:.16} / T) + '.format(-rxn.sri_par[1]) +
              'exp(T / {:.16})) - '.format(-rxn.sri_par[2]) +
              'X * {:.16} * '.format(2.0 / math.log(10.0)) +
-             'log10(Pr) * ('
+             'log10(fmax(Pr, 1.0e-300)) * ('
              '{:.16e} + ('.format(beta_0minf) +
              '{:.16e} / T) - 1.0) * '.format(E_0minf) +
              'log({:.16} * exp('.format(rxn.sri_par[0]) +

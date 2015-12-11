@@ -746,6 +746,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
 
     if len(line):
         file.write(line + utils.line_end[lang])
+        file.write(utils.line_start + 'conc_temp = fmax(conc_temp, 1e-300')
 
     if rxn.pdep:
         line = utils.line_start + 'Pr = conc_temp'

@@ -5,8 +5,9 @@ from distutils.extension import Extension
 from Cython.Distutils import build_ext
 import numpy
 
-#os.environ['CC'] = 'gcc-5'
-#os.environ['CXX'] = 'g++-5'
+import distutils.ccompiler
+import parallel_compiler as pcc
+distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
 
 if os.getenv('TCHEM_HOME'):
     tchem_home = os.getenv('TCHEM_HOME')

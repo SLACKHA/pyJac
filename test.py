@@ -192,6 +192,36 @@ class cpyjac_evaluator(object):
         A = np.empty_like(B)
         A[:] = B
         return A
+    
+    def check_numbers(self, build_dir, gas, filename='mechanism.h'):
+        """Ensures numbers of species and forward reaction match.
+        """
+        with open(os.path.join(build_dir, filename), 'r') as file:
+            n_spec = None
+            n_reac = None
+            for line in file.readlines():
+                if n_spec is None:
+                    match = re.search(r'^#define NSP (\d+)$', line)
+                    if match:
+                        n_spec = int(match.group(1))
+                
+                if n_reac is None:
+                    match = re.search(r'^#define FWD_RATES (\d+)$', line)
+                    if match:
+                        n_reac = int(match.group(1))
+                
+                if n_spec is not None and n_reac is not None:
+                    break
+        
+        if n_spec != gas.n_species:
+            print('Error: species counts do not match between '
+                  'mechanism.h and Cantera.')
+            sys.exit(1)
+        if n_reac != gas.n_reactions:
+            print('Error: forward reaction counts do not match between '
+                  'mechanism.h and Cantera.')
+            sys.exit(1)
+    
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
         self.fwd_spec_map = np.array(range(gas.n_species))
         with open(os.path.join(build_dir, filename), 'r') as file:
@@ -259,8 +289,8 @@ class cpyjac_evaluator(object):
 
         self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
 
-
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
+        self.check_numbers(build_dir, gas, filename)
         self.check_optimized(build_dir, gas, filename)
         self.pyjac = __import__(module_name)
 

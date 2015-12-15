@@ -43,7 +43,7 @@ array_chars = dict(c="[{}]", cuda="[{}]",
 def get_species_mappings(num_specs, last_species):
     """
     Consolidate the forward/backwards species mapping
-    in one place.  Only to be used 
+    in one place.
     """
 
     fwd_species_map = range(num_specs)

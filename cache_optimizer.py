@@ -11,77 +11,24 @@ from __future__ import print_function
 import multiprocessing
 import pickle
 import os
+from operator import itemgetter
 
 # Local imports
 from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
 from CParams import C_Jacob_Unroll
 import utils
 
+#dependencies
+have_bitarray = True
 try:
-    from Numberjack import *
-    Model().load('SCIP')
-    HAVE_NJ = True
-except Exception, e:
-    HAVE_NJ = False
-    print(e)
-    print('Cache-optimization support disabled...')
-    class Variable(object):
-        def __init__(self, lb, ub, name):
-            pass
-
-def get_mappings(specs, reacs, load_non_participating=False, consider_thd=False):
-    r_to_s = [set() for i in range(len(reacs))]
-    s_to_r = [set() for i in range(len(specs))]
-    for sind, sp in enumerate(specs):
-        for rind, rxn in enumerate(reacs):
-            the_set = set(rxn.reac + rxn.prod)
-            if consider_thd:
-                thd_sp = [thd[0] for thd in rxn.thd_body_eff if thd[1] != 0]
-                if thd_sp:
-                    the_set = the_set.union(set(thd_sp))
-            if any(sp.name == x for x in the_set):
-                nu = utils.get_nu(sp, rxn)
-                if (nu is not None and nu != 0) or load_non_participating:
-                    r_to_s[rind].add(sind)
-                    s_to_r[sind].add(rind)
-
-    return r_to_s, s_to_r
-
-class rxn_comp(Variable):
-    def __init__(self, c1, c2, lb=0, ub=None):
-        ub = len(c1)
-        Variable.__init__(self, lb, ub, "rxn_comp")
-        self.children = c1 + c2
-        self.c1 = c1
-        self.c2 = c2
-
-    def decompose(self):
-        '''
-        Decompose must return either a list containing a list of expressions
-        '''
-
-        return [ Sum([self.c1[i] < self.c2[i] for i in range(len(self.c1))]) ]
-
-
-class sp_comp(Variable):
-    def __init__(self, r1, r2, lb=0, ub=None):
-        ub = len(r1)
-        Variable.__init__(self, lb, ub, "rxn_comp")
-        self.children = r1 + r2
-        self.r1 = r1
-        self.r2 = r2
-
-    def decompose(self):
-        '''
-        Decompose must return either a list containing a list of expressions
-        '''
-
-        return [ Sum([self.r2[i] < self.r1[i] for i in range(len(self.r1))]) ]
-
+    from bitarray import bitarray
+except:
+    print('bitarray not found, turning off cache-optimization')
+    have_bitarray = False
 
 def optimize_cache(specs, reacs, multi_thread,
                     force_optimize, build_path,
-                     last_spec, time_lim=60, verbosity=1):
+                     last_spec):
     """
     Utilizes the Numberjack package to optimize species
     and reaction orders in the mechanism to attempt to improve cache hit rates.
@@ -100,10 +47,6 @@ def optimize_cache(specs, reacs, multi_thread,
         The path to the build directory
     last_spec : int
         The index of the species that should be placed last
-    time_lim : int
-        The time limit for optimization operations in minutes
-    verbosity : int
-        The verbosity of the Numberjack solvers
 
     Returns
     _______
@@ -161,173 +104,174 @@ def optimize_cache(specs, reacs, multi_thread,
 
     #otherwise swap the last_spec
     temp = specs[last_spec]
-    specs[last_spec] = specs[-1]
+    specs[last_spec:-1] = specs[last_spec+1:]
     specs[-1] = temp
 
-    print('Beginning Reaction Cache Locality Reordering')
-    #get the mappings
-    r_to_s, s_to_r = get_mappings(specs, reacs, consider_thd=False, load_non_participating=True)
+    nsp = len(specs) - 1
+    nr = len(reacs)
 
-    #set up the Numberjack constraint problem to optimize reaction order
-    model = Model()
+    #now generate our mappings
+    sdummy = [False for i in range(nr)]
+    spec_mapping = [bitarray(sdummy) for i in range(nsp)]
 
-    rxn_order = [Variable(0, len(reacs), "rxn_{}".format(i)) for i in range(len(reacs))]
+    rdummy = [False for i in range(nsp)]
+    reac_mapping = [bitarray(rdummy) for i in range(nr)]
 
-    #set up the constraints to ensure unique rxn placement
-    model.add(AllDiff(rxn_order))
+    rxn_to_sp = [[] for i in range(nr)]
+    sp_to_rxn = [[] for i in range(nsp)]
 
-    #now set up score function
-    score_matrix = Matrix(len(specs), len(reacs), 2)
+    def no_dupe_add(thelist, item):
+        if not item in thelist:
+            thelist.append(item)
 
-    #set up the r_to_s constraints
-    for i, rxn in enumerate(rxn_order):
-        for sp in range(len(specs)):
-            val = 1 if sp in r_to_s[i] else 0
-            model.add(score_matrix[sp, rxn] == val)
+    species_map = {sp.name: i for i, sp in enumerate(specs[:-1])}
+    for rind, rxn in enumerate(reacs):
+        for sp in rxn.reac:
+            if sp == specs[-1].name:
+                continue
+            spind = species_map[sp]
+            spec_mapping[spind][rind] = True
+            reac_mapping[rind][spind] = True
+            no_dupe_add(rxn_to_sp[rind], spind)
+            no_dupe_add(sp_to_rxn[spind], rind)
+        for sp in rxn.reac:
+            if sp == specs[-1].name:
+                continue
+            spind = species_map[sp]
+            spec_mapping[spind][rind] = True
+            reac_mapping[rind][spind] = True
+            no_dupe_add(rxn_to_sp[rind], spind)
+            no_dupe_add(sp_to_rxn[spind], rind)
+        for sp, eff in rxn.thd_body_eff:
+            if sp == specs[-1].name:
+                continue
+            spind = species_map[sp]
+            spec_mapping[spind][rind] = True
+            reac_mapping[rind][spind] = True
+            no_dupe_add(rxn_to_sp[rind], spind)
+            no_dupe_add(sp_to_rxn[spind], rind)
+        if rxn.pdep_sp:
+            if rxn.pdep_sp == specs[-1].name:
+                continue
+            spind = species_map[rxn.pdep_sp]
+            spec_mapping[spind][rind] = True
+            reac_mapping[rind][spind] = True
+            no_dupe_add(rxn_to_sp[rind], spind)
+            no_dupe_add(sp_to_rxn[spind], rind)
+    
+    def get_rxn_tiebreak(rind, rxn_to_sp, spec_mapping):
+        bt = bitarray(sdummy)
+        for sp in rxn_to_sp[rind]:
+            bt |= spec_mapping[sp]
+        return bt.count()
 
-    score_list = []
-    for i in range(len(reacs) - 1):
-        score_list.append(rxn_comp(score_matrix.col[i], score_matrix.col[i + 1]))
+    def update_rxn_to_sp(rind, spec_mapping, rxn_to_sp):
+        for sp in rxn_to_sp[rind]:
+            spec_mapping[sp][rind] = False
 
-    score = Sum(score_list)
-    model.add(Minimize(score))
-    solver = model.load('SCIP')
-    solver.setThreadCount(multi_thread)
-    solver.setTimeLimit(time_lim * 60)
-    solver.setVerbosity(verbosity)
+    def update_sp_to_rxn(spind, reac_mapping, sp_to_rxn):
+        for rind in sp_to_rxn[spind]:
+            reac_mapping[rind][spind] = False
 
-    def __rxn_score_check(r_to_s, ordering):
-        the_sum = 0
-        for i in range(len(r_to_s) - 1):
-            the_sum += len(r_to_s[ordering[i + 1]].difference(r_to_s[ordering[i]]))
+    maxcount = None
+    ind = None
+    # select the first reaction as the one with the species 
+    #that participate in the most distinct reactions
+    ind = max(range(nr), key=lambda x: get_rxn_tiebreak(x, rxn_to_sp, spec_mapping))
 
-        assert len(set(ordering)) == len(ordering)
-        return the_sum
+    #get the updating spec mapping
+    #used to determine all distinct reactions for species in a reaction
+    #counting only those reactions that haven't been selected yet
+    updating_reac_mapping = [x.copy() for x in reac_mapping]
+    update_spec_mapping(ind, updating, rxn_to_sp)
+    reacs_left = [i for i in range(nr) if i != ind]
+    fwd_rxn_mapping = [ind]
+    while len(reacs_left):
+        #the next reaction is the one that best matches the previous one
+        #in case of a tie a tie breaker is used:
+        #     the number of of the distinct reactions the species in the reaction are in 
+        maxcount = None
+        ind = None
+        last_tiebreak = None
+        last = fwd_rxn_mapping[-1]
 
-    solved = solver.solve()
-    solns = [x for x in solver.solutions()]
-    print("Solution Found: {}\nSolution Optimal: {}\n".format(solved, solver.is_opt()))
-    if solved and solver.is_opt():
-        print('Checking optimal solution')
-        ordering = [x.get_value() for x in rxn_order]
-    elif solved:
-        print('Checking other {} solutions'.format(len(solns)))
-        bestVal = None
-        for solution in solns:
-            val = __rxn_score_check(r_to_s, solution)
-            if bestVal is None or val < bestVal:
-                ordering[:] = solution
-                bestVal = val
-    else:
-        raise Exception('No solution found, try a longer timelimit')
+        for rind in reacs_left:
+            #number of species shared in by the reactions
+            #minus the number that are in this candidate and not the last reaction
+            count = ((reac_mapping[rind] | reac_mapping[last]).count() - 
+                        ((reac_mapping[rind] ^ reac_mapping[last]) & reac_mapping[rind]).count())
 
-    pre = __rxn_score_check(r_to_s, range(len(reacs)))
-    post = __rxn_score_check(r_to_s, ordering)
-    print('Reaction Cache Locality Heuristic changed from {} to {}'.format(pre, post))
+            if maxcount is None or count >= maxcount:
+                #compute tiebreak score
+                tiebreak = get_rxn_tiebreak(rind, rxn_to_sp, updating_reac_mapping)
+                winner = True
+                if last_tiebreak is not None and count == maxcount and tiebreak <= last_tiebreak:
+                    winner = False
+                if winner:
+                    ind = rind
+                    maxcount = count
+                    last_tiebreak = tiebreak
 
-    if post >= pre:
-        print('Using newly optimized reaction order:\n' + ', '.join(
-                [str(x) for x in enumerate(ordering)]))
-        fwd_rxn_mapping = ordering[:]
-    else:
-        print('Using original reaction order:')
-        fwd_rxn_mapping = range(len(reacs))
+        #add the winner to the list
+        fwd_rxn_mapping.append(ind)
+        update_rxn_to_sp(ind, updating_reac_mapping, rxn_to_sp)
+        reacs_left.remove(ind)
 
+    #ok, we now have a reordered reaction list
+    #let's take a whack at the species
 
-    print('Beginning Species Cache Locality reordering')
-    #now set up the species optimization problem
-    #set up the Numberjack constraint problem to optimize reaction order
-    model = Model()
+    # select the first species as the one in the first reaction
+    #that participate in the most reactions
+    ind = max(rxn_to_sp[fwd_rxn_mapping[0]], key=lambda x: reac_mapping[x].count())
 
-    sp_order = [Variable(0, len(specs) - 1, "sp_{}".format(i)) for i in range(len(specs) - 1)]
+    update_spec_mapping = [x.copy() for x in spec_mapping]
+    fwd_spec_mapping = [ind]
+    specs_left = [i for i in range(nsp) if i != ind]
+    update_sp_to_rxn(ind, update_spec_mapping, sp_to_rxn)
 
-    #set up the constraints to ensure unique rxn placement
-    model.add(AllDiff(sp_order))
+    while len(specs_left):
+        maxcount = None
+        ind = None
+        last_tiebreak = None
+        last = fwd_spec_mapping[-1]
 
-    #now set up score function
-    score_matrix = Matrix(len(specs) - 1, len(reacs), 2)
+        for spind in specs_left:
+            #number of reactions shared with the last species
+            #minus the number that are not
+            count = ((reac_mapping[spind] | reac_mapping[last]).count() - 
+                        ((reac_mapping[spind] ^ reac_mapping[last]) & reac_mapping[spind]).count())
 
-    #set up the r_to_s constraints
-    for i, sp in enumerate(sp_order):
-        for rxn in range(len(reacs)):
-            val = 1 if rxn in s_to_r[i] else 0
-            model.add(score_matrix[sp, rxn] == val)
+            if maxcount is None or count >= maxcount:
+                #compute tiebreak score
+                tiebreak = updating_reac_mapping[spind].count()
+                winner = True
+                if last_tiebreak is not None and count == maxcount and tiebreak <= last_tiebreak:
+                    winner = False
+                if winner:
+                    ind = rind
+                    maxcount = count
+                    last_tiebreak = tiebreak
 
-    score_list = []
-    for i in range(len(specs) - 2):
-        score_list.append(sp_comp(score_matrix.row[i], score_matrix.row[i + 1]))
+        #add the winner to the list
+        fwd_spec_mapping.append(ind)
+        update_sp_to_rxn(ind, updating_reac_mapping, sp_to_rxn)
+        specs_left.remove(ind)
 
-    score = Sum(score_list)
-    model.add(Minimize(score))
-    solver = model.load('SCIP')
-    solver.setThreadCount(multi_thread)
-    solver.setVerbosity(verbosity)
-    solver.setTimeLimit(time_lim * 60)
+    fwd_spec_mapping.append(last_spec)
 
-    def __sp_score_check(s_to_r, ordering):
-        the_sum = 0
-        for i in range(len(s_to_r) - 2):
-            the_sum += len(s_to_r[ordering[i + 1]].difference(s_to_r[ordering[i]]))
+    #plot for visibility
+    import matplotlib.pyplot as plt
+    fig = plt.figure()
+    ax = fig.subplot(1,1,1)
+    arr = np.zeros((nr, nsp, 3))
 
-        assert len(set(ordering)) == len(ordering)
-        return the_sum
+    for rind in range(nr):
+        for sp in rxn_to_sp[rind]:
+            arr[rind, sp] = [1, 1, 1]
 
-    solved = solver.solve()
-    solns = [x for x in solver.solutions()]
-    print("Solution Found: {}\nSolution Optimal: {}\n".format(solved, solver.is_opt()))
-    if solved and solver.is_opt():
-        print('Checking optimal solution')
-        ordering = [x.get_value() for x in sp_order]
-    elif solved:
-        print('Checking other {} solutions'.format(len(solns)))
-        bestVal = None
-        for solution in solns:
-            val = __sp_score_check(s_to_r, solution)
-            if bestVal is None or val < bestVal:
-                ordering[:] = solution
-                bestVal = val
-    else:
-        raise Exception('No solution found, try a longer timelimit')
+    plt.imshow(arr, interpolation='nearest')
+    plt.show(arr)
 
-    pre = __sp_score_check(s_to_r, range(len(specs)))
-    post = __sp_score_check(s_to_r, ordering)
-    print('Species Cache Locality Heuristic changed from {} to {}'.format(pre, post))
-
-    if post >= pre:
-        fwd_spec_mapping = ordering[:]
-        #the last species is the last_spec
-        fwd_spec_mapping.insert(last_spec, len(specs) - 1)
-        print('Using newly optimized species order:\n' + ', '.join(
-            [str(x) for x in enumerate(fwd_spec_mapping)]))
-    else:
-        print('Using original species order')
-        fwd_spec_mapping = range(len(specs))
-        fwd_spec_mapping[last_spec:-1] = fwd_spec_mapping[last_spec + 1:]
-        fwd_spec_mapping[-1] = last_spec
-
-    #swap the last species back, for simplicity in reordering
-    temp = specs[last_spec]
-    specs[last_spec] = specs[-1]
-    specs[-1] = temp
-
-    #reorder the species and reactions in the appropriate order
-    spec_temp = specs[:]
-    specs = [specs[i] for i in fwd_spec_mapping]
-    reac_temp = reacs[:]
-    reacs = [reacs[i] for i in fwd_rxn_mapping]
-
-    reverse_spec_mapping = []
-    # finally reorder the spec and rxn orderings to fix for printing
-    for spec_ind in range(len(fwd_spec_mapping)):
-        reverse_spec_mapping.append(
-            fwd_spec_mapping.index(spec_ind)
-        )
-
-    reverse_rxn_mapping = []
-    for rxn_ind in range(len(fwd_rxn_mapping)):
-        reverse_rxn_mapping.append(
-            fwd_rxn_mapping.index(rxn_ind)
-        )
 
     # save to avoid reoptimization if possible
     with open(os.path.join(build_path, 'optimized.pickle'), 'wb') as file:

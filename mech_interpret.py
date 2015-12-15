@@ -687,10 +687,10 @@ def read_mech(mech_filename, therm_filename):
             new_reac.E = new_reac.rev_par[2]
             new_reac.rev = False
             new_reac.rev_par = []
-            new_reac.prod = reac.reac
-            new_reac.prod_nu = reac.reac_nu
-            new_reac.reac = reac.prod
-            new_reac.reac_nu = reac.prod_nu
+            new_reac.prod = reac.reac[:]
+            new_reac.prod_nu = reac.reac_nu[:]
+            new_reac.reac = reac.prod[:]
+            new_reac.reac_nu = reac.prod_nu[:]
 
             reacs.insert(idx + 1, new_reac)
 

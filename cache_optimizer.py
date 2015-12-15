@@ -102,13 +102,10 @@ def optimize_cache(specs, reacs, multi_thread,
             return old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping, \
                     reverse_spec_mapping, reverse_rxn_mapping
 
-    #otherwise swap the last_spec
-    temp = specs[last_spec]
-    specs[last_spec:-1] = specs[last_spec+1:]
-    specs[-1] = temp
-
-    nsp = len(specs) - 1
+    nsp = len(specs)
     nr = len(reacs)
+
+    last_name = specs[last_spec].name
 
     #now generate our mappings
     sdummy = [False for i in range(nr)]
@@ -124,36 +121,36 @@ def optimize_cache(specs, reacs, multi_thread,
         if not item in thelist:
             thelist.append(item)
 
-    species_map = {sp.name: i for i, sp in enumerate(specs[:-1])}
+    name_map = {sp.name: i for i, sp in enumerate(specs)}
     for rind, rxn in enumerate(reacs):
         for sp in rxn.reac:
-            if sp == specs[-1].name:
+            if sp == last_name:
                 continue
-            spind = species_map[sp]
+            spind = name_map[sp]
             spec_mapping[spind][rind] = True
             reac_mapping[rind][spind] = True
             no_dupe_add(rxn_to_sp[rind], spind)
             no_dupe_add(sp_to_rxn[spind], rind)
         for sp in rxn.reac:
-            if sp == specs[-1].name:
+            if sp == last_name:
                 continue
-            spind = species_map[sp]
+            spind = name_map[sp]
             spec_mapping[spind][rind] = True
             reac_mapping[rind][spind] = True
             no_dupe_add(rxn_to_sp[rind], spind)
             no_dupe_add(sp_to_rxn[spind], rind)
         for sp, eff in rxn.thd_body_eff:
-            if sp == specs[-1].name:
+            if sp == last_name:
                 continue
-            spind = species_map[sp]
+            spind = name_map[sp]
             spec_mapping[spind][rind] = True
             reac_mapping[rind][spind] = True
             no_dupe_add(rxn_to_sp[rind], spind)
             no_dupe_add(sp_to_rxn[spind], rind)
         if rxn.pdep_sp:
-            if rxn.pdep_sp == specs[-1].name:
+            if rxn.pdep_sp == last_name:
                 continue
-            spind = species_map[rxn.pdep_sp]
+            spind = name_map[rxn.pdep_sp]
             spec_mapping[spind][rind] = True
             reac_mapping[rind][spind] = True
             no_dupe_add(rxn_to_sp[rind], spind)
@@ -165,13 +162,13 @@ def optimize_cache(specs, reacs, multi_thread,
             bt |= spec_mapping[sp]
         return bt.count()
 
-    def update_rxn_to_sp(rind, spec_mapping, rxn_to_sp):
-        for sp in rxn_to_sp[rind]:
-            spec_mapping[sp][rind] = False
+    def update_spec_mapping(i, mapvals, listvals):
+        for i2 in listvals[i]:
+            mapvals[i2][i] = False
 
-    def update_sp_to_rxn(spind, reac_mapping, sp_to_rxn):
-        for rind in sp_to_rxn[spind]:
-            reac_mapping[rind][spind] = False
+    def update_reac_mapping(i, mapvals, listvals):
+        for i2 in listvals[i]:
+            mapvals[i][i2] = False
 
     maxcount = None
     ind = None
@@ -182,7 +179,7 @@ def optimize_cache(specs, reacs, multi_thread,
     #get the updating spec mapping
     #used to determine all distinct reactions for species in a reaction
     #counting only those reactions that haven't been selected yet
-    updating_reac_mapping = [x.copy() for x in reac_mapping]
+    updating = [x.copy() for x in spec_mapping]
     update_spec_mapping(ind, updating, rxn_to_sp)
     reacs_left = [i for i in range(nr) if i != ind]
     fwd_rxn_mapping = [ind]
@@ -203,7 +200,7 @@ def optimize_cache(specs, reacs, multi_thread,
 
             if maxcount is None or count >= maxcount:
                 #compute tiebreak score
-                tiebreak = get_rxn_tiebreak(rind, rxn_to_sp, updating_reac_mapping)
+                tiebreak = get_rxn_tiebreak(rind, rxn_to_sp, updating)
                 winner = True
                 if last_tiebreak is not None and count == maxcount and tiebreak <= last_tiebreak:
                     winner = False
@@ -214,7 +211,7 @@ def optimize_cache(specs, reacs, multi_thread,
 
         #add the winner to the list
         fwd_rxn_mapping.append(ind)
-        update_rxn_to_sp(ind, updating_reac_mapping, rxn_to_sp)
+        update_spec_mapping(ind, updating, rxn_to_sp)
         reacs_left.remove(ind)
 
     #ok, we now have a reordered reaction list
@@ -224,10 +221,10 @@ def optimize_cache(specs, reacs, multi_thread,
     #that participate in the most reactions
     ind = max(rxn_to_sp[fwd_rxn_mapping[0]], key=lambda x: reac_mapping[x].count())
 
-    update_spec_mapping = [x.copy() for x in spec_mapping]
+    updating = [x.copy() for x in spec_mapping]
     fwd_spec_mapping = [ind]
     specs_left = [i for i in range(nsp) if i != ind]
-    update_sp_to_rxn(ind, update_spec_mapping, sp_to_rxn)
+    update_reac_mapping(ind, updating, sp_to_rxn)
 
     while len(specs_left):
         maxcount = None
@@ -243,34 +240,59 @@ def optimize_cache(specs, reacs, multi_thread,
 
             if maxcount is None or count >= maxcount:
                 #compute tiebreak score
-                tiebreak = updating_reac_mapping[spind].count()
+                tiebreak = updating[spind].count()
                 winner = True
                 if last_tiebreak is not None and count == maxcount and tiebreak <= last_tiebreak:
                     winner = False
                 if winner:
-                    ind = rind
+                    ind = spind
                     maxcount = count
                     last_tiebreak = tiebreak
 
         #add the winner to the list
         fwd_spec_mapping.append(ind)
-        update_sp_to_rxn(ind, updating_reac_mapping, sp_to_rxn)
+        update_reac_mapping(ind, updating, sp_to_rxn)
         specs_left.remove(ind)
 
     fwd_spec_mapping.append(last_spec)
 
-    #plot for visibility
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = fig.subplot(1,1,1)
-    arr = np.zeros((nr, nsp, 3))
+    plot = True
+    if plot:
+        #plot for visibility
+        import matplotlib
+        matplotlib.use('agg')
+        import matplotlib.pyplot as plt
+        import numpy as np
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        arr = np.zeros((nr, nsp + 1, 3))
+        arr.fill(1)
 
-    for rind in range(nr):
-        for sp in rxn_to_sp[rind]:
-            arr[rind, sp] = [1, 1, 1]
+        for rind in range(nr):
+            rxn = reacs[rind]
+            plot = set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp])
+            plot = [name_map[sp] for sp in plot if sp]
+            for sp in plot:
+                arr[rind, sp] = [0, 0, 0]
 
-    plt.imshow(arr, interpolation='nearest')
-    plt.show(arr)
+        plt.imshow(arr, interpolation='nearest')
+        plt.savefig('old.pdf')
+
+        fig = plt.figure()
+        ax = fig.add_subplot(1,1,1)
+        arr = np.zeros((nr, nsp + 1, 3))
+        arr.fill(1)
+
+        name_map = {specs[sp].name: i for i, sp in enumerate(fwd_spec_mapping)}
+        for rind in fwd_rxn_mapping:
+            rxn = reacs[rind]
+            plot = set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp])
+            plot = [name_map[sp] for sp in plot if sp]
+            for sp in plot:
+                arr[rind, sp] = [0, 0, 0]
+
+        plt.imshow(arr, interpolation='nearest')
+        plt.savefig('new.pdf')
 
 
     # save to avoid reoptimization if possible

@@ -192,6 +192,36 @@ class cpyjac_evaluator(object):
         A = np.empty_like(B)
         A[:] = B
         return A
+    
+    def check_numbers(self, build_dir, gas, filename='mechanism.h'):
+        """Ensures numbers of species and forward reaction match.
+        """
+        with open(os.path.join(build_dir, filename), 'r') as file:
+            n_spec = None
+            n_reac = None
+            for line in file.readlines():
+                if n_spec is None:
+                    match = re.search(r'^#define NSP (\d+)$', line)
+                    if match:
+                        n_spec = int(match.group(1))
+                
+                if n_reac is None:
+                    match = re.search(r'^#define FWD_RATES (\d+)$', line)
+                    if match:
+                        n_reac = int(match.group(1))
+                
+                if n_spec is not None and n_reac is not None:
+                    break
+        
+        if n_spec != gas.n_species:
+            print('Error: species counts do not match between '
+                  'mechanism.h and Cantera.')
+            sys.exit(1)
+        if n_reac != gas.n_reactions:
+            print('Error: forward reaction counts do not match between '
+                  'mechanism.h and Cantera.')
+            sys.exit(1)
+    
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
         self.fwd_spec_map = np.array(range(gas.n_species))
         with open(os.path.join(build_dir, filename), 'r') as file:
@@ -259,8 +289,8 @@ class cpyjac_evaluator(object):
 
         self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
 
-
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
+        self.check_numbers(build_dir, gas, filename)
         self.check_optimized(build_dir, gas, filename)
         self.pyjac = __import__(module_name)
 
@@ -458,7 +488,7 @@ class tchem_evaluator(cpyjac_evaluator):
 
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
-         seed=None, pasr_output_file=None, last_spec=None,
+         compile_jacob=True, seed=None, pasr_output_file=None, last_spec=None,
          cache_optimization=False, no_shared=False, tchem_flag=False):
     """Compares pyJac results against Cantera (and optionally TChem) using
     state data from PaSR simulations.
@@ -476,6 +506,9 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     except subprocess.CalledProcessError:
         print('Error: appropriate compiler for language not found.')
         sys.exit(1)
+
+    if generate_jacob and not compile_jacob:
+        print('Warning: Jacobian files being generated but not compiled.')
 
     if generate_jacob:
         #remove the old jaclist
@@ -514,34 +547,37 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
               'not compatible with Cantera mechanism.'
               )
 
-    #write and compile the dydt python wrapper
-    try:
-        os.remove('pyjacob.so')
-    except:
-        pass
-    #need to compile this anyways, it's way easier to get the analytical
-    #jacobian evaulator to use the c interface
-    subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
-                           'pyjacob_setup.py', 'build_ext', '--inplace'
-                           ])
-
-    try:
-        os.remove('cu_pyjacob.so')
-    except:
-        pass
-    if lang == 'cuda':
+    if compile_jacob:
+        #write and compile the dydt python wrapper
+        try:
+            os.remove('pyjacob.so')
+        except:
+            pass
+        #need to compile this anyways, it's way easier to get the analytical
+        #jacobian evaulator to use the c interface
         subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
-                               'pyjacob_cuda_setup.py', 'build_ext', '--inplace'
+                               'pyjacob_setup.py', 'build_ext', '--inplace'
                                ])
 
-    try:
-        os.remove('py_tchem.so')
-    except:
-        pass
-    if tchem_flag:
-        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
-                               'pytchem_setup.py', 'build_ext', '--inplace'
-                               ])
+        try:
+            os.remove('cu_pyjacob.so')
+        except:
+            pass
+        if lang == 'cuda':
+            subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
+                                   'pyjacob_cuda_setup.py',
+                                   'build_ext', '--inplace'
+                                   ])
+
+        try:
+            os.remove('py_tchem.so')
+        except:
+            pass
+        if tchem_flag:
+            subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
+                                   'pytchem_setup.py',
+                                   'build_ext', '--inplace'
+                                   ])
 
     # get the cantera object
     gas = ct.Solution(mech_filename)
@@ -955,59 +991,79 @@ if __name__ == '__main__':
                         choices=utils.langs,
                         required=True,
                         help='Programming language for output '
-                             'source files.')
+                             'source files'
+                        )
     parser.add_argument('-b', '--build_dir',
                         type=str,
                         default='out' + os.path.sep,
                         help='The directory the jacob/rates/tester'
-                             ' files will be generated and built in.')
+                             ' files will be generated and built in'
+                        )
     parser.add_argument('-m', '--mech',
                         type=str,
                         required=True,
-                        help='Mechanism filename (e.g., mech.dat).')
+                        help='Mechanism filename (e.g., mech.dat)'
+                        )
     parser.add_argument('-t', '--thermo',
                         type=str,
                         default=None,
                         help='Thermodynamic database filename (e.g., '
-                             'therm.dat), or nothing if in mechanism.')
+                             'therm.dat), or nothing if in mechanism'
+                        )
     parser.add_argument('-i', '--input',
                         type=str,
                         default='pasr_input.yaml',
                         help='Partially stirred reactor input file for '
-                             'generating test data (e.g, pasr_input.yaml)')
+                             'generating test data (e.g, pasr_input.yaml)'
+                        )
     parser.add_argument('-dng', '--do_not_generate',
                         action='store_false',
                         dest='generate_jacob',
                         default=True,
-                        help='Use this option to have the tester utilize '
-                             'existing Jacobian files')
+                        help='Use this option to have the tester use '
+                             'existing Jacobian files'
+                        )
     parser.add_argument('-s', '--seed',
                         type=int,
                         default=None,
-                        help='The seed to be used for random numbers')
+                        help='The seed to be used for random numbers'
+                        )
     parser.add_argument('-p', '--pasr_output',
                         type=str,
                         default=None,
                         help='An optional saved .npy file that has the '
-                             'resulting PaSR data (to speed testing)')
+                             'resulting PaSR data (to speed testing)'
+                             )
     parser.add_argument('-ls', '--last_spec',
                         type=str,
                         default=None,
-                        help='The last species, to pass to pyJac')
+                        help='The last species, to pass to pyJac'
+                        )
     parser.add_argument('-co', '--cache_optimization',
                         default=False,
                         action='store_true',
-                        help='Use to enable cache optimization in pyJac')
+                        help='Use to enable cache optimization in pyJac'
+                        )
     parser.add_argument('-nosmem', '--no_shared',
                         default=False,
                         action='store_true',
-                        help='Use to disable shared memory usage in pyJac (CUDA only)')
+                        help='Use to disable shared memory usage in pyJac '
+                             '(CUDA only)'
+                        )
     parser.add_argument('-tc', '--tchem',
                         default=False,
                         action='store_true',
-                        help='Activate TChem comparison (false by default).')
+                        help='Activate TChem comparison (false by default)'
+                        )
+    parser.add_argument('-dnc', '--do_not_compile',
+                        action='store_false',
+                        dest='compile_jacob',
+                        default=True,
+                        help='Use this option to force the tester to use '
+                             'previously compiled files'
+                        )
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
-         args.generate_jacob, args.seed, args.pasr_output,
+         args.generate_jacob, args.compile_jacob, args.seed, args.pasr_output,
          args.last_spec, args.cache_optimization, args.no_shared, args.tchem
          )

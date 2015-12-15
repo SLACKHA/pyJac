@@ -8,6 +8,7 @@ from __future__ import division
 import sys
 import math
 import re
+from copy import deepcopy
 
 import numpy as np
 
@@ -670,6 +671,28 @@ def read_mech(mech_filename, therm_filename):
                     reac.cheb_par[0] += math.log10(0.001 ** (order - 1.))
 
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
+    
+    # Split reversible reactions with explicit reverse parameters into 
+    # two irreversible reactions to match Cantera's behavior
+    for reac in reacs[:]:
+        if reac.rev_par:
+            new_reac = deepcopy(reac)
+            
+            idx = reacs.index(reac)
+            reacs[idx].rev = False
+            reacs[idx].rev_par = []
+            
+            new_reac.A = new_reac.rev_par[0]
+            new_reac.b = new_reac.rev_par[1]
+            new_reac.E = new_reac.rev_par[2]
+            new_reac.rev = False
+            new_reac.rev_par = []
+            new_reac.prod = reac.reac
+            new_reac.prod_nu = reac.reac_nu
+            new_reac.reac = reac.prod
+            new_reac.reac_nu = reac.prod_nu
+
+            reacs.insert(idx + 1, new_reac)
 
     # Read seperate thermo file if present and needed
     if any([not sp.mw for sp in specs]):

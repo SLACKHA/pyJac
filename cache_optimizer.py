@@ -275,6 +275,20 @@ def optimize_cache(specs, reacs, multi_thread,
             for sp in plot:
                 arr[rind, sp] = [0, 0, 0]
 
+        loads = 0
+        for rind in range(nr - 1):
+            for sp in range(nsp):
+                if arr[rind, sp, 0] > arr[rind + 1, sp, 0]:
+                    loads += 1
+
+        local = 0
+        for rind in range(nr):
+            for sp in range(nsp - 1):
+                if arr[rind, sp, 0] < arr[rind, sp + 1, 0]:
+                    local += 1
+
+        print (loads, local)
+
         plt.imshow(arr, interpolation='nearest')
         plt.savefig('old.pdf')
 
@@ -290,6 +304,20 @@ def optimize_cache(specs, reacs, multi_thread,
             plot = [name_map[sp] for sp in plot if sp]
             for sp in plot:
                 arr[rind, sp] = [0, 0, 0]
+
+        loads = 0
+        for rind in range(nr - 1):
+            for sp in range(nsp):
+                if arr[rind, sp, 0] > arr[rind + 1, sp, 0]:
+                    loads += 1
+
+        local = 0
+        for rind in range(nr):
+            for sp in range(nsp - 1):
+                if arr[rind, sp, 0] < arr[rind, sp + 1, 0]:
+                    local += 1
+
+        print (loads, local)
 
         plt.imshow(arr, interpolation='nearest')
         plt.savefig('new.pdf')

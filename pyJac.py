@@ -2097,7 +2097,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 get_array, do_unroll
                 )
             if dkdt:
-                file.write(jline)
+                file.write(jline + dkdt)
             else:
                 doT = False
         

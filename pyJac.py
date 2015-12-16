@@ -2077,6 +2077,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         jline += ' / T) * ('
 
+        doT = True
         if rxn.plog:
             write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                               rev_reacs.index(rind) if rxn.rev else None,
@@ -2097,57 +2098,60 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 )
             if dkdt:
                 file.write(jline)
-
-        for k_sp in set(rxn.reac + rxn.prod):
-            sp_k = specs[k_sp]
-            line = utils.line_start
-            nu = utils.get_nu(k_sp, rxn)
-            if nu == 0:
-                continue
-            if lang in ['c', 'cuda']:
-                j_str = ('{}J_nplusone'.format('*' if do_unroll else '')
-                         if k_sp + 1 == num_s
-                         else get_array(lang, 'jac', k_sp + 1)
-                         )
-                line += (
-                    j_str +
-                    ' {}= {}j_temp{} * {:.16e}'.format(
-                        '+' if touched[k_sp + 1] else '',
-                        '' if nu == 1 else ('-' if nu == -1 else ''),
-                        ' * {}'.format(float(nu))
-                        if nu != 1 and nu != -1 else '',
-                        sp_k.mw
-                        )
-                    )
-            elif lang in ['fortran', 'matlab']:
-                # NOTE: I believe there was a bug here w/ the previous
-                # fortran/matlab code (as it looks like it would be zero
-                # indexed)
-                j_str = ('J_nplusone' if k_sp + 1 == num_s
-                         else get_array(lang, 'jac', k_sp + 1, twod=0)
-                         )
-                line += (
-                    j_str + ' = ' +
-                    (j_str + ' + ' if touched[k_sp + 1] else '') +
-                    ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else
-                        ('-' if nu == -1 else ''),
-                        ' * {}'.format(float(nu))
-                        if nu != 1 and nu != -1 else '', sp_k.mw
-                        )
-                    )
-            file.write(line + utils.line_end[lang])
-            if k_sp + 1 == num_s:
-                J_nplusone_touched = True
             else:
-                touched[k_sp + 1] = True
-            if lang in ['c', 'cuda']:
-                if k_sp + 1 not in sparse_indicies:
-                    sparse_indicies.append(k_sp + 1)
-            elif lang in ['fortran', 'matlab']:
-                if (k_sp + 1, 1) not in sparse_indicies:
-                    sparse_indicies.append((k_sp + 1, 1))
+                doT = False
+        
+        if doT:
+            for k_sp in set(rxn.reac + rxn.prod):
+                sp_k = specs[k_sp]
+                line = utils.line_start
+                nu = utils.get_nu(k_sp, rxn)
+                if nu == 0:
+                    continue
+                if lang in ['c', 'cuda']:
+                    j_str = ('{}J_nplusone'.format('*' if do_unroll else '')
+                             if k_sp + 1 == num_s
+                             else get_array(lang, 'jac', k_sp + 1)
+                             )
+                    line += (
+                        j_str +
+                        ' {}= {}j_temp{} * {:.16e}'.format(
+                            '+' if touched[k_sp + 1] else '',
+                            '' if nu == 1 else ('-' if nu == -1 else ''),
+                            ' * {}'.format(float(nu))
+                            if nu != 1 and nu != -1 else '',
+                            sp_k.mw
+                            )
+                        )
+                elif lang in ['fortran', 'matlab']:
+                    # NOTE: I believe there was a bug here w/ the previous
+                    # fortran/matlab code (as it looks like it would be zero
+                    # indexed)
+                    j_str = ('J_nplusone' if k_sp + 1 == num_s
+                             else get_array(lang, 'jac', k_sp + 1, twod=0)
+                             )
+                    line += (
+                        j_str + ' = ' +
+                        (j_str + ' + ' if touched[k_sp + 1] else '') +
+                        ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else
+                            ('-' if nu == -1 else ''),
+                            ' * {}'.format(float(nu))
+                            if nu != 1 and nu != -1 else '', sp_k.mw
+                            )
+                        )
+                file.write(line + utils.line_end[lang])
+                if k_sp + 1 == num_s:
+                    J_nplusone_touched = True
+                else:
+                    touched[k_sp + 1] = True
+                if lang in ['c', 'cuda']:
+                    if k_sp + 1 not in sparse_indicies:
+                        sparse_indicies.append(k_sp + 1)
+                elif lang in ['fortran', 'matlab']:
+                    if (k_sp + 1, 1) not in sparse_indicies:
+                        sparse_indicies.append((k_sp + 1, 1))
 
-        file.write('\n')
+            file.write('\n')
 
         ######################################
         # with respect to species

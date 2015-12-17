@@ -1083,7 +1083,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
 
     # print line for reaction
-    return jline + ')) * rho_inv' + utils.line_end[lang]
+    return jline + ') * rho_inv' + utils.line_end[lang]
 
 def write_cheb_ut(file, lang, rxn):
     line_list = []

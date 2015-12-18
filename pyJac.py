@@ -1086,7 +1086,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
     # print line for reaction
     if jline:
-        jline += ') * rho_inv' + utils.line_end[lang]
+        jline += ')) * rho_inv' + utils.line_end[lang]
     return jline
 
 def write_cheb_ut(file, lang, rxn):
@@ -1146,6 +1146,7 @@ def write_cheb_ut(file, lang, rxn):
                   line in line_list]
     file.write(''.join(line_list))
 
+
 def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array, do_unroll):
     # Chebyshev reaction
     tlim_inv_sum = 1.0 / rxn.cheb_tlim[0] + 1.0 / rxn.cheb_tlim[1]
@@ -1196,6 +1197,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx, specs, get_array, d
     jline += ')) * rho_inv'
     # print line for reaction
     file.write(jline + utils.line_end[lang])
+
 
 def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, do_unroll):
     # Plog reactions have conditional contribution,
@@ -1276,8 +1278,8 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
                         jline_p += ')'
                     jline_p += ')'
 
-            jline_p += ')) * rho_inv'
-            #jline_p += '))'
+            jline_p += ') * rho_inv'
+
             if have_prev:
                 file.write(
                     utils.line_start + '}} else if ((pres > {:.4e}) '.format(p1) +

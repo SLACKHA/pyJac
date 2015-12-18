@@ -1301,10 +1301,13 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
             raise NotImplementedError
         else:
             if b_p1 != 0.0:
-                jline_p += '{:.16e} + '.format(b_p1)
+                jline_p += '{:.16e}'.format(b_p1)
             if E_p1 != 0.0:
-                jline_p += '{:.16e} / T + '.format(E_p1)
+                if jline_p: jline_p += ' + '
+                jline_p += '{:.16e} / T'.format(E_p1)
             if b_p2 - b_p1 != 0.0 or E_p2 - E_p1 != 0.0:
+                if jline_p: jline_p += ' + '
+
                 jline_p += '('
                 if b_p2 - b_p1 != 0.0:
                     jline_p += '{:.16e} + '.format(b_p2 - b_p1)

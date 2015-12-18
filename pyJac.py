@@ -1032,12 +1032,12 @@ def write_dcp_dt(file, lang, specs):
 
         first = False
 
+
 def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
                           get_array, do_unroll
                           ):
     """Write contribution from temperature derivative of reaction rate for
     elementary reaction.
-
     """
 
     jline = ''
@@ -1144,6 +1144,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
     if jline:
         jline += ')) * rho_inv' + utils.line_end[lang]
     return jline
+
 
 def write_cheb_ut(file, lang, rxn):
     line_list = []
@@ -1280,7 +1281,8 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                           )
 
     dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rind,
-                                     rev_idx, get_array, do_unroll)
+                                 rev_idx, get_array, do_unroll
+                                 )
     have_prev = False
     if dkdt:
         file.write(utils.line_start + 'if (pres <= {:.4e}) {{\n'.format(p1))
@@ -1291,13 +1293,13 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
         (p1, A_p1, b_p1, E_p1) = vals
         (p2, A_p2, b_p2, E_p2) = rxn.plog_par[idx + 1]
 
+        jline_p = ''
         if A_p2 / A_p1 < 0:
             # MIT mechanisms occasionally have (for some unknown reason)
             # negative A's, so we need to handle the
             # log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
-            jline_p = ''
             if b_p1 != 0.0:
                 jline_p += '{:.16e} + '.format(b_p1)
             if E_p1 != 0.0:
@@ -1314,54 +1316,57 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                     assert p1 != p2, 'Cannot have equal pressures in PLOG'
                     jline_p += '{:.16e})'.format(math.log(p2) - math.log(p1))
 
-        if jline_p:
-            jline_p = jline + jline_p
-
-
-            jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
-
-            if rxn.rev:
-                # reverse reaction rate also
-                jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
-
-            jline_p += ')'
-            nu = sum(rxn.reac_nu)
-            if nu != 1.0:
-                jline_p += ' + ' + get_array(lang, 'fwd_rates', rind)
-                jline_p += ' * {}'.format(1. - nu)
-
-            if rxn.rev:
-                nu = sum(rxn.prod_nu)
-                dbdt = get_db_dt(lang, specs, rxn, do_unroll)
-                if nu != 1.0 or dbdt:
-                    jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
-                    jline_p += ' * ('
-                    if nu != 1.0:
-                        jline_p+= '{} + '.format(1. - nu)
-                    dbdt = get_db_dt(lang, specs, rxn, do_unroll)
-                    if dbdt:
-                        jline_p += ('-T * (' +
-                                    get_db_dt(lang, specs, rxn, do_unroll) +
-                                    ')'
+                    jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
+                    if rxn.rev:
+                        # reverse reaction rate also
+                        jline_p += (' - ' +
+                                    get_array(lang, 'rev_rates', rev_idx)
                                     )
                     jline_p += ')'
 
-            jline_p += ') * rho_inv'
+        nu = sum(rxn.reac_nu)
+        if nu != 1.0:
+            if jline_p: jline_p += ' + '
+            jline_p += (get_array(lang, 'fwd_rates', rind)
+                        ' * {}'.format(1. - nu)
+                        )
 
-            if have_prev:
-                file.write(
-                    utils.line_start +
-                    '}} else if ((pres > {:.4e}) '.format(p1) +
-                    '&& (pres <= {:.4e})) {{\n'.format(p2)
-                    )
-            else:
-                file.write(
-                    utils.line_start + 'if ((pres > {:.4e}) '.format(p1) +
-                    '&& (pres <= {:.4e})) {{\n'.format(p2)
-                    )
-            have_prev = True
-            # print line for reaction
-            file.write(utils.line_start + jline_p + utils.line_end[lang])
+        if rxn.rev:
+            nu = sum(rxn.prod_nu)
+            dbdt = get_db_dt(lang, specs, rxn, do_unroll)
+            if nu != 1.0 or dbdt:
+                jline_p += ('{}'.format(' - ' if jline_p else '-') +
+                            get_array(lang, 'rev_rates', rev_idx) +
+                            ' * ('
+                            )
+                if nu != 1.0:
+                    jline_p += '{} + '.format(1. - nu)
+                dbdt = get_db_dt(lang, specs, rxn, do_unroll)
+                if dbdt:
+                    jline_p += ('-T * (' +
+                                get_db_dt(lang, specs, rxn, do_unroll) +
+                                ')'
+                                )
+                jline_p += ')'
+
+        if jline_p:
+            jline_p = jline '(' + jline_p + ')' + ') * rho_inv'
+        else:
+            jline_p = jline + '0.0e0)'
+
+        if have_prev:
+            file.write(utils.line_start +
+                       '}} else if ((pres > {:.4e}) '.format(p1) +
+                       '&& (pres <= {:.4e})) {{\n'.format(p2)
+                       )
+        else:
+            file.write(utils.line_start +
+                       'if ((pres > {:.4e}) '.format(p1) +
+                       '&& (pres <= {:.4e})) {{\n'.format(p2)
+                       )
+        have_prev = True
+        # print line for reaction
+        file.write(utils.line_start + jline_p + utils.line_end[lang])
 
     (pn, A_pn, b_pn, E_pn) = rxn.plog_par[-1]
     file.write(utils.line_start +
@@ -1377,8 +1382,8 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                           A_pn, b_pn, E_pn
                           )
     dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rind,
-                                     rev_idx, get_array, do_unroll
-                                     )
+                                 rev_idx, get_array, do_unroll
+                                 )
     if dkdt:
         if have_prev:
             file.write(utils.line_start +

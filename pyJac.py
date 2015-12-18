@@ -1327,7 +1327,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
         nu = sum(rxn.reac_nu)
         if nu != 1.0:
             if jline_p: jline_p += ' + '
-            jline_p += (get_array(lang, 'fwd_rates', rind) + 
+            jline_p += (get_array(lang, 'fwd_rates', rind) +
                         ' * {}'.format(1. - nu)
                         )
 
@@ -1350,7 +1350,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                 jline_p += ')'
 
         if jline_p:
-            jline_p = jline '(' + jline_p + ')' + ') * rho_inv'
+            jline_p = jline + '(' + jline_p + ')) * rho_inv'
         else:
             jline_p = jline + '0.0e0)'
 

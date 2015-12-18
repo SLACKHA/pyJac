@@ -1318,14 +1318,16 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                     jline_p += ') / '
                     assert p1 != p2, 'Cannot have equal pressures in PLOG'
                     jline_p += '{:.16e})'.format(math.log(p2) - math.log(p1))
+            else:
+                jline_p += ')'
 
-                    jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
-                    if rxn.rev:
-                        # reverse reaction rate also
-                        jline_p += (' - ' +
-                                    get_array(lang, 'rev_rates', rev_idx)
-                                    )
-                    jline_p += ')'
+            jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
+            if rxn.rev:
+                # reverse reaction rate also
+                jline_p += (' - ' +
+                            get_array(lang, 'rev_rates', rev_idx)
+                            )
+            jline_p += ')'
 
         nu = sum(rxn.reac_nu)
         if nu != 1.0:

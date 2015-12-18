@@ -997,25 +997,23 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
                 jline += dk_dt
 
             # loop over reactants
-            nu = sum(rxn.reac_nu)
             if nu != 1.0:
                 if dk_dt and jline:
                     jline += ' + '
                 jline += '{}'.format(1. - float(nu))
             jline += ')'
 
-        jline += ' - ' + \
-            get_array(lang, 'rev_rates', rev_idx) + \
-            ' * ('
-
         dk_dt = get_rxn_params_dt(rxn, rev=True)
         nu = sum(rxn.prod_nu)
         if dk_dt or nu != 1.0:
+            jline += ' - ' + \
+            get_array(lang, 'rev_rates', rev_idx) + \
+            ' * ('
+
             if dk_dt:
                 jline += dk_dt
 
             # product nu sum
-            nu = sum(rxn.prod_nu)
             if nu != 1.0:
                 if dk_dt and jline:
                     jline += ' + '
@@ -1048,21 +1046,25 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
             jline += get_array(lang, 'fwd_rates', rind)
             jline += ' * {}'.format(1. - float(nu))
 
-        if jline:
-            jline += ' - '
-        else:
-            jline += '-'
-        jline += get_array(lang, 'rev_rates', rev_idx)
-        jline += ' * ('
-        # product nu sum
+        dbdt = get_db_dt(lang, specs, rxn, do_unroll)
         nu = sum(rxn.prod_nu)
-        if nu != 1.0:
-            jline += '{} + '.format(1. - float(nu))
-        jline += '-T * ('
+        if dbdt or nu != 1.0:
+            if jline:
+                jline += ' - '
+            else:
+                jline += '-'
+            jline += get_array(lang, 'rev_rates', rev_idx)
+            jline += ' * ('
+            # product nu sum
+            nu = sum(rxn.prod_nu)
+            if nu != 1.0:
+                jline += '{} + '.format(1. - float(nu))
+            if dbdt:
+                jline += '-T * ('
 
-        # product nu sum
-        jline += get_db_dt(lang, specs, rxn, do_unroll)
-        jline += '))'
+                # product nu sum
+                jline += dbdt
+                jline += '))'
     else:
         #forward only, combine dk/dt and nu sum
         dk_dt = get_rxn_params_dt(rxn, rev=False)
@@ -1083,7 +1085,9 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
 
     # print line for reaction
-    return jline + ') * rho_inv' + utils.line_end[lang]
+    if jline:
+        jline += ') * rho_inv' + utils.line_end[lang]
+    return jline
 
 def write_cheb_ut(file, lang, rxn):
     line_list = []
@@ -1198,7 +1202,6 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
     # depends on pressure range
 
     (p1, A_p1, b_p1, E_p1) = rxn.plog_par[0]
-    file.write(utils.line_start + 'if (pres <= {:.4e}) {{\n'.format(p1))
 
     # For pressure below the first pressure given, use standard
     # Arrhenius expression.
@@ -1209,60 +1212,85 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
                           A_p1, b_p1, E_p1
                           )
 
-    file.write(utils.line_start + jline +
-               get_elementary_rxn_dt(lang, specs, rxn_p, rind,
-                                     rev_idx, get_array, do_unroll
-                                     )
-               )
+    dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rind,
+                                     rev_idx, get_array, do_unroll)
+    have_prev = False
+    if dkdt:
+        file.write(utils.line_start + 'if (pres <= {:.4e}) {{\n'.format(p1))
+        file.write(utils.line_start + jline + dkdt)
+        have_prev = True
 
     for idx, vals in enumerate(rxn.plog_par[:-1]):
         (p1, A_p1, b_p1, E_p1) = vals
         (p2, A_p2, b_p2, E_p2) = rxn.plog_par[idx + 1]
-
-        file.write(
-            utils.line_start + '}} else if ((pres > {:.4e}) '.format(p1) +
-            '&& (pres <= {:.4e})) {{\n'.format(p2)
-            )
 
         if A_p2 / A_p1 < 0:
             #MIT mechanisms occaisionally have (for some unknown reason)
             #negative A's, so we need to handle the log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
-            jline_p = (jline + '({:.16e} + '.format(b_p1) +
-                       '{:.16e} / T + '.format(E_p1) +
-                       '({:.16e} + '.format(b_p2 - b_p1) +
-                       '{:.16e} / T) * '.format(E_p2 - E_p1) +
-                       '(log(pres) - {:.16e}) /'.format(math.log(p1)) +
-                       ' {:.16e}'.format(math.log(p2) - math.log(p1)) +
-                       ')'
-                       )
+            jline_p = ''
+            if b_p1 != 0.0:
+                jline_p += '{:.16e} + '.format(b_p1)
+            if E_p1 != 0.0:
+                jline_p += '{:.16e} / T + '.format(E_p1)
+            if b_p2 - b_p1 != 0.0 or E_p2 - E_p1 != 0.0:
+                jline_p += '('
+                if b_p2 - b_p1 != 0.0:
+                    jline_p += '{:.16e} + '.format(b_p2 - b_p1)
+                if E_p2 - E_p1 != 0.0:
+                    jline_p += '{:.16e} / T) * (log(pres)'.format(E_p2 - E_p1)
+                    if p1 != 1.0:
+                        jline_p += ' - {:.16e}'.format(math.log(p1))
+                    jline_p += ') / '
+                    assert p1 != p2, 'Cannot have equal pressures in PLOG'
+                    jline_p += '{:.16e})'.format(math.log(p2) - math.log(p1))
 
-        jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
+        if jline_p:
+            jline_p = jline + jline_p
 
-        if rxn.rev:
-            # reverse reaction rate also
-            jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
 
-        jline_p += ') '
-        nu = sum(rxn.reac_nu)
-        if nu != 1.0:
-            jline_p += ' + ' + get_array(lang, 'fwd_rates', rind)
-            jline_p += ' * {}'.format(1. - nu)
+            jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
 
-        if rxn.rev:
-            jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
-            jline_p += ' * ('
-            nu = sum(rxn.prod_nu)
+            if rxn.rev:
+                # reverse reaction rate also
+                jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
+
+            jline_p += ')'
+            nu = sum(rxn.reac_nu)
             if nu != 1.0:
-                jline_p+= '{} + '.format(1. - nu)
-            jline_p += '-T * (' + get_db_dt(lang, specs, rxn, do_unroll)
-            jline_p += '))'
+                jline_p += ' + ' + get_array(lang, 'fwd_rates', rind)
+                jline_p += ' * {}'.format(1. - nu)
 
-        jline_p += ')) * rho_inv'
-        #jline_p += '))'
-        # print line for reaction
-        file.write(utils.line_start + jline_p + utils.line_end[lang])
+            if rxn.rev:
+                nu = sum(rxn.prod_nu)
+                dbdt = get_db_dt(lang, specs, rxn, do_unroll)
+                if nu != 1.0 or dbdt:
+                    jline_p += ' - ' + get_array(lang, 'rev_rates', rev_idx)
+                    jline_p += ' * ('
+                    if nu != 1.0:
+                        jline_p+= '{} + '.format(1. - nu)
+                    dbdt = get_db_dt(lang, specs, rxn, do_unroll)
+                    if dbdt:
+                        jline_p += '-T * (' + get_db_dt(lang, specs, rxn, do_unroll)
+                        jline_p += ')'
+                    jline_p += ')'
+
+            jline_p += ')) * rho_inv'
+            #jline_p += '))'
+            if have_prev:
+                file.write(
+                    utils.line_start + '}} else if ((pres > {:.4e}) '.format(p1) +
+                    '&& (pres <= {:.4e})) {{\n'.format(p2)
+                    )
+            else:
+                file.write(
+                    utils.line_start + 'if ((pres > {:.4e}) '.format(p1) +
+                    '&& (pres <= {:.4e})) {{\n'.format(p2)
+                    )
+            have_prev = True
+            # print line for reaction
+            file.write(utils.line_start + jline_p + utils.line_end[lang])
 
     (pn, A_pn, b_pn, E_pn) = rxn.plog_par[-1]
     file.write(utils.line_start + '}} else if (pres > {:.4e}) {{\n'.format(pn))
@@ -1275,14 +1303,17 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind, rev_idx, get_array, d
                           rxn.prod, rxn.prod_nu,
                           A_pn, b_pn, E_pn
                           )
-
-    file.write(utils.line_start + jline +
-               get_elementary_rxn_dt(lang, specs, rxn_p, rind,
+    dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rind,
                                      rev_idx, get_array, do_unroll
                                      )
-               )
+    if dkdt:
+        if have_prev:
+            file.write(utils.line_start + '}} else if (pres > {:.4e}) {{\n'.format(pn))
+        else:
+            file.write(utils.line_start + 'if (pres > {:.4e}) {{\n'.format(pn))
+        file.write(utils.line_start + jline + dkdt)
 
-    file.write(utils.line_start + '}\n')
+        file.write(utils.line_start + '}\n')
 
 
 def write_dt_y(file, lang, specs, sp, isp, num_s,
@@ -2046,6 +2077,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
 
         jline += ' / T) * ('
 
+        doT = True
         if rxn.plog:
             write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                               rev_reacs.index(rind) if rxn.rev else None,
@@ -2059,63 +2091,67 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                               )
 
         else:
-            jline += get_elementary_rxn_dt(
+            dkdt = get_elementary_rxn_dt(
                 lang, specs, rxn, rind,
                 rev_reacs.index(rind) if rxn.rev else None,
                 get_array, do_unroll
                 )
-            file.write(jline)
-
-        for k_sp in set(rxn.reac + rxn.prod):
-            sp_k = specs[k_sp]
-            line = utils.line_start
-            nu = utils.get_nu(k_sp, rxn)
-            if nu == 0:
-                continue
-            if lang in ['c', 'cuda']:
-                j_str = ('{}J_nplusone'.format('*' if do_unroll else '')
-                         if k_sp + 1 == num_s
-                         else get_array(lang, 'jac', k_sp + 1)
-                         )
-                line += (
-                    j_str +
-                    ' {}= {}j_temp{} * {:.16e}'.format(
-                        '+' if touched[k_sp + 1] else '',
-                        '' if nu == 1 else ('-' if nu == -1 else ''),
-                        ' * {}'.format(float(nu))
-                        if nu != 1 and nu != -1 else '',
-                        sp_k.mw
-                        )
-                    )
-            elif lang in ['fortran', 'matlab']:
-                # NOTE: I believe there was a bug here w/ the previous
-                # fortran/matlab code (as it looks like it would be zero
-                # indexed)
-                j_str = ('J_nplusone' if k_sp + 1 == num_s
-                         else get_array(lang, 'jac', k_sp + 1, twod=0)
-                         )
-                line += (
-                    j_str + ' = ' +
-                    (j_str + ' + ' if touched[k_sp + 1] else '') +
-                    ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else
-                        ('-' if nu == -1 else ''),
-                        ' * {}'.format(float(nu))
-                        if nu != 1 and nu != -1 else '', sp_k.mw
-                        )
-                    )
-            file.write(line + utils.line_end[lang])
-            if k_sp + 1 == num_s:
-                J_nplusone_touched = True
+            if dkdt:
+                file.write(jline + dkdt)
             else:
-                touched[k_sp + 1] = True
-            if lang in ['c', 'cuda']:
-                if k_sp + 1 not in sparse_indicies:
-                    sparse_indicies.append(k_sp + 1)
-            elif lang in ['fortran', 'matlab']:
-                if (k_sp + 1, 1) not in sparse_indicies:
-                    sparse_indicies.append((k_sp + 1, 1))
+                doT = False
 
-        file.write('\n')
+        if doT:
+            for k_sp in set(rxn.reac + rxn.prod):
+                sp_k = specs[k_sp]
+                line = utils.line_start
+                nu = utils.get_nu(k_sp, rxn)
+                if nu == 0:
+                    continue
+                if lang in ['c', 'cuda']:
+                    j_str = ('{}J_nplusone'.format('*' if do_unroll else '')
+                             if k_sp + 1 == num_s
+                             else get_array(lang, 'jac', k_sp + 1)
+                             )
+                    line += (
+                        j_str +
+                        ' {}= {}j_temp{} * {:.16e}'.format(
+                            '+' if touched[k_sp + 1] else '',
+                            '' if nu == 1 else ('-' if nu == -1 else ''),
+                            ' * {}'.format(float(nu))
+                            if nu != 1 and nu != -1 else '',
+                            sp_k.mw
+                            )
+                        )
+                elif lang in ['fortran', 'matlab']:
+                    # NOTE: I believe there was a bug here w/ the previous
+                    # fortran/matlab code (as it looks like it would be zero
+                    # indexed)
+                    j_str = ('J_nplusone' if k_sp + 1 == num_s
+                             else get_array(lang, 'jac', k_sp + 1, twod=0)
+                             )
+                    line += (
+                        j_str + ' = ' +
+                        (j_str + ' + ' if touched[k_sp + 1] else '') +
+                        ' {}j_temp{} * {:.16e}'.format('' if nu == 1 else
+                            ('-' if nu == -1 else ''),
+                            ' * {}'.format(float(nu))
+                            if nu != 1 and nu != -1 else '', sp_k.mw
+                            )
+                        )
+                file.write(line + utils.line_end[lang])
+                if k_sp + 1 == num_s:
+                    J_nplusone_touched = True
+                else:
+                    touched[k_sp + 1] = True
+                if lang in ['c', 'cuda']:
+                    if k_sp + 1 not in sparse_indicies:
+                        sparse_indicies.append(k_sp + 1)
+                elif lang in ['fortran', 'matlab']:
+                    if (k_sp + 1, 1) not in sparse_indicies:
+                        sparse_indicies.append((k_sp + 1, 1))
+
+            file.write('\n')
 
         ######################################
         # with respect to species

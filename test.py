@@ -309,7 +309,8 @@ class cpyjac_evaluator(object):
             self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
              fwd_rates, rev_rates)
             fwd_rates[:] = fwd_rates[self.back_rxn_map]
-            rev_rates[:] = rev_rates[self.back_rev_rxn_map]
+            if self.back_rev_rxn_map.size:
+                rev_rates[:] = rev_rates[self.back_rev_rxn_map]
         else:
             self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
@@ -322,8 +323,14 @@ class cpyjac_evaluator(object):
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
         if self.cache_opt:
             test_fwd = self.__copy(fwd_rates[self.fwd_rxn_map])
-            test_rev = self.__copy(rev_rates[self.fwd_rev_rxn_map])
-            test_pdep = self.__copy(pres_mod[self.fwd_pdep_map])
+            if self.fwd_rev_rxn_map.size:
+                test_rev = self.__copy(rev_rates[self.fwd_rev_rxn_map])
+            else:
+                test_rev = self.__copy(rev_rates)
+            if self.fwd_pdep_map.size:
+                test_pdep = self.__copy(pres_mod[self.fwd_pdep_map])
+            else:
+                test_pdep = self.__copy(pres_mod)
             self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
             spec_rates[:] = spec_rates[self.back_spec_map]
         else:
@@ -695,12 +702,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
         #get reaction rates of production
         test_fwd_rates = np.zeros(gas.n_reactions)
-        test_rev_rates = np.zeros(len(idx_rev))
-        test_pres_mod = np.zeros(len(idx_pmod))
+        test_rev_rates = np.zeros(max(len(idx_rev), 1))
+        test_pres_mod = np.zeros(max(len(idx_pmod), 1))
         pyjacob.eval_rxn_rates(temp, pres, test_conc,
                                   test_fwd_rates, test_rev_rates
                                   )
-        pyjacob.get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
+
+        if len(idx_pmod):
+            pyjacob.get_rxn_pres_mod(temp, pres, test_conc, test_pres_mod)
 
         # Species production rates
         test_spec_rates = np.zeros(gas.n_species)

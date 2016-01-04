@@ -261,7 +261,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
     last_spec = len(specs) - 1
     mw_frac = sp_j.mw / specs[last_spec].mw
     jline += ' * {:.16e}'.format(1. - mw_frac)
-    if ((rxn.pdep and rxn.pdep_sp == '') or
+    if ((rxn.pdep and rxn.pdep_sp is None) or
         (rxn.thd_body and rxn.thd_body_eff)
         ):
         alphaij = next((thd[1] for thd in rxn.thd_body_eff
@@ -278,7 +278,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
                     jline += ' + {:.16e} * pres_mod_temp'.format(alphaij)
             else:
                 jline += ' + pres_mod_temp'
-    elif rxn.pdep and (rxn.pdep_sp == j_sp or rxn.pdep_sp == last_spec):
+    elif (rxn.pdep_sp == j_sp or rxn.pdep_sp == last_spec):
         if rxn.pdep_sp == j_sp:
             jline += ' + pres_mod_temp'
         else:
@@ -732,7 +732,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs,
     # print lines for necessary pressure-dependent variables
     line = utils.line_start + 'conc_temp = '
     conc_temp_log = None
-    if rxn.pdep_sp != '':
+    if rxn.pdep_sp is not None:
         line += get_array(lang, 'conc', rxn.pdep_sp)
     elif not rxn.thd_body_eff:
         line += 'm'
@@ -1509,8 +1509,8 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
 
 
 def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
-                    this_thd, this_troe, this_sri, this_cheb, cheb_dim,
-                    this_plog, no_shared, has_nsp
+                    batch_has_m, this_thd, this_troe, this_sri,
+                    this_cheb, cheb_dim, this_plog, no_shared, has_nsp
                     ):
     """
     Writes the header and definitions for of any of the various sub-functions
@@ -1531,7 +1531,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
         file.write('const double, const double*')
         for rate in rate_list:
             file.write(', const double*')
-        if this_pdep:
+        if batch_has_m:
             file.write(', const double')
         file.write(', const double, const double, const double*, '
                    'const double, double*'
@@ -1554,7 +1554,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
              'const double * conc')
     for rate in rate_list:
         line += ', const double* ' + rate
-    if this_pdep:
+    if batch_has_m:
         line += ', const double m'
     line += (', const double mw_avg, const double rho, const double* dBdT, '
              'const double T, double* jac'
@@ -1960,7 +1960,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
     file.write('\n')
 
     # third-body variable needed for reactions
-    if any((rxn.pdep and rxn.pdep_sp == '') or rxn.thd_body for rxn in reacs):
+    if any((rxn.pdep and rxn.pdep_sp is None) or rxn.thd_body for rxn in reacs):
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -2130,6 +2130,7 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
             plog = False
             pdep_thd_eff = False
             has_jnplus_one = False
+            batch_has_m = False
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
@@ -2137,6 +2138,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     pdep = True
                     if reacs[ind_next].thd_body_eff:
                         pdep_thd_eff = True
+                    if reacs[ind_next].pdep_sp is None:
+                        batch_has_m = True
                 if reacs[ind_next].thd_body:
                     thd = True
                 if reacs[ind_next].troe:
@@ -2152,15 +2155,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                     utils.get_nu(len(specs) - 1, reac):
                     has_jnplus_one = True
 
-            batch_has_m = pdep
-
             dim = None
             if cheb:
                 dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             # write the specific evaluator for this reaction
             file = write_sub_intro(os.path.join(path, 'jacobs'), lang,
-                                   jac_count, rate_list, rev, pdep, thd,
-                                   troe, sri, cheb, dim, plog, smm is None,
+                                   jac_count, rate_list, rev, pdep,
+                                   batch_has_m, thd, troe, sri, cheb,
+                                   dim, plog, smm is None,
                                    has_jnplus_one
                                    )
 

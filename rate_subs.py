@@ -1145,7 +1145,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
 
     Returns
     -------
-    None
+    seen : a list of bools, True if species rate i is not identically zero
 
     """
 
@@ -1337,7 +1337,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
 
     file.close()
 
-    return
+    return seen
 
 
 def write_chem_utils(path, lang, specs):

@@ -1724,7 +1724,7 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
     return file
 
 
-def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
+def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -1737,6 +1737,8 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
         List of species in the mechanism.
     reacs : list of ReacInfo
         List of reactions in the mechanism.
+    seen_sp : list of bool
+        List of booleans, False if species i has an (identically) zero species rate
     splittings : list of int
         If not None and lang == 'cuda', this will be used
         to partition the sub jacobian routines
@@ -2669,22 +2671,14 @@ def write_jacobian(path, lang, specs, reacs, splittings=None, smm=None):
                 else:
                     jac_part = '-'
 
-            if lang in ['c', 'cuda']:
-                line += (get_array(lang, 'h', k_sp) + ' * (' + jac_part +
-                         '(j_temp * (' + get_array(lang, 'cp', j_sp) +
-                         ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                         ' * ' + get_array(lang, 'spec_rates', k_sp) +
-                         ' * {:.8e}))'.format(sp_k.mw)
-                         )
-            elif lang in ['fortran', 'matlab']:
-                line += (get_array(lang, 'h', k_sp) + jac_part +
-                         ' - (j_temp * (' + get_array(lang, 'cp', j_sp) +
-                         ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
-                         ' * ' + get_array(lang, 'spec_rates', k_sp) +
-                         ' * {:.8e}))'.format(sp_k.mw)
-                         )
-            line += ')' + utils.line_end[lang]
-            file.write(line)
+            sp_part = ('(j_temp * (' + get_array(lang, 'cp', j_sp) +
+                        ' - ' + get_array(lang, 'cp', num_s - 1) + ')' +
+                        ' * ' + get_array(lang, 'spec_rates', k_sp) +
+                        ' * {:.8e}))'.format(sp_k.mw))
+
+            line += get_array(lang, 'h', k_sp) + ' * (' + jac_part + sp_part + ')' + utils.line_end[lang]
+            if jac_part != '-' or seen_sp[k_sp]:
+                file.write(line)
 
         if do_unroll and k_sp == next_fn_index - 1:
             # switch back
@@ -3033,7 +3027,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
                                     )
 
     # write species rates subroutine
-    rate.write_spec_rates(build_path, lang, specs, reacs,
+    seen_sp = rate.write_spec_rates(build_path, lang, specs, reacs,
                     fwd_spec_mapping, fwd_rxn_mapping, smm)
 
     # write chem_utils subroutines
@@ -3058,7 +3052,7 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     if skip_jac == False:
         # write Jacobian subroutine
         sparse_indicies = write_jacobian(build_path, lang, specs,
-                                         reacs, splittings, smm
+                                         reacs, seen_sp, splittings, smm
                                          )
 
         write_sparse_multiplier(build_path, lang, sparse_indicies, len(specs))

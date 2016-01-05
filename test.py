@@ -496,7 +496,8 @@ class tchem_evaluator(cpyjac_evaluator):
 def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
          compile_jacob=True, seed=None, pasr_output_file=None, last_spec=None,
-         cache_optimization=False, no_shared=False, tchem_flag=False):
+         cache_optimization=False, no_shared=False, tchem_flag=False,
+         only_rxn=None):
     """Compares pyJac results against Cantera (and optionally TChem) using
     state data from PaSR simulations.
 
@@ -517,6 +518,27 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     if generate_jacob and not compile_jacob:
         print('Warning: Jacobian files being generated but not compiled.')
 
+    # Interpret reaction mechanism file, depending on Cantera or
+    # Chemkin format.
+    ck_mech_filename = None
+    if not mech_filename.endswith(tuple(['.cti', '.xml'])):
+        # Chemkin format; need to convert first.
+        ck_mech_filename = mech_filename
+        mech_filename = convert_mech(mech_filename, therm_filename)
+    elif tchem_flag:
+        tchem_flag = False
+        print('TChem validation disabled; '
+              'not compatible with Cantera mechanism.'
+              )
+
+    # get the cantera object
+    gas = ct.Solution(mech_filename)
+    if only_rxn is not None:
+        reacs = [int(x) for x in only_rxn.split(',')]
+        gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+                            species=gas.species(),
+                            reactions=[gas.reaction(rxn) for rxn in reacs])
+
     if generate_jacob:
         #remove the old jaclist
         try:
@@ -529,7 +551,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             pass
 
         # Create Jacobian and supporting source code files
-        create_jacobian(lang, mech_filename, therm_name=therm_filename,
+        create_jacobian(lang, gas=gas,
                         optimize_cache=cache_optimization, build_path=build_dir,
                         no_shared=no_shared, last_spec=last_spec
                         )
@@ -537,22 +559,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             #if it's cuda, we need to make sure the c files
             #are generated using the same manner
             #as we're going to use the c interface for testing the jacobian
-            create_jacobian('c', mech_filename, therm_name=therm_filename,
+            create_jacobian('c', gas=gas,
                         optimize_cache=cache_optimization, build_path=build_dir,
                         no_shared=no_shared, last_spec=last_spec
                         )
-
-    # Interpret reaction mechanism file, depending on Cantera or
-    # Chemkin format.
-    if not mech_filename.endswith(tuple(['.cti', '.xml'])):
-        # Chemkin format; need to convert first.
-        ck_mech_filename = mech_filename
-        mech_filename = convert_mech(mech_filename, therm_filename)
-    elif tchem_flag:
-        tchem_flag = False
-        print('TChem validation disabled; '
-              'not compatible with Cantera mechanism.'
-              )
 
     if compile_jacob:
         #write and compile the dydt python wrapper
@@ -586,8 +596,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                    'build_ext', '--inplace'
                                    ])
 
-    # get the cantera object
-    gas = ct.Solution(mech_filename)
     pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
 
@@ -1071,8 +1079,13 @@ if __name__ == '__main__':
                         help='Use this option to force the tester to use '
                              'previously compiled files'
                         )
+    parser.add_argument('-orxn', '--only_reaction',
+                        type=str,
+                        default=None,
+                        help='A comma separated list of reactions to test.')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
          args.generate_jacob, args.compile_jacob, args.seed, args.pasr_output,
-         args.last_spec, args.cache_optimization, args.no_shared, args.tchem
+         args.last_spec, args.cache_optimization, args.no_shared, args.tchem,
+         args.only_reaction
          )

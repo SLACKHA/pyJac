@@ -74,8 +74,6 @@ def read_mech(mech_filename, therm_filename):
 
     """
 
-    file = open(mech_filename, 'r')
-
     elems = []
     reacs = []
     specs = []
@@ -87,571 +85,570 @@ def read_mech(mech_filename, therm_filename):
     if therm_filename:
         therm_flag = True
 
-    # start line reading loop
-    while True:
-        # remember last line position
-        last_line = file.tell()
+    with open(mech_filename, 'r') as file:
+        # start line reading loop
+        while True:
+            # remember last line position
+            last_line = file.tell()
 
-        line = file.readline()
+            line = file.readline()
 
-        # end of file
-        if not line: break
+            # end of file
+            if not line: break
 
-        # skip blank or commented lines
-        if re.search('^\s*$', line) or re.search('^\s*!', line): continue
+            # skip blank or commented lines
+            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
 
-        # don't convert to lowercase, since thermo
-        # needs to match (for Chemkin)
+            # don't convert to lowercase, since thermo
+            # needs to match (for Chemkin)
 
-        # remove any comments from end of line
-        ind = line.find('!')
-        if ind > 0: line = line[0:ind]
+            # remove any comments from end of line
+            ind = line.find('!')
+            if ind > 0: line = line[0:ind]
 
-        # now determine key
-        if line[0:4].lower() == 'elem':
-            key = 'elem'
+            # now determine key
+            if line[0:4].lower() == 'elem':
+                key = 'elem'
 
-            # check for any entries on this line
-            line_split = line.split()
-            if len(line_split) > 1:
-                ind = line.index(line_split[1])
-                line = line[ind:]
-            else:
-                continue
-
-        elif line[0:4].lower() == 'spec':
-            key = 'spec'
-
-            # check for any entries on this line
-            line_split = line.split()
-            if len(line_split) > 1:
-                ind = line.index(line_split[1])
-                line = line[ind:]
-            else:
-                continue
-
-        elif line[0:4].lower() == 'reac':
-            key = 'reac'
-
-            # default units from Chemkin
-            units_E = 'cal/mole'
-            units_A = 'moles'
-
-            # get Arrhenius coefficient units (if specified)
-            for unit in line.split()[1:]:
-                if unit.lower() in pre_units:
-                    units_A = unit.lower()
-                elif unit.lower() in act_energy_units:
-                    units_E = unit.lower()
-                else:
-                    print('Error: unsupported units on REACTION line.')
-                    print('For pre-exponential factor, choose from: ' +
-                          pre_units
-                          )
-                    print('For activation energy, choose from: ' +
-                          act_energy_units
-                          )
-                    print('Otherwise leave blank for moles and cal/mole.')
-                    sys.exit(1)
-
-            if units_A == 'molecules':
-                raise NotImplementedError('Molecules units not '
-                                          'supported, sorry.'
-                                          )
-            continue
-        elif line[0:4].lower() == 'ther':
-            # thermo data is in mechanism file
-            read_thermo(mech_filename, elems, specs)
-            continue
-        elif line[0:3].lower() == 'end':
-            key = ''
-            continue
-
-        line = line.strip()
-
-        if key == 'elem':
-            # if any atomic weight declarations, replace / with spaces
-            line = line.replace('/', ' ')
-
-            line_split = line.split()
-            e_last = ''
-            for e in line_split:
-                if e.isalpha():
-                    if e[0:3] == 'end': continue
-                    if e not in elems:
-                        elems.append(e)
-                    e_last = e
-                else:
-                    # either add new element or update existing
-                    # atomic weight
-                    elem_wt[e_last.lower()] = float(e)
-
-        elif key == 'spec':
-            line_split = line.split()
-            for s in line_split:
-                if s[0:3] == 'end': continue
-                if not next((sp for sp in specs if sp.name == s), None):
-                    specs.append(chem.SpecInfo(s))
-
-        elif key == 'reac':
-            # determine if reaction or auxiliary info line
-
-            if '=' in line:
-                # new reaction
-
-                cheb_flag = False
-
-                # get Arrhenius coefficients
+                # check for any entries on this line
                 line_split = line.split()
-                n = len(line_split)
-                reac_A = float(line_split[n - 3])
-                reac_b = float(line_split[n - 2])
-                reac_E = float(line_split[n - 1])
-
-                ind = line.index(line_split[n - 3])
-                line = line[0:ind].strip()
-
-                if '<=>' in line:
-                    ind = line.index('<=>')
-                    reac_rev = True
-                    reac_str = line[0:ind].strip()
-                    prod_str = line[ind + 3:].strip()
-                elif '=>' in line:
-                    ind = line.index('=>')
-                    reac_rev = False
-                    reac_str = line[0:ind].strip()
-                    prod_str = line[ind + 2:].strip()
+                if len(line_split) > 1:
+                    ind = line.index(line_split[1])
+                    line = line[ind:]
                 else:
-                    ind = line.index('=')
-                    reac_rev = True
-                    reac_str = line[0:ind].strip()
-                    prod_str = line[ind + 1:].strip()
+                    continue
 
-                thd = False
-                pdep = False
-                pdep_sp = ''
+            elif line[0:4].lower() == 'spec':
+                key = 'spec'
 
-                reac_spec = []
-                reac_nu = []
-                prod_spec = []
-                prod_nu = []
+                # check for any entries on this line
+                line_split = line.split()
+                if len(line_split) > 1:
+                    ind = line.index(line_split[1])
+                    line = line[ind:]
+                else:
+                    continue
 
-                # reactants
+            elif line[0:4].lower() == 'reac':
+                key = 'reac'
 
-                # look for third-body species
-                sub_str = reac_str
-                while '(' in sub_str:
-                    ind1 = sub_str.find('(')
-                    ind2 = sub_str.find(')')
+                # default units from Chemkin
+                units_E = 'cal/mole'
+                units_A = 'moles'
 
-                    # Need to check if '+' is first character inside
-                    # parentheses and not embedded within parentheses
-                    # (e.g., '(+)').
-                    # If not, part of species name.
-                    inParen = sub_str[ind1 + 1: ind2].strip()
-                    if inParen is '+':
-                        # '+' embedded within parentheses
-                        sub_str = sub_str[ind2 + 1:]
-                    elif inParen[0] is '+':
-                        pdep = True
-
-                        # either 'm' or a specific species
-                        pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
-                        pdep_sp = pdep_sp.strip()
-
-                        if pdep_sp.lower() == 'm':
-                            thd = True
-                            pdep_sp = ''
-
-                        # now remove from string
-                        ind = reac_str.find(sub_str)
-                        reac_str = (reac_str[0: ind1 + ind] +
-                                    reac_str[ind2 + ind + 1:]
-                                    )
-                        break
+                # get Arrhenius coefficient units (if specified)
+                for unit in line.split()[1:]:
+                    if unit.lower() in pre_units:
+                        units_A = unit.lower()
+                    elif unit.lower() in act_energy_units:
+                        units_E = unit.lower()
                     else:
-                        # Part of species name, remove from substring
-                        # and look at rest of reactant line.
-                        sub_str = sub_str[ind2 + 1:]
+                        print('Error: unsupported units on REACTION line.')
+                        print('For pre-exponential factor, choose from: ' +
+                              pre_units
+                              )
+                        print('For activation energy, choose from: ' +
+                              act_energy_units
+                              )
+                        print('Otherwise leave blank for moles and cal/mole.')
+                        sys.exit(1)
 
-                reac_list = reac_str.split('+')
+                if units_A == 'molecules':
+                    raise NotImplementedError('Molecules units not '
+                                              'supported, sorry.'
+                                              )
+                continue
+            elif line[0:4].lower() == 'ther':
+                # thermo data is in mechanism file
+                read_thermo(mech_filename, elems, specs)
+                continue
+            elif line[0:3].lower() == 'end':
+                key = ''
+                continue
 
-                # Check for empty list elements, meaning there were
-                # multiple '+' in a row, which indicates species'
-                # name ended in '+'.
-                while '' in reac_list:
-                    ind = reac_list.index('')
-                    reac_list[ind - 1] = reac_list[ind - 1] + '+'
-                    del reac_list[ind]
+            line = line.strip()
 
-                # check for any species with '(+)' that was split apart
-                for sp in reac_list:
-                    ind = reac_list.index(sp)
+            if key == 'elem':
+                # if any atomic weight declarations, replace / with spaces
+                line = line.replace('/', ' ')
 
-                    # ensure not last entry
-                    if (ind < len(reac_list) - 1):
-                        spNext = reac_list[ind + 1]
-                        if sp[len(sp) - 1] is '(' and spNext[0] is ')':
-                            reac_list[ind] = sp + '+' + spNext
-                            del reac_list[ind + 1]
-
-                for sp in reac_list:
-
-                    sp = sp.strip()
-
-                    # look for coefficient
-                    if sp[0:1].isdigit():
-                        # starts with number (coefficient)
-
-                        # search for first letter
-                        for i in range(len(sp)):
-                            if sp[i: i + 1].isalpha(): break
-
-                        nu = sp[0:i]
-                        if '.' in nu:
-                            # float
-                            nu = float(nu)
-                        else:
-                            # integer
-                            nu = int(nu)
-
-                        sp = sp[i:].strip()
+                line_split = line.split()
+                e_last = ''
+                for e in line_split:
+                    if e.isalpha():
+                        if e[0:3] == 'end': continue
+                        if e not in elems:
+                            elems.append(e)
+                        e_last = e
                     else:
-                        # no coefficient given
-                        nu = 1
+                        # either add new element or update existing
+                        # atomic weight
+                        elem_wt[e_last.lower()] = float(e)
 
-                    # check for third body
-                    if sp.lower() == 'm':
-                        thd = True
-                        continue
+            elif key == 'spec':
+                line_split = line.split()
+                for s in line_split:
+                    if s[0:3] == 'end': continue
+                    if not next((sp for sp in specs if sp.name == s), None):
+                        specs.append(chem.SpecInfo(s))
 
-                    # check if species already in reaction
-                    if sp not in reac_spec:
-                        # new reactant
-                        reac_spec.append(sp)
-                        reac_nu.append(nu)
+            elif key == 'reac':
+                # determine if reaction or auxiliary info line
+
+                if '=' in line:
+                    # new reaction
+
+                    cheb_flag = False
+
+                    # get Arrhenius coefficients
+                    line_split = line.split()
+                    n = len(line_split)
+                    reac_A = float(line_split[n - 3])
+                    reac_b = float(line_split[n - 2])
+                    reac_E = float(line_split[n - 1])
+
+                    ind = line.index(line_split[n - 3])
+                    line = line[0:ind].strip()
+
+                    if '<=>' in line:
+                        ind = line.index('<=>')
+                        reac_rev = True
+                        reac_str = line[0:ind].strip()
+                        prod_str = line[ind + 3:].strip()
+                    elif '=>' in line:
+                        ind = line.index('=>')
+                        reac_rev = False
+                        reac_str = line[0:ind].strip()
+                        prod_str = line[ind + 2:].strip()
                     else:
-                        # existing reactant
-                        i = reac_spec.index(sp)
-                        reac_nu[i] += nu
+                        ind = line.index('=')
+                        reac_rev = True
+                        reac_str = line[0:ind].strip()
+                        prod_str = line[ind + 1:].strip()
 
-                # products
-
-                # look for third-body species
-                sub_str = prod_str
-                while '(' in sub_str:
-                    ind1 = sub_str.find('(')
-                    ind2 = sub_str.find(')')
-
-                    # Need to check if '+' is first character inside
-                    # parentheses and not embedded within parentheses
-                    # (e.g., '(+)'). If not, part of species name.
-                    inParen = sub_str[ind1 + 1: ind2].strip()
-                    if inParen is '+':
-                        # '+' embedded within parentheses
-                        sub_str = sub_str[ind2 + 1:]
-                    elif inParen[0] is '+':
-                        pdep = True
-
-                        # either 'm' or a specific species
-                        pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
-                        pdep_sp = pdep_sp.strip()
-
-                        if pdep_sp.lower() == 'm':
-                            thd = True
-                            pdep_sp = ''
-
-                        # now remove from string
-                        ind = prod_str.find(sub_str)
-                        prod_str = (prod_str[0: ind1 + ind] +
-                                    prod_str[ind2 + ind + 1:]
-                                    )
-                        break
-                    else:
-                        # Part of species name, remove from substring and
-                        # look at rest of product line.
-                        sub_str = sub_str[ind2 + 1:]
-
-                prod_list = prod_str.split('+')
-
-                # Check for empty list elements, meaning there were
-                # multiple '+' in a row, which indicates species
-                # name ended in '+'.
-                while '' in prod_list:
-                    ind = prod_list.index('')
-                    prod_list[ind - 1] = prod_list[ind - 1] + '+'
-                    del prod_list[ind]
-
-                # check for any species with '(+)' that was split apart
-                for sp in prod_list:
-                    ind = prod_list.index(sp)
-
-                    # ensure not last entry
-                    if (ind < len(prod_list) - 1):
-                        spNext = prod_list[ind + 1]
-                        if sp[len(sp) - 1] is '(' and spNext[0] is ')':
-                            prod_list[ind] = sp + '+' + spNext
-                            del prod_list[ind + 1]
-
-                for sp in prod_list:
-
-                    sp = sp.strip()
-
-                    # look for coefficient
-                    if sp[0:1].isdigit():
-                        # starts with number (coefficient)
-
-                        # search for first letter
-                        for i in range(len(sp)):
-                            if sp[i: i + 1].isalpha(): break
-
-                        nu = sp[0:i]
-                        if '.' in nu:
-                            # float
-                            nu = float(nu)
-                        else:
-                            # integer
-                            nu = int(nu)
-
-                        sp = sp[i:].strip()
-                    else:
-                        # no coefficient given
-                        nu = 1
-
-                    # check for third body
-                    if sp in ['m', 'M']:
-                        thd = True
-                        continue
-
-                    # check if species already in reaction
-                    if sp not in prod_spec:
-                        # new product
-                        prod_spec.append(sp)
-                        prod_nu.append(nu)
-                    else:
-                        # existing product
-                        i = prod_spec.index(sp)
-                        prod_nu[i] += nu
-
-                # Don't want to confuse third-body and pressure-dependent
-                # reactions... they are different!
-                if pdep:
                     thd = False
+                    pdep = False
+                    pdep_sp = ''
 
-                # Convert given activation energy units to internal units
-                reac_E *= act_energy_fact[units_E]
+                    reac_spec = []
+                    reac_nu = []
+                    prod_spec = []
+                    prod_nu = []
 
-                # Convert given pre-exponential units to internal units
-                if units_A == 'moles':
-                    reac_ord = sum(reac_nu)
-                    if thd:
-                        reac_A /= 1000. ** reac_ord
-                    elif pdep:
-                        # Low- (chemically activated bimolecular reaction) or
-                        # high-pressure (fall-off reaction) limit parameters
-                        reac_A /= 1000. ** (reac_ord - 1.)
-                    else:
-                        # Elementary reaction
-                        reac_A /= 1000. ** (reac_ord - 1.)
+                    # reactants
 
-                # add reaction to list
-                reac = chem.ReacInfo(reac_rev, reac_spec, reac_nu,
-                                     prod_spec, prod_nu, reac_A, reac_b,
-                                     reac_E
-                                     )
-                reac.thd_body = thd
-                reac.pdep = pdep
-                if pdep: reac.pdep_sp = pdep_sp
+                    # look for third-body species
+                    sub_str = reac_str
+                    while '(' in sub_str:
+                        ind1 = sub_str.find('(')
+                        ind2 = sub_str.find(')')
 
-                reacs.append(reac)
+                        # Need to check if '+' is first character inside
+                        # parentheses and not embedded within parentheses
+                        # (e.g., '(+)').
+                        # If not, part of species name.
+                        inParen = sub_str[ind1 + 1: ind2].strip()
+                        if inParen is '+':
+                            # '+' embedded within parentheses
+                            sub_str = sub_str[ind2 + 1:]
+                        elif inParen[0] is '+':
+                            pdep = True
 
-            else:
-                # auxiliary reaction info
+                            # either 'm' or a specific species
+                            pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
+                            pdep_sp = pdep_sp.strip()
 
-                aux = line[0:3].lower()
-                if aux == 'dup':
-                    reacs[-1].dup = True
+                            if pdep_sp.lower() == 'm':
+                                thd = True
+                                pdep_sp = ''
 
-                elif aux == 'rev':
-                    line = line.replace('/', ' ')
-                    line = line.replace(',', ' ')
-                    line_split = line.split()
-                    par1 = float(line_split[1])
-                    par2 = float(line_split[2])
-                    par3 = float(line_split[3])
-
-                    # Convert reverse activation energy units
-                    par3 *= act_energy_fact[units_E]
-
-                    # Convert reverse pre-exponential factor
-                    if units_A == 'moles':
-                        reac_ord = sum(reacs[-1].prod_nu)
-                        if thd:
-                            par1 /= 1000. ** reac_ord
-                        elif pdep:
-                            # Low- (chemically activated bimolecular reaction) or
-                            # high-pressure (fall-off reaction) limit parameters
-                            par1 /= 1000. ** (reac_ord - 1.)
+                            # now remove from string
+                            ind = reac_str.find(sub_str)
+                            reac_str = (reac_str[0: ind1 + ind] +
+                                        reac_str[ind2 + ind + 1:]
+                                        )
+                            break
                         else:
-                            # Elementary reaction
-                            par1 /= 1000. ** (reac_ord - 1.)
+                            # Part of species name, remove from substring
+                            # and look at rest of reactant line.
+                            sub_str = sub_str[ind2 + 1:]
 
-                    # Ensure nonzero reverse coefficients
-                    if par1 != 0.0:
-                        reacs[-1].rev_par.append(par1)
-                        reacs[-1].rev_par.append(par2)
-                        reacs[-1].rev_par.append(par3)
-                    else:
-                        reacs[-1].rev = False
+                    reac_list = reac_str.split('+')
 
-                elif aux == 'low':
-                    line = line.replace('/', ' ')
-                    line = line.replace(',', ' ')
-                    line_split = line.split()
-                    par1 = float(line_split[1])
-                    par2 = float(line_split[2])
-                    par3 = float(line_split[3])
+                    # Check for empty list elements, meaning there were
+                    # multiple '+' in a row, which indicates species'
+                    # name ended in '+'.
+                    while '' in reac_list:
+                        ind = reac_list.index('')
+                        reac_list[ind - 1] = reac_list[ind - 1] + '+'
+                        del reac_list[ind]
 
-                    # Convert low-pressure activation energy units
-                    par3 *= act_energy_fact[units_E]
+                    # check for any species with '(+)' that was split apart
+                    for sp in reac_list:
+                        ind = reac_list.index(sp)
 
-                    # Convert low-pressure pre-exponential factor
-                    if units_A == 'moles':
-                        par1 /= 1000. ** sum(reacs[-1].reac_nu)
+                        # ensure not last entry
+                        if (ind < len(reac_list) - 1):
+                            spNext = reac_list[ind + 1]
+                            if sp[len(sp) - 1] is '(' and spNext[0] is ')':
+                                reac_list[ind] = sp + '+' + spNext
+                                del reac_list[ind + 1]
 
-                    reacs[-1].low.append(par1)
-                    reacs[-1].low.append(par2)
-                    reacs[-1].low.append(par3)
+                    for sp in reac_list:
 
-                elif aux == 'hig':
-                    line = line.replace('/', ' ')
-                    line = line.replace(',', ' ')
-                    line_split = line.split()
-                    par1 = float(line_split[1])
-                    par2 = float(line_split[2])
-                    par3 = float(line_split[3])
+                        sp = sp.strip()
 
-                    # Convert high-pressure activation energy units
-                    par3 *= act_energy_fact[units_E]
+                        # look for coefficient
+                        if sp[0:1].isdigit():
+                            # starts with number (coefficient)
 
-                    # Convert high-pressure pre-exponential factor
-                    if units_A == 'moles':
-                        par1 /= 1000. ** (sum(reacs[-1].reac_nu) - 2.)
+                            # search for first letter
+                            for i in range(len(sp)):
+                                if sp[i: i + 1].isalpha(): break
 
-                    reacs[-1].high.append(par1)
-                    reacs[-1].high.append(par2)
-                    reacs[-1].high.append(par3)
+                            nu = sp[0:i]
+                            if '.' in nu:
+                                # float
+                                nu = float(nu)
+                            else:
+                                # integer
+                                nu = int(nu)
 
-                elif aux == 'tro':
-                    line = line.replace('/', ' ')
-                    line = line.replace(',', ' ')
-                    line_split = line.split()
-                    reacs[-1].troe = True
-                    par1 = float(line_split[1])
-                    par2 = float(line_split[2])
-                    par3 = float(line_split[3])
-                    reacs[-1].troe_par.append(par1)
-                    reacs[-1].troe_par.append(par2)
-                    reacs[-1].troe_par.append(par3)
+                            sp = sp[i:].strip()
+                        else:
+                            # no coefficient given
+                            nu = 1
 
-                    # optional fourth parameter
-                    if len(line_split) > 4:
-                        par4 = float(line_split[4])
-                        reacs[-1].troe_par.append(par4)
+                        # check for third body
+                        if sp.lower() == 'm':
+                            thd = True
+                            continue
 
-                elif aux == 'sri':
-                    line = line.replace('/', ' ')
-                    line = line.replace(',', ' ')
-                    line_split = line.split()
-                    reacs[-1].sri = True
-                    par1 = float(line_split[1])
-                    par2 = float(line_split[2])
-                    par3 = float(line_split[3])
-                    reacs[-1].sri_par.append(par1)
-                    reacs[-1].sri_par.append(par2)
-                    reacs[-1].sri_par.append(par3)
+                        # check if species already in reaction
+                        if sp not in reac_spec:
+                            # new reactant
+                            reac_spec.append(sp)
+                            reac_nu.append(nu)
+                        else:
+                            # existing reactant
+                            i = reac_spec.index(sp)
+                            reac_nu[i] += nu
 
-                    # optional fourth and fifth parameters
-                    if len(line_split) > 4:
-                        par4 = float(line_split[4])
-                        par5 = float(line_split[5])
-                        reacs[-1].sri_par.append(par4)
-                        reacs[-1].sri_par.append(par5)
-                elif aux == 'che':
-                    reacs[-1].cheb = True
-                    line = line.replace('/', ' ')
-                    line_split = line.split()
-                    if cheb_flag:
-                        for par in line_split[1:]:
-                            reacs[-1].cheb_par.append(float(par))
-                    else:
-                        # first CHEB line
-                        cheb_flag = True
-                        # Don't want Cheb reactions lumped in with
-                        # standard falloff.
-                        reacs[-1].pdep = False
-                        reacs[-1].cheb_n_temp = int(line_split[1])
-                        reacs[-1].cheb_n_pres = int(line_split[2])
-                        reacs[-1].cheb_par = []
-                        for par in line_split[3:]:
-                            reacs[-1].cheb_par.append(float(par))
-                elif aux == 'pch':
-                    line = line.replace('/', ' ')
-                    line_split = line.split()
-                    # Convert pressure from atm to Pa
-                    reacs[-1].cheb_plim = [float(line_split[1]) * chem.PA,
-                                           float(line_split[2]) * chem.PA
-                                           ]
+                    # products
 
-                    # Look for temperature limits on same line:
-                    if line_split[3].lower() == 'tcheb':
-                        reacs[-1].cheb_tlim = [float(line_split[4]),
-                                               float(line_split[5])
-                                               ]
-                elif aux == 'tch':
-                    line = line.replace('/', ' ')
-                    line_split = line.split()
-                    reacs[-1].cheb_tlim = [float(line_split[1]),
-                                           float(line_split[2])
-                                           ]
-                    # Look for pressure limits on same line:
-                    if line_split[3].lower() == 'pcheb':
-                        reacs[-1].cheb_plim = [float(line_split[4]) * chem.PA,
-                                               float(line_split[5]) * chem.PA
-                                               ]
-                elif aux == 'plo':
-                    line = line.replace('/', ' ')
-                    line_split = line.split()
-                    if not reacs[-1].plog:
-                        reacs[-1].plog = True
-                        # Don't want Plog reactions lumped in with
-                        # standard falloff.
-                        reacs[-1].pdep = False
-                        reacs[-1].plog_par = []
-                    pars = [float(n) for n in line_split[1:5]]
+                    # look for third-body species
+                    sub_str = prod_str
+                    while '(' in sub_str:
+                        ind1 = sub_str.find('(')
+                        ind2 = sub_str.find(')')
 
-                    # Convert pressure from atm to Pa
-                    pars[0] *= 101325.0
+                        # Need to check if '+' is first character inside
+                        # parentheses and not embedded within parentheses
+                        # (e.g., '(+)'). If not, part of species name.
+                        inParen = sub_str[ind1 + 1: ind2].strip()
+                        if inParen is '+':
+                            # '+' embedded within parentheses
+                            sub_str = sub_str[ind2 + 1:]
+                        elif inParen[0] is '+':
+                            pdep = True
+
+                            # either 'm' or a specific species
+                            pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
+                            pdep_sp = pdep_sp.strip()
+
+                            if pdep_sp.lower() == 'm':
+                                thd = True
+                                pdep_sp = ''
+
+                            # now remove from string
+                            ind = prod_str.find(sub_str)
+                            prod_str = (prod_str[0: ind1 + ind] +
+                                        prod_str[ind2 + ind + 1:]
+                                        )
+                            break
+                        else:
+                            # Part of species name, remove from substring and
+                            # look at rest of product line.
+                            sub_str = sub_str[ind2 + 1:]
+
+                    prod_list = prod_str.split('+')
+
+                    # Check for empty list elements, meaning there were
+                    # multiple '+' in a row, which indicates species
+                    # name ended in '+'.
+                    while '' in prod_list:
+                        ind = prod_list.index('')
+                        prod_list[ind - 1] = prod_list[ind - 1] + '+'
+                        del prod_list[ind]
+
+                    # check for any species with '(+)' that was split apart
+                    for sp in prod_list:
+                        ind = prod_list.index(sp)
+
+                        # ensure not last entry
+                        if (ind < len(prod_list) - 1):
+                            spNext = prod_list[ind + 1]
+                            if sp[len(sp) - 1] is '(' and spNext[0] is ')':
+                                prod_list[ind] = sp + '+' + spNext
+                                del prod_list[ind + 1]
+
+                    for sp in prod_list:
+
+                        sp = sp.strip()
+
+                        # look for coefficient
+                        if sp[0:1].isdigit():
+                            # starts with number (coefficient)
+
+                            # search for first letter
+                            for i in range(len(sp)):
+                                if sp[i: i + 1].isalpha(): break
+
+                            nu = sp[0:i]
+                            if '.' in nu:
+                                # float
+                                nu = float(nu)
+                            else:
+                                # integer
+                                nu = int(nu)
+
+                            sp = sp[i:].strip()
+                        else:
+                            # no coefficient given
+                            nu = 1
+
+                        # check for third body
+                        if sp in ['m', 'M']:
+                            thd = True
+                            continue
+
+                        # check if species already in reaction
+                        if sp not in prod_spec:
+                            # new product
+                            prod_spec.append(sp)
+                            prod_nu.append(nu)
+                        else:
+                            # existing product
+                            i = prod_spec.index(sp)
+                            prod_nu[i] += nu
+
+                    # Don't want to confuse third-body and pressure-dependent
+                    # reactions... they are different!
+                    if pdep:
+                        thd = False
 
                     # Convert given activation energy units to internal units
-                    pars[3] *= act_energy_fact[units_E]
+                    reac_E *= act_energy_fact[units_E]
 
                     # Convert given pre-exponential units to internal units
                     if units_A == 'moles':
-                        reac_ord = sum(reacs[-1].reac_nu)
-                        # Looks like elementary reaction
-                        pars[1] /= 1000. ** (reac_ord - 1.)
+                        reac_ord = sum(reac_nu)
+                        if thd:
+                            reac_A /= 1000. ** reac_ord
+                        elif pdep:
+                            # Low- (chemically activated bimolecular reaction) or
+                            # high-pressure (fall-off reaction) limit parameters
+                            reac_A /= 1000. ** (reac_ord - 1.)
+                        else:
+                            # Elementary reaction
+                            reac_A /= 1000. ** (reac_ord - 1.)
 
-                    reacs[-1].plog_par.append(pars)
+                    # add reaction to list
+                    reac = chem.ReacInfo(reac_rev, reac_spec, reac_nu,
+                                         prod_spec, prod_nu, reac_A, reac_b,
+                                         reac_E
+                                         )
+                    reac.thd_body = thd
+                    reac.pdep = pdep
+                    if pdep: reac.pdep_sp = pdep_sp
+
+                    reacs.append(reac)
+
                 else:
-                    # enhanced third body efficiencies
-                    line = line.replace('/', ' ')
-                    line_split = line.split()
-                    for i in range(0, len(line_split), 2):
-                        pair = [line_split[i], float(line_split[i + 1])]
-                        reacs[-1].thd_body_eff.append(pair)
+                    # auxiliary reaction info
 
-    file.close()
+                    aux = line[0:3].lower()
+                    if aux == 'dup':
+                        reacs[-1].dup = True
+
+                    elif aux == 'rev':
+                        line = line.replace('/', ' ')
+                        line = line.replace(',', ' ')
+                        line_split = line.split()
+                        par1 = float(line_split[1])
+                        par2 = float(line_split[2])
+                        par3 = float(line_split[3])
+
+                        # Convert reverse activation energy units
+                        par3 *= act_energy_fact[units_E]
+
+                        # Convert reverse pre-exponential factor
+                        if units_A == 'moles':
+                            reac_ord = sum(reacs[-1].prod_nu)
+                            if thd:
+                                par1 /= 1000. ** reac_ord
+                            elif pdep:
+                                # Low- (chemically activated bimolecular reaction) or
+                                # high-pressure (fall-off reaction) limit parameters
+                                par1 /= 1000. ** (reac_ord - 1.)
+                            else:
+                                # Elementary reaction
+                                par1 /= 1000. ** (reac_ord - 1.)
+
+                        # Ensure nonzero reverse coefficients
+                        if par1 != 0.0:
+                            reacs[-1].rev_par.append(par1)
+                            reacs[-1].rev_par.append(par2)
+                            reacs[-1].rev_par.append(par3)
+                        else:
+                            reacs[-1].rev = False
+
+                    elif aux == 'low':
+                        line = line.replace('/', ' ')
+                        line = line.replace(',', ' ')
+                        line_split = line.split()
+                        par1 = float(line_split[1])
+                        par2 = float(line_split[2])
+                        par3 = float(line_split[3])
+
+                        # Convert low-pressure activation energy units
+                        par3 *= act_energy_fact[units_E]
+
+                        # Convert low-pressure pre-exponential factor
+                        if units_A == 'moles':
+                            par1 /= 1000. ** sum(reacs[-1].reac_nu)
+
+                        reacs[-1].low.append(par1)
+                        reacs[-1].low.append(par2)
+                        reacs[-1].low.append(par3)
+
+                    elif aux == 'hig':
+                        line = line.replace('/', ' ')
+                        line = line.replace(',', ' ')
+                        line_split = line.split()
+                        par1 = float(line_split[1])
+                        par2 = float(line_split[2])
+                        par3 = float(line_split[3])
+
+                        # Convert high-pressure activation energy units
+                        par3 *= act_energy_fact[units_E]
+
+                        # Convert high-pressure pre-exponential factor
+                        if units_A == 'moles':
+                            par1 /= 1000. ** (sum(reacs[-1].reac_nu) - 2.)
+
+                        reacs[-1].high.append(par1)
+                        reacs[-1].high.append(par2)
+                        reacs[-1].high.append(par3)
+
+                    elif aux == 'tro':
+                        line = line.replace('/', ' ')
+                        line = line.replace(',', ' ')
+                        line_split = line.split()
+                        reacs[-1].troe = True
+                        par1 = float(line_split[1])
+                        par2 = float(line_split[2])
+                        par3 = float(line_split[3])
+                        reacs[-1].troe_par.append(par1)
+                        reacs[-1].troe_par.append(par2)
+                        reacs[-1].troe_par.append(par3)
+
+                        # optional fourth parameter
+                        if len(line_split) > 4:
+                            par4 = float(line_split[4])
+                            reacs[-1].troe_par.append(par4)
+
+                    elif aux == 'sri':
+                        line = line.replace('/', ' ')
+                        line = line.replace(',', ' ')
+                        line_split = line.split()
+                        reacs[-1].sri = True
+                        par1 = float(line_split[1])
+                        par2 = float(line_split[2])
+                        par3 = float(line_split[3])
+                        reacs[-1].sri_par.append(par1)
+                        reacs[-1].sri_par.append(par2)
+                        reacs[-1].sri_par.append(par3)
+
+                        # optional fourth and fifth parameters
+                        if len(line_split) > 4:
+                            par4 = float(line_split[4])
+                            par5 = float(line_split[5])
+                            reacs[-1].sri_par.append(par4)
+                            reacs[-1].sri_par.append(par5)
+                    elif aux == 'che':
+                        reacs[-1].cheb = True
+                        line = line.replace('/', ' ')
+                        line_split = line.split()
+                        if cheb_flag:
+                            for par in line_split[1:]:
+                                reacs[-1].cheb_par.append(float(par))
+                        else:
+                            # first CHEB line
+                            cheb_flag = True
+                            # Don't want Cheb reactions lumped in with
+                            # standard falloff.
+                            reacs[-1].pdep = False
+                            reacs[-1].cheb_n_temp = int(line_split[1])
+                            reacs[-1].cheb_n_pres = int(line_split[2])
+                            reacs[-1].cheb_par = []
+                            for par in line_split[3:]:
+                                reacs[-1].cheb_par.append(float(par))
+                    elif aux == 'pch':
+                        line = line.replace('/', ' ')
+                        line_split = line.split()
+                        # Convert pressure from atm to Pa
+                        reacs[-1].cheb_plim = [float(line_split[1]) * chem.PA,
+                                               float(line_split[2]) * chem.PA
+                                               ]
+
+                        # Look for temperature limits on same line:
+                        if line_split[3].lower() == 'tcheb':
+                            reacs[-1].cheb_tlim = [float(line_split[4]),
+                                                   float(line_split[5])
+                                                   ]
+                    elif aux == 'tch':
+                        line = line.replace('/', ' ')
+                        line_split = line.split()
+                        reacs[-1].cheb_tlim = [float(line_split[1]),
+                                               float(line_split[2])
+                                               ]
+                        # Look for pressure limits on same line:
+                        if line_split[3].lower() == 'pcheb':
+                            reacs[-1].cheb_plim = [float(line_split[4]) * chem.PA,
+                                                   float(line_split[5]) * chem.PA
+                                                   ]
+                    elif aux == 'plo':
+                        line = line.replace('/', ' ')
+                        line_split = line.split()
+                        if not reacs[-1].plog:
+                            reacs[-1].plog = True
+                            # Don't want Plog reactions lumped in with
+                            # standard falloff.
+                            reacs[-1].pdep = False
+                            reacs[-1].plog_par = []
+                        pars = [float(n) for n in line_split[1:5]]
+
+                        # Convert pressure from atm to Pa
+                        pars[0] *= 101325.0
+
+                        # Convert given activation energy units to internal units
+                        pars[3] *= act_energy_fact[units_E]
+
+                        # Convert given pre-exponential units to internal units
+                        if units_A == 'moles':
+                            reac_ord = sum(reacs[-1].reac_nu)
+                            # Looks like elementary reaction
+                            pars[1] /= 1000. ** (reac_ord - 1.)
+
+                        reacs[-1].plog_par.append(pars)
+                    else:
+                        # enhanced third body efficiencies
+                        line = line.replace('/', ' ')
+                        line_split = line.split()
+                        for i in range(0, len(line_split), 2):
+                            pair = [line_split[i], float(line_split[i + 1])]
+                            reacs[-1].thd_body_eff.append(pair)
 
     # process some reaction auxiliary info
     for idx, reac in enumerate(reacs):

@@ -1534,8 +1534,9 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
             file.write(', const double*')
         if batch_has_m:
             file.write(', const double')
-        file.write(', const double, const double, const double*, '
-                   'const double, double*'
+        file.write(', const double, const double' +
+                    ('' if not this_rev else ', const double*') +
+                   ', const double, double*'
                    + (', double*, double*' if has_nsp else '') +
                    ');\n'
                    '\n'
@@ -1557,9 +1558,11 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
         line += ', const double* ' + rate
     if batch_has_m:
         line += ', const double m'
-    line += (', const double mw_avg, const double rho, const double* dBdT, '
-             'const double T, double* jac'
-             )
+    line += ', const double mw_avg, const double rho'
+    if this_rev:
+        line += ', const double* dBdT'
+    line += ', const double T, double* jac'
+
     if has_nsp:
         line += ', double* J_nplusone, double* J_nplusjplus'
     line += ') {'
@@ -2415,7 +2418,10 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                 line += ', ' + rate
             if batch_has_m:
                 line += ', m'
-            line += ', mw_avg, rho, dBdT, T, jac'
+            line += ', mw_avg, rho'
+            if rev:
+                line += ', dBdT'
+            line += ', T, jac'
             if has_jnplus_one:
                 line += ', &J_nplusone, J_nplusjplus'
             line += ')'

@@ -214,8 +214,10 @@ def reassign_species_lists(reacs, specs):
         rxn.reac = [species_map[sp] for sp in rxn.reac]
         rxn.prod = [species_map[sp] for sp in rxn.prod]
         rxn.thd_body_eff = [(species_map[thd[0]], thd[1]) for thd in rxn.thd_body_eff]
-        if rxn.pdep_sp:
+        if rxn.pdep_sp != '':
             rxn.pdep_sp = species_map[rxn.pdep_sp]
+        else:
+            rxn.pdep_sp = None
 
 
 def is_integer(val):

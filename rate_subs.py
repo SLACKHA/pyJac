@@ -964,7 +964,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
 
         # pressure dependence
         if reac.pdep:
-            if reac.pdep_sp == '':
+            if reac.pdep_sp is None:
                 line = '  thd = m'
                 for sp in reac.thd_body_eff:
                     if sp[1] == 1.0:
@@ -1003,7 +1003,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs, fwd_rxn_mapping, smm=None):
             file.write(line)
 
             # reduced pressure
-            if reac.pdep_sp != '':
+            if reac.pdep_sp is not None:
                 line = ('  Pr = k0 * ' +
                         get_array(lang, 'C', reac.pdep_sp) + ' / kinf'
                         )
@@ -1145,7 +1145,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
 
     Returns
     -------
-    None
+    seen : a list of bools, True if species rate i is not identically zero
 
     """
 
@@ -1337,7 +1337,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, fwd_rxn_mapping
 
     file.close()
 
-    return
+    return seen
 
 
 def write_chem_utils(path, lang, specs):

@@ -1375,9 +1375,6 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
         file.write(utils.line_start + jline_p + utils.line_end[lang])
 
     (pn, A_pn, b_pn, E_pn) = rxn.plog_par[-1]
-    file.write(utils.line_start +
-               '}} else if (pres > {:.4e}) {{\n'.format(pn)
-               )
 
     # For pressure above the final pressure given, use standard
     # Arrhenius expression.
@@ -1396,6 +1393,9 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                        '}} else if (pres > {:.4e}) {{\n'.format(pn)
                        )
         else:
+            file.write(utils.line_start +
+                       'j_temp = 0' + utils.line_end[lang]
+                       )
             file.write(utils.line_start +
                        'if (pres > {:.4e}) {{\n'.format(pn)
                        )

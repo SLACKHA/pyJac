@@ -2853,7 +2853,7 @@ def write_sparse_multiplier(path, lang, sparse_indicies, nvars):
     file.close()
 
 
-def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
+def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_cache=False,
                     initial_state="", num_blocks=8, num_threads=64,
                     no_shared=False, L1_preferred=True, multi_thread=None,
                     force_optimize=False, build_path='./out/', last_spec=None,
@@ -2865,11 +2865,14 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     ----------
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Language type.
-    mech_name : str
+    mech_name : str, optional
         Reaction mechanism filename (e.g. 'mech.dat').
+        This or gas must be specified
     therm_name : str, optional
         Thermodynamic database filename (e.g. 'therm.dat')
         or nothing if info in mechanism file.
+    gas : cantera.Solution, optional
+        The mechanism to generate the Jacobian for.  This or mech_name must be specified
     optimize_cache : bool, optional
         If true, use the greedy optimizer to attempt to
         improve cache hit rates
@@ -2914,10 +2917,12 @@ def create_jacobian(lang, mech_name, therm_name=None, optimize_cache=False,
     # create output directory if none exists
     utils.create_dir(build_path)
 
+    assert mech_name is not None or gas is not None, "No mechanism specified!"
+
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
-    if mech_name.endswith(tuple(['.cti', '.xml'])):
-        [elems, specs, reacs] = mech.read_mech_ct(mech_name)
+    if gas is not None or mech_name.endswith(tuple(['.cti', '.xml'])):
+        [elems, specs, reacs] = mech.read_mech_ct(mech_name, gas)
     else:
         [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
 

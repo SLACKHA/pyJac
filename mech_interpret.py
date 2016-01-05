@@ -671,17 +671,17 @@ def read_mech(mech_filename, therm_filename):
                     reac.cheb_par[0] += math.log10(0.001 ** (order - 1.))
 
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
-    
-    # Split reversible reactions with explicit reverse parameters into 
+
+    # Split reversible reactions with explicit reverse parameters into
     # two irreversible reactions to match Cantera's behavior
     for reac in reacs[:]:
         if reac.rev_par:
             new_reac = deepcopy(reac)
-            
+
             idx = reacs.index(reac)
             reacs[idx].rev = False
             reacs[idx].rev_par = []
-            
+
             new_reac.A = new_reac.rev_par[0]
             new_reac.b = new_reac.rev_par[1]
             new_reac.E = new_reac.rev_par[2]
@@ -704,6 +704,12 @@ def read_mech(mech_filename, therm_filename):
                   'mechanism file with THERMO option.'
                   )
             sys.exit(1)
+
+    # Check for missing thermo data again
+    missing_mw = [sp.name for sp in specs if not sp.mw]
+    if missing_mw:
+        print('Error: missing thermo data for ' + ', '.join(missing_mw))
+        sys.exit(1)
 
     return (elems, specs, reacs)
 

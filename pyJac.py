@@ -1300,6 +1300,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
             # log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
+            assert b_p1 != 0.0 or E_p1 != 0.0 or b_p2 != 0.0 or E_p2 != 0.0, "PLOG Derivative undefined"
             if b_p1 != 0.0:
                 jline_p += '{:.16e}'.format(b_p1)
             if E_p1 != 0.0:

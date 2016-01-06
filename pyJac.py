@@ -282,7 +282,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
         if rxn.pdep_sp == j_sp:
             jline += ' + pres_mod_temp'
         else:
-            jline += ' - pres_mod_temp * {:.16e}'.format(mw_frac)
+            jline += ' - pres_mod_temp * {:.16e}'.format(sp_j.mw / specs[rxn.pdep_sp].mw)
 
     s_term = ''
     if (rxn.pdep or rxn.thd_body) and \

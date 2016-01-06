@@ -30,7 +30,7 @@ ext = Extension('py_tchem',
                 include_dirs=includes + [numpy.get_include(),
                                          os.path.join(tchem_home, 'include')
                                          ],
-                extra_compile_args=['-frounding-math', '-fsignaling-nans']
+                extra_compile_args=['-frounding-math', '-fsignaling-nans', '-std=c99']
                 )
 
 setup(name='py_tchem',

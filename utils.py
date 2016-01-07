@@ -239,7 +239,8 @@ def is_integer(val):
 def get_parser():
     # command line arguments
     parser = ArgumentParser(description='pyJac: Generates source code '
-                                        'for analytical Jacobian.'
+                                        'for analytical chemical '
+                                        'Jacobians.'
                             )
     parser.add_argument('-l', '--lang',
                         type=str,

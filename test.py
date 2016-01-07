@@ -685,6 +685,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_norm = np.zeros(num_trials)
     err_jac = np.zeros(num_trials)
     err_jac_thr = np.zeros(num_trials)
+    err_jac_thr_max = np.zeros(num_trials)
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
     err_jac_tchem = np.zeros(num_trials)
@@ -856,10 +857,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )
+        max_err = np.max(err)
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
         err_jac_thr[i] = err
         print('L2 norm of thresholded relative error of Jacobian: '
               '{:.2e} %'.format(err))
+
+        err_jac_thr_max[i] = max_err
+        print('Max thresholded relative error of Jacobian: {:.2e}% '
+              '@ index {}'.format(max_err * 100., loc))
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
         err_jac_norm[i] = err
@@ -969,7 +976,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # Save all error arrays
     np.savez('error_arrays.npz',
              err_dydt=err_dydt, err_jac_norm=err_jac_norm,
-             err_jac=err_jac, err_jac_thr=err_jac_thr
+             err_jac=err_jac, err_jac_thr=err_jac_thr,
+             err_jac_thr_max=err_jac_thr_max
              )
 
     # Cleanup all compiled files.

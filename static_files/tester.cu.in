@@ -1,0 +1,83 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include "jacob.cuh"
+
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include "header.cuh"
+#include "timer.h"
+#include "gpu_memory.cuh"
+#include "launch_bounds.cuh"
+
+int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device);
+
+#define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
+#define GRID_SIZE (blockDim.x * gridDim.x)
+__global__
+void jac_driver(int NUM, double* pres, double* y)
+{
+    if (T_ID < NUM)
+    {
+        double y_local[NSP];
+        double pr_local = pres[T_ID];
+        double jac_local[NSP * NSP] = {0};
+
+    #pragma unroll
+        for (int i = 0; i < NSP; i++)
+        {
+            y_local[i] = y[T_ID + i * GRID_SIZE];
+        }
+
+        eval_jacob (0, pr_local, y_local, jac_local);
+    }
+}
+
+int main (int argc, char *argv[])
+{
+    int num_odes = 1;
+    if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
+    {
+        exit(1);
+    }
+
+    cudaErrorCheck (cudaSetDevice (0) );
+
+    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+
+    int g_num = (int)ceil(((double)num_odes) / ((double)TARGET_BLOCK_SIZE));
+    if (g_num == 0)
+        g_num = 1;
+
+    double* y_device;
+    double* y_host;
+    double* var_device;
+    double* var_host;
+    
+    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+    g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
+    if (g_num == 0)
+        g_num = 1;
+    dim3 dimGrid (g_num, 1 );
+    dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
+    cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
+    cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
+    StartTimer();
+    #ifdef SHARED_SIZE
+        jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device);
+    #else
+        jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device);
+    #endif
+    cudaDeviceSynchronize();
+    double runtime = GetTimer();
+    printf("%d,%.15le\\n", num_odes, runtime);
+    cudaErrorCheck( cudaPeekAtLastError() );
+    cudaErrorCheck( cudaDeviceSynchronize() );
+    free_gpu_memory(y_device, var_device);
+    free(y_host);
+    free(var_host);
+    cudaErrorCheck( cudaDeviceReset() );
+    return 0;
+}

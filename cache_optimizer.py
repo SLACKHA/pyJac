@@ -90,7 +90,7 @@ def optimize_cache(specs, reacs, multi_thread,
                         len(specs) == len(old_specs) and \
                         all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
                         len(reacs) == len(old_reacs)
-            if fwd_spec_mapping[last_spec] != len(specs) - 1:
+            if reverse_spec_mapping[last_spec] != len(specs) - 1:
                 print('Different last species detected, old species was {} and new species is {}'.format(
                     specs[fwd_spec_mapping[-1]].name, specs[last_spec].name))
                 print('Forcing reoptimization...')

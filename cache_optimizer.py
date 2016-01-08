@@ -18,6 +18,9 @@ from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
 from CParams import C_Jacob_Unroll
 import utils
 
+LOOKBACK=3
+USE_THD=False
+
 #dependencies
 have_bitarray = True
 try:
@@ -139,22 +142,23 @@ def optimize_cache(specs, reacs, multi_thread,
             reac_mapping[rind][spind] = True
             no_dupe_add(rxn_to_sp[rind], spind)
             no_dupe_add(sp_to_rxn[spind], rind)
-        for sp, eff in rxn.thd_body_eff:
-            if sp == last_name:
-                continue
-            spind = name_map[sp]
-            spec_mapping[spind][rind] = True
-            reac_mapping[rind][spind] = True
-            no_dupe_add(rxn_to_sp[rind], spind)
-            no_dupe_add(sp_to_rxn[spind], rind)
-        if rxn.pdep_sp:
-            if rxn.pdep_sp == last_name:
-                continue
-            spind = name_map[rxn.pdep_sp]
-            spec_mapping[spind][rind] = True
-            reac_mapping[rind][spind] = True
-            no_dupe_add(rxn_to_sp[rind], spind)
-            no_dupe_add(sp_to_rxn[spind], rind)
+        if USE_THD:
+            for sp, eff in rxn.thd_body_eff:
+                if sp == last_name:
+                    continue
+                spind = name_map[sp]
+                spec_mapping[spind][rind] = True
+                reac_mapping[rind][spind] = True
+                no_dupe_add(rxn_to_sp[rind], spind)
+                no_dupe_add(sp_to_rxn[spind], rind)
+            if rxn.pdep_sp:
+                if rxn.pdep_sp == last_name:
+                    continue
+                spind = name_map[rxn.pdep_sp]
+                spec_mapping[spind][rind] = True
+                reac_mapping[rind][spind] = True
+                no_dupe_add(rxn_to_sp[rind], spind)
+                no_dupe_add(sp_to_rxn[spind], rind)
     
     def get_rxn_tiebreak(rind, rxn_to_sp, spec_mapping):
         bt = bitarray(sdummy)
@@ -175,6 +179,7 @@ def optimize_cache(specs, reacs, multi_thread,
     # select the first reaction as the one with the species 
     #that participate in the most distinct reactions
     ind = max(range(nr), key=lambda x: get_rxn_tiebreak(x, rxn_to_sp, spec_mapping))
+    print (max(enumerate(reac_mapping), key=lambda x: x[1].count()))
 
     #get the updating spec mapping
     #used to determine all distinct reactions for species in a reaction
@@ -190,13 +195,15 @@ def optimize_cache(specs, reacs, multi_thread,
         maxcount = None
         ind = None
         last_tiebreak = None
-        last = fwd_rxn_mapping[-1]
-
+        start = max(len(fwd_rxn_mapping) - LOOKBACK, 0)
         for rind in reacs_left:
+            mapping = bitarray(rdummy)
+            for last_ind in range(start, len(fwd_rxn_mapping)):
+                mapping = mapping | reac_mapping[fwd_rxn_mapping[last_ind]]
             #number of species shared in by the reactions
             #minus the number that are in this candidate and not the last reaction
-            count = ((reac_mapping[rind] | reac_mapping[last]).count() - 
-                        ((reac_mapping[rind] ^ reac_mapping[last]) & reac_mapping[rind]).count())
+            count = ((reac_mapping[rind] | mapping).count() - 
+                        ((reac_mapping[rind] ^ mapping) & reac_mapping[rind]).count())
 
             if maxcount is None or count >= maxcount:
                 #compute tiebreak score
@@ -209,6 +216,7 @@ def optimize_cache(specs, reacs, multi_thread,
                     maxcount = count
                     last_tiebreak = tiebreak
 
+        print (ind, maxcount, last_tiebreak)
         #add the winner to the list
         fwd_rxn_mapping.append(ind)
         update_spec_mapping(ind, updating, rxn_to_sp)
@@ -225,18 +233,20 @@ def optimize_cache(specs, reacs, multi_thread,
     fwd_spec_mapping = [ind]
     specs_left = [i for i in range(nsp) if i != ind]
     update_reac_mapping(ind, updating, sp_to_rxn)
-
+    print()
     while len(specs_left):
         maxcount = None
         ind = None
         last_tiebreak = None
-        last = fwd_spec_mapping[-1]
-
+        start = max(len(fwd_spec_mapping) - LOOKBACK, 0)
         for spind in specs_left:
+            mapping = bitarray(sdummy)
+            for last_ind in range(start, len(fwd_spec_mapping)):
+                mapping = mapping | spec_mapping[fwd_spec_mapping[last_ind]]
             #number of reactions shared with the last species
             #minus the number that are not
-            count = ((reac_mapping[spind] | reac_mapping[last]).count() - 
-                        ((reac_mapping[spind] ^ reac_mapping[last]) & reac_mapping[spind]).count())
+            count = ((spec_mapping[spind] | mapping).count() - 
+                        ((spec_mapping[spind] ^ mapping) & spec_mapping[spind]).count())
 
             if maxcount is None or count >= maxcount:
                 #compute tiebreak score
@@ -249,6 +259,7 @@ def optimize_cache(specs, reacs, multi_thread,
                     maxcount = count
                     last_tiebreak = tiebreak
 
+        print (ind, maxcount, last_tiebreak)
         #add the winner to the list
         fwd_spec_mapping.append(ind)
         update_reac_mapping(ind, updating, sp_to_rxn)
@@ -256,6 +267,7 @@ def optimize_cache(specs, reacs, multi_thread,
 
     fwd_spec_mapping.append(last_spec)
 
+    print()
     plot = True
     if plot:
         #plot for visibility
@@ -270,7 +282,9 @@ def optimize_cache(specs, reacs, multi_thread,
 
         for rind in range(nr):
             rxn = reacs[rind]
-            plot = set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp])
+            plot = set(rxn.reac + rxn.prod)
+            if USE_THD:
+                plot += set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp])
             plot = [name_map[sp] for sp in plot if sp]
             for sp in plot:
                 arr[rind, sp] = [0, 0, 0]
@@ -300,7 +314,9 @@ def optimize_cache(specs, reacs, multi_thread,
         name_map = {specs[sp].name: i for i, sp in enumerate(fwd_spec_mapping)}
         for rind in fwd_rxn_mapping:
             rxn = reacs[rind]
-            plot = set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp])
+            plot = set(rxn.reac + rxn.prod)
+            if USE_THD:
+                plot += set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp])
             plot = [name_map[sp] for sp in plot if sp]
             for sp in plot:
                 arr[rind, sp] = [0, 0, 0]

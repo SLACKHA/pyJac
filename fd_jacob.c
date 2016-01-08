@@ -1,6 +1,5 @@
 #include "header.h"
 #include "dydt.h"
-#include "solver_options.h"
 #include <math.h>
 #include <float.h>
 

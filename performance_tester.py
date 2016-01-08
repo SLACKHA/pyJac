@@ -20,6 +20,7 @@ elif sys.version_info.major == 2:
     from itertools import izip as zip
 
 from itertools import permutations, product, chain
+from string import Template
 
 # Related modules
 import numpy as np
@@ -35,480 +36,6 @@ except ImportError:
 import utils
 from pyJac import create_jacobian
 import partially_stirred_reactor as pasr
-
-
-def __is_pdep(rxn):
-    return (isinstance(rxn, ct.ThreeBodyReaction) or
-    isinstance(rxn, ct.FalloffReaction) or
-    isinstance(rxn, ct.ChemicallyActivatedReaction))
-
-
-def run_pasr(pasr_input, mech_filename, pasr_output_file):
-    #try to load output file
-    try:
-        state_data = np.load(pasr_output_file)
-    except:
-        # Run PaSR to get data
-        state_data = pasr.run_simulation(
-                        mech_filename,
-                        pasr_input['case'],
-                        pasr_input['temperature'],
-                        pasr_input['pressure'],
-                        pasr_input['equivalence ratio'],
-                        pasr_input['fuel'],
-                        pasr_input['oxidizer'],
-                        pasr_input['complete products'],
-                        pasr_input['number of particles'],
-                        pasr_input['residence time'],
-                        pasr_input['mixing time'],
-                        pasr_input['pairing time'],
-                        pasr_input['number of residence times']
-                        )
-        if pasr_output_file:
-            np.save(pasr_output_file, state_data)
-    return state_data
-
-
-def write_timer():
-    with open('out/timer.h', 'w') as file:
-        file.write(
-"""
-#ifndef TIMER_H
-#define TIMER_H
-
-#include <stdlib.h>
-
-#ifdef WIN32
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#else
- #ifndef __USE_BSD
- #define __USE_BSD
- #endif
-#include <time.h>
-#include <sys/time.h>
-#endif
-
-#ifdef WIN32
-double PCFreq = 0.0;
-__int64 timerStart = 0;
-#else
-struct timeval timerStart;
-#endif
-
-void StartTimer()
-{
-#ifdef WIN32
-    LARGE_INTEGER li;
-    if(!QueryPerformanceFrequency(&li))
-        printf("QueryPerformanceFrequency failed!\\n");
-
-    PCFreq = (double)li.QuadPart/1000.0;
-
-    QueryPerformanceCounter(&li);
-    timerStart = li.QuadPart;
-#else
-    gettimeofday(&timerStart, NULL);
-#endif
-}
-
-// time elapsed in ms
-double GetTimer()
-{
-#ifdef WIN32
-    LARGE_INTEGER li;
-    QueryPerformanceCounter(&li);
-    return (double)(li.QuadPart-timerStart)/PCFreq;
-#else
-    struct timeval timerStop, timerElapsed;
-    gettimeofday(&timerStop, NULL);
-    timersub(&timerStop, &timerStart, &timerElapsed);
-    return timerElapsed.tv_sec*1000.0+timerElapsed.tv_usec/1000.0;
-#endif
-}
-
-#endif // TIMER_H
-        """
-)
-
-
-def write_cuda_reader(file):
-    file.write(
-    """
-#include "header.cuh"
-#include "gpu_memory.cuh"
-#include "gpu_macros.cuh"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/time.h>
-
- int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device) {
-    int padded = initialize_gpu_memory(NUM, block_size, grid_size, y_device, variable_device);
-    (*y_host) = (double*)malloc(padded * NN * sizeof(double));
-    (*variable_host) = (double*)malloc(padded * sizeof(double));
-    FILE *fp = fopen (filename, "rb");
-    if (fp == NULL)
-    {
-        fprintf(stderr, "Could not open file: %s\\n", filename);
-        exit(1);
-    }
-    double buffer[NN + 2];
-
-    // load temperature and mass fractions for all threads (cells)
-    for (int i = 0; i < NUM; ++i)
-    {
-        // read line from data file
-        int count = fread(buffer, sizeof(double), NN + 2, fp);
-        if (count != (NN + 2))
-        {
-            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\\n", filename, NN + 1, count);
-            exit(-1);
-        }
-        //apply mask if necessary
-        apply_mask(&buffer[3]);
-        //put into y_host
-        (*y_host)[i] = buffer[1];
-#ifdef CONP
-        (*variable_host)[i] = buffer[2];
-#elif CONV
-        double pres = buffer[2];
-#endif
-        for (int j = 0; j < NSP; j++)
-            (*y_host)[i + (j + 1) * padded] = buffer[j + 3];
-
-        // if constant volume, calculate density
-#ifdef CONV
-        double Yi[NSP];
-        double Xi[NSP];
-
-        for (int j = 1; j < NN; ++j)
-        {
-            Yi[j - 1] = (*y_host)[i + j * padded];
-        }
-
-        mass2mole (Yi, Xi);
-        (*variable_host)[i] = getDensity ((*y_host)[i], pres, Xi);
-#endif
-    }
-    fclose (fp);
-    return padded;
-}
-    """
-)
-
-
-def write_c_reader(file):
-    file.write(
-    """
-#include "header.h"
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/time.h>
-
- void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host) {
-    (*y_host) = (double*)malloc(NUM * NN * sizeof(double));
-    (*variable_host) = (double*)malloc(NUM * sizeof(double));
-    FILE *fp = fopen (filename, "rb");
-    if (fp == NULL)
-    {
-        fprintf(stderr, "Could not open file: %s\\\n", filename);
-        exit(-1);
-    }
-    double buffer[NN + 2];
-
-    // load temperature and mass fractions for all threads (cells)
-    for (int i = 0; i < NUM; ++i)
-    {
-        // read line from data file
-        int count = fread(buffer, sizeof(double), NN + 2, fp);
-        if (count != (NN + 2))
-        {
-            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\\n", filename, NN + 1, count);
-            exit(-1);
-        }
-        //apply mask if necessary
-        apply_mask(&buffer[3]);
-        //put into y_host
-        (*y_host)[i * NN] = buffer[1];
-#ifdef CONP
-        (*variable_host)[i] = buffer[2];
-#elif CONV
-        double pres = buffer[2];
-#endif
-        for (int j = 0; j < NSP; j++)
-        {
-            (*y_host)[i * NN + j + 1] = buffer[j + 3];
-        }
-
-        // if constant volume, calculate density
-#ifdef CONV
-        double Yi[NSP];
-        double Xi[NSP];
-
-        for (int j = 1; j < NN; ++j)
-        {
-            Yi[j - 1] = (*y_host)[i * NN + j];
-        }
-
-        mass2mole (Yi, Xi);
-        (*variable_host)[i] = getDensity ((*y_host)[i], pres, Xi);
-#endif
-    }
-    fclose (fp);
-}
-    """
-    )
-
-
-def write_tc_tester(file, path, mechfile, thermofile):
-    the_file = path + "data.bin"
-    if thermofile == None:
-        thermofile = mechfile
-    file.write(
-    """
-
-    #include <stdio.h>
-    #include "header.h"
-    #include "timer.h"
-
-    void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
-
-    int main(int argc, char *argv[])
-    {
-    """
-    )
-    file.write("""
-      char mechfile[100] = "{}";
-      char thermofile[100] = "{}";
-      """.format(mechfile, thermofile)
-    )
-    file.write(
-    """
-      int num_odes = 1;
-      if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
-      {
-          exit(-1);
-      }
-
-      double* y_host;
-      double* var_host;
-      """
-    )
-    file.write(
-    """
-      read_initial_conditions("{}", num_odes, &y_host, &var_host);
-    """.format(the_file))
-    file.write(
-    """
-
-      /* Initialize TC library */
-      int withtab = 0;
-      TC_initChem( mechfile, thermofile, withtab, 1.0) ;
-
-      double jac[NSP * NSP] = {0};
-      StartTimer();
-      for(int tid = 0; tid < num_odes; ++tid)
-      {
-          TC_setThermoPres(var_host[tid]) ;
-          TC_getJacTYNm1anl ( &y_host[tid * NN], NSP, jac ) ;
-      }
-      double runtime = GetTimer();
-      printf("%d,%.15le\\n", num_odes, runtime);
-      free(y_host);
-      free(var_host);
-      return 0;
-    }
-    """
-    )
-
-
-def write_c_tester(file, path):
-    the_file = path + "data.bin"
-    file.write(
-    """
-    void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
-    #include "jacob.h"
-    #include "timer.h"
-    #include "header.h"
-    #include <stdio.h>
-    int main (int argc, char *argv[])
-    {
-        int num_odes = 1;
-        if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
-        {
-            exit(-1);
-        }
-        double* y_host;
-        double* var_host;
-    """
-    )
-    file.write("""
-        read_initial_conditions("{}", num_odes, &y_host, &var_host);
-        """.format(the_file)
-        )
-    file.write(
-    """
-        double jac[NSP * NSP] = {0};
-        StartTimer();
-        for(int tid = 0; tid < num_odes; ++tid)
-        {
-            eval_jacob(0, var_host[tid], &y_host[tid * NN], jac);
-        }
-        double runtime = GetTimer();
-        printf("%d,%.15le\\n", num_odes, runtime);
-        free(y_host);
-        free(var_host);
-        return 0;
-    }
-    """
-    )
-
-
-def write_cuda_tester(file, path):
-    the_file = path + "data.bin"
-    file.write(
-    """
-    #include <stdlib.h>
-    #include <stdio.h>
-    #include <string.h>
-    #include "jacob.cuh"
-
-
-    #include <cuda.h>
-    #include <cuda_runtime.h>
-    #include <helper_cuda.h>
-    #include "header.cuh"
-    #include "timer.h"
-    #include "gpu_memory.cuh"
-    #include "launch_bounds.cuh"
-
-    int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device);
-
-    #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
-    #define GRID_SIZE (blockDim.x * gridDim.x)
-    __global__
-    void jac_driver(int NUM, double* pres, double* y)
-    {
-        if (T_ID < NUM)
-        {
-            double y_local[NSP];
-            double pr_local = pres[T_ID];
-            double jac_local[NSP * NSP] = {0};
-
-        #pragma unroll
-            for (int i = 0; i < NSP; i++)
-            {
-                y_local[i] = y[T_ID + i * GRID_SIZE];
-            }
-
-            eval_jacob (0, pr_local, y_local, jac_local);
-        }
-    }
-
-    int main (int argc, char *argv[])
-    {
-        int num_odes = 1;
-        if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
-        {
-            exit(1);
-        }
-
-        cudaErrorCheck (cudaSetDevice (0) );
-
-        cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
-
-        int g_num = (int)ceil(((double)num_odes) / ((double)TARGET_BLOCK_SIZE));
-        if (g_num == 0)
-            g_num = 1;
-
-        double* y_device;
-        double* y_host;
-        double* var_device;
-        double* var_host;
-            """
-    )
-    file.write("""
-        int padded = read_initial_conditions("{}", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
-        """.format(the_file))
-    file.write(
-    """
-        g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
-        if (g_num == 0)
-            g_num = 1;
-        dim3 dimGrid (g_num, 1 );
-        dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
-        cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-        cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
-        StartTimer();
-        #ifdef SHARED_SIZE
-            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device);
-        #else
-            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device);
-        #endif
-        cudaDeviceSynchronize();
-        double runtime = GetTimer();
-        printf("%d,%.15le\\n", num_odes, runtime);
-        cudaErrorCheck( cudaPeekAtLastError() );
-        cudaErrorCheck( cudaDeviceSynchronize() );
-        free_gpu_memory(y_device, var_device);
-        free(y_host);
-        free(var_host);
-        cudaErrorCheck( cudaDeviceReset() );
-        return 0;
-    }
-    """
-    )
-
-
-def check_step_file(filename, steplist):
-    #checks file for existing data
-    #and returns number of runs left to do
-    #for each # of does in steplist
-    runs = {}
-    for step in steplist:
-        runs[step] = 0
-    if not ('nvcc' in filename or 'fdcu' in filename):
-        raise Exception(filename)
-
-    try:
-        with open(filename, 'r') as file:
-            lines = [line.strip() for line in file.readlines()]
-        for line in lines:
-            try:
-                vals = line.split(',')
-                if len(vals) == 2:
-                    vals = [float(v) for v in vals]
-                    runs[vals[0]] += 1
-            except:
-                pass
-        return runs
-    except:
-        return runs
-
-
-def check_file(filename):
-    #checks file for existing data
-    #and returns number of runs left to do
-    try:
-        with open(filename, 'r') as file:
-            lines = [line.strip() for line in file.readlines()]
-        num_completed = 0
-        to_find = 2
-        for line in lines:
-            try:
-                vals = line.split(',')
-                if len(vals) == to_find:
-                    i = int(vals[0])
-                    f = float(vals[1])
-                    num_completed += 1
-            except:
-                pass
-        return num_completed
-    except:
-        return 0
-
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -532,641 +59,321 @@ libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             icc=['-m64', '-ipo', '-lm', '-std=c99']
             )
 
-mechanism_dir = '/home/nick/mechs/'
-mechanism_list = [{'name':'H2', 'mech':'chem.cti', 'input':'pasr_input_h2.yaml', 'chemkin':'h2.dat', 'thermo':'h2therm.dat'},
-                  {'name':'GRI', 'mech':'grimech30.cti', 'input':'pasr_input_ch4.yaml', 'chemkin':'grimech30.dat', 'thermo':'thermo30.dat'},
-                  {'name':'USC', 'mech':'uscmech.cti', 'input':'pasr_input_c2h4.yaml', 'chemkin':'uscmech.dat', 'thermo':'usctherm.dat'}
-                  ]
+def performance_tester():
+    def is_pdep(rxn):
+        return (isinstance(rxn, ct.ThreeBodyReaction) or
+        isinstance(rxn, ct.FalloffReaction) or
+        isinstance(rxn, ct.ChemicallyActivatedReaction))
 
-pressure_list = [1, 10, 25]
-temp_list = [400, 600, 800]
-#premixed = ['premixed', 'non-premixed']
+    def check_step_file(filename, steplist):
+        #checks file for existing data
+        #and returns number of runs left to do
+        #for each # of does in steplist
+        runs = {}
+        for step in steplist:
+            runs[step] = 0
+        if not 'cuda' in filename:
+            raise Exception(filename)
 
-cache_opt = [False]#[True, False]
-shared = [True, False]
-num_threads = [1]#[1, 12]
+        try:
+            with open(filename, 'r') as file:
+                lines = [line.strip() for line in file.readlines()]
+            for line in lines:
+                try:
+                    vals = line.split(',')
+                    if len(vals) == 2:
+                        vals = [float(v) for v in vals]
+                        runs[vals[0]] += 1
+                except:
+                    pass
+            return runs
+        except:
+            return runs
 
-repeats = 10
-gpu_repeats = 10
-home = os.getcwd() + os.path.sep
-build_dir = 'out/'
-test_dir = 'test/'
 
+    def check_file(filename):
+        #checks file for existing data
+        #and returns number of runs left to do
+        try:
+            with open(filename, 'r') as file:
+                lines = [line.strip() for line in file.readlines()]
+            num_completed = 0
+            to_find = 2
+            for line in lines:
+                try:
+                    vals = line.split(',')
+                    if len(vals) == to_find:
+                        i = int(vals[0])
+                        f = float(vals[1])
+                        num_completed += 1
+                except:
+                    pass
+            return num_completed
+        except:
+            return 0
 
-version = {}
-#get version info
-for lang in cmd_compile:
-    with open('temp', 'w') as file:
-        subprocess.check_call([cmd_compile[lang], '--version'], stdout=file)
-    with open('temp', 'r') as file:
-        lines = [line.strip() for line in file.readlines()]
-        for line in lines:
-            v = re.search(r'(\d+\.\d+\.(?:\d+))', line)
-            if v:
-                v = v.group(1)
-                break
-    version[lang] = v.replace('.', '')
-    os.remove('temp')
+    class file_struct(object):
+        def __init__(self, lang, filename, i_dirs, args):
+            self.lang = lang
+            self.filename = filename
+            self.i_dirs = i_dirs
+            self.args = args
 
-do_cuda = True
-do_c = True
-do_tchem = True
-do_fd = True
-#make sure the performance directory exists
-subprocess.check_call(['mkdir', '-p', 'performance'])
-
-for mechanism in mechanism_list:
-    os.chdir(home + 'performance')
-    subprocess.check_call(['mkdir', '-p', mechanism['name']])
-    os.chdir(mechanism['name'])
-    subprocess.check_call(['mkdir', '-p', build_dir])
-    subprocess.check_call(['mkdir', '-p', test_dir])
-    #get input
-    pasr_input = pasr.parse_input_file(home + mechanism['input'])
-
-    with open("test/data.bin", "wb") as file:
-        pass
-
-    num_conditions = 0
-    #generate PaSR data for different pressures, and save to binary c file
-    index = 0
-    for pressure in pressure_list:
-        for temperature in temp_list:
-            #for premix in premixed:
-            pasr_input['pressure'] = pressure
-            pasr_input['temperature'] = temperature
-            #pasr_input['premixed'] = premix
-            state_data = run_pasr(pasr_input, mechanism_dir+mechanism['mech'],
-                                  'pasr_out_{}.npy'.format(index)
-                                  )
-            state_data = state_data.reshape(state_data.shape[0] *
-                                            state_data.shape[1],
-                                            state_data.shape[2]
-                                            )
-
-            with open("test/data.bin", "ab") as file:
-                state_data.tofile(file)
-
-            num_conditions += state_data.shape[0]
-            print(num_conditions)
-            index += 1
-
-    the_path = os.path.join(os.getcwd(), test_dir)
-
-    #do c
-    #next we need to start writing the jacobians
-    for opt in cache_opt:
-        for thread in num_threads:
-            if not do_c:
-                continue
-            data_output = 'gcc_{}_{}_output.txt'.format(version['c'], 'co' if opt else 'nco')
-            data_output = os.path.join(os.getcwd(), data_output)
-            num_completed = check_file(data_output)
-            if num_completed >= repeats:
-                continue
-            create_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12,
-                            build_path=build_dir
-                            )
-
-            #now we need to write the reader and the tester
-            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
-                write_c_reader(file)
-
-            with open(build_dir + 'test.c', 'w') as file:
-                write_c_tester(file, the_path)
-
-            write_timer()
-
-            #get the cantera object
-            gas = ct.Solution(mechanism_dir+mechanism['mech'])
-            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-
-            # Compile generated source code
-            files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-                     'rxn_rates', 'test', 'read_initial_conditions',
-                     'mechanism', 'mass_mole'
-                     ]
-            if pmod:
-                files += ['rxn_rates_pres_mod']
-
-            i_dirs = [build_dir]
+    def get_file_list(pmod, gpu=False, FD=False, tchem=False):
+        i_dirs = [build_dir]
+        if tchem:
+            files = ['test', 'read_initial_conditions', 
+                        'mechanism', 'mass_mole']
+            return i_dirs, files
+        files = ['chem_utils', 'dydt', 'spec_rates',
+             'rxn_rates', 'test', 'read_initial_conditions',
+             'mechanism', 'mass_mole'
+             ]
+        if pmod:
+            files += ['rxn_rates_pres_mod']
+        if FD:
+            files += ['fd_jacob']
+        else:
+            files += ['jacob']
+            if gpu:
+                ext = utils.file_ext['cuda']
+                flist = 'jac_list_cuda'
+            else:
+                ext = utils.file_ext['c']
+                flist = 'jac_list_c'
             try:
-                with open('out/jacobs/jac_list_c') as file:
+                with open(os.path.join(build_dir, 'jacobs', flist)) as file:
                     vals = file.readline().strip().split(' ')
-                    vals = ['jacobs/' + f[:f.index('.c')] for f in vals]
-                    files = vals + files
-                    i_dirs.append('out/jacobs/')
+                    vals = [os.path.join('jacobs', f[:f.index(ext)]) for f in vals]
+                    files += vals
+                    i_dirs.append(os.path.join(build_dir, 'jacobs'))
             except:
                 pass
+        if gpu:
+            files += ['gpu_memory']
 
+        return i_dirs, files
 
-            getf = lambda x: x[x.index('/') + 1:] \
-                                if 'jacobs/' in x else x
+    def getf(x):
+        return x[x.rindex('jacobs') + len('jacobs') + 1:] if 'jacobs' in x else x
 
-            def compiler(f):
-                args = [cmd_compile['c']]
-                args.extend(flags['c'])
-                include = ['-I./' + d for d in i_dirs]
-                args.extend(include)
-                args.extend([
-                    '-I.' + os.path.sep + build_dir,
-                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-                    '-o', os.path.join(test_dir, getf(f) + '.o')
-                    ])
-                args = [val for val in args if val.strip()]
-                try:
-                    subprocess.check_call(args)
-                except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
-                    return -1
-                return 0
-
-            pool = multiprocessing.Pool()
-            results = pool.map(compiler, files)
-            pool.close()
-            pool.join()
-            if any(r == -1 for r in results):
-                sys.exit(-1)
-
-            # Link into executable
-            args = [cmd_compile['c']]
-            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-            args.extend(libs['c'])
-
-            try:
-                subprocess.check_call(args)
-            except subprocess.CalledProcessError:
-                print('Error: linking of test program failed.')
-                sys.exit(1)
-
-            with open(data_output, 'a+') as file:
-                for i in range(repeats - num_completed):
-                    print(i, '/', repeats - num_completed)
-                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                     str(num_conditions)], stdout=file)
-
-    for opt in cache_opt:
-        for thread in num_threads:
-            if not do_fd:
-                continue
-            data_output = 'fdc_{}_{}_output.txt'.format(version['c'], 'co' if opt else 'nco')
-            data_output = os.path.join(os.getcwd(), data_output)
-            num_completed = check_file(data_output)
-            if num_completed >= repeats:
-                continue
-            create_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12,
-                            build_path=build_dir
-                            )
-
-            #now we need to write the reader and the tester
-            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
-                write_c_reader(file)
-
-            with open(build_dir + 'test.c', 'w') as file:
-                write_c_tester(file, the_path)
-
-            #and copy the FD Jacobian
-            shutil.copy(os.path.join(home, 'fd_jacob.c'),
-                        os.path.join(build_dir, 'fd_jacob.c'))
-
-            write_timer()
-
-            #get the cantera object
-            gas = ct.Solution(mechanism_dir+mechanism['mech'])
-            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-
-            # Compile generated source code
-            files = ['chem_utils', 'dydt', 'fd_jacob', 'spec_rates',
-                     'rxn_rates', 'test', 'read_initial_conditions',
-                     'mechanism', 'mass_mole'
-                     ]
-            if pmod:
-                files += ['rxn_rates_pres_mod']
-
-            i_dirs = [build_dir]
-
-            getf = lambda x: x
-
-            def compiler(f):
-                args = [cmd_compile['c']]
-                args.extend(flags['c'])
-                include = ['-I./' + d for d in i_dirs]
-                args.extend(include)
-                args.extend([
-                    '-I.' + os.path.sep + build_dir,
-                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-                    '-o', os.path.join(test_dir, getf(f) + '.o')
-                    ])
-                args = [val for val in args if val.strip()]
-                try:
-                    subprocess.check_call(args)
-                except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f +
-                          utils.file_ext['c']
-                          )
-                    return -1
-                return 0
-
-            pool = multiprocessing.Pool()
-            results = pool.map(compiler, files)
-            pool.close()
-            pool.join()
-            if any(r == -1 for r in results):
-                sys.exit(-1)
-
-            # Link into executable
-            args = [cmd_compile['c']]
-            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-            args.extend(libs['c'])
-
-            try:
-                subprocess.check_call(args)
-            except subprocess.CalledProcessError:
-                print('Error: linking of test program failed.')
-                sys.exit(1)
-
-            with open(data_output, 'a+') as file:
-                for i in range(repeats - num_completed):
-                    print(i, '/', repeats - num_completed)
-                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                                          str(num_conditions)], stdout=file
-                                          )
-
-    #do cuda
-    #next we need to start writing the jacobians
-    for opt in cache_opt:
-        for smem in shared:
-            if not do_cuda:
-                continue
-            #do steps
-            step_size = 1
-            steplist = []
-            while step_size < num_conditions:
-                steplist.append(step_size)
-                step_size *= 2
-            if step_size / 2 != num_conditions:
-                steplist.append(num_conditions)
-
-            data_output = 'nvcc_{}_{}_{}_output_steps.txt'.format(version['cuda'], 'co' if opt else 'nco',
-                'sm' if smem else 'nsm')
-            data_output = os.path.join(os.getcwd(), data_output)
-            todo = check_step_file(data_output, steplist)
-            if all(todo[x] >= gpu_repeats for x in todo):
-                continue
-
-            create_jacobian('cuda', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12,
-                            build_path=build_dir,
-                            no_shared=not smem,
-                            num_blocks=8, num_threads=64
-                            )
-
-            with open('out/regcount') as file:
-                regcount = int(file.readline())
-
-            #now we need to write the reader and the tester
-            with open(build_dir + 'read_initial_conditions.cu', 'w') as file:
-                write_cuda_reader(file)
-
-            with open(build_dir + 'test.cu', 'w') as file:
-                write_cuda_tester(file, the_path)
-
-            write_timer()
-
-            #get the cantera object
-            gas = ct.Solution(mechanism_dir+mechanism['mech'])
-            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-
-            # Compile generated source code
-            files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-                     'rxn_rates', 'test', 'read_initial_conditions',
-                     'mechanism', 'mass_mole', 'gpu_memory'
-                     ]
-            i_dirs = [build_dir]
-            try:
-                with open('out/jacobs/jac_list_cuda') as file:
-                    vals = file.readline().strip().split(' ')
-                    vals = ['jacobs/' + f[:f.index('.cu')] for f in vals]
-                    files = vals + files
-                    i_dirs.append('out/jacobs/')
-            except:
-                pass
-            if pmod:
-                files += ['rxn_rates_pres_mod']
-
-            getf = lambda x: x[x.index('/') + 1:] \
-                                if 'jacobs/' in x else x
-
-            def compiler(f):
-                args = [cmd_compile['cuda']]
-                args.extend(['-maxrregcount', str(regcount)])
-                args.extend(flags['cuda'])
-                include = ['-I./' + d for d in i_dirs]
-                for i in include:
-                    args.insert(-1, i)
-                args.extend([
-                    '-o', os.path.join(test_dir, getf(f)) + '.o',
-                    os.path.join(build_dir, f + utils.file_ext['cuda'])
-                    ])
-                args = [val for val in args if val.strip()]
-                try:
-                    subprocess.check_call(args)
-                except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f + utils.file_ext['cuda'])
-                    return -1
-                return 0
-
-            pool = multiprocessing.Pool()
-            results = pool.map(compiler, files)
-            pool.close()
-            pool.join()
-            if any(r == -1 for r in results):
-                sys.exit(-1)
-
-            # Link into executable
-            args = [cmd_compile['cuda']]
-            args.extend([os.path.join(os.getcwd(), test_dir, getf(f) + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-            args.extend(libs['cuda'])
-
-            try:
-                subprocess.check_call(args)
-            except subprocess.CalledProcessError:
-                print('Error: linking of test program failed.')
-                sys.exit(1)
-
-            with open(data_output, 'a+') as file:
-                for stepsize in todo:
-                    for i in range(gpu_repeats - todo[stepsize]):
-                        print(i, "/", gpu_repeats - todo[stepsize])
-                        subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                         str(stepsize)], stdout=file)
-
-       #do cuda
-    #next we need to start writing the jacobians
-    for opt in cache_opt:
-        for smem in shared:
-            if not do_fd:
-                continue
-            #do steps
-            step_size = 1
-            steplist = []
-            while step_size < num_conditions:
-                steplist.append(step_size)
-                step_size *= 2
-            if step_size / 2 != num_conditions:
-                steplist.append(num_conditions)
-
-            data_output = 'fdcu_{}_{}_{}_output_steps.txt'.format(version['cuda'], 'co' if opt else 'nco',
-                'sm' if smem else 'nsm')
-            data_output = os.path.join(os.getcwd(), data_output)
-            todo = check_step_file(data_output, steplist)
-            if all(todo[x] >= gpu_repeats for x in todo):
-                continue
-
-            create_jacobian('cuda', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12,
-                            build_path=build_dir,
-                            no_shared=not smem,
-                            num_blocks=8, num_threads=64
-                            )
-
-            with open('out/regcount') as file:
-                regcount = int(file.readline())
-
-            #now we need to write the reader and the tester
-            with open(build_dir + 'read_initial_conditions.cu', 'w') as file:
-                write_cuda_reader(file)
-
-            with open(build_dir + 'test.cu', 'w') as file:
-                write_cuda_tester(file, the_path)
-
-            #and copy the FD Jacobian
-            shutil.copy(os.path.join(home, 'fd_jacob.cu'),
-                        os.path.join(build_dir, 'fd_jacob.cu'))
-
-
-            write_timer()
-
-            #get the cantera object
-            gas = ct.Solution(mechanism_dir+mechanism['mech'])
-            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-
-            # Compile generated source code
-            files = ['chem_utils', 'dydt', 'fd_jacob', 'spec_rates',
-                     'rxn_rates', 'test', 'read_initial_conditions',
-                     'mechanism', 'mass_mole', 'gpu_memory'
-                     ]
-            i_dirs = [build_dir]
-
-            if pmod:
-                files += ['rxn_rates_pres_mod']
-
-            getf = lambda x: x
-
-            def compiler(f):
-                args = [cmd_compile['cuda']]
-                args.extend(['-maxrregcount', str(regcount)])
-                args.extend(flags['cuda'])
-                include = ['-I./' + d for d in i_dirs]
-                for i in include:
-                    args.insert(-1, i)
-                args.extend([
-                    '-o', os.path.join(test_dir, getf(f)) + '.o',
-                    os.path.join(build_dir, f + utils.file_ext['cuda'])
-                    ])
-                args = [val for val in args if val.strip()]
-                try:
-                    subprocess.check_call(args)
-                except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f + utils.file_ext['cuda'])
-                    return -1
-                return 0
-
-            pool = multiprocessing.Pool()
-            results = pool.map(compiler, files)
-            pool.close()
-            pool.join()
-            if any(r == -1 for r in results):
-                sys.exit(-1)
-
-            # Link into executable
-            args = [cmd_compile['cuda']]
-            args.extend([os.path.join(os.getcwd(), test_dir, getf(f) + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-            args.extend(libs['cuda'])
-
-            try:
-                subprocess.check_call(args)
-            except subprocess.CalledProcessError:
-                print('Error: linking of test program failed.')
-                sys.exit(1)
-
-            with open(data_output, 'a+') as file:
-                for stepsize in todo:
-                    for i in range(gpu_repeats - todo[stepsize]):
-                        print(i, "/", gpu_repeats - todo[stepsize])
-                        subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                         str(stepsize)], stdout=file)
-
-    if not do_tchem:
-        continue
-    #finally tc tester
-    data_output = 'tchem_output.txt'
-    data_output = os.path.join(os.getcwd(), data_output)
-    num_completed = check_file(data_output)
-    #now we need to write the reader and the tester
-    with open(build_dir + 'read_initial_conditions.c', 'w') as file:
-        write_c_reader(file)
-
-    with open(build_dir + 'tc_test.c', 'w') as file:
-        write_tc_tester(file, the_path, mechanism['chemkin'], mechanism['thermo'])
-
-    write_timer()
-
-    # Compile generated source code
-    files = ['tc_test', 'read_initial_conditions', 'mechanism', 'mass_mole']
-
-    i_dirs = [build_dir]
-
-    def compiler(f):
-        args = [cmd_compile['c']]
-        args.extend(flags['c'])
-        include = ['-I./' + d for d in i_dirs]
+    def compiler(fstruct):
+        getf = 
+        args = [cmd_compile[fstruct.lang]]
+        args.extend(flags[fstruct.lang])
+        include = ['-I./' + d for d in fstruct.i_dirs]
         args.extend(include)
         args.extend([
             '-I.' + os.path.sep + build_dir,
-            '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-            '-o', os.path.join(test_dir, f + '.o')
+            '-c', os.path.join(build_dir, fstruct.filename + 
+                        utils.file_ext[fstruct.lang]),
+            '-o', os.path.join(test_dir, getf(fstruct.filename) + '.o')
             ])
         args = [val for val in args if val.strip()]
         try:
             subprocess.check_call(args)
         except subprocess.CalledProcessError:
-            print('Error: compilation failed for ' + f + utils.file_ext['c'])
+            print('Error: compilation failed for ' + fstruct.filename +
+                    utils.file_ext[fstruct.lang])
             return -1
         return 0
 
-    pool = multiprocessing.Pool()
-    results = pool.map(compiler, files)
-    pool.close()
-    pool.join()
-    if any(r == -1 for r in results):
-        sys.exit(-1)
+    def linker(lang, temp_lang, filelist):
+        args = [cmd_compile[temp_lang]]
+        args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
+        args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+        args.extend(libs[lang])
+        if lang == 'tchem':
+            args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
 
-    # Link into executable
-    args = [cmd_compile['c']]
-    args.extend([os.path.join(test_dir, f+ '.o') for f in files])
-    args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-    args.extend(libs['c'] + ['-L' + os.path.join(home, 'TChem_v0.2', 'lib'), '-ltchem'])
+        try:
+            subprocess.check_call(args)
+        except subprocess.CalledProcessError:
+            print('Error: linking of test program failed.')
+            sys.exit(1)
 
-    try:
-        subprocess.check_call(args)
-    except subprocess.CalledProcessError:
-        print('Error: linking of test program failed.')
-        sys.exit(1)
+    pdir = 'performance'
 
-    #copy periodic table and mechanisms in
-    shutil.copy(os.path.join(home, 'TChem_v0.2', 'data', 'periodictable.dat'), 'periodictable.dat')
-    shutil.copy(os.path.join(mechanism_dir, mechanism['chemkin']), mechanism['chemkin'])
-    shutil.copy(os.path.join(mechanism_dir, mechanism['thermo']), mechanism['thermo'])
+    #find the mechanisms to test
+    mechanism_list = {}
+    for name in os.listdir(pdir):
+        if os.path.isdir(os.path.join(pdir, name)):
+            #check for cti
+            files = [f for f in os.listdir(os.path.join(pdir, name)) if 
+                        os.path.isfile(os.path.join(pdir, name, f))]
+            for f in files:
+                if f.endswith('*.cti'):
+                    mechanism_list[name] = {}
+                    mechanism_list[name]['mech'] = f
+                    mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
 
-    with open(data_output, 'a+') as file:
-        for i in range(repeats - num_completed):
-            print(i, '/', repeats - num_completed)
-            subprocess.check_call([os.path.join(the_path, 'speedtest'),
-             str(num_conditions)], stdout=file)
+                    thermo = next((tf for tf in files if 'thermo.dat' == tf), None)
+                    if thermo is not None:
+                        mechanism_list[name]['thermo'] = thermo
 
-    #do icc
-    #next we need to start writing the jacobians
-    for opt in cache_opt:
-        for thread in num_threads:
-            data_output = 'icc_{}_{}_output.txt'.format(version['icc'], 'co' if opt else 'nco')
-            data_output = os.path.join(os.getcwd(), data_output)
-            num_completed = check_file(data_output)
-            if num_completed >= repeats:
-                continue
-            create_jacobian('c', mechanism_dir+mechanism['mech'],
-                            optimize_cache=opt, multi_thread=12, build_path=build_dir)
-
-            #now we need to write the reader and the tester
-            with open(build_dir + 'read_initial_conditions.c', 'w') as file:
-                write_c_reader(file)
-
-            with open(build_dir + 'test.c', 'w') as file:
-                write_c_tester(file, the_path)
-
-            write_timer()
-
-            #get the cantera object
-            gas = ct.Solution(mechanism_dir+mechanism['mech'])
-            pmod = any([__is_pdep(rxn) for rxn in gas.reactions()])
-
-            # Compile generated source code
-            files = ['chem_utils', 'dydt', 'jacob', 'spec_rates',
-                     'rxn_rates', 'test', 'read_initial_conditions',
-                     'mechanism', 'mass_mole'
-                     ]
-            if pmod:
-                files += ['rxn_rates_pres_mod']
-
-            i_dirs = [build_dir]
-            try:
-                with open('out/jacobs/jac_list_c') as file:
-                    vals = file.readline().strip().split(' ')
-                    vals = ['jacobs/' + f[:f.index('.c')] for f in vals]
-                    files = vals + files
-                    i_dirs.append('out/jacobs/')
-            except:
-                pass
+    if os.getenv('TCHEM_HOME'):
+        tchem_home = os.getenv('TCHEM_HOME')
+    else:
+        raise SystemError('TCHEM_HOME environment variable not set.')
 
 
-            getf = lambda x: x[x.index('/') + 1:] \
-                                if 'jacobs/' in x else x
+    cache_opt_base = [True, False]
+    shared_base = [True, False]
+    finite_diffs_base = [False, True]
 
-            def compiler(f):
-                args = [cmd_compile['icc']]
-                args.extend(flags['icc'])
-                include = ['-I./' + d for d in i_dirs]
-                args.extend(include)
-                args.extend([
-                    '-I.' + os.path.sep + build_dir,
-                    '-c', os.path.join(build_dir, f + utils.file_ext['c']),
-                    '-o', os.path.join(test_dir, getf(f) + '.o')
-                    ])
-                args = [val for val in args if val.strip()]
-                try:
-                    subprocess.check_call(args)
-                except subprocess.CalledProcessError:
-                    print('Error: compilation failed for ' + f + utils.file_ext['c'])
-                    return -1
-                return 0
+    cpu_repeats = 10
+    gpu_repeats = 10
+    home = os.getcwd()
+    build_dir = 'out'
+    test_dir = 'test'
 
-            pool = multiprocessing.Pool()
-            results = pool.map(compiler, files)
-            pool.close()
-            pool.join()
-            if any(r == -1 for r in results):
-                sys.exit(-1)
+    langs = ['c', 'cuda', 'tchem']
+    for mech_name, mech_info in mechanism_list:
+        #get the cantera object
+        gas = ct.Solution(os.path.join(home, mech_name, mech_info['mech']))
+        pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
 
-            # Link into executable
-            args = [cmd_compile['icc']]
-            args.extend([os.path.join(test_dir, getf(f) + '.o') for f in files])
-            args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-            args.extend(libs['icc'])
+        #ensure directory structure is valid
+        os.chdir(os.path.join(home, pdir, mech_name))
+        subprocess.check_call(['mkdir', '-p', build_dir])
+        subprocess.check_call(['mkdir', '-p', test_dir])
 
-            try:
-                subprocess.check_call(args)
-            except subprocess.CalledProcessError:
-                print('Error: linking of test program failed.')
-                sys.exit(1)
+        #clear old data
+        with open(os.path.join(test_dir, "data.bin"), "wb") as file:
+            pass
 
-            with open(data_output, 'a+') as file:
-                for i in range(repeats - num_completed):
-                    print(i, '/', repeats - num_completed)
-                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
-                     str(num_conditions)], stdout=file)
+        npy_files = [f for f in os.listdir()
+                        if f.endswith('.npy')
+                        and os.path.isfile(f)]
+        num_conditions = 0
+        #load PaSR data for different pressures/conditions, and save to binary c file
+        for i, npy in npy_files:
+            state_data = np.load(npy)
+            state_data = state_data.reshape(state_data.shape[0] *
+                                state_data.shape[1],
+                                state_data.shape[2]
+                                )
+            with open(os.path.join(test_dir, 'data.bin'), "ab") as file:
+                    state_data.tofile(file)
+
+            num_conditions += state_data.shape[0]
+            print(num_conditions)
+
+        #figure out gpu steps
+        step_size = 1
+        steplist = []
+        while step_size < num_conditions:
+            steplist.append(step_size)
+            step_size *= 2
+        if step_size / 2 != num_conditions:
+            steplist.append(num_conditions)
+
+        the_path = os.path.join(os.getcwd(), test_dir)
+
+        for lang in langs:
+            if lang == 'cuda':
+                shared = [True, False]
+            else:
+                shared = [False]
+            if lang == 'tchem':
+                finite_diffs = [False]
+                cache_opt = [False]
+                shared = [False]
+            else:
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+                shared = shared_base
+
+            for FD in finite_diffs
+                for opt in cache_opt:
+                    for smem in shared:
+
+                        data_output = '{}_{}_{}_output.txt'.format(lang, 'co' if opt else 'nco',
+                                                                    'smem' if smem else 'nosmem')
+                        data_output = os.path.join(os.getcwd(), data_output)
+                        if lang != 'cuda':
+                            repeats = cpu_repeats
+                            num_completed = check_file(data_output)
+                            if num_completed >= repeats:
+                                continue
+                            todo = {num_conditions: num_completed - repeats}
+                        else:
+                            repeats = gpu_repeats
+                            todo = check_step_file(data_output, steplist)
+                            if all(todo[x] >= repeats for x in todo):
+                                continue
+
+                        create_jacobian(lang, mechanism_dir+mechanism['mech'],
+                                        optimize_cache=opt,
+                                        build_path=build_dir,
+                                        no_shared=not smem,
+                                        num_blocks=8, num_threads=64
+                                        )
+
+                        #now we need to write the reader
+                        shutil.copy(os.path.join('static_files', 'read_initial_conditions.c')
+                                    os.path.join(build_dir, 'read_initial_conditions.c'))
+
+                        #write the tester
+                        file_data = {'datafile' : os.path.join(the_path, 'data.bin')}
+                        if lang == 'c' or lang == 'cuda':
+                            with open(os.path.join('static_files', 
+                                                    'tester.{}.in'.format(utils.file_ext[temp_lang]))
+                                                   , 'r') as file:
+                                src = Template(file.read())
+                            src.substitute(file_data)
+                        else:
+                            file_data['mechfile'] = mechanism['chemkin']
+                            file_data['thermofile'] = mechanism['thermo']
+                            with open(os.path.join('static_files', 
+                                                   'tc_tester.c.in'), 'r') as file:
+                                src = Template(file.read())
+                            src.substitute(file_data)
+                        with open(os.path.join(build_dir, 
+                                              'test.{}'.format(utils.file_ext[temp_lang]))
+                                              , 'w') as file:
+                            file.write(src)
+
+                        #copy timer
+                        shutil.copy(os.path.join('static_files', 'timer.h')
+                                    os.path.join(build_dir, 'timer.h'))
+
+                        #get file lists
+                        files, i_dirs = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
+                        
+                        # Compile generated source code
+                        temp_lang = 'c' if lang != 'cuda' else 'cuda'
+                        structs = [file_struct(temp_lang, f, flags[temp_lang], i_dirs)]
+
+                        getf = lambda x: x[x.index('/') + 1:] \
+                                            if 'jacobs/' in x else x
+
+                        pool = multiprocessing.Pool()
+                        results = pool.map(compiler, structs)
+                        pool.close()
+                        pool.join()
+                        if any(r == -1 for r in results):
+                            sys.exit(-1)
+
+                        linker(lang, files)
+
+                        if lang == 'tchem':
+                            #copy periodic table and mechanisms in
+                            shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'), 
+                                                    'periodictable.dat')
+                            shutil.copy(os.path.join(mechanism_dir, mechanism['chemkin']), 
+                                                    mechanism['chemkin'])
+                            shutil.copy(os.path.join(mechanism_dir, mechanism['thermo']), 
+                                                    mechanism['thermo'])
+
+                        with open(data_output, 'a+') as file:
+                            for stepsize in todo:
+                                for i in range(repeats - todo[stepsize]):
+                                    print(i, "/", repeats - todo[stepsize])
+                                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
+                                    str(num_conditions)], stdout=file)
+
+
+if __name__='__main__':
+    # command line arguments
+    performance_tester()

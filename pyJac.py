@@ -114,7 +114,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     """
     """
     # write the T_Pr and T_Fi terms if needed
-    if rxn.pdep or (rxn.thd_body and rxn.thd_body_eff):
+    if (rxn.pdep or rxn.thd_body) and rxn.thd_body_eff:
         jline = utils.line_start + 'pres_mod_temp = '
         if rxn.pdep:
             jline += '('
@@ -186,13 +186,13 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
             jline += ' - {} * '.format(float(prod_nu))
         jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rind))
 
-    if rxn.pdep:
+    if rxn.pdep and (rxn.pdep_sp or rxn.thd_body_eff):
         jline += ' + pres_mod_temp'
     jline += ')'
 
     file.write(jline + utils.line_end[lang])
 
-    if rxn.pdep:
+    if rxn.pdep and (rxn.pdep_sp or rxn.thd_body_eff):
         file.write(utils.line_start +
             'pres_mod_temp *= (' + get_array(lang, 'pres_mod', pind) +
                             ' / conc_temp)' + utils.line_end[lang])
@@ -261,8 +261,8 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
     last_spec = len(specs) - 1
     mw_frac = sp_j.mw / specs[last_spec].mw
     jline += ' * {:.16e}'.format(1. - mw_frac)
-    if ((rxn.pdep and rxn.pdep_sp is None) or
-        (rxn.thd_body and rxn.thd_body_eff)
+    if (((rxn.pdep and rxn.pdep_sp is None) or
+        (rxn.thd_body)) and rxn.thd_body_eff
         ):
         alphaij = next((thd[1] for thd in rxn.thd_body_eff
                         if thd[0] == j_sp), 1.0)
@@ -282,7 +282,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
         if rxn.pdep_sp == j_sp:
             jline += ' + pres_mod_temp'
         else:
-            jline += ' - pres_mod_temp * {:.16e}'.format(mw_frac)
+            jline += ' - pres_mod_temp * {:.16e}'.format(sp_j.mw / specs[rxn.pdep_sp].mw)
 
     s_term = ''
     if (rxn.pdep or rxn.thd_body) and \
@@ -1375,9 +1375,6 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
         file.write(utils.line_start + jline_p + utils.line_end[lang])
 
     (pn, A_pn, b_pn, E_pn) = rxn.plog_par[-1]
-    file.write(utils.line_start +
-               '}} else if (pres > {:.4e}) {{\n'.format(pn)
-               )
 
     # For pressure above the final pressure given, use standard
     # Arrhenius expression.
@@ -1396,6 +1393,9 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                        '}} else if (pres > {:.4e}) {{\n'.format(pn)
                        )
         else:
+            file.write(utils.line_start +
+                       'j_temp = 0' + utils.line_end[lang]
+                       )
             file.write(utils.line_start +
                        'if (pres > {:.4e}) {{\n'.format(pn)
                        )

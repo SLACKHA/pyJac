@@ -497,7 +497,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
          compile_jacob=True, seed=None, pasr_output_file=None, last_spec=None,
          cache_optimization=False, no_shared=False, tchem_flag=False,
-         only_rxn=None):
+         only_rxn=None, do_not_remove=False, condition_numbers=None):
     """Compares pyJac results against Cantera (and optionally TChem) using
     state data from PaSR simulations.
 
@@ -649,28 +649,27 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                         state_data.shape[1],
                                         state_data.shape[2]
                                         )
+    if lang == 'cuda':
+        pyjacob = cupyjac_evaluator(build_dir, gas, state_data)
+    else:
+        pyjacob = cpyjac_evaluator(build_dir, gas)
 
-    # The test data from Cantera does not use the 1 - Yn approach
+     # The test data from Cantera does not use the 1 - Yn approach
     # and thus mass is not explicitly, strictly conserved
     # Although this effect is typically very small e.g. O(1e-16)
     # it can have a large effect on the error in certain cases
     # e.g. if you designate a radical like OH as the last species
     # and that radical also has a mass fraction on that order of
     # magnitude
-    # --------------------------------------------------------------
-    # Therefore to maintain 100% consistancy and to ensure the mass
-    # fractions we put into our code (which does not normalize)
-    # are strictly equal to unity, we renormalize them now by running
-    # them through Cantera again
 
     for i in range(len(state_data)):
-        gas.TPY = state_data[i, 1], state_data[i, 2], state_data[i, 3:]
-        state_data[i, 3:] = gas.Y
+        state_data[i, 3:] /= np.sum(state_data[i, 3:])
+        ls = 3 + pyjacob.last_spec
+        state_data[i, ls] = 1. - np.sum(state_data[i, 3:ls]) - \
+                                 np.sum(state_data[i, ls + 1:])
 
-    if lang == 'cuda':
-        pyjacob = cupyjac_evaluator(build_dir, gas, state_data)
-    else:
-        pyjacob = cpyjac_evaluator(build_dir, gas)
+    if condition_numbers is not None:
+        state_data = state_data[[int(x) for x in condition_numbers.split(',')], :]
 
     tchem_jac = None
     if tchem_flag:
@@ -685,6 +684,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_norm = np.zeros(num_trials)
     err_jac = np.zeros(num_trials)
     err_jac_thr = np.zeros(num_trials)
+    err_jac_thr_max = np.zeros(num_trials)
     err_jac_max = np.zeros(num_trials)
     err_jac_zero = np.zeros(num_trials)
     err_jac_tchem = np.zeros(num_trials)
@@ -856,10 +856,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )
+        max_err = np.max(err)
+        loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
         err_jac_thr[i] = err
         print('L2 norm of thresholded relative error of Jacobian: '
               '{:.2e} %'.format(err))
+
+        err_jac_thr_max[i] = max_err
+        print('Max thresholded relative error of Jacobian: {:.2e}% '
+              '@ index {}'.format(max_err * 100., loc))
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
         err_jac_norm[i] = err
@@ -969,31 +975,33 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # Save all error arrays
     np.savez('error_arrays.npz',
              err_dydt=err_dydt, err_jac_norm=err_jac_norm,
-             err_jac=err_jac, err_jac_thr=err_jac_thr
+             err_jac=err_jac, err_jac_thr=err_jac_thr,
+             err_jac_thr_max=err_jac_thr_max
              )
 
-    # Cleanup all compiled files.
-    for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
-        os.remove(f)
-    if lang == 'cuda':
-        for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
+    if do_not_remove:
+        # Cleanup all compiled files.
+        for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
             os.remove(f)
+        if lang == 'cuda':
+            for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
+                os.remove(f)
 
-    # Now clean build directory
-    for root, dirs, files in os.walk('./build', topdown=False):
-        for name in files:
-            os.remove(os.path.join(root, name))
-        for name in dirs:
-            os.rmdir(os.path.join(root, name))
-    os.rmdir('./build')
+        # Now clean build directory
+        for root, dirs, files in os.walk('./build', topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+                os.rmdir(os.path.join(root, name))
+        os.rmdir('./build')
 
-    # Cleanup TChem crud
-    if tchem_flag:
-        for f in ['periodictable.dat', 'kmod.echo', 'kmod.err', 'kmod.list',
-                  'kmod.out', 'math_elem.dat', 'math_falloff.dat',
-                  'math_nasapol7.dat', 'math_reac.dat', 'math_spec.dat',
-                  'math_trdbody.dat']:
-            os.remove(f)
+        # Cleanup TChem crud
+        if tchem_flag:
+            for f in ['periodictable.dat', 'kmod.echo', 'kmod.err', 'kmod.list',
+                      'kmod.out', 'math_elem.dat', 'math_falloff.dat',
+                      'math_nasapol7.dat', 'math_reac.dat', 'math_spec.dat',
+                      'math_trdbody.dat']:
+                os.remove(f)
 
     return 0
 
@@ -1083,9 +1091,18 @@ if __name__ == '__main__':
                         type=str,
                         default=None,
                         help='A comma separated list of reactions to test.')
+    parser.add_argument('-dnr', '--do_not_remove',
+                        default=False,
+                        action='store_true',
+                        help='Do not remove old pyjacob module.  Useful for debugging.')
+    parser.add_argument('-cn', '--condition_numbers',
+                        default=None,
+                        type=str,
+                        help='Comma separated list of conditions to test,'
+                             ' useful for debugging.')
     args = parser.parse_args()
     test(args.lang, args.build_dir, args.mech, args.thermo, args.input,
          args.generate_jacob, args.compile_jacob, args.seed, args.pasr_output,
          args.last_spec, args.cache_optimization, args.no_shared, args.tchem,
-         args.only_reaction
+         args.only_reaction, args.do_not_remove, args.condition_numbers
          )

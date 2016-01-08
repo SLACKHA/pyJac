@@ -127,16 +127,12 @@ def optimize_cache(specs, reacs, multi_thread,
     name_map = {sp.name: i for i, sp in enumerate(specs)}
     for rind, rxn in enumerate(reacs):
         for sp in rxn.reac:
-            if sp == last_name:
-                continue
             spind = name_map[sp]
             spec_mapping[spind][rind] = True
             reac_mapping[rind][spind] = True
             no_dupe_add(rxn_to_sp[rind], spind)
             no_dupe_add(sp_to_rxn[spind], rind)
         for sp in rxn.reac:
-            if sp == last_name:
-                continue
             spind = name_map[sp]
             spec_mapping[spind][rind] = True
             reac_mapping[rind][spind] = True
@@ -144,16 +140,12 @@ def optimize_cache(specs, reacs, multi_thread,
             no_dupe_add(sp_to_rxn[spind], rind)
         if USE_THD:
             for sp, eff in rxn.thd_body_eff:
-                if sp == last_name:
-                    continue
                 spind = name_map[sp]
                 spec_mapping[spind][rind] = True
                 reac_mapping[rind][spind] = True
                 no_dupe_add(rxn_to_sp[rind], spind)
                 no_dupe_add(sp_to_rxn[spind], rind)
             if rxn.pdep_sp:
-                if rxn.pdep_sp == last_name:
-                    continue
                 spind = name_map[rxn.pdep_sp]
                 spec_mapping[spind][rind] = True
                 reac_mapping[rind][spind] = True
@@ -227,19 +219,22 @@ def optimize_cache(specs, reacs, multi_thread,
 
     # select the first species as the one in the first reaction
     #that participate in the most reactions
-    ind = max(rxn_to_sp[fwd_rxn_mapping[0]], key=lambda x: reac_mapping[x].count())
+    ind = max(rxn_to_sp[fwd_rxn_mapping[0]], key=lambda x: reac_mapping[x].count() *
+                                                    (1 if x != last_spec else 0))
 
     updating = [x.copy() for x in spec_mapping]
     fwd_spec_mapping = [ind]
     specs_left = [i for i in range(nsp) if i != ind]
     update_reac_mapping(ind, updating, sp_to_rxn)
     print()
-    while len(specs_left):
+    while len(specs_left) > 1:
         maxcount = None
         ind = None
         last_tiebreak = None
         start = max(len(fwd_spec_mapping) - LOOKBACK, 0)
         for spind in specs_left:
+            if spind == last_spec:
+                continue
             mapping = bitarray(sdummy)
             for last_ind in range(start, len(fwd_spec_mapping)):
                 mapping = mapping | spec_mapping[fwd_spec_mapping[last_ind]]
@@ -266,6 +261,9 @@ def optimize_cache(specs, reacs, multi_thread,
         specs_left.remove(ind)
 
     fwd_spec_mapping.append(last_spec)
+
+    reverse_spec_mapping = [fwd_spec_mapping.index(i) for i in range(len(fwd_spec_mapping))]
+    reverse_rxn_mapping = [fwd_rxn_mapping.index(i) for i in range(len(fwd_rxn_mapping))]
 
     print()
     plot = True

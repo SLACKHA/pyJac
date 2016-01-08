@@ -979,7 +979,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
              err_jac_thr_max=err_jac_thr_max
              )
 
-    if do_not_remove:
+    if not do_not_remove:
         # Cleanup all compiled files.
         for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
             os.remove(f)

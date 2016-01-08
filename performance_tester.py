@@ -287,6 +287,9 @@ def performance_tester():
                 shared = shared_base
 
             for FD in finite_diffs:
+                if FD:
+                    shutil.copy(os.path.join(home, 'fd_jacob{}'.format(utils.file_ext[temp_lang])),
+                                os.path.join(build_dir, 'fd_jacob{}'.format(utils.file_ext[temp_lang])))
                 for opt in cache_opt:
                     for smem in shared:
 

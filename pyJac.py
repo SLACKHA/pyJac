@@ -2863,7 +2863,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
                     initial_state="", num_blocks=8, num_threads=64,
                     no_shared=False, L1_preferred=True, multi_thread=None,
                     force_optimize=False, build_path='./out/', last_spec=None,
-                    skip_jac=False
+                    skip_jac=False, auto_diff=False
                     ):
     """Create Jacobian subroutine from mechanism.
 
@@ -2906,12 +2906,17 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
         Typically should be N2, Ar, He or another inert bath gas
     skip_jac : bool, optional
         If True, only the reaction rate subroutines will be generated
+    auto_diff : bool, optional
+        If True, generate files for use with the Adept autodifferention library.
 
     Returns
     -------
     None
 
     """
+
+    if auto_diff:
+        skip_jac = True
 
     lang = lang.lower()
     if lang not in utils.langs:
@@ -3029,24 +3034,25 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     ## now begin writing subroutines
 
     # print reaction rate subroutine
-    rate.write_rxn_rates(build_path, lang, specs, reacs, fwd_rxn_mapping, smm)
+    rate.write_rxn_rates(build_path, lang, specs, reacs, 
+                        fwd_rxn_mapping, smm, auto_diff)
 
     # if third-body/pressure-dependent reactions,
     # print modification subroutine
     if next((r for r in reacs if (r.thd_body or r.pdep)), None):
         rate.write_rxn_pressure_mod(build_path, lang, specs, reacs,
-                                    fwd_rxn_mapping, smm
+                                    fwd_rxn_mapping, smm, auto_diff
                                     )
 
     # write species rates subroutine
     seen_sp = rate.write_spec_rates(build_path, lang, specs, reacs,
-                    fwd_spec_mapping, fwd_rxn_mapping, smm)
+                    fwd_spec_mapping, fwd_rxn_mapping, smm, auto_diff)
 
     # write chem_utils subroutines
-    rate.write_chem_utils(build_path, lang, specs)
+    rate.write_chem_utils(build_path, lang, specs, auto_diff)
 
     # write derivative subroutines
-    rate.write_derivs(build_path, lang, specs, reacs)
+    rate.write_derivs(build_path, lang, specs, reacs, auto_diff)
 
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)
@@ -3087,5 +3093,6 @@ if __name__ == "__main__":
                     multi_thread=args.multi_thread,
                     force_optimize=args.force_optimize,
                     build_path=args.build_path,
-                    last_spec=args.last_species
+                    last_spec=args.last_species,
+                    auto_diff=args.auto_diff
                     )

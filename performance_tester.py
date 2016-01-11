@@ -293,8 +293,9 @@ def performance_tester():
                 for opt in cache_opt:
                     for smem in shared:
 
-                        data_output = '{}_{}_{}_output.txt'.format(lang, 'co' if opt else 'nco',
-                                                                    'smem' if smem else 'nosmem')
+                        data_output = '{}_{}_{}_{}_output.txt'.format(lang, 'co' if opt else 'nco',
+                                                                    'smem' if smem else 'nosmem',
+                                                                    'fd' if FD else 'ajac')
                         data_output = os.path.join(the_path, data_output)
                         if lang != 'cuda':
                             repeats = cpu_repeats

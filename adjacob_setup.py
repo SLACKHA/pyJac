@@ -3,6 +3,7 @@ from distutils.core import setup, Extension
 import distutils.ccompiler
 
 from Cython.Distutils import build_ext
+from Cython.Build import cythonize
 import parallel_compiler as pcc
 import numpy
 import os
@@ -19,15 +20,21 @@ includes = ['out/']
 
 distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
 
-ext_modules=[Extension("adjacob",
+os.environ["CC"] = "g++"
+os.environ["CXX"] = "g++"
+
+ext = [Extension("adjacob",
      sources=sources,
      include_dirs=includes + [numpy.get_include()],
-     extra_compile_args=['-frounding-math', '-fsignaling-nans'],
-     language='c',
+     extra_compile_args=['-frounding-math', '-fsignaling-nans', 
+                         '-DADEPT STACK THREAD UNSAFE', '-fopenmp'],
+     language='c++',
+     libraries=['adept']
+     extra_link_args=['-fopenmp']
      )]
 
 setup(
     name='adjacob',
-    ext_modules=ext_modules,
-    cmdclass={'build_ext': build_ext}
+    ext_modules=ext,
+    cmdclass={'build_ext': build_ext},
 )

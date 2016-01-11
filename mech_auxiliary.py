@@ -34,10 +34,10 @@ void eval_jacob(const double t, const double p, const double* y,
     adept::Stack stack; // Where the derivative information is stored
     std::vector<adouble> in(NSP); // Vector of active input variables
     adept::set_values(&in[0], NSP, y); // Initialize adouble inputs
-    adouble p = pres;
-    adept.new_recording(); // Start recording
+    adouble pres = p;
+    stack.new_recording(); // Start recording
     std::vector<adouble> out(NSP); // Create vector of active output variables
-    dydt(t, p, &in[0], &out[0]); // Run algorithm
+    dydt(t, pres, &in[0], &out[0]); // Run algorithm
     stack.independent(&in[0], NSP); // Identify independent variables
     stack.dependent(&out[0], NSP); // Identify dependent variables
     stack.jacobian(jac); // Compute & store Jacobian in jac

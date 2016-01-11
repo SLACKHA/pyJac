@@ -1,6 +1,8 @@
 #! /usr/bin/env python2.7
 
 import numpy as np
+# distutils: language = c++
+
 cimport numpy as np
 
 cdef extern from "out/jacob.h":

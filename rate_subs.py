@@ -266,6 +266,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
     pre  = '__device__ ' if lang == 'cuda' else ''
     file_prefix = 'ad_' if auto_diff else ''
+    pres_ref = '&' if auto_diff else ''
     file = open(os.path.join(path, '{}rates'.format(file_prefix) 
                                 + utils.header_ext[lang]), 'w')
     file.write('#ifndef RATES_HEAD\n'
@@ -280,15 +281,16 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
     file.write('{0}void eval_rxn_rates (const {1},'
-               ' const {1}, const {1}*, {1}*, {1}*);\n'
+               ' const {1}{2}, const {1}*, {1}*, {1}*);\n'
                '{0}void eval_spec_rates (const {1}*,'
                ' const {1}*, const {1}*, {1}*, {1}*);\n'.format(
-                        pre, double_type)
+                        pre, double_type, pres_ref)
                )
 
     if pdep_reacs:
-        file.write('{}void get_rxn_pres_mod (const double, const '
-                   'double, const double*, double*);\n'.format(pre)
+        file.write('{0}void get_rxn_pres_mod (const {1}, const '
+                   '{1}{2}, const {1}*, {1}*);\n'.format(
+                   pre, double_type, pres_ref)
                    )
 
     file.write('\n')
@@ -302,10 +304,14 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
     if lang == 'cuda': line = '__device__ '
 
     if lang in ['c', 'cuda']:
-        file.write('#include "rates' + utils.header_ext[lang] + '"\n')
-        line += ('void eval_rxn_rates (const {0} T, const {0} pres,'
+        file.write('#include "{}rates'.format(file_prefix)
+                    + utils.header_ext[lang] + '"\n')
+        if auto_diff:
+            file.write('#include "adept.h"\n'
+                        'using adept::adouble;\n')
+        line += ('void eval_rxn_rates (const {0} T, const {0}{1} pres,'
                  ' const {0} * C, {0} * fwd_rxn_rates, '
-                 '{0} * rev_rxn_rates) {{\n'.format(double_type)
+                 '{0} * rev_rxn_rates) {{\n'.format(double_type, pres_ref)
                  )
     elif lang == 'fortran':
         line += ('subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates,'
@@ -359,7 +365,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
     pre = '  '
     if lang == 'c':
-        pre += 'double '
+        pre += double_type + ' '
     elif lang == 'cuda':
         pre += 'register {} '.format(double_type)
     line = (pre + 'logT = log(T)' +
@@ -762,9 +768,11 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
     """
     double_type = 'double'
     file_prefix = ''
+    pres_ref = ''
     if auto_diff:
         double_type = 'adouble'
         file_prefix = 'ad_'
+        pres_ref = '&'
     filename = file_prefix + 'rxn_rates_pres_mod' + utils.file_ext[lang]
     file = open(os.path.join(path, filename), 'w')
 
@@ -775,7 +783,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
                    )
         if auto_diff:
             file.write('#include "adept.h"\n'
-                       'using adept::adouble;\n')
+                       'using adept::adouble;\n'
+                       '#define fmax(a, b) (a.value() > b ? a : adouble(b))\n')
         file.write('\n')
 
     # list of reactions with third-body or pressure-dependence
@@ -801,8 +810,9 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
     if lang == 'cuda': line = '__device__ '
 
     if lang in ['c', 'cuda']:
-        line += ('void get_rxn_pres_mod (const {0} T, const {0} pres, '
-                 'const {0} * C, {0} * pres_mod) {{\n'.format(double_type)
+        line += ('void get_rxn_pres_mod (const {0} T, const {0}{1} pres, '
+                 'const {0} * C, {0} * pres_mod) {{\n'.format(
+                double_type, pres_ref)
                  )
     elif lang == 'fortran':
         line += 'subroutine get_rxn_pres_mod ( T, pres, C, pres_mod )\n\n'
@@ -1401,9 +1411,11 @@ def write_chem_utils(path, lang, specs, auto_diff):
 
     file_prefix = ''
     double_type = 'double'
+    pres_ref = ''
     if auto_diff:
         file_prefix = 'ad_'
         double_type = 'adouble'
+        pres_ref = '&'
 
     num_s = len(specs)
 
@@ -1420,16 +1432,16 @@ def write_chem_utils(path, lang, specs, auto_diff):
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
     file.write(
-               '{0}void eval_conc (const {1}, const {1}, '
+               '{0}void eval_conc (const {1}{2}, const {1}{2}, '
                'const {1}*, {1}*, {1}*, {1}*, {1}*);\n'
-               '{0}void eval_conc_rho (const {1}, const {1}, '
+               '{0}void eval_conc_rho (const {1}{2}, const {1}{2}, '
                'const {1}*, {1}*, {1}*, {1}*, {1}*);\n'
-               '{0}void eval_h (const {1}, {1}*);\n'
-               '{0}void eval_u (const {1}, {1}*);\n'
-               '{0}void eval_cv (const {1}, {1}*);\n'
-               '{0}void eval_cp (const {1}, {1}*);\n'
+               '{0}void eval_h (const {1}{2}, {1}*);\n'
+               '{0}void eval_u (const {1}{2}, {1}*);\n'
+               '{0}void eval_cv (const {1}{2}, {1}*);\n'
+               '{0}void eval_cp (const {1}{2}, {1}*);\n'
                '\n'
-               '#endif\n'.format(pre, double_type)
+               '#endif\n'.format(pre, double_type, pres_ref)
                )
     file.close()
 
@@ -1449,9 +1461,10 @@ def write_chem_utils(path, lang, specs, auto_diff):
     ###################################
     line = pre
     if lang in ['c', 'cuda']:
-        line += ('void eval_conc (const {0} T, const {0} pres, '
+        line += ('void eval_conc (const {0}{1} T, const {0}{1} pres, '
                  'const {0} * y, {0} * y_N, {0} * mw_avg, '
-                 '{0} * rho, {0} * conc) {{\n\n'.format(double_type)
+                 '{0} * rho, {0} * conc) {{\n\n'.format(
+                 double_type, pres_ref)
                  )
     elif lang == 'fortran':
         line += (
@@ -1549,9 +1562,10 @@ def write_chem_utils(path, lang, specs, auto_diff):
 
     line = pre
     if lang in ['c', 'cuda']:
-        line += ('void eval_conc_rho (const {0} T, const {0} rho, '
+        line += ('void eval_conc_rho (const {0}{1} T, const {0}{1} rho, '
                  'const {0} * y, {0} * y_N, {0} * mw_avg, '
-                 '{0} * pres, {0} * conc) {{\n\n'.format(double_type)
+                 '{0} * pres, {0} * conc) {{\n\n'.format(
+                 double_type, pres_ref)
                  )
     elif lang == 'fortran':
         line += (
@@ -1652,7 +1666,8 @@ def write_chem_utils(path, lang, specs, auto_diff):
     ######################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_h (const {0} T, {0} * h) {{\n\n'.format(double_type)
+        line += 'void eval_h (const {0}{1} T, {0} * h) {{\n\n'.format(
+            double_type, pres_ref)
     elif lang == 'fortran':
         line += ('subroutine eval_h (T, h)\n\n'
                  # fortran needs type declarations
@@ -1724,7 +1739,8 @@ def write_chem_utils(path, lang, specs, auto_diff):
     #################################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_u (const {0} T, {0} * u) {{\n\n'.format(double_type)
+        line += 'void eval_u (const {0}{1} T, {0} * u) {{\n\n'.format(
+            double_type, pres_ref)
     elif lang == 'fortran':
         line += ('subroutine eval_u (T, u)\n\n'
                  # fortran needs type declarations
@@ -1794,8 +1810,8 @@ def write_chem_utils(path, lang, specs, auto_diff):
     # cv subroutine
     ##################################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cv (const {0} T, {0} * cv) {{\n\n'.format(
-                        double_type)
+        line = pre + 'void eval_cv (const {0}{1} T, {0} * cv) {{\n\n'.format(
+                        double_type, pres_ref)
     elif lang == 'fortran':
         line = ('subroutine eval_cv (T, cv)\n\n'
                 # fortran needs type declarations
@@ -1864,8 +1880,8 @@ def write_chem_utils(path, lang, specs, auto_diff):
     # cp subroutine
     ###############################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cp (const {0} T, {0} * cp) {{\n\n'.format(
-                        double_type)
+        line = pre + 'void eval_cp (const {0}{1} T, {0} * cp) {{\n\n'.format(
+                        double_type, pres_ref)
     elif lang == 'fortran':
         line = ('subroutine eval_cp (T, cp)\n\n'
                 # fortran needs type declarations
@@ -1960,9 +1976,11 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
 
     file_prefix = ''
     double_type = 'double'
+    pres_ref = ''
     if auto_diff:
         file_prefix = 'ad_'
         double_type = 'adouble'
+        pres_ref = '&'
 
     pre = ''
     if lang == 'cuda': pre = '__device__ '
@@ -1980,10 +1998,10 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
     file.write(
-               '{0}void dydt (const double, const {1}, '
+               '{0}void dydt (const double, const {1}{2}, '
                'const {1}*, {1}*);\n'
                '\n'
-               '#endif\n'.format(pre, double_type)
+               '#endif\n'.format(pre, double_type, pres_ref)
                )
     file.close()
 
@@ -1992,8 +2010,9 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
 
     file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
 
-    file.write('#include "chem_utils{0}"\n'
-               '#include "rates{0}"\n'.format(utils.header_ext[lang]))
+    file.write('#include "{0}chem_utils{1}"\n'
+               '#include "{0}rates{1}"\n'.format(file_prefix, 
+                                            utils.header_ext[lang]))
     if lang == 'cuda':
         file.write('#include "gpu_memory.cuh"\n'
                    )
@@ -2007,8 +2026,9 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     ##################################################################
     file.write('#if defined(CONP)\n\n')
 
-    line = (pre + 'void dydt (const double t, const {0} pres, '
-                  'const {0} * y, {0} * dy) {{\n\n'.format(double_type)
+    line = (pre + 'void dydt (const double t, const {0}{1} pres, '
+                  'const {0} * y, {0} * dy) {{\n\n'.format(
+                  double_type, pres_ref)
             )
     file.write(line)
 

@@ -3064,7 +3064,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     aux.write_mechanism_initializers(build_path, lang, specs, reacs,
                                      initial_state, reverse_spec_mapping,
                                      reverse_rxn_mapping, optimize_cache,
-                                     last_spec
+                                     last_spec, auto_diff
                                      )
 
     if skip_jac == False:

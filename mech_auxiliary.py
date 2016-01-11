@@ -28,7 +28,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 #include "adept.h"
 #include "header.h"
 #include "ad_dydt.h"
-void algorithm2_jacobian(const double t, const double p, const double* y,
+void eval_jacob(const double t, const double p, const double* y,
                          double* jac) { 
     using adept::adouble; // Import Stack and adouble from adept
     adept::Stack stack; // Where the derivative information is stored

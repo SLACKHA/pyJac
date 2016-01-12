@@ -274,17 +274,17 @@ def performance_tester():
         for lang in langs:
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
             if lang == 'cuda':
-                shared = [True, False]
-            else:
+                shared = shared_base
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+            elif lang == 'c':
                 shared = [False]
-            if lang == 'tchem':
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+            elif lang == 'tchem':
                 finite_diffs = [False]
                 cache_opt = [False]
                 shared = [False]
-            else:
-                finite_diffs = finite_diffs_base
-                cache_opt = cache_opt_base
-                shared = shared_base
 
             for FD in finite_diffs:
                 if FD:

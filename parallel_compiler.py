@@ -2,7 +2,7 @@ import multiprocessing
 from multiprocessing.pool import ThreadPool
 import distutils.ccompiler
 
-N = num_threads=multiprocessing.cpu_count()
+N = multiprocessing.cpu_count()
 
 # monkey-patch for parallel compilation
 def parallelCompile(self, sources, output_dir=None, macros=None,

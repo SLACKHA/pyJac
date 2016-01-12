@@ -136,7 +136,7 @@ class autodiff_jacob:
         
         jacob = np.zeros((gas.n_species * gas.n_species))
 
-        self.jac.eval_jacob(0, gas.pressure, y, jacob)
+        self.jac.ad_eval_jacobian(0, gas.P, y, jacob)
         return jacob
 
 

@@ -873,7 +873,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
             if sri_flag:
                 # sri variables
                 file.write('  // sri variable declarations\n')
-                file.write('  "{0}" X;\n'
+                file.write('  {0} X;\n'
                            '\n'.format(double_type)
                            )
         elif lang == 'cuda':

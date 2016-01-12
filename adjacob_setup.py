@@ -29,7 +29,7 @@ ext = [Extension("adjacob",
      extra_compile_args=['-frounding-math', '-fsignaling-nans', 
                          '-DADEPT STACK THREAD UNSAFE', '-fopenmp'],
      language='c++',
-     libraries=['adept']
+     libraries=['adept'],
      extra_link_args=['-fopenmp']
      )]
 

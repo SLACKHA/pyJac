@@ -314,12 +314,13 @@ def performance_tester():
                             for x in todo:
                                 todo[x] = repeats - num_completed
 
-                        create_jacobian(lang, mech_info['mech'],
-                                        optimize_cache=opt,
-                                        build_path=build_dir,
-                                        no_shared=not smem,
-                                        num_blocks=8, num_threads=64
-                                        )
+                        if lang != 'tchem':
+                            create_jacobian(lang, mech_info['mech'],
+                                            optimize_cache=opt,
+                                            build_path=build_dir,
+                                            no_shared=not smem,
+                                            num_blocks=8, num_threads=64
+                                            )
 
                         #now we need to write the reader
                         shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions.c'),

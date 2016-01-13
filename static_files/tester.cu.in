@@ -72,7 +72,7 @@ int main (int argc, char *argv[])
     #endif
     cudaDeviceSynchronize();
     double runtime = GetTimer();
-    printf("%d,%.15le\\n", num_odes, runtime);
+    printf("%d,%.15le\n", num_odes, runtime);
     cudaErrorCheck( cudaPeekAtLastError() );
     cudaErrorCheck( cudaDeviceSynchronize() );
     free_gpu_memory(y_device, var_device);

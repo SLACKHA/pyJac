@@ -2319,6 +2319,10 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
 
         # now loop through each species
         for j_sp, sp_j in enumerate(specs[:-1]):
+            dr_dyj = write_dr_dy_species(lang, specs, rxn, pind,
+                                                    j_sp, sp_j, rind,
+                                                    rev_reacs, get_array
+                                                    )
             for k_sp in set(rxn.reac + rxn.prod):
                 sp_k = specs[k_sp]
 
@@ -2377,10 +2381,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
 
                 working_temp += '('
 
-                working_temp += write_dr_dy_species(lang, specs, rxn, pind,
-                                                    j_sp, sp_j, rind,
-                                                    rev_reacs, get_array
-                                                    )
+                working_temp += dr_dyj
 
                 working_temp += ')'
 

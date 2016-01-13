@@ -311,6 +311,8 @@ def performance_tester():
                             todo = check_step_file(data_output, steplist)
                             if all(todo[x] >= repeats for x in todo):
                                 continue
+                            for x in todo:
+                                todo[x] = repeats - num_completed
 
                         create_jacobian(lang, mech_info['mech'],
                                         optimize_cache=opt,
@@ -373,8 +375,8 @@ def performance_tester():
 
                         with open(data_output, 'a+') as file:
                             for stepsize in todo:
-                                for i in range(repeats - todo[stepsize]):
-                                    print(i, "/", repeats - todo[stepsize])
+                                for i in range(todo[stepsize]):
+                                    print(i, "/", todo[stepsize])
                                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                                     str(num_conditions)], stdout=file)
 

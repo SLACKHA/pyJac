@@ -137,8 +137,12 @@ def linker(lang, temp_lang, test_dir, filelist):
     args = [cmd_compile[temp_lang]]
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-    args.extend(libs[lang])
+    args.extend(libs[temp_lang])
     if lang == 'tchem':
+        if os.getenv('TCHEM_HOME'):
+            tchem_home = os.getenv('TCHEM_HOME')
+        else:
+            raise SystemError('TCHEM_HOME environment variable not set.')
         args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
 
     try:
@@ -210,7 +214,7 @@ def performance_tester():
                     mechanism_list[name]['mech'] = f
                     mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
 
-                    thermo = next((tf for tf in files if 'thermo' in tf), None)
+                    thermo = next((tf for tf in files if 'therm' in tf), None)
                     if thermo is not None:
                         mechanism_list[name]['thermo'] = thermo
 
@@ -335,8 +339,8 @@ def performance_tester():
                                 src = Template(file.read())
                             src = src.substitute(file_data)
                         else:
-                            file_data['mechfile'] = mechanism['chemkin']
-                            file_data['thermofile'] = mechanism['thermo']
+                            file_data['mechfile'] = mech_info['chemkin']
+                            file_data['thermofile'] = mech_info['thermo']
                             with open(os.path.join(home, 'static_files', 
                                                    'tc_tester.c.in'), 'r') as file:
                                 src = Template(file.read())
@@ -369,10 +373,6 @@ def performance_tester():
                             #copy periodic table and mechanisms in
                             shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'), 
                                                     'periodictable.dat')
-                            shutil.copy(os.path.join(mechanism_dir, mechanism['chemkin']), 
-                                                    mechanism['chemkin'])
-                            shutil.copy(os.path.join(mechanism_dir, mechanism['thermo']), 
-                                                    mechanism['thermo'])
 
                         with open(data_output, 'a+') as file:
                             for stepsize in todo:

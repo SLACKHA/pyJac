@@ -231,7 +231,7 @@ def performance_tester():
     cpu_repeats = 10
     gpu_repeats = 10
 
-    langs=['c']
+    langs=['c', 'tchem']
     #langs = ['c', 'cuda', 'tchem']
     for mech_name, mech_info in mechanism_list.iteritems():
         #get the cantera object

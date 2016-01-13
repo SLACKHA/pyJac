@@ -4,15 +4,20 @@ import os
 import os.path
 import numpy as np
 import cantera as ct
+import sys
 
 def parse_file(directory, mech, filename, num_specs, num_reacs):
 	data_arr = []
 	with open(os.path.join(directory, filename)) as file:
 		lines = [line.strip() for line in file.readlines()]
 	for line in lines:
-		x, y = [float(f) for f in line.split(',')]
-		data_arr.append(data_point(mech, filename, num_specs,
-						num_reacs, x, y))
+		try:
+			x, y = [float(f) for f in line.split(',')]
+			data_arr.append(data_point(mech, filename, num_specs,
+							num_reacs, x, y))
+		except:
+			assert line == 'SUCCESS'
+			pass
 	return data_arr
 
 class data_point(object):
@@ -33,7 +38,8 @@ class data_point(object):
 
 def get_data(home_dir=None):
 	if home_dir is None:
-		home_dir = '.'
+		home_dir = os.path.join(sys.path[0], '../')
+		home_dir = os.path.realpath(home_dir)
 	d=os.path.join(home_dir, 'performance')
 	dirs = [o for o in os.listdir(d) if os.path.isdir(os.path.join(d,o))]
 
@@ -47,7 +53,7 @@ def get_data(home_dir=None):
 					o.endswith('.txt')]
 		mechanism = next(s for s in os.listdir(os.path.join(d, directory))
 					if s.endswith('.cti'))
-		gas = ct.Solution(os.listdir(os.path.join(d, directory, mechanism)))
+		gas = ct.Solution(os.path.join(d, directory, mechanism))
 		for filename in files:
 			data.extend(parse_file(thedir, directory, filename,
 							gas.n_species, gas.n_reactions))

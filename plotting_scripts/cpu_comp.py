@@ -1,10 +1,14 @@
-import os
-os.path.append('../')
+#! /usr/bin/env python2.7
+
+import sys
 from performance_extractor import get_data
 from general_plotting import legend_key
 import numpy as np
+import matplotlib
+matplotlib.use('agg')
+import matplotlib.pyplot as plt
 
-data, mechanism_sizes = get_data('../')
+data = get_data()
 data = [x for x in data if x.lang in ['c', 'tchem']]
 
 fig, ax = plt.subplots()
@@ -16,9 +20,9 @@ FD_marker = '>'
 pj_marker = 'o'
 tc_marker = 's'
 
-def plot(plotdata, marker, name):
-    plotdata = sorted(plotdata, key=lambda x: x.num_reactions)
-    thex = [x.num_reactions for x in plotdata]
+def plot(plotdata, marker, name, miny):
+    plotdata = sorted(plotdata, key=lambda x: x.num_reacs)
+    thex = [x.num_reacs for x in plotdata]
     they = [x.y for x in plotdata]
     they = [float(x.y) / float(x.x) for x in plotdata]
     thez = np.std(they)
@@ -27,22 +31,23 @@ def plot(plotdata, marker, name):
         plt.errorbar(thex, they, yerr=z, marker=marker, label=name)
     else:
         plt.plot(thex, they, marker=marker, label=name)
+    return miny
 
 #FD
 plotdata = [x for x in data if x.finite_difference]
-plot(plotdata, FD_marker, 'Finite Difference')
+miny = plot(plotdata, FD_marker, 'Finite Difference', miny)
 
 #pyjac
 plotdata = [x for x in data if not x.finite_difference
                 and x.lang == 'c'
                 and not x.cache_opt]
-plot(plotdata, pj_marker, 'pyJac')
+miny = plot(plotdata, pj_marker, 'pyJac', miny)
 
 #tchem
 
 plotdata = [x for x in data if not x.finite_difference
                 and x.lang == 'tchem']
-plot(plotdata, tc_marker, 'TChem')
+miny = plot(plotdata, tc_marker, 'TChem', miny)
 
 ax.set_yscale('log')
 ax.set_ylim(ymin=miny*0.95)

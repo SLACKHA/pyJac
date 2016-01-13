@@ -137,8 +137,12 @@ def linker(lang, temp_lang, test_dir, filelist):
     args = [cmd_compile[temp_lang]]
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-    args.extend(libs[lang])
+    args.extend(libs[temp_lang])
     if lang == 'tchem':
+        if os.getenv('TCHEM_HOME'):
+            tchem_home = os.getenv('TCHEM_HOME')
+        else:
+            raise SystemError('TCHEM_HOME environment variable not set.')
         args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
 
     try:
@@ -210,7 +214,7 @@ def performance_tester():
                     mechanism_list[name]['mech'] = f
                     mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
 
-                    thermo = next((tf for tf in files if 'thermo' in tf), None)
+                    thermo = next((tf for tf in files if 'therm' in tf), None)
                     if thermo is not None:
                         mechanism_list[name]['thermo'] = thermo
 
@@ -227,7 +231,7 @@ def performance_tester():
     cpu_repeats = 10
     gpu_repeats = 10
 
-    langs=['c']
+    langs=['c', 'tchem']
     #langs = ['c', 'cuda', 'tchem']
     for mech_name, mech_info in mechanism_list.iteritems():
         #get the cantera object
@@ -274,22 +278,25 @@ def performance_tester():
         for lang in langs:
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
             if lang == 'cuda':
-                shared = [True, False]
-            else:
+                shared = shared_base
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+            elif lang == 'c':
                 shared = [False]
-            if lang == 'tchem':
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+            elif lang == 'tchem':
                 finite_diffs = [False]
                 cache_opt = [False]
                 shared = [False]
-            else:
-                finite_diffs = finite_diffs_base
-                cache_opt = cache_opt_base
-                shared = shared_base
 
             for FD in finite_diffs:
                 if FD:
                     shutil.copy(os.path.join(home, 'fd_jacob{}'.format(utils.file_ext[temp_lang])),
                                 os.path.join(build_dir, 'fd_jacob{}'.format(utils.file_ext[temp_lang])))
+                    shared = [False]
+                    cache_opt = [False]
+
                 for opt in cache_opt:
                     for smem in shared:
 
@@ -308,13 +315,16 @@ def performance_tester():
                             todo = check_step_file(data_output, steplist)
                             if all(todo[x] >= repeats for x in todo):
                                 continue
+                            for x in todo:
+                                todo[x] = repeats - num_completed
 
-                        create_jacobian(lang, mech_info['mech'],
-                                        optimize_cache=opt,
-                                        build_path=build_dir,
-                                        no_shared=not smem,
-                                        num_blocks=8, num_threads=64
-                                        )
+                        if lang != 'tchem':
+                            create_jacobian(lang, mech_info['mech'],
+                                            optimize_cache=opt,
+                                            build_path=build_dir,
+                                            no_shared=not smem,
+                                            num_blocks=8, num_threads=64
+                                            )
 
                         #now we need to write the reader
                         shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions.c'),
@@ -329,8 +339,8 @@ def performance_tester():
                                 src = Template(file.read())
                             src = src.substitute(file_data)
                         else:
-                            file_data['mechfile'] = mechanism['chemkin']
-                            file_data['thermofile'] = mechanism['thermo']
+                            file_data['mechfile'] = mech_info['chemkin']
+                            file_data['thermofile'] = mech_info['thermo']
                             with open(os.path.join(home, 'static_files', 
                                                    'tc_tester.c.in'), 'r') as file:
                                 src = Template(file.read())
@@ -363,15 +373,11 @@ def performance_tester():
                             #copy periodic table and mechanisms in
                             shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'), 
                                                     'periodictable.dat')
-                            shutil.copy(os.path.join(mechanism_dir, mechanism['chemkin']), 
-                                                    mechanism['chemkin'])
-                            shutil.copy(os.path.join(mechanism_dir, mechanism['thermo']), 
-                                                    mechanism['thermo'])
 
                         with open(data_output, 'a+') as file:
                             for stepsize in todo:
-                                for i in range(repeats - todo[stepsize]):
-                                    print(i, "/", repeats - todo[stepsize])
+                                for i in range(todo[stepsize]):
+                                    print(i, "/", todo[stepsize])
                                     subprocess.check_call([os.path.join(the_path, 'speedtest'),
                                     str(num_conditions)], stdout=file)
 

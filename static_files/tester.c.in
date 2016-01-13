@@ -21,7 +21,7 @@ void read_initial_conditions(const char* filename, int NUM, double** y_host, dou
             eval_jacob(0, var_host[tid], &y_host[tid * NN], jac);
         }
         double runtime = GetTimer();
-        printf("%d,%.15le\\n", num_odes, runtime);
+        printf("%d,%.15le\n", num_odes, runtime);
         free(y_host);
         free(var_host);
         return 0;

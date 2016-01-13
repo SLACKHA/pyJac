@@ -2749,7 +2749,7 @@ def write_sparse_multiplier(path, lang, touched, nvars):
                 )
     file.write('#ifndef SPARSE_HEAD\n'
                '#define SPARSE_HEAD\n')
-    file.write('\n#define N_A {}'.format(len(sorted_and_cleaned)))
+    file.write('\n#define N_A {}'.format(len(sparse_indicies)))
     file.write(
         '\n'
         '#include "header{}"\n'.format(utils.header_ext[lang]) +

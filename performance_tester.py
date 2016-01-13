@@ -290,6 +290,9 @@ def performance_tester():
                 if FD:
                     shutil.copy(os.path.join(home, 'fd_jacob{}'.format(utils.file_ext[temp_lang])),
                                 os.path.join(build_dir, 'fd_jacob{}'.format(utils.file_ext[temp_lang])))
+                    shared = [False]
+                    cache_opt = [False]
+
                 for opt in cache_opt:
                     for smem in shared:
 

@@ -1,9 +1,10 @@
 #include "header.h"
 #include "dydt.h"
-#include "solver_options.h"
 #include <math.h>
 #include <float.h>
 
+#define ATOL (1e-15)
+#define RTOL (1e-8)
 #define FD_ORD 1
 
 void eval_jacob (const double t, const double pres, const double * cy, double * jac) {

@@ -3,8 +3,9 @@
 #include "header.cuh"
 #include "dydt.cuh"
 #include "gpu_macros.cuh"
-#include "solver_options.h"
 
+#define ATOL (1e-15)
+#define RTOL (1e-8)
 #define FD_ORD 1
 
 // Finite difference coefficients

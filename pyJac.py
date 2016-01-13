@@ -114,7 +114,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     """
     """
     # write the T_Pr and T_Fi terms if needed
-    if (rxn.pdep or rxn.thd_body) and rxn.thd_body_eff:
+    if (rxn.pdep or rxn.thd_body) and (rxn.thd_body_eff or rxn.pdep_sp):
         jline = utils.line_start + 'pres_mod_temp = '
         if rxn.pdep:
             jline += '('

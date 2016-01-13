@@ -59,39 +59,37 @@ libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             icc=['-m64', '-ipo', '-lm', '-std=c99']
             )
 
-def performance_tester():
-    def is_pdep(rxn):
-        return (isinstance(rxn, ct.ThreeBodyReaction) or
-        isinstance(rxn, ct.FalloffReaction) or
-        isinstance(rxn, ct.ChemicallyActivatedReaction))
+def is_pdep(rxn):
+    return (isinstance(rxn, ct.ThreeBodyReaction) or
+    isinstance(rxn, ct.FalloffReaction) or
+    isinstance(rxn, ct.ChemicallyActivatedReaction))
 
-    def check_step_file(filename, steplist):
-        #checks file for existing data
-        #and returns number of runs left to do
-        #for each # of does in steplist
-        runs = {}
-        for step in steplist:
-            runs[step] = 0
-        if not 'cuda' in filename:
-            raise Exception(filename)
+def check_step_file(filename, steplist):
+    #checks file for existing data
+    #and returns number of runs left to do
+    #for each # of does in steplist
+    runs = {}
+    for step in steplist:
+        runs[step] = 0
+    if not 'cuda' in filename:
+        raise Exception(filename)
 
-        try:
-            with open(filename, 'r') as file:
-                lines = [line.strip() for line in file.readlines()]
-            for line in lines:
-                try:
-                    vals = line.split(',')
-                    if len(vals) == 2:
-                        vals = [float(v) for v in vals]
-                        runs[vals[0]] += 1
-                except:
-                    pass
-            return runs
-        except:
-            return runs
+    try:
+        with open(filename, 'r') as file:
+            lines = [line.strip() for line in file.readlines()]
+        for line in lines:
+            try:
+                vals = line.split(',')
+                if len(vals) == 2:
+                    vals = [float(v) for v in vals]
+                    runs[vals[0]] += 1
+            except:
+                pass
+        return runs
+    except:
+        return runs
 
-
-    def check_file(filename):
+def check_file(filename):
         #checks file for existing data
         #and returns number of runs left to do
         try:
@@ -112,12 +110,57 @@ def performance_tester():
         except:
             return 0
 
-    class file_struct(object):
-        def __init__(self, lang, filename, i_dirs, args):
-            self.lang = lang
-            self.filename = filename
-            self.i_dirs = i_dirs
-            self.args = args
+def getf(x):
+    return x[x.rindex('jacobs') + len('jacobs') + 1:] if 'jacobs' in x else x
+
+def compiler(fstruct):
+    args = [cmd_compile[fstruct.lang]]
+    args.extend(flags[fstruct.lang])
+    include = ['-I./' + d for d in fstruct.i_dirs]
+    args.extend(include)
+    args.extend([
+        '-I.' + os.path.sep + fstruct.build_dir,
+        '-c', os.path.join(fstruct.build_dir, fstruct.filename + 
+                    utils.file_ext[fstruct.lang]),
+        '-o', os.path.join(fstruct.test_dir, getf(fstruct.filename) + '.o')
+        ])
+    args = [val for val in args if val.strip()]
+    try:
+        subprocess.check_call(args)
+    except subprocess.CalledProcessError:
+        print('Error: compilation failed for ' + fstruct.filename +
+                utils.file_ext[fstruct.lang])
+        return -1
+    return 0
+
+def linker(lang, temp_lang, test_dir, filelist):
+    args = [cmd_compile[temp_lang]]
+    args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
+    args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+    args.extend(libs[lang])
+    if lang == 'tchem':
+        args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
+
+    try:
+        subprocess.check_call(args)
+    except subprocess.CalledProcessError:
+        print('Error: linking of test program failed.')
+        sys.exit(1)
+
+class file_struct(object):
+    def __init__(self, lang, filename, i_dirs, args, build_dir, test_dir):
+        self.lang = lang
+        self.filename = filename
+        self.i_dirs = i_dirs
+        self.args = args
+        self.build_dir = build_dir
+        self.test_dir = test_dir
+
+def performance_tester():
+    pdir = 'performance'
+    home = os.getcwd()
+    build_dir = 'out'
+    test_dir = 'test'
 
     def get_file_list(pmod, gpu=False, FD=False, tchem=False):
         i_dirs = [build_dir]
@@ -154,46 +197,6 @@ def performance_tester():
 
         return i_dirs, files
 
-    def getf(x):
-        return x[x.rindex('jacobs') + len('jacobs') + 1:] if 'jacobs' in x else x
-
-    def compiler(fstruct):
-        getf = 
-        args = [cmd_compile[fstruct.lang]]
-        args.extend(flags[fstruct.lang])
-        include = ['-I./' + d for d in fstruct.i_dirs]
-        args.extend(include)
-        args.extend([
-            '-I.' + os.path.sep + build_dir,
-            '-c', os.path.join(build_dir, fstruct.filename + 
-                        utils.file_ext[fstruct.lang]),
-            '-o', os.path.join(test_dir, getf(fstruct.filename) + '.o')
-            ])
-        args = [val for val in args if val.strip()]
-        try:
-            subprocess.check_call(args)
-        except subprocess.CalledProcessError:
-            print('Error: compilation failed for ' + fstruct.filename +
-                    utils.file_ext[fstruct.lang])
-            return -1
-        return 0
-
-    def linker(lang, temp_lang, filelist):
-        args = [cmd_compile[temp_lang]]
-        args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
-        args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-        args.extend(libs[lang])
-        if lang == 'tchem':
-            args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
-
-        try:
-            subprocess.check_call(args)
-        except subprocess.CalledProcessError:
-            print('Error: linking of test program failed.')
-            sys.exit(1)
-
-    pdir = 'performance'
-
     #find the mechanisms to test
     mechanism_list = {}
     for name in os.listdir(pdir):
@@ -202,12 +205,12 @@ def performance_tester():
             files = [f for f in os.listdir(os.path.join(pdir, name)) if 
                         os.path.isfile(os.path.join(pdir, name, f))]
             for f in files:
-                if f.endswith('*.cti'):
+                if f.endswith('.cti'):
                     mechanism_list[name] = {}
                     mechanism_list[name]['mech'] = f
                     mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
 
-                    thermo = next((tf for tf in files if 'thermo.dat' == tf), None)
+                    thermo = next((tf for tf in files if 'thermo' in tf), None)
                     if thermo is not None:
                         mechanism_list[name]['thermo'] = thermo
 
@@ -223,14 +226,12 @@ def performance_tester():
 
     cpu_repeats = 10
     gpu_repeats = 10
-    home = os.getcwd()
-    build_dir = 'out'
-    test_dir = 'test'
 
-    langs = ['c', 'cuda', 'tchem']
-    for mech_name, mech_info in mechanism_list:
+    langs=['c']
+    #langs = ['c', 'cuda', 'tchem']
+    for mech_name, mech_info in mechanism_list.iteritems():
         #get the cantera object
-        gas = ct.Solution(os.path.join(home, mech_name, mech_info['mech']))
+        gas = ct.Solution(os.path.join(home, pdir, mech_name, mech_info['mech']))
         pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
 
         #ensure directory structure is valid
@@ -242,12 +243,12 @@ def performance_tester():
         with open(os.path.join(test_dir, "data.bin"), "wb") as file:
             pass
 
-        npy_files = [f for f in os.listdir()
+        npy_files = [f for f in os.listdir(os.path.join(home, pdir, mech_name))
                         if f.endswith('.npy')
                         and os.path.isfile(f)]
         num_conditions = 0
         #load PaSR data for different pressures/conditions, and save to binary c file
-        for i, npy in npy_files:
+        for npy in npy_files:
             state_data = np.load(npy)
             state_data = state_data.reshape(state_data.shape[0] *
                                 state_data.shape[1],
@@ -271,39 +272,44 @@ def performance_tester():
         the_path = os.path.join(os.getcwd(), test_dir)
 
         for lang in langs:
+            temp_lang = 'c' if lang != 'cuda' else 'cuda'
             if lang == 'cuda':
-                shared = [True, False]
-            else:
+                shared = shared_base
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+            elif lang == 'c':
                 shared = [False]
-            if lang == 'tchem':
+                finite_diffs = finite_diffs_base
+                cache_opt = cache_opt_base
+            elif lang == 'tchem':
                 finite_diffs = [False]
                 cache_opt = [False]
                 shared = [False]
-            else:
-                finite_diffs = finite_diffs_base
-                cache_opt = cache_opt_base
-                shared = shared_base
 
-            for FD in finite_diffs
+            for FD in finite_diffs:
+                if FD:
+                    shutil.copy(os.path.join(home, 'fd_jacob{}'.format(utils.file_ext[temp_lang])),
+                                os.path.join(build_dir, 'fd_jacob{}'.format(utils.file_ext[temp_lang])))
                 for opt in cache_opt:
                     for smem in shared:
 
-                        data_output = '{}_{}_{}_output.txt'.format(lang, 'co' if opt else 'nco',
-                                                                    'smem' if smem else 'nosmem')
-                        data_output = os.path.join(os.getcwd(), data_output)
+                        data_output = '{}_{}_{}_{}_output.txt'.format(lang, 'co' if opt else 'nco',
+                                                                    'smem' if smem else 'nosmem',
+                                                                    'fd' if FD else 'ajac')
+                        data_output = os.path.join(the_path, data_output)
                         if lang != 'cuda':
                             repeats = cpu_repeats
                             num_completed = check_file(data_output)
                             if num_completed >= repeats:
                                 continue
-                            todo = {num_conditions: num_completed - repeats}
+                            todo = {num_conditions: repeats - num_completed}
                         else:
                             repeats = gpu_repeats
                             todo = check_step_file(data_output, steplist)
                             if all(todo[x] >= repeats for x in todo):
                                 continue
 
-                        create_jacobian(lang, mechanism_dir+mechanism['mech'],
+                        create_jacobian(lang, mech_info['mech'],
                                         optimize_cache=opt,
                                         build_path=build_dir,
                                         no_shared=not smem,
@@ -311,42 +317,38 @@ def performance_tester():
                                         )
 
                         #now we need to write the reader
-                        shutil.copy(os.path.join('static_files', 'read_initial_conditions.c')
-                                    os.path.join(build_dir, 'read_initial_conditions.c'))
+                        shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions.c'),
+                                    os.path.join(os.getcwd(), build_dir, 'read_initial_conditions.c'))
 
                         #write the tester
                         file_data = {'datafile' : os.path.join(the_path, 'data.bin')}
                         if lang == 'c' or lang == 'cuda':
-                            with open(os.path.join('static_files', 
-                                                    'tester.{}.in'.format(utils.file_ext[temp_lang]))
+                            with open(os.path.join(home, 'static_files', 
+                                                    'tester{}.in'.format(utils.file_ext[temp_lang]))
                                                    , 'r') as file:
                                 src = Template(file.read())
-                            src.substitute(file_data)
+                            src = src.substitute(file_data)
                         else:
                             file_data['mechfile'] = mechanism['chemkin']
                             file_data['thermofile'] = mechanism['thermo']
-                            with open(os.path.join('static_files', 
+                            with open(os.path.join(home, 'static_files', 
                                                    'tc_tester.c.in'), 'r') as file:
                                 src = Template(file.read())
-                            src.substitute(file_data)
+                            src = src.substitute(file_data)
                         with open(os.path.join(build_dir, 
-                                              'test.{}'.format(utils.file_ext[temp_lang]))
+                                              'test{}'.format(utils.file_ext[temp_lang]))
                                               , 'w') as file:
                             file.write(src)
 
                         #copy timer
-                        shutil.copy(os.path.join('static_files', 'timer.h')
-                                    os.path.join(build_dir, 'timer.h'))
+                        shutil.copy(os.path.join(home, 'static_files', 'timer.h'),
+                                    os.path.join(os.getcwd(), build_dir, 'timer.h'))
 
                         #get file lists
-                        files, i_dirs = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
+                        i_dirs, files = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
                         
                         # Compile generated source code
-                        temp_lang = 'c' if lang != 'cuda' else 'cuda'
-                        structs = [file_struct(temp_lang, f, flags[temp_lang], i_dirs)]
-
-                        getf = lambda x: x[x.index('/') + 1:] \
-                                            if 'jacobs/' in x else x
+                        structs = [file_struct(temp_lang, f, flags[temp_lang], i_dirs, build_dir, test_dir) for f in files]
 
                         pool = multiprocessing.Pool()
                         results = pool.map(compiler, structs)
@@ -355,7 +357,7 @@ def performance_tester():
                         if any(r == -1 for r in results):
                             sys.exit(-1)
 
-                        linker(lang, files)
+                        linker(lang, temp_lang, test_dir, files)
 
                         if lang == 'tchem':
                             #copy periodic table and mechanisms in
@@ -374,6 +376,6 @@ def performance_tester():
                                     str(num_conditions)], stdout=file)
 
 
-if __name__='__main__':
+if __name__=='__main__':
     # command line arguments
     performance_tester()

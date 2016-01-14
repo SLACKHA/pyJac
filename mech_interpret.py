@@ -953,7 +953,8 @@ def read_mech_ct(filename=None, gas=None):
             for thd_body in rxn.efficiencies:
                 reac.thd_body_eff.append([thd_body, rxn.efficiencies[thd_body]])
 
-        elif isinstance(rxn, ct.FalloffReaction):
+        elif isinstance(rxn, ct.FalloffReaction) and \
+             not isinstance(rxn, ct.ChemicallyActivatedReaction):
             reac = chem.ReacInfo(rxn.reversible,
                                  rxn.reactants.keys(),
                                  rxn.reactants.values(),

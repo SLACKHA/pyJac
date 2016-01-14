@@ -2068,7 +2068,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
                    ', pres, conc, pres_mod);\n'
                    )
     else:
-        file.write('  double* pres_mod = 0;\n')
+        file.write('  {}* pres_mod = 0;\n'.format(double_type))
     file.write('\n')
 
     # species rate of change of molar concentration

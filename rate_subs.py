@@ -2054,7 +2054,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     if rev_reacs:
         file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
     else:
-        file.write('  double* rev_rates = 0;\n')
+        file.write('  {}* rev_rates = 0;\n'.format(double_type))
     file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) +
                ', pres, conc, fwd_rates, rev_rates);\n\n'
                )

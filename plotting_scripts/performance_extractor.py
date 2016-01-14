@@ -10,14 +10,19 @@ def parse_file(directory, mech, filename, num_specs, num_reacs):
 	data_arr = []
 	with open(os.path.join(directory, filename)) as file:
 		lines = [line.strip() for line in file.readlines()]
+	data = {}
 	for line in lines:
 		try:
-			x, y = [float(f) for f in line.split(',')]
-			data_arr.append(data_point(mech, filename, num_specs,
-							num_reacs, x, y))
+			x1, y1 = [float(f) for f in line.split(',')]
+			if not x1 in data:
+				data[x1] = []
+			data[x1].append(y1)
 		except:
 			assert line == 'SUCCESS'
 			pass
+	for x in data:
+		data_arr.append(data_point(mech, filename, num_specs,
+				num_reacs, x, data[x]))
 	return data_arr
 
 class data_point(object):

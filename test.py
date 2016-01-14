@@ -757,6 +757,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   gas.forward_rates_of_progress[non_zero]) /
                   gas.forward_rates_of_progress[non_zero]
                   )
+        if non_zero.shape[0] == 0:
+            continue
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.

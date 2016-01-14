@@ -2743,7 +2743,6 @@ def write_sparse_multiplier(path, lang, touched, nvars):
 
     sparse_indicies = [x for x in range(nvars * nvars) if touched[nvars]]
 
-
     # first write header file
     file = open(os.path.join(path,
                 'sparse_multiplier{}'.format(utils.header_ext[lang])), 'w'

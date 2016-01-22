@@ -193,23 +193,43 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, nspec, get_array):
     file.write(jline + utils.line_end[lang])
 
     if rxn.pdep and (rxn.pdep_sp or rxn.thd_body_eff):
-        if not rxn.pdep_sp:
-            file.write(utils.line_start +
-                'pres_mod_temp *= (' + get_array(lang, 'pres_mod', pind) +
-                                ' / conc_temp)' + utils.line_end[lang])
-        else:
-            if rxn.low:
-                k0 = rxn.low
-                kinf = [rxn.A, rxn.b, rxn.E]
-            else:
-                k0 = [rxn.A, rxn.b, rxn.E]
-                kinf = rxn.high
+        jline = ''
 
-            file.write(utils.line_start + 'pres_mod_temp *= ' +
-                        rate.rxn_rate_const(k0[0] / kinf[0],
-                                            k0[1] - kinf[1],
-                                            k0[2] - kinf[2]) +
-                        utils.line_end[lang])
+        if rxn.low:
+            k0 = rxn.low
+            kinf = [rxn.A, rxn.b, rxn.E]
+        else:
+            k0 = [rxn.A, rxn.b, rxn.E]
+            kinf = rxn.high
+        jline = utils.line_start + 'pres_mod_temp *= '
+        #k0 / kinf
+        jline += rate.rxn_rate_const(k0[0] / kinf[0],
+                                        k0[1] - kinf[1],
+                                        k0[2] - kinf[2])
+        #Fi
+        if rxn.troe:
+            jline += ' * pow(Fcent, 1.0 / (1 + A * A / (B * B)))'
+        elif rxn.sri:
+            jline += '* pow({:.6} * '.format(reac.sri_par[0])
+            # Need to check for negative parameters, and
+            # skip "-" sign if so.
+            if reac.sri_par[1] > 0.0:
+                line += 'exp(-{:.6} / T)'.format(reac.sri_par[1])
+            else:
+                line += 'exp({:.6} / T)'.format(abs(reac.sri_par[1]))
+
+            if reac.sri_par[2] > 0.0:
+                line += ' + exp(-T / {:.6}), X) '.format(reac.sri_par[2])
+            else:
+                line += ' + exp(T / {:.6}), X) '.format(abs(reac.sri_par[2]))
+
+            if (len(reac.sri_par) == 5 and
+                    reac.sri_par[3] != 1.0 and reac.sri_par[4] != 0.0):
+                line += ('* {:.8e} * '.format(reac.sri_par[3]) +
+                         'pow(T, {:.6}) '.format(reac.sri_par[4])
+                         )
+        jline += ' / (1.0 + Pr)'
+        file.write(jline + utils.line_end[lang])
 
 
 def write_rates(file, lang, rxn):

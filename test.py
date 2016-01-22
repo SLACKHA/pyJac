@@ -851,6 +851,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         non_zero = np.where(abs(test_jacob) >
                             np.linalg.norm(test_jacob) / 1.e20
                             )[0]
+        if non_zero.shape[0] == 0:
+            continue
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )

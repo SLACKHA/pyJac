@@ -20,12 +20,6 @@ except ImportError:
     print('Error: Cantera must be installed.')
     raise
 
-try:
-    import numdifftools
-except ImportError:
-    print('Error: numdifftools must be installed.')
-    raise
-
 # Local imports
 import utils
 from pyJac import create_jacobian
@@ -125,37 +119,25 @@ def convert_mech(mech_filename, therm_filename=None):
     return mech_filename
 
 
-class analytic_eval_jacob:
+class autodiff_jacob:
     def __init__(self, pressure, fwd_spec_map):
         self.pres = pressure
         self.fwd_spec_map = fwd_spec_map
-        import pyjacob
-        self.jac = pyjacob
+        import adjacob
+        self.jac = adjacob
 
-    def dydt(self, y):
-        dy = np.zeros_like(y)
-        self.jac.py_dydt(0, self.pres, y, dy)
-        return dy
-
-    def eval_jacobian(self, gas, order):
+    def eval_jacobian(self, gas):
         """Evaluate finite difference Jacobian.
 
-        Uses Richardson extrapolation applied to central finite difference to
-        to achieve much higher accuracy.
+        Uses autodifferentiation package Adept
         """
-        #abs_tol = 1.e-20
-        #rel_tol = 1.e-8
 
         y = np.hstack((gas.T, gas.Y[self.fwd_spec_map][:-1]))
-        #step = np.array([1e-15 for x in range(len(y))])
-        #step[0] = abs_tol
+        
+        jacob = np.zeros((gas.n_species * gas.n_species))
 
-        jacob = numdifftools.Jacobian(self.dydt, order=order,
-                                      method='central', full_output=True
-                                      )
-        arr = jacob(y)
-        fd = np.array(arr[0])
-        return fd.T.flatten()
+        self.jac.ad_eval_jacobian(0, gas.P, y, jacob)
+        return jacob
 
 
 def is_pdep(rxn):
@@ -555,6 +537,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                         optimize_cache=cache_optimization, build_path=build_dir,
                         no_shared=no_shared, last_spec=last_spec
                         )
+        create_jacobian(lang, gas=gas,
+                        optimize_cache=cache_optimization, build_path=build_dir,
+                        no_shared=no_shared, last_spec=last_spec, auto_diff=True
+                        )
         if lang == 'cuda':
             #if it's cuda, we need to make sure the c files
             #are generated using the same manner
@@ -574,6 +560,16 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         #jacobian evaulator to use the c interface
         subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
                                'pyjacob_setup.py', 'build_ext', '--inplace'
+                               ])
+
+        try:
+            os.remove('adjacob.so')
+        except:
+            pass
+        #need to compile this anyways, it's way easier to get the analytical
+        #jacobian evaulator to use the c interface
+        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
+                               'adjacob_setup.py', 'build_ext', '--inplace'
                                ])
 
         try:
@@ -700,7 +696,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         pres = state[2]
         mass_frac = state[3:]
 
-        ajac = analytic_eval_jacob(pres, pyjacob.fwd_spec_map)
+        ajac = autodiff_jacob(pres, pyjacob.fwd_spec_map)
 
         gas.TPY = temp, pres, mass_frac
 
@@ -734,7 +730,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         # Jacobian matrix
         test_jacob = np.zeros((gas.n_species) * (gas.n_species))
         pyjacob.eval_jacobian(0, pres, y_dummy, test_jacob)
-        jacob = ajac.eval_jacobian(gas, 6)
+        jacob = ajac.eval_jacobian(gas)
 
 
         print()
@@ -761,6 +757,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                   gas.forward_rates_of_progress[non_zero]) /
                   gas.forward_rates_of_progress[non_zero]
                   )
+        if non_zero.shape[0] == 0:
+            continue
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
@@ -853,6 +851,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         non_zero = np.where(abs(test_jacob) >
                             np.linalg.norm(test_jacob) / 1.e20
                             )[0]
+        if non_zero.shape[0] == 0:
+            continue
         err = abs((test_jacob[non_zero] - jacob[non_zero]) /
                   jacob[non_zero]
                   )

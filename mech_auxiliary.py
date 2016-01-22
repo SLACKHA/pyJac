@@ -15,9 +15,35 @@ import utils
 
 def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='',
                                  old_spec_order=None, old_rxn_order=None,
-                                 cache_optimized=False, last_spec=None):
+                                 cache_optimized=False, last_spec=None, 
+                                 autodiff=False):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
+
+    if autodiff:
+        with open(os.path.join(path, 'ad_jac.c'), 'w') as file:
+            #need to write the autodiff jacobian
+            file.write("""
+#include <vector>
+#include "adept.h"
+#include "header.h"
+#include "ad_dydt.h"
+void eval_jacob(const double t, const double p, const double* y,
+                         double* jac) { 
+    using adept::adouble; // Import Stack and adouble from adept
+    adept::Stack stack; // Where the derivative information is stored
+    std::vector<adouble> in(NSP); // Vector of active input variables
+    adept::set_values(&in[0], NSP, y); // Initialize adouble inputs
+    adouble pres = p;
+    stack.new_recording(); // Start recording
+    std::vector<adouble> out(NSP); // Create vector of active output variables
+    dydt(t, pres, &in[0], &out[0]); // Run algorithm
+    stack.independent(&in[0], NSP); // Identify independent variables
+    stack.dependent(&out[0], NSP); // Identify dependent variables
+    stack.jacobian(jac); // Compute & store Jacobian in jac
+}
+            """
+            )
 
     # some information variables
     have_rev_rxns = any(reac.rev for reac in reacs)

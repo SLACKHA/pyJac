@@ -338,6 +338,11 @@ def get_parser():
                              'the mechanism. If not specifed, defaults to '
                              'the first of N2, AR, and HE in the mechanism.'
                         )
+    parser.add_argument('-ad', '--auto_diff',
+                        default=False,
+                        action='store_true',
+                        help='Use this option to generate file for use with the '
+                             'Adept autodifferntiation library.')
 
     args = parser.parse_args()
     return args

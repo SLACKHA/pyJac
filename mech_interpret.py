@@ -1066,6 +1066,8 @@ def read_mech_ct(filename=None, gas=None):
 
         # No reverse reactions with explicit coefficients in Cantera.
 
-        reacs.append(reac)
+        # Ensure no reactions with zero pre-exponential factor allowed
+        if rxn.rate.pre_exponential_factor != 0.0:
+            reacs.append(reac)
 
     return (elems, specs, reacs)

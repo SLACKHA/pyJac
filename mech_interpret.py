@@ -1048,6 +1048,11 @@ def read_mech_ct(filename=None, gas=None):
 
         elif isinstance(rxn, ct.ElementaryReaction):
             # Instantiate internal reaction based on Cantera Reaction data.
+
+            # Ensure no reactions with zero pre-exponential factor allowed
+            if rxn.rate.pre_exponential_factor == 0.0:
+                continue
+
             reac = chem.ReacInfo(rxn.reversible,
                                  rxn.reactants.keys(),
                                  rxn.reactants.values(),
@@ -1066,8 +1071,6 @@ def read_mech_ct(filename=None, gas=None):
 
         # No reverse reactions with explicit coefficients in Cantera.
 
-        # Ensure no reactions with zero pre-exponential factor allowed
-        if rxn.rate.pre_exponential_factor != 0.0:
-            reacs.append(reac)
+        reacs.append(reac)
 
     return (elems, specs, reacs)

@@ -2932,9 +2932,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
     if gas is not None or mech_name.endswith(tuple(['.cti', '.xml'])):
-        [elems, specs, reacs] = mech.read_mech_ct(mech_name, gas)
+        elems, specs, reacs = mech.read_mech_ct(mech_name, gas)
     else:
-        [elems, specs, reacs] = mech.read_mech(mech_name, therm_name)
+        elems, specs, reacs = mech.read_mech(mech_name, therm_name)
 
     if not specs:
         print('No species found in file: {}'.format(mech_name))
@@ -3033,8 +3033,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     ## now begin writing subroutines
 
     # print reaction rate subroutine
-    rate.write_rxn_rates(build_path, lang, specs, reacs, 
-                        fwd_rxn_mapping, smm, auto_diff)
+    rate.write_rxn_rates(build_path, lang, specs, reacs,
+                         fwd_rxn_mapping, smm, auto_diff
+                         )
 
     # if third-body/pressure-dependent reactions,
     # print modification subroutine

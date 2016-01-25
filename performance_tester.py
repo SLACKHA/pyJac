@@ -244,7 +244,7 @@ def performance_tester():
         subprocess.check_call(['mkdir', '-p', test_dir])
 
         #clear old data
-        with open(os.path.join(test_dir, "data.bin"), "wb") as file:
+        with open(os.path.join('data.bin'), 'wb') as file:
             pass
 
         npy_files = [f for f in os.listdir(os.path.join(home, pdir, mech_name))
@@ -258,7 +258,7 @@ def performance_tester():
                                 state_data.shape[1],
                                 state_data.shape[2]
                                 )
-            with open(os.path.join(test_dir, 'data.bin'), "ab") as file:
+            with open(os.path.join('data.bin'), "ab") as file:
                     state_data.tofile(file)
 
             num_conditions += state_data.shape[0]
@@ -382,7 +382,7 @@ def performance_tester():
                             for stepsize in todo:
                                 for i in range(todo[stepsize]):
                                     print(i, "/", todo[stepsize])
-                                    subprocess.check_call([os.path.join(the_path, 'speedtest'),
+                                    subprocess.check_call([os.path.join(the_path, test_dir, 'speedtest'),
                                     str(num_conditions)], stdout=file)
 
 

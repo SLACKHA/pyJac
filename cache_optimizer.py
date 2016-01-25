@@ -205,7 +205,7 @@ def optimize_cache(specs, reacs, multi_thread,
                 divisor = reac_mapping[rind].count()
                 if USE_THD and reacs[rind].thd_body_eff:
                     divisor += non_zero[0].shape[0]
-                count = float(count) / float(divisor)
+                count = 0 if divisor == 0 else float(count) / float(divisor)
 
                 if maxcount is None or count >= maxcount:
                     #compute tiebreak score
@@ -219,6 +219,8 @@ def optimize_cache(specs, reacs, multi_thread,
                         maxcount = count
                         last_tiebreak = tiebreak
 
+        if maxcount == 0:
+            insert = -1
         #print (insert, maxcount, ind, len(fwd_rxn_mapping))
         #add the winner to the list
         fwd_rxn_mapping.insert(insert, ind)
@@ -255,6 +257,9 @@ def optimize_cache(specs, reacs, multi_thread,
                 count = ((spec_mapping[spind] | mapping).count() - 
                             ((spec_mapping[spind] ^ mapping) & spec_mapping[spind]).count())
 
+                divisor = spec_mapping[spind].count()
+                count = 0 if divisor == 0 else float(count) / float(divisor)
+
                 if maxcount is None or count >= maxcount:
                     #compute tiebreak score
                     tiebreak = updating[spind].count()
@@ -267,7 +272,9 @@ def optimize_cache(specs, reacs, multi_thread,
                         maxcount = count
                         last_tiebreak = tiebreak
 
-        #print (ind, maxcount, last_tiebreak)
+        if maxcount == 0:
+            insert = -1
+        #print (specs[ind].name, insert, maxcount, last_tiebreak)
         #add the winner to the list
         fwd_spec_mapping.insert(insert, ind)
         update_reac_mapping(ind, updating, sp_to_rxn)

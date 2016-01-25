@@ -328,7 +328,8 @@ def optimize_cache(specs, reacs, multi_thread,
         arr = np.zeros((nr, nsp + 1, 3))
         arr.fill(1)
 
-        name_map = {specs[sp].name: i for i, sp in enumerate(fwd_spec_mapping)}
+        name_map = {specs[fwd_spec_mapping[i]].name: i for i, sp in enumerate(fwd_spec_mapping)}
+        #print(name_map)
         for rind in fwd_rxn_mapping:
             rxn = reacs[rind]
             plot = set(rxn.reac + rxn.prod)

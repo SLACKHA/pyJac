@@ -231,8 +231,8 @@ def performance_tester():
     cpu_repeats = 10
     gpu_repeats = 10
 
-    langs=['c', 'tchem']
-    #langs = ['c', 'cuda', 'tchem']
+    #langs=['c', 'tchem']
+    langs = ['c', 'cuda', 'tchem']
     for mech_name, mech_info in mechanism_list.iteritems():
         #get the cantera object
         gas = ct.Solution(os.path.join(home, pdir, mech_name, mech_info['mech']))
@@ -273,7 +273,8 @@ def performance_tester():
         if step_size / 2 != num_conditions:
             steplist.append(num_conditions)
 
-        the_path = os.path.join(os.getcwd(), test_dir)
+        the_path = os.getcwd()
+        first_run = True
 
         for lang in langs:
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
@@ -323,8 +324,11 @@ def performance_tester():
                                             optimize_cache=opt,
                                             build_path=build_dir,
                                             no_shared=not smem,
-                                            num_blocks=8, num_threads=64
+                                            num_blocks=8, num_threads=64,
+                                            force_optimize=first_run
                                             )
+                            if opt:
+                                first_run = False
 
                         #now we need to write the reader
                         shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions.c'),

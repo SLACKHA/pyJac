@@ -601,10 +601,14 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
     """
     """
     if len(rev_reacs):
-        file.write('  double dBdT[{}]'.format(len(specs)) +
-                   utils.line_end[lang]
-                   )
-    template = 'dBdT[{}]'
+        if lang == 'c':
+            file.write('  double dBdT[{}]'.format(len(specs)) +
+                       utils.line_end[lang]
+                       )
+        else:
+            file.write(utils.line_start + 
+                'double {}* dBdT = d_mem->dBdT'.format(utils.restrict[lang]) + 
+                utils.line_end[lang])
     t_mid = {}
     for i_rxn in rev_reacs:
         rxn = reacs[i_rxn]
@@ -624,11 +628,6 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
                 t_mid[specs[sp_ind].Trange[1]] = []
             t_mid[specs[sp_ind].Trange[1]].append(sp_ind)
 
-            if lang in ['c', 'cuda']:
-                dBdT = template.format(sp_ind)
-            elif lang in ['fortran', 'matlab']:
-                dBdT = template.format(sp_ind + 1)
-            line = '    '
     for mid_temp in t_mid:
         # dB/dT evaluation (with temperature conditional)
         line = utils.line_start + 'if (T <= {:})'.format(mid_temp)
@@ -640,10 +639,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
             line += '\n'
         file.write(line)
         for sp_ind in sorted(t_mid[mid_temp]):
-            if lang in ['c', 'cuda']:
-                dBdT = template.format(sp_ind)
-            elif lang in ['fortran', 'matlab']:
-                dBdT = template.format(sp_ind + 1)
+            dBdT = utils.get_array(lang, 'dBdT', sp_ind)
             line = (utils.line_start * 2 + dBdT +
                     ' = ({:.16e}'.format(specs[sp_ind].lo[0] - 1.0) +
                     ' + {:.16e} / T) / T'.format(specs[sp_ind].lo[5]) +
@@ -661,10 +657,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
             file.write('  else\n')
 
         for sp_ind in sorted(t_mid[mid_temp]):
-            if lang in ['c', 'cuda']:
-                dBdT = template.format(sp_ind)
-            elif lang in ['fortran', 'matlab']:
-                dBdT = template.format(sp_ind + 1)
+            dBdT = utils.get_array(lang, 'dBdT', sp_ind)
             line = (utils.line_start * 2 +  dBdT +
                     ' = ({:.16e}'.format(specs[sp_ind].hi[0] - 1.0) +
                     ' + {:.16e} / T) / T'.format(specs[sp_ind].hi[5]) +
@@ -686,7 +679,6 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
 def get_db_dt(lang, specs, rxn, do_unroll):
     """
     """
-    template = 'dBdT[{}]'
     jline = ''
     notfirst = False
     # contribution from dBdT terms from
@@ -702,10 +694,7 @@ def get_db_dt(lang, specs, rxn, do_unroll):
         if (nu == 0):
             continue
 
-        if lang in ['c', 'cuda']:
-            dBdT = template.format(sp_ind)
-        elif lang in ['fortran', 'matlab']:
-            dBdT = template.format(sp_ind + 1)
+        dBdT = utils.get_array(lang, 'dBdT', sp_ind)
 
         if not notfirst:
             # first entry
@@ -737,10 +726,7 @@ def get_db_dt(lang, specs, rxn, do_unroll):
 
         nu = -rxn.reac_nu[rxn.reac.index(sp_ind)]
 
-        if lang in ['c', 'cuda']:
-            dBdT = template.format(sp_ind)
-        elif lang in ['fortran', 'matlab']:
-            dBdT = template.format(sp_ind + 1)
+        dBdT = utils.get_array(lang, 'dBdT', sp_ind)
 
         # not first entry
         if nu == 1:
@@ -1808,9 +1794,11 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                '\n'
                '__device__ ')
     file.write('void eval_jacob (const double, const double, '
-               'const double*, double*);\n'
+               'const double {0}*, double {0}*{1});\n'
                '\n'
-               '#endif\n'
+               '#endif\n'.format(utils.restrict[lang], 
+                ', mechanism_memory {}*'.format(utils.restrict[lang]) 
+                if lang == 'cuda' else '')
                )
     file.close()
 
@@ -1840,7 +1828,10 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
 
     if lang in ['c', 'cuda']:
         line += ('void eval_jacob (const double t, const double pres, '
-                 'const double * y, double * jac) {\n\n')
+                 'const double {0}* y, double {0}* jac{1}) {{\n\n'.format(
+                 utils.restrict[lang],
+                 ', mechanism_memory {}* d_mem'.format(utils.restrict[lang]) 
+                if lang == 'cuda' else ''))
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
 
@@ -1896,14 +1887,23 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
     file.write(utils.line_start + utils.comment[lang] +
                ' species molar concentrations\n'
                )
-    if lang in ['c', 'cuda']:
+    if lang == 'c':
         file.write(utils.line_start + 'double conc[{}];\n'.format(num_s))
+    elif lang == 'cuda':
+        file.write(utils.line_start + 'double {}* conc = d_mem->conc'.format(
+                    utils.restrict[lang]) + utils.line_end[lang])
     elif lang == 'matlab':
         file.write(utils.line_start + 'conc = zeros({},1);\n'.format(num_s)
                    )
     file.write(utils.line_start + 'double y_N' + utils.line_end[lang])
-    file.write(utils.line_start +
-               'eval_conc (y[0], pres, &y[1], &y_N, &mw_avg, &rho, conc);\n\n'
+    file.write(utils.line_start + 'eval_conc(' + 
+               utils.get_array(lang, 'y', 0) + 
+               ', pres, &' + 
+               (utils.get_array(lang, 'y', 0) if lang != 'cuda' else 
+                'y[threadDim.x * blockDim.x]') + 
+               '&y_N, &mw_avg, &rho, conc)' +
+                utils.line_end[lang] + 
+               '\n'
                )
 
     rate_list = ['fwd_rates']
@@ -1917,9 +1917,20 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                )
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
-        file.write(utils.line_start + 'double fwd_rates[{}];\n'.format(num_r))
-        if lang == 'cuda' and num_rev == 0:
+        if lang == 'cuda':
+            file.write(utils.line_start + 
+                'double * {} fwd_rates = d_mem->fwd_rates'.format(
+                    utils.restrict[lang]) +
+                utils.line_end[lang])
+        else:
+            file.write(utils.line_start + 'double fwd_rates[{}];\n'.format(num_r))
+        if num_rev == 0:
             file.write(utils.line_start + 'double* rev_rates = 0;\n')
+        elif lang == 'cuda':
+            file.write(utils.line_start + 
+                'double {}* rev_rates = d_mem->rev_rates'.format(
+                    utils.restrict[lang]) +
+                utils.line_end[lang])
         else:
             file.write(utils.line_start +
                        'double rev_rates[{}];\n'.format(num_rev)
@@ -1940,12 +1951,18 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                    )
     file.write('\n')
 
-    if lang == 'c' or (lang == 'cuda' and num_pdep != 0):
+    if num_pdep == 0:
+        file.write(utils.line_start + 'double* pres_mod = 0;\n')
+    elif lang == 'c':
         file.write(utils.line_start +
                    'double pres_mod[{}];\n'.format(num_pdep)
                    )
-    elif lang == 'cuda':
-        file.write(utils.line_start + 'double* pres_mod = 0;\n')
+    else:
+        file.write(utils.line_start +
+                   'double {}* pres_mod = d_mem->pres_mod{}'.format(
+                    utils.restrict[lang], utils.line_end[lang])
+                   )
+        
 
 
     if len(pdep_reacs):
@@ -1972,7 +1989,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
     file.write(utils.line_start + utils.comment[lang] +
                ' evaluate rate of change of species molar concentration\n'
                )
-    if lang in ['c', 'cuda']:
+    if lang == 'c':
         file.write(utils.line_start +
                    'double spec_rates[{}];\n'.format(num_s)
                    )
@@ -1980,6 +1997,18 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
             utils.line_start +
             'eval_spec_rates (fwd_rates, rev_rates, '
             'pres_mod, spec_rates, &spec_rates[{}]);\n'.format(num_s - 1)
+            )
+    elif lang == 'cuda':
+        file.write(utils.line_start +
+                   'double {}* spec_rates = d_mem->spec_rates{}'.format(
+                    utils.restrict[lang], utils.line_end[lang])
+                   )
+        file.write(
+            utils.line_start +
+            'eval_spec_rates (fwd_rates, rev_rates, '
+            'pres_mod, spec_rates, &{}){}'.format(
+            utils.get_array(lang, 'spec_rates', num_s - 1),
+            utils.line_end[lang])
             )
     elif lang == 'fortran':
         file.write(utils.line_start +
@@ -2096,7 +2125,9 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                        )
             dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
             file.write(utils.line_start +
-                       'double dot_prod[{}]'.format(dim) +
+                       ('double dot_prod[{}]'.format(dim) if lang == 'c'
+                       else 'double {}* dot_prod = d_mem->dot_prod'.format(
+                        utils.restrict[lang])) + 
                        utils.line_end[lang]
                        )
 
@@ -2115,10 +2146,17 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                'double J_nplusone = 0' +
                utils.line_end[lang]
                )
-    file.write(utils.line_start +
-               'double J_nplusjplus[NSP]' +
-               utils.line_end[lang]
-               )
+    if lang == 'c':
+        file.write(utils.line_start +
+                   'double J_nplusjplus[NSP]' +
+                   utils.line_end[lang]
+                   )
+    else:
+        file.write(utils.line_start +
+                   'double {}* J_nplusjplus = d_mem->J_nplusjplus'.format(
+                    utils.restrict[lang]) +
+                   utils.line_end[lang]
+                   )
 
     # variables for equilibrium constant derivatives, if needed
     dBdT_flag = [False for sp in specs]

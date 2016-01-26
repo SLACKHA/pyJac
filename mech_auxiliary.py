@@ -278,6 +278,24 @@ void eval_jacob(const double t, const double p, const double* y,
 
         file.write('}\n\n')
 
+    gpu_memory = {'pres' : '1',
+                  'y' : 'NSP',
+                  'dy' : 'NSP',
+                  'conc' : 'NSP',
+                  'fwd_rates' : 'FWD_RATES',
+                  'rev_rates' : 'REV_RATES',
+                  'spec_rates' : 'NSP',
+                  'cp' : 'NSP',
+                  'h' : 'NSP',
+                  'dBdT' : 'NSP',
+                  'J_nplusjplus' : 'NSP',
+                  'jac' : 'NSP * NSP'
+                  }
+    if any(r.pdep or r.thd_body for r in reacs):
+        gpu_memory['pres_mod'] = 'PRES_MOD_RATES'
+    if any(r.cheb for r in reacs):
+        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+        gpu_memory['dot_prod'] = str(dim)
     if lang == 'cuda':
         mem_template = 'double* {};'
         with open(os.path.join(path, 'gpu_memory.cuh'), 'w') as file:
@@ -287,61 +305,51 @@ void eval_jacob(const double t, const double p, const double* y,
                        '#include "header{}"\n'.format(utils.header_ext[lang]) +
                        '#include "gpu_macros.cuh"\n'
                        '\n'
+                       'struct mechanism_memory {\n'
                        )
-            file.write('#ifdef CONP\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
-                       'double** pres_device);\n'
-                       'void free_gpu_memory(double* y_device, double* pres_device);\n'
-                       '#else\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
-                       'double** rho_device);\n'
-                       'void free_gpu_memory(double* y_device, double* rho_device);\n'
-                       '#endif\n'
+            for array in gpu_memory:
+                file.write('  double * {} {};\n'.format(utils.restrict[lang], array))
+            file.write('};\n')
+            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory* d_mem);\n'
+                       'void free_gpu_memory(mechanism_memory* d_mem);\n'
                        '\n'
                        '#endif\n')
 
         with open(os.path.join(path, 'gpu_memory.cu'), 'w') as file:
-            init_template = 'initialize_pointer(&{}, {});'
-            free_template = 'cudaErrorCheck(cudaFree({}));'
+            init_template = 'initialize_pointer(&{}, {} * padded)'
+            free_template = 'cudaErrorCheck(cudaFree({}))'
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
-            file.write('void initialize_pointer(double** ptr, int size) {\n'
-                       '    cudaErrorCheck(cudaMalloc((void**)ptr, size * sizeof(double)));\n'
-                       '    cudaErrorCheck(cudaMemset(*ptr, 0, size * sizeof(double)));\n'
+            file.write('void initialize_pointer(double** d_mem, int size) {\n'
+                       '  double* temp;\n'
+                       '  //create pointer\n'
+                       '  cudaErrorCheck(cudaMalloc((void**)&temp, size * sizeof(double)));\n'
+                       '  //zero it out\n'
+                       '  cudaErrorCheck(cudaMemset(temp, 0, size * sizeof(double)));\n'
+                       '  //and copy to the destination\n'
+                       '  cudaMemcpy(d_mem, &temp, sizeof(double*), cudaMemcpyHostToDevice);\n'
                        '}\n')
-            file.write('#ifdef CONP\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
-                       'double** pres_device)\n'
-                       '#else\n'
-                       'int initialize_gpu_memory(int NUM, int block_size, int grid_size, double** y_device, '
-                       'double** rho_device)\n'
-                       '#endif\n'
+            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory* d_mem)\n'
                        '{\n'
-                       '    int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
-                       '    cudaErrorCheck(cudaMalloc((void**)y_device, padded * NSP * sizeof(double)));\n'
-                       '#ifdef CONP\n'
-                       '    cudaErrorCheck(cudaMalloc((void**)pres_device, padded * sizeof(double)));\n'
-                       '#else\n'
-                       '    cudaErrorCheck(cudaMalloc((void**)rho_device, padded * sizeof(double)));\n'
-                       '#endif\n'
-                       '    return padded;\n'
+                       '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
+                       '  // Allocate storage for struct\n'
+                       '  cudaMalloc(&d_mem, sizeof(mechanism_memory));\n'
+                      )
+            for array, size in gpu_memory.iteritems():
+                file.write(utils.line_start + init_template.format(array, size) + utils.line_end[lang])
+
+            file.write(
+                       '  return padded;\n'
                        '}\n'
                        )
-            file.write('#ifdef CONP\n'
-                       'void free_gpu_memory(double* y_device, double* pres_device)\n'
-                       '#else\n'
-                       'void free_gpu_memory(double* y_device, double* rho_device)\n'
-                       '#endif\n'
+            file.write('void free_gpu_memory(mechanism_memory* d_mem)\n'
                        '{\n'
-                       '    cudaErrorCheck(cudaFree(y_device));\n'
-                       '#ifdef CONP\n'
-                       '    cudaErrorCheck(cudaFree(pres_device));\n'
-                       '#else\n'
-                       '    cudaErrorCheck(cudaFree(rho_device));\n'
-                       '#endif\n'
-                       '}\n'
                        )
+            for array in gpu_memory:
+                file.write(utils.line_start + free_template.format('d_mem->{}'.format(array)) + utils.line_end[lang])
+            file.write(utils.line_start + free_template.format('d_mem'.format(array)) + utils.line_end[lang])
+            file.write('}\n')
 
     if lang == 'cuda':
         with open(os.path.join(path, 'gpu_macros.cuh'), 'w') as file:
@@ -351,6 +359,9 @@ void eval_jacob(const double t, const double p, const double* y,
                        '#include <cuda.h>\n'
                        '#include <cuda_runtime.h>\n'
                        '#include <helper_cuda.h>\n'
+                       '\n'
+                       '#define GRID_DIM (blockDim.x * threadDim.x)'
+                       '#define INDEX(i) (threadIdx.x + blockDim.x * blockIdx.x + (i) * GRID_DIM)'
                        '\n'
                        )
 

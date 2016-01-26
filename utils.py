@@ -22,6 +22,9 @@ file_ext = dict(c='.c', cuda='.cu',
                 fortran='.f90', matlab='.m'
                 )
 
+restrict = {'c' : '__restrict__',
+            'cuda' : '__restrict__'}
+
 # header extensions based on language
 header_ext = dict(c='.h', cuda='.cuh')
 
@@ -36,7 +39,7 @@ exp_10_fun = dict(c="pow(10.0, ", cuda='exp10(',
                   )
 
 # the characters to format an index into an array per language
-array_chars = dict(c="[{}]", cuda="[{}]",
+array_chars = dict(c="[{}]", cuda="[INDEX({})]",
                    fortran="({})", matlab="({})"
                    )
 

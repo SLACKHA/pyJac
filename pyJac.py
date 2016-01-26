@@ -2913,6 +2913,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     None
 
     """
+    if lang != 'c' and auto_diff:
+        print('Error: autodifferention only supported for C')
+        sys.exit(2)
 
     if auto_diff:
         skip_jac = True

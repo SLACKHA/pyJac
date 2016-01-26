@@ -308,7 +308,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        'struct mechanism_memory {\n'
                        )
             for array in gpu_memory:
-                file.write('  double * {} {};\n'.format(utils.restrict[lang], array))
+                file.write('  double {} * {};\n'.format(utils.restrict[lang], array))
             file.write('};\n')
             file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory* d_mem);\n'
                        'void free_gpu_memory(mechanism_memory* d_mem);\n'

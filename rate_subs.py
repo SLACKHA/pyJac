@@ -275,6 +275,8 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                '#include "header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                )
+    if lang == 'cuda':
+        file.write('#include "gpu_memory.cuh"\n')
     double_type = 'double'
     if auto_diff:
         double_type = 'adouble'
@@ -1197,10 +1199,11 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang])
                    )
-        file.write('\n')
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n')
+        file.write('#include "rates{}"\n'.format(utils.header_ext[lang]))
+        file.write('\n')
 
     num_s = len(specs)
     num_r = len(reacs)
@@ -1218,7 +1221,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
     if lang == 'cuda': line = '__device__ '
 
     if lang in ['c', 'cuda']:
-        line += ('void eval_spec_rates (const {0} {1} * fwd_rates,'
+        line += ('void eval_spec_rates (const {0} * {1} fwd_rates,'
                  ' const {0} * {1} rev_rates, const {0} * {1} pres_mod,'
                  ' {0} * {1} sp_rates, {0} * {1} dy_N) {{\n'.format(double_type,
                  utils.restrict[lang])
@@ -1433,6 +1436,9 @@ def write_chem_utils(path, lang, specs, auto_diff):
     if auto_diff:
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
+    if lang == 'cuda':
+        file.write('#include "gpu_memory.cuh"\n')
+
     file.write(
                '{0}void eval_conc (const {1}{2}, const {1}{2}, '
                'const {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3});\n'
@@ -1453,6 +1459,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
 
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
+        file.write('#include "chem_utils{}"\n'.format(utils.header_ext[lang]))
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n')
@@ -2097,7 +2104,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
                '  {} dy_N;\n'.format(double_type) + 
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
     file.write('&' + utils.get_array(lang, 'dy', 1) if lang != 'cuda'
-               else '&dy[threadDim.x * blockDim.x]')
+               else '&dy[GRID_DIM]')
     file.write(', &dy_N);\n\n')
 
     # evaluate specific heat
@@ -2239,7 +2246,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
                '  {} dy_N;'.format(double_type) + 
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
     file.write('&' + utils.get_array(lang, 'dy', 1) if lang != 'cuda'
-           else '&dy[threadDim.x * blockDim.x]')
+           else '&dy[GRID_DIM]')
     file.write(', &dy_N)' + utils.line_end[lang] + '\n')
 
     # evaluate specific heat

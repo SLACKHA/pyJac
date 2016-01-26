@@ -556,9 +556,10 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             #are generated using the same manner
             #as we're going to use the c interface for testing the jacobian
             create_jacobian('c', gas=gas,
-                        optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec
-                        )
+                            optimize_cache=cache_optimization,
+                            build_path=build_dir, no_shared=no_shared,
+                            last_spec=last_spec
+                            )
 
     if compile_jacob:
         #write and compile the dydt python wrapper

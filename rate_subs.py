@@ -281,15 +281,15 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
     file.write('{0}void eval_rxn_rates (const {1},'
-               ' const {1}{2}, const {1} {3}*, {1} {3}*, {1} {3}*);\n'
-               '{0}void eval_spec_rates (const {1} {3}*,'
-               ' const {1} {3}*, const {1} {3}*, {1} {3}*, {1} {3}*);\n'.format(
+               ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3});\n'
+               '{0}void eval_spec_rates (const {1} * {3},'
+               ' const {1} * {3}, const {1} * {3}, {1} * {3}, {1} * {3});\n'.format(
                         pre, double_type, pres_ref, utils.restrict[lang])
                )
 
     if pdep_reacs:
         file.write('{0}void get_rxn_pres_mod (const {1}, const '
-                   '{1}{2}, const {1} {3}*, {1} {3}*);\n'.format(
+                   '{1}{2}, const {1} * {3}, {1} * {3});\n'.format(
                    pre, double_type, pres_ref, utils.restrict[lang])
                    )
 
@@ -310,8 +310,8 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             file.write('#include "adept.h"\n'
                         'using adept::adouble;\n')
         line += ('void eval_rxn_rates (const {0} T, const {0}{1} pres,'
-                 ' const {0} {2} * C, {0} {2} * fwd_rxn_rates, '
-                 '{0} {2} * rev_rxn_rates) {{\n'.format(double_type, pres_ref,
+                 ' const {0} * {2} C, {0} * {2} fwd_rxn_rates, '
+                 '{0} * {2} rev_rxn_rates) {{\n'.format(double_type, pres_ref,
                  utils.restrict[lang])
                  )
     elif lang == 'fortran':
@@ -812,7 +812,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
 
     if lang in ['c', 'cuda']:
         line += ('void get_rxn_pres_mod (const {0} T, const {0}{1} pres, '
-                 'const {0} {2} * C, {0} {2} * pres_mod) {{\n'.format(
+                 'const {0} * {2} C, {0} * {2} pres_mod) {{\n'.format(
                 double_type, pres_ref, utils.restrict[lang])
                  )
     elif lang == 'fortran':
@@ -1219,8 +1219,8 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
 
     if lang in ['c', 'cuda']:
         line += ('void eval_spec_rates (const {0} {1} * fwd_rates,'
-                 ' const {0} {1} * rev_rates, const {0} {1} * pres_mod,'
-                 ' {0} {1} * sp_rates, {0} {1} * dy_N) {{\n'.format(double_type,
+                 ' const {0} * {1} rev_rates, const {0} * {1} pres_mod,'
+                 ' {0} * {1} sp_rates, {0} * {1} dy_N) {{\n'.format(double_type,
                  utils.restrict[lang])
                  )
     elif lang == 'fortran':
@@ -1435,16 +1435,16 @@ def write_chem_utils(path, lang, specs, auto_diff):
                    'using adept::adouble;\n')
     file.write(
                '{0}void eval_conc (const {1}{2}, const {1}{2}, '
-               'const {1} {3}*, {1} {3}*, {1} {3}*, {1} {3}*, {1} {3}*);\n'
+               'const {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3});\n'
                '{0}void eval_conc_rho (const {1}{2}, const {1}{2}, '
-               'const {1} {3}*, {1} {3}*, {1} {3}*, {1} {3}*, {1} {3}*);\n'
-               '{0}void eval_h (const {1}{2}, {1} {3}*);\n'
-               '{0}void eval_u (const {1}{2}, {1} {3}*);\n'
-               '{0}void eval_cv (const {1}{2}, {1} {3}*);\n'
-               '{0}void eval_cp (const {1}{2}, {1} {3}*);\n'
+               'const {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3});\n'
+               '{0}void eval_h (const {1}{2}, {1} * {3});\n'
+               '{0}void eval_u (const {1}{2}, {1} * {3});\n'
+               '{0}void eval_cv (const {1}{2}, {1} * {3});\n'
+               '{0}void eval_cp (const {1}{2}, {1} * {3});\n'
                '\n'
                '#endif\n'.format(pre, double_type, pres_ref,
-                                 utils.line_end[lang])
+                                 utils.restrict[lang])
                )
     file.close()
 
@@ -1465,8 +1465,8 @@ def write_chem_utils(path, lang, specs, auto_diff):
     line = pre
     if lang in ['c', 'cuda']:
         line += ('void eval_conc (const {0}{1} T, const {0}{1} pres, '
-                 'const {0} {2} * y, {0} {2} * y_N, {0} {2} * mw_avg, '
-                 '{0} {2} * rho, {0} {2} * conc) {{\n\n'.format(
+                 'const {0} * {2} y, {0} * {2} y_N, {0} * {2} mw_avg, '
+                 '{0} * {2} rho, {0} * {2} conc) {{\n\n'.format(
                  double_type, pres_ref, utils.restrict[lang])
                  )
     elif lang == 'fortran':
@@ -1566,8 +1566,8 @@ def write_chem_utils(path, lang, specs, auto_diff):
     line = pre
     if lang in ['c', 'cuda']:
         line += ('void eval_conc_rho (const {0}{1} T, const {0}{1} rho, '
-                 'const {0} {2} * y, {0} {2} * y_N, {0} {2} * mw_avg, '
-                 '{0} {2} * pres, {0} {2} * conc) {{\n\n'.format(
+                 'const {0} * {2} y, {0} * {2} y_N, {0} * {2} mw_avg, '
+                 '{0} * {2} pres, {0} * {2} conc) {{\n\n'.format(
                  double_type, pres_ref, utils.restrict[lang])
                  )
     elif lang == 'fortran':
@@ -1669,7 +1669,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     ######################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_h (const {0}{1} T, {0} {2} * h) {{\n\n'.format(
+        line += 'void eval_h (const {0}{1} T, {0} * {2} h) {{\n\n'.format(
             double_type, pres_ref, utils.restrict[lang])
     elif lang == 'fortran':
         line += ('subroutine eval_h (T, h)\n\n'
@@ -1742,7 +1742,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     #################################
     line = pre
     if lang in ['c', 'cuda']:
-        line += 'void eval_u (const {0}{1} T, {0} {2} * u) {{\n\n'.format(
+        line += 'void eval_u (const {0}{1} T, {0} * {2} u) {{\n\n'.format(
             double_type, pres_ref, utils.restrict[lang])
     elif lang == 'fortran':
         line += ('subroutine eval_u (T, u)\n\n'
@@ -1813,7 +1813,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     # cv subroutine
     ##################################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cv (const {0}{1} T, {0} {2} * cv) {{\n\n'.format(
+        line = pre + 'void eval_cv (const {0}{1} T, {0} * {2} cv) {{\n\n'.format(
                         double_type, pres_ref, utils.restrict[lang])
     elif lang == 'fortran':
         line = ('subroutine eval_cv (T, cv)\n\n'
@@ -1883,7 +1883,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     # cp subroutine
     ###############################
     if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cp (const {0}{1} T, {0} {2} * cp) {{\n\n'.format(
+        line = pre + 'void eval_cp (const {0}{1} T, {0} * {2} cp) {{\n\n'.format(
                         double_type, pres_ref, utils.restrict[lang])
     elif lang == 'fortran':
         line = ('subroutine eval_cp (T, cp)\n\n'
@@ -2000,14 +2000,13 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     if auto_diff:
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
-    file.write(
-               '{0}void dydt (const double, const {1}{2}, '
-               'const {1}{3}*, {1}{3}*' + 
+    file.write('{0}void dydt (const double, const {1}{2}, '
+               'const {1} * {3}, {1} * {3}'.format(pre, double_type, pres_ref,
+                                utils.restrict[lang]) + 
                ('' if lang == 'c' else 'const mechanism_memory*') + 
                ');\n'
                '\n'
-               '#endif\n'.format(pre, double_type, pres_ref,
-                                utils.restrict[lang])
+               '#endif\n'
                )
     file.close()
 
@@ -2033,9 +2032,9 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     file.write('#if defined(CONP)\n\n')
 
     line = (pre + 'void dydt (const double t, const {0}{1} pres, '
-                  'const {0} {2} * y, {0} {2} * dy{3}) {{\n\n'.format(
+                  'const {0} * {2} y, {0} * {2} dy{3}) {{\n\n'.format(
                   double_type, pres_ref, utils.restrict[lang],
-                  ', const mechanism_memory {} * d_mem'.format(utils.restrict[lang])
+                  ', const mechanism_memory * {} d_mem'.format(utils.restrict[lang])
                   if lang == 'cuda' else '')
             )
     file.write(line)
@@ -2043,7 +2042,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     # calculation of species molar concentrations
     file.write('  // species molar concentrations\n')
     file.write(('  {0} conc[{1}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double {}* conc = d_mem->conc'.format(utils.restrict[lang]))
+               else '  double * {} conc = d_mem->conc'.format(utils.restrict[lang]))
                + utils.line_end[lang]
                )
 
@@ -2060,14 +2059,14 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     # evaluate reaction rates
     rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     if lang == 'cuda':
-        file.write('  double {}* fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang]) 
                    + utils.line_end[lang])
     else:
         file.write('  // local arrays holding reaction rates\n'
                    '  {} fwd_rates[{}];\n'.format(double_type, len(reacs))
                    )
     if rev_reacs and lang == 'cuda':
-        file.write('  double {}* rev_rates = d_mem->rev_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang]) 
                    + utils.line_end[lang])
     elif rev_reacs:
         file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
@@ -2082,7 +2081,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     if num_dep_reacs > 0:
         file.write('  // get pressure modifications to reaction rates\n')
         if lang == 'cuda':
-            file.write('  double {}* pres_mod = d_mem->pres_mod'.format(utils.restrict[lang]) +
+            file.write('  double * {} pres_mod = d_mem->pres_mod'.format(utils.restrict[lang]) +
                    utils.line_end[lang])
         else:
             file.write('  {} pres_mod[{}];\n'.format(double_type, num_dep_reacs))
@@ -2104,7 +2103,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n')
     file.write(('  {} cp[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double {}* cp = d_mem->cp'.format(utils.restrict[lang]))
+               else '  double * {} cp = d_mem->cp'.format(utils.restrict[lang]))
                + utils.line_end[lang])
     file.write('  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp)'
                + utils.line_end[lang] + '\n')
@@ -2131,7 +2130,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
 
     file.write('  // local array for species enthalpies\n' + 
               ('  {} h[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double {}* h = d_mem->h'.format(utils.restrict[lang]))
+               else '  double * {} h = d_mem->h'.format(utils.restrict[lang]))
                + utils.line_end[lang])
     file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', h);\n')
 
@@ -2175,17 +2174,17 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     ##################################################################
     file.write('#elif defined(CONV)\n\n')
 
-    file.write(pre + 'void dydt (const double t, const {0}{1} rho, '
-                     'const {0}{1} * y, {0}{1} * dy{2}) {{\n\n'.format(double_type,
+    file.write(pre + 'void dydt (const double t, const {0} rho, '
+                     'const {0} * {1} y, {0} * {1} dy{2}) {{\n\n'.format(double_type,
                      utils.restrict[lang],
                      '' if lang != 'cuda' else 
-                     ', mechanism_memory {}* d_mem'.format(utils.restrict[lang]))
+                     ', mechanism_memory * {} d_mem'.format(utils.restrict[lang]))
                )
 
     # calculation of species molar concentrations
     file.write('  // species molar concentrations\n')
     file.write(('  {0} conc[{1}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double {}* conc = d_mem->conc'.format(utils.restrict[lang]))
+               else '  double * {} conc = d_mem->conc'.format(utils.restrict[lang]))
                + utils.line_end[lang]
                )
 
@@ -2202,14 +2201,14 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     # evaluate reaction rates
     rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     if lang == 'cuda':
-        file.write('  double {}* fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang]) 
                    + utils.line_end[lang])
     else:
         file.write('  // local arrays holding reaction rates\n'
                    '  {} fwd_rates[{}];\n'.format(double_type, len(reacs))
                    )
     if rev_reacs and lang == 'cuda':
-        file.write('  double {}* rev_rates = d_mem->rev_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang]) 
                    + utils.line_end[lang])
     elif rev_reacs:
         file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
@@ -2224,7 +2223,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     if num_dep_reacs > 0:
         file.write('  // get pressure modifications to reaction rates\n')
         if lang == 'cuda':
-            file.write('  double {}* pres_mod = d_mem->pres_mod'.format(utils.restrict[lang]) +
+            file.write('  double * {} pres_mod = d_mem->pres_mod'.format(utils.restrict[lang]) +
                    utils.line_end[lang])
         else:
             file.write('  {} pres_mod[{}];\n'.format(double_type, num_dep_reacs))
@@ -2245,7 +2244,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
 
     # evaluate specific heat
     file.write(('  {} cv[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double {}* cv = d_mem->cp'.format(utils.restrict[lang]))
+               else '  double * {} cv = d_mem->cp'.format(utils.restrict[lang]))
                + utils.line_end[lang])
     file.write('  eval_cv(' + utils.get_array(lang, 'y', 0) + ', cv);\n\n')
 
@@ -2269,7 +2268,7 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     # evaluate internal energy
     file.write('  // local array for species internal energies\n' + 
               ('  {} u[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double {}* u = d_mem->h'.format(utils.restrict[lang]))
+               else '  double * {} u = d_mem->h'.format(utils.restrict[lang]))
                + utils.line_end[lang])
     file.write('  eval_u (' + utils.get_array(lang, 'y', 0) + ', u);\n\n')
 

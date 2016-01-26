@@ -22,7 +22,7 @@ file_ext = dict(c='.c', cuda='.cu',
                 fortran='.f90', matlab='.m'
                 )
 
-restrict = {'c' : '__restrict__',
+restrict = {'c' : 'restrict',
             'cuda' : '__restrict__'}
 
 # header extensions based on language

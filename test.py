@@ -535,11 +535,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         # Create Jacobian and supporting source code files
         create_jacobian(lang, gas=gas,
                         optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec
-                        )
-        create_jacobian(lang, gas=gas,
-                        optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec, auto_diff=True
+                        no_shared=no_shared, last_spec=last_spec, auto_diff=lang=='c'
                         )
         if lang == 'cuda':
             #if it's cuda, we need to make sure the c files
@@ -547,7 +543,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             #as we're going to use the c interface for testing the jacobian
             create_jacobian('c', gas=gas,
                         optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec
+                        no_shared=no_shared, last_spec=last_spec, auto_diff=True
                         )
 
     if compile_jacob:

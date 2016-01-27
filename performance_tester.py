@@ -331,8 +331,8 @@ def performance_tester():
                                 first_run = False
 
                         #now we need to write the reader
-                        shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions.c'),
-                                    os.path.join(os.getcwd(), build_dir, 'read_initial_conditions.c'))
+                        shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])),
+                                    os.path.join(os.getcwd(), build_dir, 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])))
 
                         #write the tester
                         file_data = {'datafile' : os.path.join(the_path, 'data.bin')}

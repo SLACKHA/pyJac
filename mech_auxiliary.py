@@ -87,8 +87,9 @@ void eval_jacob(const double t, const double p, const double* y,
 
         file.write(
             '//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
-            '{} set_same_initial_conditions(int NUM,{} double**, double**);\n\n'.format(
-                'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '')
+            '{} set_same_initial_conditions(int NUM,{} double**, double**{});\n\n'.format(
+                'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '',
+                ', mechanism_memory**' if lang == 'cuda' else '')
             )
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
                    '    void write_jacobian_and_rates_output(int NUM);\n'
@@ -151,11 +152,13 @@ void eval_jacob(const double t, const double p, const double* y,
             needed_arr = ['double** ' + a + '_host' for a in needed_arr]
             needed_arr_conv = ['double** ' + a + '_host' for a in needed_arr_conv]
         file.write('#ifdef CONP\n'
-                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                           ', '.join(needed_arr)) +
+                   '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
+                                                                           ', '.join(needed_arr), 
+                                                                            ', mechanism_memory** d_mem' if lang == 'cuda' else '') +
                    '#elif CONV\n'
-                   '{} set_same_initial_conditions(int NUM, {}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                           ', '.join(needed_arr_conv)) +
+                   '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
+                                                                           ', '.join(needed_arr_conv), 
+                                                                            ', mechanism_memory** d_mem' if lang == 'cuda' else '') +
                    '#endif\n'
                    )
         file.write('{\n')

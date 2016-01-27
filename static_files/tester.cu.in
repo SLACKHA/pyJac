@@ -17,21 +17,11 @@ int read_initial_conditions(const char* filename, int NUM, int block_size, int g
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 #define GRID_SIZE (blockDim.x * gridDim.x)
 __global__
-void jac_driver(int NUM, double* pres, double* y)
+void jac_driver(int NUM, const double* pres, const double* y, const mechanism_memory* d_mem)
 {
     if (T_ID < NUM)
     {
-        double y_local[NSP];
-        double pr_local = pres[T_ID];
-        double jac_local[NSP * NSP] = {0};
-
-    #pragma unroll
-        for (int i = 0; i < NSP; i++)
-        {
-            y_local[i] = y[T_ID + i * GRID_SIZE];
-        }
-
-        eval_jacob (0, pr_local, y_local, jac_local);
+        eval_jacob (0, pres[T_ID], y, d_mem->jac, d_mem);
     }
 }
 
@@ -51,12 +41,14 @@ int main (int argc, char *argv[])
     if (g_num == 0)
         g_num = 1;
 
+    mechanism_memory * d_mem = 0;
+
     double* y_device;
     double* y_host;
     double* var_device;
     double* var_host;
     
-    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device);
+    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device, d_mem);
     g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
     if (g_num == 0)
         g_num = 1;
@@ -66,16 +58,16 @@ int main (int argc, char *argv[])
     cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
     StartTimer();
     #ifdef SHARED_SIZE
-        jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device);
+        jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, d_mem);
     #else
-        jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device);
+        jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, d_mem);
     #endif
     cudaDeviceSynchronize();
     double runtime = GetTimer();
     printf("%d,%.15le\n", num_odes, runtime);
     cudaErrorCheck( cudaPeekAtLastError() );
     cudaErrorCheck( cudaDeviceSynchronize() );
-    free_gpu_memory(y_device, var_device);
+    free_gpu_memory(d_mem);
     free(y_host);
     free(var_host);
     cudaErrorCheck( cudaDeviceReset() );

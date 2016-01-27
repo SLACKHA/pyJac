@@ -6,8 +6,10 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
- int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device) {
-    int padded = initialize_gpu_memory(NUM, block_size, grid_size, y_device, variable_device);
+ int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device, mechanism_memory** d_mem) {
+    int padded = initialize_gpu_memory(NUM, block_size, grid_size, d_mem);
+    cudaErrorCheck( cudaMalloc(y_device, padded * NN * sizeof(double)) );
+    cudaErrorCheck( cudaMalloc(variable_device, padded * sizeof(double)) );
     (*y_host) = (double*)malloc(padded * NN * sizeof(double));
     (*variable_host) = (double*)malloc(padded * sizeof(double));
     FILE *fp = fopen (filename, "rb");

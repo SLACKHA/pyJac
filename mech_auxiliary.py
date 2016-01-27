@@ -316,7 +316,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        '#endif\n')
 
         with open(os.path.join(path, 'gpu_memory.cu'), 'w') as file:
-            init_template = 'initialize_pointer(&{}, {} * padded)'
+            init_template = 'initialize_pointer(&(d_mem->{}), {} * padded)'
             free_template = 'cudaErrorCheck(cudaFree({}))'
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
@@ -334,7 +334,10 @@ void eval_jacob(const double t, const double p, const double* y,
                        '{\n'
                        '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
                        '  // Allocate storage for struct\n'
+                       '  mechanism_memory mem;\n'
                        '  cudaMalloc(&d_mem, sizeof(mechanism_memory));\n'
+                       '  cudaMemcpy(d_mem, &mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice);\n'
+                       '  // Initialize struct pointers\n'
                       )
             for array, size in gpu_memory.iteritems():
                 file.write(utils.line_start + init_template.format(array, size) + utils.line_end[lang])

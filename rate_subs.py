@@ -782,8 +782,10 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
     # headers
     if lang in ['c', 'cuda']:
         file.write('#include <math.h>\n'
-                   '#include "header{}"\n'.format(utils.header_ext[lang])
+                   '#include "header{0}"\n'
+                   '#include "rates{0}"\n'.format(utils.header_ext[lang])
                    )
+
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n'
@@ -2010,7 +2012,8 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
     file.write('{0}void dydt (const double, const {1}{2}, '
                'const {1} * {3}, {1} * {3}'.format(pre, double_type, pres_ref,
                                 utils.restrict[lang]) + 
-               ('' if lang == 'c' else 'const mechanism_memory*') + 
+               ('' if lang == 'c' else
+                    ', const mechanism_memory * {}'.format(utils.restrict[lang])) +
                ');\n'
                '\n'
                '#endif\n'

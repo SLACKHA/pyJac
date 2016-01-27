@@ -12,7 +12,7 @@
 #include "gpu_memory.cuh"
 #include "launch_bounds.cuh"
 
-int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device);
+int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device, mechanism_memory** d_mem);
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 #define GRID_SIZE (blockDim.x * gridDim.x)
@@ -48,7 +48,7 @@ int main (int argc, char *argv[])
     double* var_device;
     double* var_host;
     
-    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device, d_mem);
+    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device, &d_mem);
     g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
     if (g_num == 0)
         g_num = 1;

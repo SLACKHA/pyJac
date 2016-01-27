@@ -49,6 +49,25 @@ void eval_jacob(const double t, const double p, const double* y,
     have_rev_rxns = any(reac.rev for reac in reacs)
     have_pdep_rxns = any(reac.thd_body or reac.pdep for reac in reacs)
 
+    gpu_memory = {'pres' : '1',
+                  'y' : 'NSP',
+                  'dy' : 'NSP',
+                  'conc' : 'NSP',
+                  'fwd_rates' : 'FWD_RATES',
+                  'rev_rates' : 'REV_RATES',
+                  'spec_rates' : 'NSP',
+                  'cp' : 'NSP',
+                  'h' : 'NSP',
+                  'dBdT' : 'NSP',
+                  'J_nplusjplus' : 'NSP',
+                  'jac' : 'NSP * NSP'
+                  }
+    if any(r.pdep or r.thd_body for r in reacs):
+        gpu_memory['pres_mod'] = 'PRES_MOD_RATES'
+    if any(r.cheb for r in reacs):
+        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+        gpu_memory['dot_prod'] = str(dim)
+
     # the mechanism header defines a number of useful preprocessor defines, as
     # well as defining method stubs for setting initial conditions
     with open(os.path.join(path, 'mechanism{}'.format(utils.header_ext[lang])),
@@ -57,6 +76,20 @@ void eval_jacob(const double t, const double p, const double* y,
         file.write('#ifndef MECHANISM_{}\n'.format(utils.header_ext[lang][1:]) +
                    '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang][1:])
                    )
+
+        if lang == 'cuda':
+            file.write('#include <cuda.h>\n'
+                       '#include <cuda_runtime.h>\n'
+                       '#include <helper_cuda.h>\n'
+                       '#include "launch_bounds.cuh"\n'
+                       '#include "gpu_macros.cuh"\n'
+                       )
+            file.write('\nstruct mechanism_memory {\n')
+            for array in gpu_memory:
+                file.write('  double * {};\n'.format(array))
+            file.write('};\n\n')
+        if lang == 'c':
+            file.write('#include <string.h>\n') # for memset
 
         # make cache optimized easy to recognize
         if cache_optimized:
@@ -109,17 +142,10 @@ void eval_jacob(const double t, const double p, const double* y,
     with open(os.path.join(path, 'mechanism' + utils.file_ext[lang]), 'w') as file:
         file.write('#include "mass_mole{}"\n'.format(
           utils.header_ext[lang]) +
-        '#include <stdio.h>\n')
-
+        '#include <stdio.h>\n'
+        '#include "mechanism{}"\n'.format(utils.header_ext[lang]))
         if lang == 'cuda':
-            file.write('#include <cuda.h>\n'
-                       '#include <cuda_runtime.h>\n'
-                       '#include <helper_cuda.h>\n'
-                       '#include "launch_bounds.cuh"\n'
-                       '#include "gpu_macros.cuh"\n'
-                       '#include "gpu_memory.cuh"\n')
-        if lang == 'c':
-            file.write('#include <string.h>\n') # for memset
+            file.write('#include "gpu_memory.cuh"\n')
 
         file.write('    //apply masking of ICs for cache optimized mechanisms\n')
         file.write('    void apply_mask(double* y_specs) {\n')
@@ -169,10 +195,13 @@ void eval_jacob(const double t, const double p, const double* y,
             # do cuda mem init and copying
             file.write(
                 '#ifdef CONP\n'
-                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_y, d_pres);\n'
+                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_mem);\n'
+                '    cudaErrorCheck( cudaMalloc(d_pres, padded * sizeof(double)) );\n'
                 '#elif CONV\n'
-                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_y, d_rho);\n'
+                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_mem);\n'
+                '    cudaErrorCheck( cudaMalloc(d_rho, padded * NN * sizeof(double)) );\n'
                 '#endif\n'
+                '    cudaErrorCheck( cudaMalloc(d_y, padded * NN * sizeof(double)) );\n'
             )
         else:
             file.write('    int padded = NUM;\n')
@@ -281,24 +310,6 @@ void eval_jacob(const double t, const double p, const double* y,
 
         file.write('}\n\n')
 
-    gpu_memory = {'pres' : '1',
-                  'y' : 'NSP',
-                  'dy' : 'NSP',
-                  'conc' : 'NSP',
-                  'fwd_rates' : 'FWD_RATES',
-                  'rev_rates' : 'REV_RATES',
-                  'spec_rates' : 'NSP',
-                  'cp' : 'NSP',
-                  'h' : 'NSP',
-                  'dBdT' : 'NSP',
-                  'J_nplusjplus' : 'NSP',
-                  'jac' : 'NSP * NSP'
-                  }
-    if any(r.pdep or r.thd_body for r in reacs):
-        gpu_memory['pres_mod'] = 'PRES_MOD_RATES'
-    if any(r.cheb for r in reacs):
-        dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-        gpu_memory['dot_prod'] = str(dim)
     if lang == 'cuda':
         mem_template = 'double* {};'
         with open(os.path.join(path, 'gpu_memory.cuh'), 'w') as file:
@@ -308,11 +319,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        '#include "header{}"\n'.format(utils.header_ext[lang]) +
                        '#include "gpu_macros.cuh"\n'
                        '\n'
-                       'struct mechanism_memory {\n'
                        )
-            for array in gpu_memory:
-                file.write('  double * {};\n'.format(array))
-            file.write('};\n')
             file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory** d_mem);\n'
                        'void free_gpu_memory(mechanism_memory* d_mem);\n'
                        '\n'

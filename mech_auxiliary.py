@@ -308,15 +308,15 @@ void eval_jacob(const double t, const double p, const double* y,
                        'struct mechanism_memory {\n'
                        )
             for array in gpu_memory:
-                file.write('  double * {} {};\n'.format(utils.restrict[lang], array))
+                file.write('  double * {};\n'.format(array))
             file.write('};\n')
-            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory* d_mem);\n'
+            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory** d_mem);\n'
                        'void free_gpu_memory(mechanism_memory* d_mem);\n'
                        '\n'
                        '#endif\n')
 
         with open(os.path.join(path, 'gpu_memory.cu'), 'w') as file:
-            init_template = 'initialize_pointer(&(d_mem->{}), {} * padded)'
+            init_template = 'initialize_pointer(&((*d_mem)->{}), {} * padded)'
             free_template = 'cudaErrorCheck(cudaFree({}))'
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
@@ -328,15 +328,15 @@ void eval_jacob(const double t, const double p, const double* y,
                        '  //zero it out\n'
                        '  cudaErrorCheck(cudaMemset(temp, 0, size * sizeof(double)));\n'
                        '  //and copy to the destination\n'
-                       '  cudaMemcpy(d_mem, &temp, sizeof(double*), cudaMemcpyHostToDevice);\n'
+                       '  cudaMemcpy((void*)d_mem, (void*)&temp, sizeof(double*), cudaMemcpyHostToDevice);\n'
                        '}\n')
-            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory* d_mem)\n'
+            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory** d_mem)\n'
                        '{\n'
                        '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
                        '  // Allocate storage for struct\n'
                        '  mechanism_memory mem;\n'
-                       '  cudaMalloc(&d_mem, sizeof(mechanism_memory));\n'
-                       '  cudaMemcpy(d_mem, &mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice);\n'
+                       '  cudaMalloc(d_mem, sizeof(mechanism_memory));\n'
+                       '  cudaMemcpy(*d_mem, &mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice);\n'
                        '  // Initialize struct pointers\n'
                       )
             for array, size in gpu_memory.iteritems():

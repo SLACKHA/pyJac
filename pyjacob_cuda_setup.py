@@ -65,7 +65,8 @@ sources = ['pyjacob_cuda_wrapper.pyx',
            'out/rxn_rates.cu',
            'out/rxn_rates_pres_mod.cu',
            'out/spec_rates.cu',
-           'out/jacob.cu'
+           'out/jacob.cu',
+           'out/gpu_memory.cu'
            ]
 includes = ['out/', './']
 

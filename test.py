@@ -368,18 +368,13 @@ class cupyjac_evaluator(cpyjac_evaluator):
         rho = czeros(num_cond)
         temp = cuda_state[:, 0].flatten(order='c')
         pres = cuda_state[:, 1].flatten(order='c')
-        mass_frac = cuda_state[:, [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
-                                .astype(np.dtype('d'), order='c')
-        y_dummy = cuda_state[:, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+        y = cuda_state[:, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
                                 .astype(np.dtype('d'), order='c')
 
-        self.pyjac.py_eval_conc(num_cond, temp, pres, mass_frac, mw_avg, rho, test_conc)
-        self.pyjac.py_eval_rxn_rates(num_cond, temp, pres, test_conc, test_fwd_rates, test_rev_rates)
-        self.pyjac.py_get_rxn_pres_mod(num_cond, temp, pres, test_conc, test_pres_mod)
-        self.pyjac.py_eval_spec_rates(num_cond, test_fwd_rates, test_rev_rates, test_pres_mod, test_spec_rates)
-        self.pyjac.py_dydt(num_cond, 0, pres, y_dummy, test_dydt)
-        self.pyjac.py_eval_jacobian(num_cond, 0, pres, y_dummy, test_jacob)
-
+        self.pyjac.py_curun(num_cond, pres, y, test_conc, test_fwd_rates,
+                        test_rev_rates, test_pres_mod, test_spec_rates,
+                        test_dydt, test_jacob)
+        
         #reshape for comparison
         self.test_conc = reshaper(test_conc, (num_cond, gas.n_species), self.back_spec_map)
         self.test_fwd_rates = reshaper(test_fwd_rates, (num_cond, gas.n_reactions), self.back_rxn_map)

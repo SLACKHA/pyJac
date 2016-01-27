@@ -1797,7 +1797,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
                'const double * {0}, double * {0}{1});\n'
                '\n'
                '#endif\n'.format(utils.restrict[lang], 
-                ', mechanism_memory * {}'.format(utils.restrict[lang]) 
+                ', const mechanism_memory * {}'.format(utils.restrict[lang]) 
                 if lang == 'cuda' else '')
                )
     file.close()
@@ -1830,7 +1830,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
         line += ('void eval_jacob (const double t, const double pres, '
                  'const double * {0} y, double * {0} jac{1}) {{\n\n'.format(
                  utils.restrict[lang],
-                 ', mechanism_memory * {} d_mem'.format(utils.restrict[lang]) 
+                 ', const mechanism_memory * {} d_mem'.format(utils.restrict[lang]) 
                 if lang == 'cuda' else ''))
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'

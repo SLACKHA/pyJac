@@ -2342,6 +2342,7 @@ def write_mass_mole(path, lang, specs):
 
     # Create header file
     if lang in ['c', 'cuda']:
+        arr_lang = 'c'
         file = open(os.path.join(path, 'mass_mole{}'.format(
             utils.header_ext[lang])), 'w')
 
@@ -2406,7 +2407,7 @@ def write_mass_mole(path, lang, specs):
 
         if not isfirst: line += ' + '
 
-        line += utils.get_array(lang, 'X', isp)
+        line += utils.get_array(arr_lang, 'X', isp)
 
         isfirst = False
     line += ')'
@@ -2419,8 +2420,8 @@ def write_mass_mole(path, lang, specs):
                    )
         for isp in range(len(specs) - 1):
             sp = specs[isp]
-            file.write('  mw_avg += X[{}] * '.format(isp) +
-                       '{:.16e};\n'.format(sp.mw)
+            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'X', isp) +
+                       ' * {:.16e};\n'.format(sp.mw)
                        )
         file.write(utils.line_start + 'mw_avg += X_N * ' +
                        '{:.16e};\n'.format(specs[-1].mw)
@@ -2441,8 +2442,10 @@ def write_mass_mole(path, lang, specs):
         file.write('  // calculate mass fractions\n')
         for isp in range(len(specs) - 1):
             sp = specs[isp]
-            file.write('  Y[{0}] = X[{0}] * '.format(isp) +
-                       '{:.16e} / mw_avg;\n'.format(sp.mw)
+            file.write('  ' + utils.get_array(arr_lang, 'Y', isp) + 
+                        ' = ' + 
+                        utils.get_array(arr_lang, 'X', isp) +
+                       ' * {:.16e} / mw_avg;\n'.format(sp.mw)
                        )
         file.write('\n'
                    '} // end mole2mass\n'
@@ -2502,7 +2505,7 @@ def write_mass_mole(path, lang, specs):
 
         if not isfirst: line += ' + '
 
-        line += utils.get_array(lang, 'Y', isp)
+        line += utils.get_array(arr_lang, 'Y', isp)
 
         isfirst = False
     line += ')'
@@ -2513,8 +2516,8 @@ def write_mass_mole(path, lang, specs):
         file.write('  // average molecular weight\n')
         file.write('  double mw_avg = 0.0;\n')
         for isp in range(len(specs) - 1):
-            file.write('  mw_avg += Y[{}] / '.format(isp) +
-                       '{:.16e};\n'.format(specs[isp].mw)
+            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'Y', isp) +
+                       ' / {:.16e};\n'.format(specs[isp].mw)
                        )
         file.write('  mw_avg += Y_N / ' +
                        '{:.16e};\n'.format(specs[-1].mw)
@@ -2534,8 +2537,10 @@ def write_mass_mole(path, lang, specs):
     if lang in ['c', 'cuda']:
         file.write('  // calculate mole fractions\n')
         for isp in range(len(specs) - 1):
-            file.write('  X[{0}] = Y[{0}] * '.format(isp) +
-                       'mw_avg / {:.16e};\n'.format(specs[isp].mw)
+            file.write('  ' + utils.get_array(arr_lang, 'X', isp)
+                      + ' = ' +
+                      utils.get_array(arr_lang, 'Y', isp) + 
+                       ' * mw_avg / {:.16e};\n'.format(specs[isp].mw)
                        )
         file.write('\n'
                    '} // end mass2mole\n'
@@ -2598,7 +2603,7 @@ def write_mass_mole(path, lang, specs):
 
         if not isfirst: line += ' + '
 
-        line += utils.get_array(lang, 'X', isp)
+        line += utils.get_array(arr_lang, 'X', isp)
 
         isfirst = False
     line += ')'
@@ -2610,8 +2615,8 @@ def write_mass_mole(path, lang, specs):
                    '  double mw_avg = 0.0;\n'
                    )
         for isp in range(len(specs) - 1):
-            file.write('  mw_avg += X[{}] * '.format(isp) +
-                       '{:.16e};\n'.format(specs[isp].mw)
+            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'X', isp) + 
+                       ' * {:.16e};\n'.format(specs[isp].mw)
                        )
         file.write(utils.line_start + 'mw_avg += X_N * ' +
                '{:.16e};\n'.format(specs[-1].mw))

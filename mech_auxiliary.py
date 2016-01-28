@@ -342,7 +342,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        '  //allocate the device arrays on the host pointer\n'
                       )
             for array, size in gpu_memory.iteritems():
-                file.write('{}cudaErrorCheck( cudaMalloc(&((*h_mem)->{}), {} * sizeof(double)) ){}'.format(
+                file.write('{}cudaErrorCheck( cudaMalloc(&((*h_mem)->{}), {} * padded * sizeof(double)) ){}'.format(
                   utils.line_start, array, size, utils.line_end[lang]))
             file.write(utils.line_start + 'cudaErrorCheck( '
               'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 

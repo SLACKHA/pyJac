@@ -530,7 +530,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         # Create Jacobian and supporting source code files
         create_jacobian(lang, gas=gas,
                         optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec, auto_diff=lang=='c'
+                        no_shared=no_shared, last_spec=last_spec, auto_diff=False,
                         )
         if lang == 'cuda':
             #if it's cuda, we need to make sure the c files

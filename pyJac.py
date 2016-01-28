@@ -1899,7 +1899,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
     file.write(utils.line_start + 'eval_conc(' + 
                utils.get_array(lang, 'y', 0) + 
                ', pres, &' + 
-               (utils.get_array(lang, 'y', 0) if lang != 'cuda' else 
+               (utils.get_array(lang, 'y', 1) if lang != 'cuda' else
                 'y[GRID_DIM]') + 
                ', &y_N, &mw_avg, &rho, conc)' +
                 utils.line_end[lang] + 

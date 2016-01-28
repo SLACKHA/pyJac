@@ -98,7 +98,7 @@ void run(int num, const double* pres, const double* mass_frac,
 	double* dMass = 0;
 	double* dPres = 0;
 	int padded = initialize_gpu_memory(num, TARGET_BLOCK_SIZE, grid_num, &h_mem, &d_mem, &dMass, &dPres);
-	int pitch_host = num;
+	int pitch_host = num * sizeof(double);
 	int pitch_device = padded * sizeof(double);
 
 	//copy over state data

@@ -1524,14 +1524,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
             line = '     '
 
         if not isfirst: line += ' + '
-        if lang in ['c', 'cuda']:
-            line += ('(y[{}] * {:.16e})'.format(isp,
-                     1.0 / sp.mw)
-                     )
-        elif lang in ['fortran', 'matlab']:
-            line += ('(y[{}] * {:.16e})'.format(isp + 1,
-                     1.0 / sp.mw)
-                     )
+        line += '(' + utils.get_array(lang, 'y', isp) + ' * {:.16e})'.format(1.0 / sp.mw)
 
         isfirst = False
     line += ' + ((*y_N) * {:.16e})'.format(1.0 / specs[-1].mw)
@@ -1548,18 +1541,13 @@ def write_chem_utils(path, lang, specs, auto_diff):
 
     # loop through species
     for isp, sp in enumerate(specs[:-1]):
-        line = '  conc'
-        if lang in ['c', 'cuda']:
-            line += '[{0}] = (*rho) * y[{0}] * '.format(isp)
-        elif lang in ['fortran', 'matlab']:
-            line += '({0}) = (*rho) * y({0}) * '.format(isp + 1)
-        line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
+        line = utils.line_start + utils.get_array(lang, 'conc', isp)
+        line += ' = '
+        line += '(*rho) * ' + utils.get_array(lang, 'y', isp)
+        line += ' * {:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
-    line = '  conc'
-    if lang in ['c', 'cuda']:
-        line += '[{0}] = (*rho) * (*y_N) * '.format(len(specs) - 1)
-    elif lang in ['fortran', 'matlab']:
-        line += '({0}) = (*rho) * y_N * '.format(len(specs))
+    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
+    line += ' = (*rho) * (*y_N) * '.format(len(specs) - 1)
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
     file.write(line + '\n')
 
@@ -1625,14 +1613,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
             line = '     '
 
         if not isfirst: line += ' + '
-        if lang in ['c', 'cuda']:
-            line += ('(y[{}] * {:.16e})'.format(isp,
-                     1.0 / sp.mw)
-                     )
-        elif lang in ['fortran', 'matlab']:
-            line += ('(y[{}] * {})'.format(isp + 1,
-                     1.0 / sp.mw)
-                     )
+        line += '(' + utils.get_array(lang, 'y', isp) + ' * {:.16e})'.format(1.0 / sp.mw)
 
         isfirst = False
     line += ' + ((*y_N) * {:.16e})'.format(1.0 / specs[-1].mw)
@@ -1649,18 +1630,13 @@ def write_chem_utils(path, lang, specs, auto_diff):
 
     # loop through species
     for isp, sp in enumerate(specs[:-1]):
-        line = '  conc'
-        if lang in ['c', 'cuda']:
-            line += '[{0}] = rho * y[{0}] * '.format(isp)
-        elif lang in ['fortran', 'matlab']:
-            line += '({0}) = rho * y({0}) * '.format(isp + 1)
-        line += '{:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
+        line = utils.line_start + utils.get_array(lang, 'conc', isp)
+        line += ' = '
+        line += 'rho * ' + utils.get_array(lang, 'y', isp)
+        line += ' * {:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
         file.write(line)
-    line = '  conc'
-    if lang in ['c', 'cuda']:
-        line += '[{0}] = rho * (*y_N) * '.format(len(specs) - 1)
-    elif lang in ['fortran', 'matlab']:
-        line += '({0}) = rho * y_N * '.format(len(specs))
+    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
+    line += ' = rho * (*y_N) * '.format(len(specs) - 1)
     line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
     file.write(line)
 

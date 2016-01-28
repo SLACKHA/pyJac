@@ -49,8 +49,7 @@ void eval_jacob(const double t, const double p, const double* y,
     have_rev_rxns = any(reac.rev for reac in reacs)
     have_pdep_rxns = any(reac.thd_body or reac.pdep for reac in reacs)
 
-    gpu_memory = {'pres' : '1',
-                  'y' : 'NSP',
+    gpu_memory = {'y' : 'NSP',
                   'dy' : 'NSP',
                   'conc' : 'NSP',
                   'fwd_rates' : 'FWD_RATES',

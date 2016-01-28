@@ -93,85 +93,83 @@ void run(int num, const double* pres, const double* mass_frac,
 			double* pres_mod, double* spec_rates, double* dy, double* jac)
 {
 	int grid_num = (int)ceil(((double)num) / ((double)TARGET_BLOCK_SIZE));
-	int padded = grid_num * TARGET_BLOCK_SIZE;
+	mechanism_memory * d_mem = 0;
+	mechanism_memory * h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
+	double* dMass = 0;
+	double* dPres = 0;
+	int padded = initialize_gpu_memory(num, TARGET_BLOCK_SIZE, grid_num, &h_mem, &d_mem, &dMass, &dPres);
 	int pitch_host = num;
 	int pitch_device = padded * sizeof(double);
-	mechanism_memory * d_mem = 0;
-	initialize_gpu_memory(num, TARGET_BLOCK_SIZE, grid_num, &d_mem);
-
-	//init state vector
-	double* dMass = 0;
-	cudaErrorCheck( cudaMalloc((void**)&dMass, padded * NSP * sizeof(double)) );
 
 	//copy over state data
-	cudaErrorCheck( cudaMemcpy(d_mem->pres, pres, pitch_host, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy(dPres, pres, pitch_host, cudaMemcpyHostToDevice) );
 	cudaErrorCheck( cudaMemcpy2D(dMass, pitch_device, mass_frac,
 					pitch_host, pitch_host, NSP, cudaMemcpyHostToDevice) );
 
 	//get concentrations
-	k_eval_conc<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, d_mem->pres,
-		dMass, d_mem->conc);
+	k_eval_conc<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dPres,
+		dMass, h_mem->conc);
 
 	check_err();
 	
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(conc, pitch_host, d_mem->conc, pitch_device,
+	cudaErrorCheck( cudaMemcpy2D(conc, pitch_host, h_mem->conc, pitch_device,
 					pitch_host, NSP, cudaMemcpyDeviceToHost) );
 
 	//reaction rates
-	k_eval_rxn_rates<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dMass, d_mem->pres,
-						d_mem->conc, d_mem->fwd_rates, d_mem->rev_rates);
+	k_eval_rxn_rates<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dMass, dPres,
+						h_mem->conc, h_mem->fwd_rates, h_mem->rev_rates);
 
 	check_err();
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(fwd_rxn_rates, pitch_host, d_mem->fwd_rates, pitch_device,
+	cudaErrorCheck( cudaMemcpy2D(fwd_rxn_rates, pitch_host, h_mem->fwd_rates, pitch_device,
 								 pitch_host, FWD_RATES, cudaMemcpyDeviceToHost) );
 
 	#if REV_RATES != 0
-		cudaErrorCheck( cudaMemcpy2D(rev_rxn_rates, pitch_host, d_mem->rev_rates,
+		cudaErrorCheck( cudaMemcpy2D(rev_rxn_rates, pitch_host, h_mem->rev_rates,
 								pitch_device, pitch_host, REV_RATES, cudaMemcpyDeviceToHost) );
 	#endif
 
 	//pres mod rates
-	k_get_rxn_pres_mod<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dMass, d_mem->pres,
-								d_mem->conc, d_mem->pres_mod);
+	k_get_rxn_pres_mod<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dMass, dPres,
+								h_mem->conc, h_mem->pres_mod);
 
 	check_err();
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(pres_mod, pitch_host, d_mem->pres_mod, pitch_device, pitch_host,
+	cudaErrorCheck( cudaMemcpy2D(pres_mod, pitch_host, h_mem->pres_mod, pitch_device, pitch_host,
 									PRES_MOD_RATES, cudaMemcpyDeviceToHost) );
 	
 	//species rates
-	k_eval_spec_rates<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, d_mem->fwd_rates, d_mem->rev_rates,
-						d_mem->pres_mod, d_mem->spec_rates);
+	k_eval_spec_rates<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, h_mem->fwd_rates, h_mem->rev_rates,
+						h_mem->pres_mod, h_mem->spec_rates);
 
 	check_err();
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(spec_rates, pitch_host, d_mem->spec_rates, pitch_device,
+	cudaErrorCheck( cudaMemcpy2D(spec_rates, pitch_host, h_mem->spec_rates, pitch_device,
 									pitch_host, NSP, cudaMemcpyDeviceToHost) );
 
 	//dydt
-	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, d_mem->pres, dMass, d_mem->dy, d_mem);
+	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dPres, dMass, h_mem->dy, d_mem);
 
 	check_err();
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(dy, pitch_host, d_mem->dy, pitch_device, pitch_host,
+	cudaErrorCheck( cudaMemcpy2D(dy, pitch_host, h_mem->dy, pitch_device, pitch_host,
 									NSP, cudaMemcpyDeviceToHost) );
 
 	//jacobian
-	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, d_mem->pres, dMass, d_mem->jac, d_mem);
+	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, dPres, dMass, h_mem->jac, d_mem);
 
 	check_err();
 
 	//copy back
-	cudaErrorCheck( cudaMemcpy2D(jac, pitch_host, d_mem->jac, pitch_device, pitch_host, NSP * NSP, cudaMemcpyDeviceToHost) );
+	cudaErrorCheck( cudaMemcpy2D(jac, pitch_host, h_mem->jac, pitch_device, pitch_host, NSP * NSP, cudaMemcpyDeviceToHost) );
 
 	//clean up
-	cudaErrorCheck( cudaFree(dMass) );
-	free_gpu_memory(d_mem);
+	free_gpu_memory(&h_mem, &d_mem, &dMass, &dPres);
+	free(h_mem);
 
 }

@@ -59,9 +59,11 @@ void eval_jacob(const double t, const double p, const double* y,
                   'cp' : 'NSP',
                   'h' : 'NSP',
                   'dBdT' : 'NSP',
-                  'J_nplusjplus' : 'NSP',
                   'jac' : 'NSP * NSP'
                   }
+    if any( len(specs) - 1 in reac.reac + reac.prod and
+            utils.get_nu(len(specs) - 1, reac) for reac in reacs ):
+        gpu_memory['J_nplusjplus'] = 'NSP'
     if any(r.pdep or r.thd_body for r in reacs):
         gpu_memory['pres_mod'] = 'PRES_MOD_RATES'
     if any(r.cheb for r in reacs):

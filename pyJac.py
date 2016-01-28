@@ -2142,21 +2142,23 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
         line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
         file.write(line)
 
-    file.write(utils.line_start +
-               'double J_nplusone = 0' +
-               utils.line_end[lang]
-               )
-    if lang == 'c':
+    if len(specs) - 1 in set(reac.reac + reac.prod) and \
+        utils.get_nu(len(specs) - 1, reac):
         file.write(utils.line_start +
-                   'double J_nplusjplus[NSP]' +
-                   utils.line_end[lang]
-                   )
-    else:
-        file.write(utils.line_start +
-                   'double * {} J_nplusjplus = d_mem->J_nplusjplus'.format(
-                    utils.restrict[lang]) +
-                   utils.line_end[lang]
-                   )
+           'double J_nplusone = 0' +
+           utils.line_end[lang]
+           )
+        if lang == 'c':
+            file.write(utils.line_start +
+                       'double J_nplusjplus[NSP]' +
+                       utils.line_end[lang]
+                       )
+        else:
+            file.write(utils.line_start +
+                       'double * {} J_nplusjplus = d_mem->J_nplusjplus'.format(
+                        utils.restrict[lang]) +
+                       utils.line_end[lang]
+                       )
 
     # variables for equilibrium constant derivatives, if needed
     dBdT_flag = [False for sp in specs]

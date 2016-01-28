@@ -358,8 +358,8 @@ void eval_jacob(const double t, const double p, const double* y,
             for array in gpu_memory:
                 file.write(utils.line_start + free_template.format('(*h_mem)->{}'.format(array)) + utils.line_end[lang])
             file.write(utils.line_start + free_template.format('*d_mem') + utils.line_end[lang])
-            file.write(utils.line_start + free_template.format('d_y') + utils.line_end[lang])
-            file.write(utils.line_start + free_template.format('d_var') + utils.line_end[lang])
+            file.write(utils.line_start + free_template.format('*d_y') + utils.line_end[lang])
+            file.write(utils.line_start + free_template.format('*d_var') + utils.line_end[lang])
             file.write('}\n')
 
     if lang == 'cuda':

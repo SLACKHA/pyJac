@@ -2512,7 +2512,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
     file.write('\n')
 
     # evaluate specific heat
-    if lang in ['c', 'cuda']:
+    if lang == 'c':
         file.write('  // species specific heats\n'
                    '  double cp[{}];\n'.format(num_s) +
                    '  eval_cp(T, cp);\n')

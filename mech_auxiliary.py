@@ -122,7 +122,7 @@ void eval_jacob(const double t, const double p, const double* y,
             '//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
             '{} set_same_initial_conditions(int NUM,{} double**, double**{});\n\n'.format(
                 'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '',
-                ', mechanism_memory**' if lang == 'cuda' else '')
+                ', mechanism_memory**, mechanism_memory**' if lang == 'cuda' else '')
             )
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
                    '    void write_jacobian_and_rates_output(int NUM);\n'
@@ -180,11 +180,11 @@ void eval_jacob(const double t, const double p, const double* y,
         file.write('#ifdef CONP\n'
                    '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
                                                                            ', '.join(needed_arr), 
-                                                                            ', mechanism_memory** d_mem' if lang == 'cuda' else '') +
+                                                                            ', mechanism_memory** h_mem, mechanism_memory** d_mem' if lang == 'cuda' else '') +
                    '#elif CONV\n'
                    '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
                                                                            ', '.join(needed_arr_conv), 
-                                                                            ', mechanism_memory** d_mem' if lang == 'cuda' else '') +
+                                                                            ', mechanism_memory** h_mem, mechanism_memory** d_mem' if lang == 'cuda' else '') +
                    '#endif\n'
                    )
         file.write('{\n')
@@ -195,13 +195,10 @@ void eval_jacob(const double t, const double p, const double* y,
             # do cuda mem init and copying
             file.write(
                 '#ifdef CONP\n'
-                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_mem);\n'
-                '    cudaErrorCheck( cudaMalloc(d_pres, padded * sizeof(double)) );\n'
+                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, h_mem, d_mem, d_y, d_pres);\n'
                 '#elif CONV\n'
-                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, d_mem);\n'
-                '    cudaErrorCheck( cudaMalloc(d_rho, padded * NN * sizeof(double)) );\n'
+                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, h_mem, d_mem, d_y, d_rho);\n'
                 '#endif\n'
-                '    cudaErrorCheck( cudaMalloc(d_y, padded * NN * sizeof(double)) );\n'
             )
         else:
             file.write('    int padded = NUM;\n')
@@ -320,8 +317,9 @@ void eval_jacob(const double t, const double p, const double* y,
                        '#include "gpu_macros.cuh"\n'
                        '\n'
                        )
-            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory** d_mem);\n'
-                       'void free_gpu_memory(mechanism_memory* d_mem);\n'
+            file.write('int initialize_gpu_memory(int, int, int, '
+                       'mechanism_memory**, mechanism_memory**, double**, double**);\n'
+                       'void free_gpu_memory(mechanism_memory**, mechanism_memory**, double**, double**);\n'
                        '\n'
                        '#endif\n')
 
@@ -331,37 +329,37 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
-            file.write('void initialize_pointer(double** d_mem, int size) {\n'
-                       '  double* temp;\n'
-                       '  //create pointer\n'
-                       '  cudaErrorCheck(cudaMalloc((void**)&temp, size * sizeof(double)));\n'
-                       '  //zero it out\n'
-                       '  cudaErrorCheck(cudaMemset(temp, 0, size * sizeof(double)));\n'
-                       '  //and copy to the destination\n'
-                       '  cudaMemcpy((void*)d_mem, (void*)&temp, sizeof(double*), cudaMemcpyHostToDevice);\n'
-                       '}\n')
-            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, mechanism_memory** d_mem)\n'
+            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, '
+                       'mechanism_memory** h_mem, mechanism_memory** d_mem, '
+                       'double** y_device, double** var_device)\n'
                        '{\n'
                        '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
-                       '  // Allocate storage for struct\n'
-                       '  mechanism_memory mem;\n'
-                       '  cudaMalloc(d_mem, sizeof(mechanism_memory));\n'
-                       '  cudaMemcpy(*d_mem, &mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice);\n'
-                       '  // Initialize struct pointers\n'
+                       '  //init vectors\n'
+                       '  cudaErrorCheck( cudaMalloc(y_device, padded * NSP * sizeof(double)) );\n'
+                       '  cudaErrorCheck( cudaMalloc(var_device, padded * sizeof(double)) );\n'
+                       '  // Allocate storage for the device struct\n'
+                       '  cudaErrorCheck( cudaMalloc(d_mem, sizeof(mechanism_memory)) );\n'
+                       '  //allocate the device arrays on the host pointer\n'
                       )
             for array, size in gpu_memory.iteritems():
-                file.write(utils.line_start + init_template.format(array, size) + utils.line_end[lang])
+                file.write('{}cudaErrorCheck( cudaMalloc(&((*h_mem)->{}), {} * sizeof(double)) ){}'.format(
+                  utils.line_start, array, size, utils.line_end[lang]))
+            file.write(utils.line_start + 'cudaErrorCheck( '
+              'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 
+              utils.line_end[lang])
 
             file.write(
                        '  return padded;\n'
                        '}\n'
                        )
-            file.write('void free_gpu_memory(mechanism_memory* d_mem)\n'
+            file.write('void free_gpu_memory(mechanism_memory** h_mem, mechanism_memory** d_mem, double** d_y, double** d_var)\n'
                        '{\n'
                        )
             for array in gpu_memory:
-                file.write(utils.line_start + free_template.format('d_mem->{}'.format(array)) + utils.line_end[lang])
-            file.write(utils.line_start + free_template.format('d_mem'.format(array)) + utils.line_end[lang])
+                file.write(utils.line_start + free_template.format('(*h_mem)->{}'.format(array)) + utils.line_end[lang])
+            file.write(utils.line_start + free_template.format('*d_mem') + utils.line_end[lang])
+            file.write(utils.line_start + free_template.format('d_y') + utils.line_end[lang])
+            file.write(utils.line_start + free_template.format('d_var') + utils.line_end[lang])
             file.write('}\n')
 
     if lang == 'cuda':

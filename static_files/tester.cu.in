@@ -12,7 +12,7 @@
 #include "gpu_memory.cuh"
 #include "launch_bounds.cuh"
 
-int read_initial_conditions(const char* filename, int NUM, int block_size, int grid_size, double** y_host, double** y_device, double** variable_host, double** variable_device, mechanism_memory** d_mem);
+int read_initial_conditions(const char*, int, int, int, double**, double**, double**, double**, mechanism_memory**, mechanism_memory**);
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 #define GRID_SIZE (blockDim.x * gridDim.x)
@@ -42,13 +42,14 @@ int main (int argc, char *argv[])
         g_num = 1;
 
     mechanism_memory * d_mem = 0;
+    mechanism_memory* h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
 
     double* y_device;
     double* y_host;
     double* var_device;
     double* var_host;
     
-    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device, &d_mem);
+    int padded = read_initial_conditions("$datafile", num_odes, TARGET_BLOCK_SIZE, g_num, &y_host, &y_device, &var_host, &var_device, &h_mem, &d_mem);
     g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
     if (g_num == 0)
         g_num = 1;
@@ -67,9 +68,10 @@ int main (int argc, char *argv[])
     printf("%d,%.15le\n", num_odes, runtime);
     cudaErrorCheck( cudaPeekAtLastError() );
     cudaErrorCheck( cudaDeviceSynchronize() );
-    free_gpu_memory(d_mem);
+    free_gpu_memory(&h_mem, &d_mem, &y_device, &var_device);
     free(y_host);
     free(var_host);
+    free(h_mem);
     cudaErrorCheck( cudaDeviceReset() );
     return 0;
 }

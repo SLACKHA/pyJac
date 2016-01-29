@@ -3,11 +3,13 @@
 import numpy as np
 cimport numpy as np
 cimport cython
+from libcpp cimport bool
 
 cdef extern from "pyjacob.cuh":
     void run(int num, const double* pres, const double* mass_frac,
             double* conc, double* fwd_rxn_rates, double* rev_rxn_rates,
-            double* pres_mod, double* spec_rates, double* dy, double* jac);
+            double* pres_mod, double* spec_rates, double* dy, double* jac,
+            bool eval_rates);
 
 @cython.boundscheck(False)
 def py_cuall(int num,
@@ -30,5 +32,5 @@ def py_cujac(int num,
             np.ndarray[np.double_t, mode='c'] y,
             np.ndarray[np.double_t, mode='c'] jac):
     cdef bint eval_rates = True
-    run(num, &pres[0], &y[0], 0, 0, 0,
-             0, 0, 0, &jac[0], eval_rates)
+    run(num, &pres[0], &y[0], NULL, NULL, NULL,
+             NULL, NULL, NULL, &jac[0], eval_rates)

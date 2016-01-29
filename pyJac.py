@@ -1543,19 +1543,19 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
                    ''
                    'void eval_jacob_{} ('.format(number)
                    )
-        file.write('const double, const double * {}'.format(utils.restrict[lang]))
+        line = 'const double, const double * {0}'
         for rate in rate_list:
-            file.write(', const double * {}'.format(utils.restrict[lang]))
+            line += ', const double * {0}'
         if batch_has_m:
-            file.write(', const double')
-        file.write(', const double, const double' +
+            line += ', const double'
+        line += (', const double, const double' +
                     ('' if not this_rev else ', const double * {0}') +
-                   ', const double, double * {0}'
-                   + (', double * {0}, double* {0}' if has_nsp else '') +
-                   ');\n'
-                   '\n'
-                   '#endif\n'.format(utils.restrict[lang])
-                   )
+                    ', const double, double * {0}'
+                    + (', double * {0}, double* {0}' if has_nsp else '') +
+                    ');\n'
+                    '\n'
+                    '#endif\n')
+        file.write(line.format(utils.restrict[lang]))
     file = open(os.path.join(path, 'jacob_' + str(number) +
                 utils.file_ext[lang]), 'w'
                 )

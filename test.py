@@ -371,7 +371,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
         y = cuda_state[:, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
                                 .astype(np.dtype('d'), order='c')
 
-        self.pyjac.py_curun(num_cond, pres, y, test_conc, test_fwd_rates,
+        self.pyjac.py_cuall(num_cond, pres, y, test_conc, test_fwd_rates,
                         test_rev_rates, test_pres_mod, test_spec_rates,
                         test_dydt, test_jacob)
         

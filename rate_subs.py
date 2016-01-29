@@ -2199,7 +2199,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         elif lang == 'cuda':
             file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                        ' = ' + utils.get_array(lang, 'spec_rates', isp) + 
-                       ' ({:.16e} / rho);\n'.format(sp.mw)
+                       ' * ({:.16e} / rho);\n'.format(sp.mw)
                        )
         if not specs_nonzero[isp]:
             file.write('#endif\n')
@@ -2378,7 +2378,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         elif lang == 'cuda':
             file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                        ' = ' + utils.get_array(lang, 'spec_rates', isp) + 
-                       ' ({:.16e} / rho);\n'.format(sp.mw)
+                       ' * ({:.16e} / rho);\n'.format(sp.mw)
                        )
         if not specs_nonzero[isp]:
             file.write('#endif\n')

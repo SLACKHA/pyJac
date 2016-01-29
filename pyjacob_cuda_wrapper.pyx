@@ -19,6 +19,7 @@ def py_curun(int num,
             np.ndarray[np.double_t, mode='c'] pres_mod,
             np.ndarray[np.double_t, mode='c'] spec_rates,
             np.ndarray[np.double_t, mode='c'] dy,
-            np.ndarray[np.double_t, mode='c'] jac):
+            np.ndarray[np.double_t, mode='c'] jac,
+            bool eval_rates=True):
     run(num, &pres[0], &y[0], &conc[0], &fwd_rates[0], &rev_rates[0],
-             &pres_mod[0], &spec_rates[0], &dy[0], &jac[0])
+             &pres_mod[0], &spec_rates[0], &dy[0], &jac[0], eval_rates)

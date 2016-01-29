@@ -2189,16 +2189,16 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     line = ''
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
-    for idx, sp in enumerate(specs[:-1]):
+    for isp, sp in enumerate(specs[:-1]):
         if not specs_nonzero[isp]:
             file.write('#ifdef FORCE_ZERO\n')
         if lang == 'c':
-            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
+            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
         elif lang == 'cuda':
-            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
-                       ' = ' + utils.get_array(lang, 'spec_rates', idx) + 
+            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
+                       ' = ' + utils.get_array(lang, 'spec_rates', isp) + 
                        ' ({:.16e} / rho);\n'.format(sp.mw)
                        )
         if not specs_nonzero[isp]:
@@ -2372,12 +2372,12 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         if not specs_nonzero[isp]:
             file.write('#ifdef FORCE_ZERO\n')
         if lang == 'c':
-            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
+            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
         elif lang == 'cuda':
-            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
-                       ' = ' + utils.get_array(lang, 'spec_rates', idx) + 
+            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
+                       ' = ' + utils.get_array(lang, 'spec_rates', isp) + 
                        ' ({:.16e} / rho);\n'.format(sp.mw)
                        )
         if not specs_nonzero[isp]:

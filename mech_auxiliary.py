@@ -95,6 +95,8 @@ void eval_jacob(const double t, const double p, const double* y,
         # make cache optimized easy to recognize
         if cache_optimized:
             file.write('//Cache Optimized\n')
+        file.write('{}#define FORCE_ZERO\n'.format(utils.comment[lang] 
+          if not utils.FORCE_ZERO_OUT else ''))
         file.write('//last_spec {}\n'.format(last_spec))
 
         # convience: write species indexes
@@ -348,6 +350,12 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write(utils.line_start + 'cudaErrorCheck( '
               'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 
               utils.line_end[lang])
+            file.write(utils.line_start + utils.comment[lang] + 'zero out required values\n')
+            zero_vals = ['spec_rates', 'dy', 'jac']
+            for x in zero_vals:
+                file.write(utils.line_start + 'cudaErrorCheck( '
+                  'cudeMemset((*h_mem)->{}, 0, {}) )'.format(x, gpu_memory[x])
+                  + utils.line_end[lang])
 
             file.write(
                        '  return padded;\n'

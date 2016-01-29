@@ -43,6 +43,10 @@ array_chars = dict(c="[{}]", cuda="[INDEX({})]",
                    fortran="({})", matlab="({})"
                    )
 
+# if false, zero values will be assumed to have been set previously (by memset etc.)
+# and can be skipped, to increase efficiency
+FORCE_ZERO_OUT = False
+
 def get_species_mappings(num_specs, last_species):
     """
     Consolidate the forward/backwards species mapping

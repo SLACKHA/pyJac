@@ -1366,7 +1366,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
             file.write(line)
         file.write('\n')
 
-
+    file.write('#ifdef FORCE_ZERO\n')
     for i, seen_sp in enumerate(seen):
         if not seen_sp:
             file.write(utils.line_start + utils.comment[lang] +
@@ -1374,6 +1374,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
             file.write(__get_var(i) +
                        ' = 0.0' + utils.line_end[lang]
                        )
+    file.write('#endif\n')
 
     if lang == 'cuda' and smm is not None:
         smm.force_eviction()
@@ -1939,7 +1940,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     return
 
 
-def write_derivs(path, lang, specs, reacs, auto_diff=False):
+def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     """Writes derivative function file and header.
 
     Parameters
@@ -1952,6 +1953,8 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
         List of species in the mechanism.
     reacs : list of ReacInfo
         List of reactions in the mechanism.
+    specs_nonzero : list of bool
+        List of bools indicating species with zero net production in the mechanism
     auto_diff : bool, optional
         If True, generate files for use with the Adept autodifferention library.
 
@@ -2126,7 +2129,9 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
             ' = (-1.0 / (rho * cp_avg)) * ('
             )
     isfirst = True
-    for isp, sp in enumerate(specs[:-1]):
+    for isp, sp in enumerate(specs):
+        if not specs_nonzero[isp]:
+            continue
         if len(line) > 70:
             line += '\n'
             file.write(line)
@@ -2134,23 +2139,50 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
 
         if not isfirst: line += ' + '
 
-        line += ('(' + utils.get_array(lang, 'dy', isp + 1) + ' * ' +
+        arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+        line += ('(' + arr + ' * ' +
                  utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
                  )
 
         isfirst = False
-    line += (' + (dy_N * ' + utils.get_array(lang, 'h', len(specs) - 1) +
-             ' * {:.16e})'.format(specs[-1].mw)
-             )
     line += ')' + utils.line_end[lang] + '\n'
     file.write(line)
+    if any(not x for x in specs_nonzero):
+        isfirst=True
+        file.write('#ifdef FORCE_ZERO\n')
+        line = ('  ' + utils.get_array(lang, 'dy', 0) +
+                ' += (-1.0 / (rho * cp_avg)) * (')
+        for isp, sp in enumerate(specs):
+            if specs_nonzero[isp]:
+                continue
+            if len(line) > 70:
+                line += '\n'
+                file.write(line)
+                line = '       '
 
+            if not isfirst: line += ' + '
+
+            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+            line += ('(' + arr + ' * ' +
+                     utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
+                     )
+
+            isfirst = False
+        line += ')' + utils.line_end[lang]
+        file.write(line + '#endif\n\n')
+
+
+    line = ''
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
     for idx, sp in enumerate(specs[:-1]):
+        if not specs_nonzero[isp]:
+            file.write('#ifdef FORCE_ZERO\n')
         file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
+        if not specs_nonzero[isp]:
+            file.write('#endif\n')
     file.write('\n')
 
     file.write('} // end dydt\n\n')
@@ -2264,29 +2296,59 @@ def write_derivs(path, lang, specs, reacs, auto_diff=False):
             ' = (-1.0 / (rho * cv_avg)) * ('
             )
     isfirst = True
-    for idx, sp in enumerate(specs[:-1]):
+    for isp, sp in enumerate(specs):
+        if not specs_nonzero[isp]:
+            continue
         if len(line) > 70:
             line += '\n'
             file.write(line)
             line = '       '
-        line += ' + ' if not isfirst else ''
-        line += ('(' + utils.get_array(lang, 'dy', idx + 1) + ' * ' +
-                 utils.get_array(lang, 'u', idx) + ' * {:.16e})'.format(sp.mw)
+
+        if not isfirst: line += ' + '
+
+        arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+        line += ('(' + arr + ' * ' +
+                 utils.get_array(lang, 'u', isp) + ' * {:.16e})'.format(sp.mw)
                  )
 
         isfirst = False
-    line += (' + (dy_N * ' + utils.get_array(lang, 'u', len(specs) - 1) +
-             ' * {:.16e})'.format(specs[-1].mw)
-             )
     line += ')' + utils.line_end[lang] + '\n'
     file.write(line)
+    if any(not x for x in specs_nonzero):
+        isfirst=True
+        file.write('#ifdef FORCE_ZERO\n')
+        line = ('  ' + utils.get_array(lang, 'dy', 0) +
+                ' += (-1.0 / (rho * cv_avg)) * (')
+        for isp, sp in enumerate(specs):
+            if specs_nonzero[isp]:
+                continue
+            if len(line) > 70:
+                line += '\n'
+                file.write(line)
+                line = '       '
+
+            if not isfirst: line += ' + '
+
+            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+            line += ('(' + arr + ' * ' +
+                     utils.get_array(lang, 'u', isp) + ' * {:.16e})'.format(sp.mw)
+                     )
+
+            isfirst = False
+        line += ')' + utils.line_end[lang]
+        file.write(line + '#endif\n\n')
+
 
     # rate of change of species mass fractions
     file.write('  // calculate rate of change of species mass fractions\n')
     for isp, sp in enumerate(specs[:-1]):
+        if not specs_nonzero[isp]:
+            file.write('#ifdef FORCE_ZERO\n')
         file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
+        if not specs_nonzero[isp]:
+            file.write('#endif\n')
 
     file.write('\n')
 

@@ -3104,7 +3104,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     rate.write_chem_utils(build_path, lang, specs, auto_diff)
 
     # write derivative subroutines
-    rate.write_derivs(build_path, lang, specs, reacs, auto_diff)
+    rate.write_derivs(build_path, lang, specs, reacs, seen_sp, auto_diff)
 
     # write mass-mole fraction conversion subroutine
     rate.write_mass_mole(build_path, lang, specs)

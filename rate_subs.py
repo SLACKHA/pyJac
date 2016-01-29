@@ -2041,7 +2041,8 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
     # Simply call subroutine
     file.write('  eval_conc (' + utils.get_array(lang, 'y', 0) +
-               ', pres, &' + utils.get_array(lang, 'y', 1) + ', '
+               ', pres, &' + (utils.get_array(lang, 'y', 1) if lang != 'cuda'
+                                else 'y[GRID_DIM]') + ', '
                '&y_N, &mw_avg, &rho, conc);\n\n'
                )
 
@@ -2212,7 +2213,8 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
     # Simply call subroutine
     file.write('  eval_conc_rho (' + utils.get_array(lang, 'y', 0) +
-               'rho, &' + utils.get_array(lang, 'y', 1) + ', '
+               'rho, &' + (utils.get_array(lang, 'y', 1) if lang != 'cuda'
+                                else 'y[GRID_DIM]') + ', ' +
                '&y_N, &mw_avg, &pres, conc);\n\n'
                )
 

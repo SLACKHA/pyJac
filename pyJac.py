@@ -2142,8 +2142,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
         line += 'rho_inv = 1.0 / rho' + utils.line_end[lang]
         file.write(line)
 
-    if len(specs) - 1 in set(reac.reac + reac.prod) and \
-        utils.get_nu(len(specs) - 1, reac):
+    if any(len(specs) - 1 in set(reac.reac + reac.prod) and \
+        utils.get_nu(len(specs) - 1, reac) for reac in reacs):
         file.write(utils.line_start +
            'double J_nplusone = 0' +
            utils.line_end[lang]

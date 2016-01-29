@@ -354,7 +354,7 @@ void eval_jacob(const double t, const double p, const double* y,
             zero_vals = ['spec_rates', 'dy', 'jac']
             for x in zero_vals:
                 file.write(utils.line_start + 'cudaErrorCheck( '
-                  'cudeMemset((*h_mem)->{}, 0, {}) )'.format(x, gpu_memory[x])
+                  'cudaMemset((*h_mem)->{}, 0, {}) )'.format(x, gpu_memory[x])
                   + utils.line_end[lang])
 
             file.write(

@@ -2087,9 +2087,10 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
                    utils.line_end[lang])
 
     # species rate of change of molar concentration
-    file.write('  // evaluate species molar net production rates\n'
-               '  {} dy_N;\n'.format(double_type) + 
-               '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
+    file.write('  // evaluate species molar net production rates\n')
+    if lang != 'cuda':
+        file.write('  {} dy_N;\n'.format(double_type))
+    file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
     if lang == 'c':
         file.write('&' + utils.get_array(lang, 'dy', 1) + ', &dy_N)')
     elif lang == 'cuda':

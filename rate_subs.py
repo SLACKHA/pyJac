@@ -2082,13 +2082,20 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         file.write('  {}* pres_mod = 0;\n'.format(double_type))
     file.write('\n')
 
+    if lang == 'cuda':
+        file.write('  double * {} spec_rates = d_mem->spec_rates'.format(utils.restrict[lang]) +
+                   utils.line_end[lang])
+
     # species rate of change of molar concentration
     file.write('  // evaluate species molar net production rates\n'
                '  {} dy_N;\n'.format(double_type) + 
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
-    file.write('&' + utils.get_array(lang, 'dy', 1) if lang != 'cuda'
-               else '&dy[GRID_DIM]')
-    file.write(', &dy_N);\n\n')
+    if lang == 'c':
+        file.write('&' + utils.get_array(lang, 'dy', 1) + ', &dy_N)')
+    elif lang == 'cuda':
+        file.write('spec_rates, &' + utils.get_array(lang, 'spec_rates', len(specs) - 1) + 
+                    ')')
+    file.write(utils.line_end[lang])
 
     # evaluate specific heat
     file.write('  // local array holding constant pressure specific heat\n')
@@ -2140,7 +2147,10 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
         if not isfirst: line += ' + '
 
-        arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+        if lang == 'c':
+            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+        elif lang == 'cuda':
+            arr = utils.get_array(lang, 'spec_rates', isp)
         line += ('(' + arr + ' * ' +
                  utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
                  )
@@ -2163,7 +2173,10 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
             if not isfirst: line += ' + '
 
-            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+            if lang == 'c':
+                arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+            elif lang == 'cuda':
+                arr = utils.get_array(lang, 'spec_rates', isp)
             line += ('(' + arr + ' * ' +
                      utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
                      )
@@ -2179,9 +2192,15 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     for idx, sp in enumerate(specs[:-1]):
         if not specs_nonzero[isp]:
             file.write('#ifdef FORCE_ZERO\n')
-        file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
+        if lang == 'c':
+            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
+        elif lang == 'cuda':
+            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
+                       ' = ' + utils.get_array(lang, 'spec_rates', idx) + 
+                       ' ({:.16e} / rho);\n'.format(sp.mw)
+                       )
         if not specs_nonzero[isp]:
             file.write('#endif\n')
     file.write('\n')
@@ -2308,7 +2327,10 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
         if not isfirst: line += ' + '
 
-        arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+        if lang == 'c':
+            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+        elif lang == 'cuda':
+            arr = utils.get_array(lang, 'spec_rates', isp)
         line += ('(' + arr + ' * ' +
                  utils.get_array(lang, 'u', isp) + ' * {:.16e})'.format(sp.mw)
                  )
@@ -2331,7 +2353,10 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
             if not isfirst: line += ' + '
 
-            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+            if lang == 'c':
+                arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
+            elif lang == 'cuda':
+                arr = utils.get_array(lang, 'spec_rates', isp)
             line += ('(' + arr + ' * ' +
                      utils.get_array(lang, 'u', isp) + ' * {:.16e})'.format(sp.mw)
                      )
@@ -2346,9 +2371,15 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     for isp, sp in enumerate(specs[:-1]):
         if not specs_nonzero[isp]:
             file.write('#ifdef FORCE_ZERO\n')
-        file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
+        if lang == 'c':
+            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
                    ' *= ({:.16e} / rho);\n'.format(sp.mw)
                    )
+        elif lang == 'cuda':
+            file.write('  ' + utils.get_array(lang, 'dy', idx + 1) +
+                       ' = ' + utils.get_array(lang, 'spec_rates', idx) + 
+                       ' ({:.16e} / rho);\n'.format(sp.mw)
+                       )
         if not specs_nonzero[isp]:
             file.write('#endif\n')
 

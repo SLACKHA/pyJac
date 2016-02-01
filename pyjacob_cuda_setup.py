@@ -91,7 +91,7 @@ ext = Extension('cu_pyjacob',
                                     'nvcc': ['-arch=sm_20', '--ptxas-options=-v', '-c', 
                                     '--compiler-options', "'-fPIC'",
                                     '--ftz=false', '--prec-div=true', 
-                                    '--prec-sqrt=true', '--fmad=false']},
+                                    '--prec-sqrt=true']},
                 include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes
                 )
 

@@ -1551,8 +1551,9 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
             line += ', const double'
         line += (', const double, const double' +
                     ('' if not this_rev else ', const double * {0}') +
-                    ', const double, double * {0}'
-                    + (', double * {0}, double* {0}' if has_nsp else '') +
+                    ', const double, double * {0}' +
+                    (', double * {0}, double* {0}' if has_nsp else '') +
+                    (', double * {0}' if cheb and lang == 'cuda' else '') +
                     ');\n'
                     '\n'
                     '#endif\n')
@@ -1580,6 +1581,8 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
 
     if has_nsp:
         line += ', double * {0} J_nplusone, double * {0} J_nplusjplus'
+    if cheb and lang == 'cuda':
+        line += ', double * {0} dot_prod'
     line += ') {{'
     file.write(line.format(utils.restrict[lang]) + '\n')
 
@@ -1675,9 +1678,6 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
                    utils.line_end[lang]
                    )
         file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
-                   utils.line_end[lang]
-                   )
-        file.write(utils.line_start + 'double dot_prod[{}]'.format(cheb_dim) +
                    utils.line_end[lang]
                    )
 
@@ -1917,6 +1917,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
     file.write(utils.line_start + utils.comment[lang] +
                ' evaluate reaction rates\n'
                )
+
+    cuda_cheb = any(rxn.cheb for rxn in reacs) and lang == 'cuda'
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
         if lang == 'cuda':
@@ -1937,9 +1939,13 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
             file.write(utils.line_start +
                        'double rev_rates[{}];\n'.format(num_rev)
                        )
+        if cuda_cheb:
+            file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang]) 
+                   + utils.line_end[lang])
+
         file.write(utils.line_start +
                    'eval_rxn_rates (T, pres, conc, fwd_rates, '
-                   'rev_rates);\n'
+                   'rev_rates{});\n'.format(', dot_prod' if cuda_cheb else '')
                    )
     elif lang == 'fortran':
             file.write(utils.line_start +
@@ -2490,6 +2496,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
             line += ', T, jac'
             if has_jnplus_one:
                 line += ', &J_nplusone, J_nplusjplus'
+            if cheb:
+                line += ', dot_prod'
             line += ')'
             file.write(line + utils.line_end[lang])
 

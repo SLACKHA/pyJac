@@ -282,8 +282,10 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         double_type = 'adouble'
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
+    cuda_cheb = any(rxn.cheb for rxn in reacs) and lang == 'cuda'
     file.write('{0}void eval_rxn_rates (const {1},'
-               ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3});\n'
+               ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3}' +
+               (', {1} * {3}' if cuda_cheb else '') + ');\n'
                '{0}void eval_spec_rates (const {1} * {3},'
                ' const {1} * {3}, const {1} * {3}, {1} * {3}, {1} * {3});\n'.format(
                         pre, double_type, pres_ref, utils.restrict[lang])
@@ -2062,8 +2064,14 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
     else:
         file.write('  {}* rev_rates = 0;\n'.format(double_type))
+    cheb = False
+    if any(rxn.cheb for rxn in reacs) and lang == 'cuda':
+        cheb = True
+        file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang]) 
+                   + utils.line_end[lang])
     file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) +
-               ', pres, conc, fwd_rates, rev_rates);\n\n'
+               ', pres, conc, fwd_rates, rev_rates{});\n\n'.format(', dot_prod'
+                    if cheb else '')
                )
 
     # reaction pressure dependence

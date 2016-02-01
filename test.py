@@ -543,15 +543,14 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     if compile_jacob:
         #write and compile the dydt python wrapper
-        try:
-            os.remove('pyjacob.so')
-        except:
-            pass
-        #need to compile this anyways, it's way easier to get the analytical
-        #jacobian evaulator to use the c interface
-        subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
-                               'pyjacob_setup.py', 'build_ext', '--inplace'
-                               ])
+        if lang == 'c':
+            try:
+                os.remove('pyjacob.so')
+            except:
+                pass
+            subprocess.check_call(['python2.7', os.getcwd() + os.path.sep +
+                                   'pyjacob_setup.py', 'build_ext', '--inplace'
+                                   ])
 
         try:
             os.remove('adjacob.so')

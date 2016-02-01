@@ -264,7 +264,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
     num_rev = len(rev_reacs)
     pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd_body or rxn.pdep]
 
-    pre  = '__device__ ' if lang == 'cuda' else ''
+    pre = '__device__ ' if lang == 'cuda' else ''
     file_prefix = 'ad_' if auto_diff else ''
     pres_ref = '&' if auto_diff else ''
     file = open(os.path.join(path, '{}rates'.format(file_prefix) 
@@ -312,10 +312,31 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         next_file = 0
 
     get_array = utils.get_array
-    if lang == 'cuda' and smm is not None:
+    if lang == 'cuda' and smm is not None and not do_unroll:
         smm.reset()
         get_array = smm.get_array
         smm.write_init(file, indent=2)
+
+    def write_header(lang, rate_count):
+        with open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
+                        rate_count, utils.header_ext[lang])), 'w') as file:
+            line = ('#ifndef RATES_HEAD_{0}\n'
+                   '#define RATES_HEAD_{0}\n'
+                   '\n'
+                   '#include "../header{1}"\n'
+                   '\n'
+                   ).format(rate_count, utils.header_ext[lang])
+            file.write(line)
+            pre = '  ' if lang == 'c' else '__device__ '
+            line = ('{0}void eval_rxn_rates_{4}(const {1},'
+                   ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3}'
+                   )
+            if cuda_cheb:
+                line +=  ', {1} * {3}'
+            line += ');\n'
+            file.write(line.format(
+                    pre, double_type, pres_ref, utils.restrict[lang], rate_count))
+            file.write('#endif\n')
 
     def write_sub_intro(file, defines, rate_count=None):
         pre = '  '
@@ -323,7 +344,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         if lang == 'cuda': line = '__device__ '
 
         if not defines:
-            file.write('include "rates/rates_include{}\n"'.format(utils.header_ext[lang]))
+            file.write('#include "rates/rates_include{}"\n'.format(utils.header_ext[lang]))
 
         if lang in ['c', 'cuda']:
             file.write('#include "{}{}rates'.format(
@@ -384,6 +405,11 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                      '  rev_rxn_rates = fwd_rxn_rates;\n'
                      )
         file.write(line)
+
+        if smm is not None:
+            smm.reset()
+            get_array = smm.get_array
+            smm.write_init(file, indent=2)
 
         if defines:
             if lang == 'c':
@@ -759,7 +785,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             file.write('}\n\n')
             file.close()
             file = file_store
-            file.write('  eval_rates_{}(T, pres, C, fwd_rxn_rates, rev_rates{})'.format(
+            file.write('  eval_rxn_rates_{}(T, pres, C, fwd_rxn_rates, rev_rxn_rates{})'.format(
                 rate_count - 1, ', dot_prod' if cuda_cheb else '') + utils.line_end[lang])
 
 
@@ -777,6 +803,9 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             for i in range(rate_count):
                 file.write('#include "rxn_rates_{}{}"\n'.format(i, utils.header_ext[lang]))
             file.write('\n')
+            file.write('#endif\n')
+        for i in range(rate_count):
+            write_header(lang, i)
         with open(os.path.join(path, 'rates', 'rate_list_{}'.format(lang)), 'w') as file:
             file.write(' '.join(['rxn_rates{}{}'.format(i,
                utils.file_ext[lang]) for i in range(rate_count)])

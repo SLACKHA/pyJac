@@ -304,63 +304,12 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
     filename = file_prefix + 'rxn_rates' + utils.file_ext[lang]
     file = open(os.path.join(path, filename), 'w')
 
-    line = ''
-    if lang == 'cuda': line = '__device__ '
-
-    if lang in ['c', 'cuda']:
-        file.write('#include "{}rates'.format(file_prefix)
-                    + utils.header_ext[lang] + '"\n')
-        if auto_diff:
-            file.write('#include "adept.h"\n'
-                        'using adept::adouble;\n')
-        line += ('void eval_rxn_rates (const {0} T, const {0}{1} pres,'
-                 ' const {0} * {2} C, {0} * {2} fwd_rxn_rates, '
-                 '{0} * {2} rev_rxn_rates) {{\n'.format(double_type, pres_ref,
-                 utils.restrict[lang])
-                 )
-    elif lang == 'fortran':
-        line += ('subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates,'
-                 ' rev_rxn_rates)\n\n'
-                 )
-
-        # fortran needs type declarations
-        line += ('  implicit none\n'
-                 '  double precision, intent(in) :: '
-                 'T, pres, C({})\n'.format(num_s)
-                 )
-        line += ('  double precision, intent(out) :: '
-                 'fwd_rxn_rates({}), '.format(num_r) +
-                 'rev_rxn_rates({})\n'.format(num_rev)
-                 )
-        line += ('  \n'
-                 '  double precision :: logT\n'
-                 )
-
-        kf_flag = True
-        if rev_reacs and any([not r.rev_par for r in reacs]):
-            line += '  double precision :: kf, Kc\n'
-            kf_flag = False
-
-        if any([rxn.cheb for rxn in reacs]):
-            if kf_flag:
-                line += '  double precision :: kf, Tred, Pred\n'
-                kf_flag = False
-            else:
-                line += '  double precision :: Tred, Pred\n'
-        if any([rxn.plog for rxn in reacs]):
-            if kf_flag:
-                line += '  double precision :: kf, kf2\n'
-                kf_flag = False
-            else:
-                line += '  double precision :: kf2\n'
-        line += '\n'
-    elif lang == 'matlab':
-        line += ('function [fwd_rxn_rates, rev_rxn_rates] = '
-                 'eval_rxn_rates (T, pres, C)\n\n'
-                 '  fwd_rxn_rates = zeros({},1);\n'.format(num_r) +
-                 '  rev_rxn_rates = fwd_rxn_rates;\n'
-                 )
-    file.write(line)
+    if lang == 'cuda' and len(reacs) > CUDAParams.Rates_Unroll:
+        # make paths for separate rate files
+        utils.create_dir(os.path.join(path, 'rates'))
+        rate_count = 0
+        do_unroll = True
+        next_file = 0
 
     get_array = utils.get_array
     if lang == 'cuda' and smm is not None:
@@ -368,73 +317,136 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         get_array = smm.get_array
         smm.write_init(file, indent=2)
 
-    pre = '  '
-    if lang == 'c':
-        pre += double_type + ' '
-    elif lang == 'cuda':
-        pre += 'register {} '.format(double_type)
-    line = (pre + 'logT = log(T)' +
-            utils.line_end[lang]
-            )
-    file.write(line)
-    file.write('\n')
+    def write_sub_intro(file, defines, rate_count=None):
+        pre = '  '
+        line = ''
+        if lang == 'cuda': line = '__device__ '
 
-    kf_flag = True
-    if rev_reacs and any([not r.rev_par for r in reacs]):
-        kf_flag = False
+        if lang in ['c', 'cuda']:
+            file.write('#include "{}{}rates'.format(
+                            '../' if rate_count is not None else '',
+                            file_prefix)
+                        + utils.header_ext[lang] + '"\n')
+            if auto_diff:
+                file.write('#include "adept.h"\n'
+                            'using adept::adouble;\n')
+            line += ('void eval_rxn_rates{0} (const {1} T, const {1}{2} pres,'
+                     ' const {1} * {3} C, {1} * {3} fwd_rxn_rates, '
+                     '{1} * {3} rev_rxn_rates{4}) {{\n'.format(
+                     '_{}'.format(rate_count) if rate_count is not None else '',
+                     double_type, pres_ref, utils.restrict[lang], 
+                     ', {} * {} dot_prod'.format(double_type, utils.restrict[lang]) if cuda_cheb else ''
+                     )
+                     )
+        elif lang == 'fortran':
+            line += ('subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates,'
+                     ' rev_rxn_rates)\n\n'
+                     )
 
-        if lang == 'c':
-            file.write('  {0} kf;\n'
-                       '  {0} Kc;\n'.format(double_type)
-                       )
-        elif lang == 'cuda':
-            file.write('  register double kf;\n'
-                       '  register double Kc;\n'
-                       )
+            # fortran needs type declarations
+            line += ('  implicit none\n'
+                     '  double precision, intent(in) :: '
+                     'T, pres, C({})\n'.format(num_s)
+                     )
+            line += ('  double precision, intent(out) :: '
+                     'fwd_rxn_rates({}), '.format(num_r) +
+                     'rev_rxn_rates({})\n'.format(num_rev)
+                     )
+            line += ('  \n'
+                     '  double precision :: logT\n'
+                     )
 
-    if any([rxn.cheb for rxn in reacs]):
-        # Other variables needed for Chebyshev
-        if lang == 'c':
-            if kf_flag:
-                file.write('  {0} kf;\n'.format(double_type))
+            kf_flag = True
+            if rev_reacs and any([not r.rev_par for r in reacs]):
+                line += '  double precision :: kf, Kc\n'
                 kf_flag = False
-            file.write('  {0} Tred;\n'
-                       '  {0} Pred;\n'.format(double_type))
-            file.write(utils.line_start + '{0} cheb_temp_0, cheb_temp_1'.format(
-                        double_type) + utils.line_end[lang]
-                       )
-            dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-            file.write(utils.line_start + '{0} dot_prod[{1}]'.format(double_type, dim) +
-                       utils.line_end[lang])
 
+            if any([rxn.cheb for rxn in reacs]):
+                if kf_flag:
+                    line += '  double precision :: kf, Tred, Pred\n'
+                    kf_flag = False
+                else:
+                    line += '  double precision :: Tred, Pred\n'
+            if any([rxn.plog for rxn in reacs]):
+                if kf_flag:
+                    line += '  double precision :: kf, kf2\n'
+                    kf_flag = False
+                else:
+                    line += '  double precision :: kf2\n'
+            line += '\n'
+        elif lang == 'matlab':
+            line += ('function [fwd_rxn_rates, rev_rxn_rates] = '
+                     'eval_rxn_rates (T, pres, C)\n\n'
+                     '  fwd_rxn_rates = zeros({},1);\n'.format(num_r) +
+                     '  rev_rxn_rates = fwd_rxn_rates;\n'
+                     )
+        file.write(line)
 
-        elif lang == 'cuda':
-            if kf_flag:
-                file.write('  register double kf;\n')
+        if defines:
+            if lang == 'c':
+                pre += double_type + ' '
+            elif lang == 'cuda':
+                pre += 'register {} '.format(double_type)
+            line = (pre + 'logT = log(T)' +
+                    utils.line_end[lang]
+                    )
+            file.write(line)
+            file.write('\n')
+
+            kf_flag = True
+            if rev_reacs and any([not r.rev_par for r in reacs]):
                 kf_flag = False
-            file.write('  register double Tred;\n'
-                       '  register double Pred;\n')
-            file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
-                       utils.line_end[lang]
-                       )
-            dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-            file.write(utils.line_start + 'double dot_prod[{}]'.format(dim) +
-                       utils.line_end[lang]
-                       )
+
+                if lang == 'c':
+                    file.write('  {0} kf;\n'
+                               '  {0} Kc;\n'.format(double_type)
+                               )
+                elif lang == 'cuda':
+                    file.write('  register double kf;\n'
+                               '  register double Kc;\n'
+                               )
+
+            if any([rxn.cheb for rxn in reacs]):
+                # Other variables needed for Chebyshev
+                if lang == 'c':
+                    if kf_flag:
+                        file.write('  {0} kf;\n'.format(double_type))
+                        kf_flag = False
+                    file.write('  {0} Tred;\n'
+                               '  {0} Pred;\n'.format(double_type))
+                    file.write(utils.line_start + '{0} cheb_temp_0, cheb_temp_1'.format(
+                                double_type) + utils.line_end[lang]
+                               )
+                    dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+                    file.write(utils.line_start + '{0} dot_prod[{1}]'.format(double_type, dim) +
+                               utils.line_end[lang])
 
 
-    if any([rxn.plog for rxn in reacs]):
-        # Variables needed for Plog
-        if lang == 'c':
-            if kf_flag:
-                file.write('  {0} kf;\n'.format(double_type))
-            file.write('  {0} kf2;\n'.format(double_type))
-        if lang == 'cuda':
-            if kf_flag:
-                file.write('  register double kf;\n')
-            file.write('  register double kf2;\n')
+                elif lang == 'cuda':
+                    if kf_flag:
+                        file.write('  register double kf;\n')
+                        kf_flag = False
+                    file.write('  register double Tred;\n'
+                               '  register double Pred;\n')
+                    file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
+                               utils.line_end[lang]
+                               )
 
-    file.write('\n')
+
+            if any([rxn.plog for rxn in reacs]):
+                # Variables needed for Plog
+                if lang == 'c':
+                    if kf_flag:
+                        file.write('  {0} kf;\n'.format(double_type))
+                    file.write('  {0} kf2;\n'.format(double_type))
+                if lang == 'cuda':
+                    if kf_flag:
+                        file.write('  register double kf;\n')
+                    file.write('  register double kf2;\n')
+
+            file.write('\n')
+
+    write_sub_intro(file, not do_unroll)
 
     def __get_arrays(sp, factor=1.0):
         # put together all our coeffs
@@ -460,6 +472,13 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         return lo_array, hi_array
 
     for i_rxn in range(len(reacs)):
+        if do_unroll and i_rxn == next_file:
+            file_store = file
+            file = open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
+                rate_count, utils.file_ext[lang])), 'w')
+            write_sub_intro(file, True, rate_count)
+            rate_count += 1
+            next_file = min(len(reacs), i_rxn + CUDAParams.Rates_Unroll)
         file.write(utils.line_start + utils.comment[lang] +
                     'rxn {}'.format(fwd_rxn_mapping[i_rxn]) + '\n')
         rxn = reacs[i_rxn]
@@ -733,12 +752,26 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
             file.write('\n')
 
+        if do_unroll and (i_rxn == next_file - 1 or i_rxn == len(reacs) - 1):
+            file.write('}\n\n')
+            file.close()
+            file = file_store
+            file.write('  eval_rates_{}(T, pres, C, fwd_rxn_rates, rev_rates{})'.format(
+                rate_count - 1, ', dot_prod' if cuda_cheb else '') + utils.line_end[lang])
+
+
     if lang in ['c', 'cuda']:
         file.write('} // end eval_rxn_rates\n\n')
     elif lang == 'fortran':
         file.write('end subroutine eval_rxn_rates\n\n')
     elif lang == 'matlab':
         file.write('end\n\n')
+
+    if do_unroll:
+        with open(os.path.join(path, 'rates', 'rate_list_{}'.format(lang)), 'w') as file:
+            file.write(' '.join(['rxn_rates{}{}'.format(i,
+               utils.file_ext[lang]) for i in range(rate_count)])
+               )
 
     file.close()
 

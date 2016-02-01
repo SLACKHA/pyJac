@@ -1524,6 +1524,7 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
 
 
 def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
+                    pdep_thd_eff,
                     batch_has_m, this_thd, this_troe, this_sri,
                     this_cheb, cheb_dim, this_plog, no_shared, has_nsp
                     ):
@@ -1628,7 +1629,8 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
-    if this_pdep or this_thd:
+    if (this_pdep or this_thd) and \
+            (batch_has_m or pdep_thd_eff):
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -2074,7 +2076,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
         line += 'kf = 0.0' + utils.line_end[lang]
         file.write(line)
 
-        if any(rxn.pdep or rxn.thd_body for rxn in reacs):
+        if any((rxn.pdep or rxn.thd_body) and
+               (rxn.thd_body_eff or rxn.pdep_sp) for rxn in reacs):
             line = utils.line_start
             if lang == 'c':
                 line += 'double '
@@ -2236,6 +2239,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
             # write the specific evaluator for this reaction
             file = write_sub_intro(os.path.join(path, 'jacobs'), lang,
                                    jac_count, rate_list, rev, pdep,
+                                   pdep_thd_eff,
                                    batch_has_m, thd, troe, sri, cheb,
                                    dim, plog, smm is None,
                                    has_jnplus_one

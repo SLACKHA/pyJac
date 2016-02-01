@@ -1524,7 +1524,7 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
 
 
 def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
-                    pdep_thd_eff,
+                    have_pres_mod_temp,
                     batch_has_m, this_thd, this_troe, this_sri,
                     this_cheb, cheb_dim, this_plog, no_shared, has_nsp
                     ):
@@ -1553,7 +1553,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
                     ('' if not this_rev else ', const double * {0}') +
                     ', const double, double * {0}' +
                     (', double * {0}, double* {0}' if has_nsp else '') +
-                    (', double * {0}' if cheb and lang == 'cuda' else '') +
+                    (', double * {0}' if this_cheb and lang == 'cuda' else '') +
                     ');\n'
                     '\n'
                     '#endif\n')
@@ -1581,7 +1581,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
 
     if has_nsp:
         line += ', double * {0} J_nplusone, double * {0} J_nplusjplus'
-    if cheb and lang == 'cuda':
+    if this_cheb and lang == 'cuda':
         line += ', double * {0} dot_prod'
     line += ') {{'
     file.write(line.format(utils.restrict[lang]) + '\n')
@@ -1632,8 +1632,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
     line += 'j_temp = 0.0' + utils.line_end[lang]
     file.write(line)
 
-    if (this_pdep or this_thd) and \
-            (batch_has_m or pdep_thd_eff):
+    if have_pres_mod_temp:
         line = utils.line_start
         if lang == 'c':
             line += 'double '
@@ -2214,6 +2213,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, unroll_len=-1, smm=None):
             pdep_thd_eff = False
             has_jnplus_one = False
             batch_has_m = False
+            have_pres_mod_temp = False
             for ind_next in range(rind, next_fn_index):
                 if reacs[ind_next].rev:
                     rev = True
@@ -2223,6 +2223,9 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, unroll_len=-1, smm=None):
                         pdep_thd_eff = True
                     if reacs[ind_next].pdep_sp is None:
                         batch_has_m = True
+                if ((reacs[ind_next].pdep or reacs[ind_next].thd_body) and
+                        (reacs[ind_next].thd_body_eff or reacs[ind_next].pdep_sp)):
+                    have_pres_mod_temp = True
                 if reacs[ind_next].thd_body:
                     thd = True
                 if reacs[ind_next].troe:
@@ -2244,7 +2247,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, unroll_len=-1, smm=None):
             # write the specific evaluator for this reaction
             file = write_sub_intro(os.path.join(path, 'jacobs'), lang,
                                    jac_count, rate_list, rev, pdep,
-                                   pdep_thd_eff,
+                                   have_pres_mod_temp,
                                    batch_has_m, thd, troe, sri, cheb,
                                    dim, plog, smm is None,
                                    has_jnplus_one

@@ -1744,7 +1744,7 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
     return file
 
 
-def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None):
+def write_jacobian(path, lang, specs, reacs, seen_sp, unroll_len=-1, smm=None):
     """Write Jacobian subroutine in desired language.
 
     Parameters
@@ -1759,8 +1759,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
         List of reactions in the mechanism.
     seen_sp : list of bool
         List of booleans, False if species i has an (identically) zero species rate
-    splittings : list of int
-        If not None and lang == 'cuda', this will be used
+    unroll_len : int
+        If >0 , this will be used
         to partition the sub jacobian routines
     smm : shared_memory_manager, optional
         If not None, use this to manage shared memory optimization
@@ -2202,8 +2202,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
             last_conc_temp = None
             file_store = file
             # get next index
-            next_fn_index = rind + splittings[0]
-            splittings = splittings[1:]
+            next_fn_index = rind + unroll_len
             # get flags
             rev = False
             pdep = False
@@ -2482,6 +2481,20 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, splittings=None, smm=None)
         if do_unroll and (rind == next_fn_index - 1 or rind == len(reacs) - 1):
             # switch back
             file.write('}\n\n')
+            file.close()
+            #test file size for CUDA
+            #to avoid killing nvcc
+            if jac_count == 0:
+                with open(os.path.join(path, 'jacobs',
+                            'jacob_{}{}'.format(jac_count, 
+                            utils.file_ext[lang]))) as file:
+                    num_lines = sum(1 for line in file)
+                if num_lines > CUDAParams.Max_Lines:
+                    CUDAParams.Jacob_Unroll = int(CUDAParams.Jacob_Unroll / 2)
+                    return write_jacobian(path, lang, specs, reacs, 
+                        seen_sp, CUDAParams.Jacob_Unroll, smm)
+
+
             file = file_store
             file.write('  eval_jacob_{}('.format(jac_count))
             jac_count += 1
@@ -3073,13 +3086,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
 
 
     the_len = len(reacs)
-    splittings = []
     unroll_len = (CParams.C_Jacob_Unroll if lang == 'c'
                   else CUDAParams.Jacob_Unroll
                   )
-    while the_len > 0:
-        splittings.append(min(unroll_len, the_len))
-        the_len -= unroll_len
 
     if lang == 'cuda':
         CUDAParams.write_launch_bounds(build_path, num_blocks, num_threads,
@@ -3134,7 +3143,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
     if skip_jac == False:
         # write Jacobian subroutine
         touched = write_jacobian(build_path, lang, specs,
-                                         reacs, seen_sp, splittings, smm
+                                         reacs, seen_sp, unroll_len, smm
                                          )
 
         write_sparse_multiplier(build_path, lang, touched, len(specs))

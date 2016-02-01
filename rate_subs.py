@@ -322,6 +322,9 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         line = ''
         if lang == 'cuda': line = '__device__ '
 
+        if not defines:
+            file.write('include "rates/rates_include{}\n"'.format(utils.header_ext[lang]))
+
         if lang in ['c', 'cuda']:
             file.write('#include "{}{}rates'.format(
                             '../' if rate_count is not None else '',
@@ -768,6 +771,12 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         file.write('end\n\n')
 
     if do_unroll:
+        with open(os.path.join(path, 'rates', 'rates_include' + utils.header_ext[lang]), 'w') as file:
+            file.write('#ifndef RATES_INCLUDE_{}\n'.format(lang))
+            file.write('#define RATES_INCLUDE_{}\n'.format(lang))
+            for i in range(rate_count):
+                file.write('#include "rxn_rates_{}{}"\n'.format(i, utils.header_ext[lang]))
+            file.write('\n')
         with open(os.path.join(path, 'rates', 'rate_list_{}'.format(lang)), 'w') as file:
             file.write(' '.join(['rxn_rates{}{}'.format(i,
                utils.file_ext[lang]) for i in range(rate_count)])

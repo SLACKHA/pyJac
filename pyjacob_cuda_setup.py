@@ -80,7 +80,7 @@ if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_cuda'):
 
 # Look for file with list of Jacobian files
 if os.path.exists('out/rates') and os.path.isfile('out/rates/rate_list_cuda'):
-    with open('out/jacobs/rate_list_cuda', 'r') as f:
+    with open('out/rates/rate_list_cuda', 'r') as f:
         line = f.readline()
     files = line.split()
     sources += ['out/rates/' + f for f in files]

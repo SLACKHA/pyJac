@@ -283,13 +283,12 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
     cuda_cheb = any(rxn.cheb for rxn in reacs) and lang == 'cuda'
-    file.write('{0}void eval_rxn_rates (const {1},'
-               ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3}' +
-               (', {1} * {3}' if cuda_cheb else '') + ');\n'
+    line = ('{0}void eval_rxn_rates (const {1},'
+               ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3}'
+               + (', {1} * {3}' if cuda_cheb else '') +');\n'
                '{0}void eval_spec_rates (const {1} * {3},'
-               ' const {1} * {3}, const {1} * {3}, {1} * {3}, {1} * {3});\n'.format(
-                        pre, double_type, pres_ref, utils.restrict[lang])
-               )
+               ' const {1} * {3}, const {1} * {3}, {1} * {3}, {1} * {3});\n')
+    file.write(line.format(pre, double_type, pres_ref, utils.restrict[lang]))
 
     if pdep_reacs:
         file.write('{0}void get_rxn_pres_mod (const {1}, const '
@@ -304,6 +303,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
     filename = file_prefix + 'rxn_rates' + utils.file_ext[lang]
     file = open(os.path.join(path, filename), 'w')
 
+    do_unroll = False
     if lang == 'cuda' and len(reacs) > CUDAParams.Rates_Unroll:
         # make paths for separate rate files
         utils.create_dir(os.path.join(path, 'rates'))

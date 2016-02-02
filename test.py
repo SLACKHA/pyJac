@@ -523,7 +523,15 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         except:
             pass
         try:
+            os.remove(os.path.join(build_dir, 'jacobs/rate_list_c'))
+        except:
+            pass
+        try:
             os.remove(os.path.join(build_dir, 'jacobs/jac_list_cuda'))
+        except:
+            pass
+        try:
+            os.remove(os.path.join(build_dir, 'jacobs/rate_list_cuda'))
         except:
             pass
 

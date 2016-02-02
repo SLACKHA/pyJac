@@ -338,10 +338,12 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                     pre, double_type, pres_ref, utils.restrict[lang], rate_count))
             file.write('#endif\n')
 
-    def write_sub_intro(file, defines, rate_count=None):
+    def write_sub_intro(file, defines, start, end, rate_count=None):
         pre = '  '
         line = ''
         if lang == 'cuda': line = '__device__ '
+
+        my_reacs = reacs[start:end]
 
         if not defines:
             file.write('#include "rates/rates_include{}"\n'.format(utils.header_ext[lang]))
@@ -381,17 +383,17 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                      )
 
             kf_flag = True
-            if rev_reacs and any([not r.rev_par for r in reacs]):
+            if rev_reacs and any([not r.rev_par for r in my_reacs]):
                 line += '  double precision :: kf, Kc\n'
                 kf_flag = False
 
-            if any([rxn.cheb for rxn in reacs]):
+            if any([rxn.cheb for rxn in my_reacs]):
                 if kf_flag:
                     line += '  double precision :: kf, Tred, Pred\n'
                     kf_flag = False
                 else:
                     line += '  double precision :: Tred, Pred\n'
-            if any([rxn.plog for rxn in reacs]):
+            if any([rxn.plog for rxn in my_reacs]):
                 if kf_flag:
                     line += '  double precision :: kf, kf2\n'
                     kf_flag = False
@@ -423,7 +425,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             file.write('\n')
 
             kf_flag = True
-            if rev_reacs and any([not r.rev_par for r in reacs]):
+            if rev_reacs and any([not r.rev_par for r in my_reacs]):
                 kf_flag = False
 
                 if lang == 'c':
@@ -435,7 +437,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                                '  register double Kc;\n'
                                )
 
-            if any([rxn.cheb for rxn in reacs]):
+            if any([rxn.cheb for rxn in my_reacs]):
                 # Other variables needed for Chebyshev
                 if lang == 'c':
                     if kf_flag:
@@ -446,7 +448,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                     file.write(utils.line_start + '{0} cheb_temp_0, cheb_temp_1'.format(
                                 double_type) + utils.line_end[lang]
                                )
-                    dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+                    dim = max(rxn.cheb_n_temp for rxn in my_reacs if rxn.cheb)
                     file.write(utils.line_start + '{0} dot_prod[{1}]'.format(double_type, dim) +
                                utils.line_end[lang])
 
@@ -462,7 +464,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                                )
 
 
-            if any([rxn.plog for rxn in reacs]):
+            if any([rxn.plog for rxn in my_reacs]):
                 # Variables needed for Plog
                 if lang == 'c':
                     if kf_flag:
@@ -475,7 +477,8 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
             file.write('\n')
 
-    write_sub_intro(file, not do_unroll)
+    rrange = (0, len(reacs)) if not do_unroll else (0, CUDAParams.Rates_Unroll) 
+    write_sub_intro(file, not do_unroll, rrange[0], rrange[1])
 
     def __get_arrays(sp, factor=1.0):
         # put together all our coeffs
@@ -505,9 +508,9 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             file_store = file
             file = open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
                 rate_count, utils.file_ext[lang])), 'w')
-            write_sub_intro(file, True, rate_count)
-            rate_count += 1
             next_file = min(len(reacs), i_rxn + CUDAParams.Rates_Unroll)
+            write_sub_intro(file, True, i_rxn + 1, next_file, rate_count)
+            rate_count += 1
         file.write(utils.line_start + utils.comment[lang] +
                     'rxn {}'.format(fwd_rxn_mapping[i_rxn]) + '\n')
         rxn = reacs[i_rxn]
@@ -807,7 +810,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         for i in range(rate_count):
             write_header(lang, i)
         with open(os.path.join(path, 'rates', 'rate_list_{}'.format(lang)), 'w') as file:
-            file.write(' '.join(['rxn_rates{}{}'.format(i,
+            file.write(' '.join(['rxn_rates_{}{}'.format(i,
                utils.file_ext[lang]) for i in range(rate_count)])
                )
 

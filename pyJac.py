@@ -2206,7 +2206,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                     file_store = file
                 retry = False
                 # get next index
-                next_fn_index = rind + unroll_len
+                next_fn_index = min(rind + unroll_len, len(reacs))
                 # get flags
                 rev = False
                 pdep = False

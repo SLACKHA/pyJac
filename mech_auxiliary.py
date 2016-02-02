@@ -338,14 +338,14 @@ void eval_jacob(const double t, const double p, const double* y,
                        '{\n'
                        '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
                        '  //init vectors\n'
-                       '  cudaErrorCheck( cudaMalloc(y_device, padded * NSP * sizeof(double)) );\n'
-                       '  cudaErrorCheck( cudaMalloc(var_device, padded * sizeof(double)) );\n'
+                       '  cudaOutOfMem( cudaMalloc(y_device, padded * NSP * sizeof(double)) );\n'
+                       '  cudaOutOfMem( cudaMalloc(var_device, padded * sizeof(double)) );\n'
                        '  // Allocate storage for the device struct\n'
-                       '  cudaErrorCheck( cudaMalloc(d_mem, sizeof(mechanism_memory)) );\n'
+                       '  cudaOutOfMem( cudaMalloc(d_mem, sizeof(mechanism_memory)) );\n'
                        '  //allocate the device arrays on the host pointer\n'
                       )
             for array, size in gpu_memory.iteritems():
-                file.write('{}cudaErrorCheck( cudaMalloc(&((*h_mem)->{}), {} * padded * sizeof(double)) ){}'.format(
+                file.write('{}cudaOutOfMem( cudaMalloc(&((*h_mem)->{}), {} * padded * sizeof(double)) ){}'.format(
                   utils.line_start, array, size, utils.line_end[lang]))
             file.write(utils.line_start + 'cudaErrorCheck( '
               'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 
@@ -386,6 +386,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        )
 
             file.write('#define cudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }\n'
+                       '#define cudaOutOfMem(ans) { if ((ans) == cudaErrorMemoryValueTooLarge) return -1; }\n'
                        'inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)\n'
                        '{\n'
                        '    if (code != cudaSuccess)\n'

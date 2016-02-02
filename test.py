@@ -519,19 +519,19 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     if generate_jacob:
         #remove the old jaclist
         try:
-            os.remove(os.path.join(build_dir, 'jacobs/jac_list_c'))
+            os.remove(os.path.join(build_dir, 'jacobs', 'jac_list_c'))
         except:
             pass
         try:
-            os.remove(os.path.join(build_dir, 'jacobs/rate_list_c'))
+            os.remove(os.path.join(build_dir, 'jacobs', 'rate_list_c'))
         except:
             pass
         try:
-            os.remove(os.path.join(build_dir, 'jacobs/jac_list_cuda'))
+            os.remove(os.path.join(build_dir, 'jacobs', 'jac_list_cuda'))
         except:
             pass
         try:
-            os.remove(os.path.join(build_dir, 'jacobs/rate_list_cuda'))
+            os.remove(os.path.join(build_dir, 'rates', 'rate_list_cuda'))
         except:
             pass
 

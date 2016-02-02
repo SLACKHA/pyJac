@@ -12,8 +12,8 @@ class JacRatesCacheStrat:
 JacRateStrat = JacRatesCacheStrat.Include
 ResetOnJacUnroll = True
 
-Jacob_Unroll = 20
-Jacob_Spec_Unroll = 20
+Jacob_Unroll = 40
+Jacob_Spec_Unroll = 40
 Rates_Unroll = 250
 Max_Lines = 10000
 Max_Spec_Lines = 5000

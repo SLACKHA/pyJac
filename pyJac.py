@@ -1774,7 +1774,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     elif lang == 'c':
         do_unroll = len(reacs) > CParams.Jacob_Unroll
         unroll_len = CParams.Jacob_Unroll
-        limit = CUDAParams.Max_Lines
+        limit = CParams.Max_Lines
     if do_unroll:
         # make paths for separate jacobian files
         utils.create_dir(os.path.join(path, 'jacobs'))
@@ -2640,8 +2640,9 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     # need to finish the dYk/dYj's
     write_dy_y_finish_comment(file, lang)
     unroll_len = (CParams.Jacob_Spec_Unroll if lang == 'c'
-              else CUDAParams.Jacob_Spec_Unroll
-              )
+                  else CUDAParams.Jacob_Spec_Unroll)
+    limit = (CParams.Max_Spec_Lines if lang == 'c'
+                  else CUDAParams.Max_Spec_Lines)
     
     success = False
     while not success:

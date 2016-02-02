@@ -16,6 +16,7 @@ Jacob_Unroll = 20
 Jacob_Spec_Unroll = 20
 Rates_Unroll = 250
 Max_Lines = 10000
+Max_Spec_Lines = 5000
 
 
 def get_L1_size(L1_Preferred):

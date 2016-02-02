@@ -198,6 +198,7 @@ void run(int num, const double* pres, const double* mass_frac,
 		free(jac_temp);
 	}
 	else {
+		pitch_host = num * sizeof(double);
 
 		//copy over state data
 		cudaErrorCheck( cudaMemcpy(dPres, pres, pitch_host, cudaMemcpyHostToDevice) );

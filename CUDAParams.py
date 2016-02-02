@@ -13,8 +13,9 @@ JacRateStrat = JacRatesCacheStrat.Include
 ResetOnJacUnroll = True
 
 Jacob_Unroll = 20
-Rates_Unroll = 500
-Max_Lines = 20000
+Jacob_Spec_Unroll = 20
+Rates_Unroll = 250
+Max_Lines = 10000
 
 
 def get_L1_size(L1_Preferred):

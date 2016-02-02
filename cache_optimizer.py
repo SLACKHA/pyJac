@@ -14,8 +14,6 @@ import os
 from operator import itemgetter
 
 # Local imports
-from CUDAParams import Jacob_Unroll, ResetOnJacUnroll
-from CParams import C_Jacob_Unroll
 import utils
 import numpy as np
 

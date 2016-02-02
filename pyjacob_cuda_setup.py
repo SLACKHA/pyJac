@@ -71,20 +71,20 @@ sources = ['pyjacob_cuda_wrapper.pyx',
 includes = ['out/', './']
 
 # Look for file with list of Jacobian files
-if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_cuda'):
-    with open('out/jacobs/jac_list_cuda', 'r') as f:
-        line = f.readline()
-    files = line.split()
-    sources += ['out/jacobs/' + f for f in files]
-    includes += ['out/jacobs/']
-
-# Look for file with list of Jacobian files
 if os.path.exists('out/rates') and os.path.isfile('out/rates/rate_list_cuda'):
     with open('out/rates/rate_list_cuda', 'r') as f:
         line = f.readline()
     files = line.split()
     sources += ['out/rates/' + f for f in files]
     includes += ['out/rates/']
+
+# Look for file with list of Jacobian files
+if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_cuda'):
+    with open('out/jacobs/jac_list_cuda', 'r') as f:
+        line = f.readline()
+    files = line.split()
+    sources += ['out/jacobs/' + f for f in files]
+    includes += ['out/jacobs/']
 
 ext = Extension('cu_pyjacob',
                 sources=sources,

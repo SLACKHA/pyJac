@@ -27,7 +27,7 @@ ext = [Extension("adjacob",
      sources=sources,
      include_dirs=includes + [numpy.get_include()],
      extra_compile_args=['-frounding-math', '-fsignaling-nans', 
-                         '-DADEPT STACK THREAD UNSAFE', '-fopenmp'],
+                         '-DADEPT_STACK_THREAD_UNSAFE', '-fopenmp'],
      language='c++',
      libraries=['adept'],
      extra_link_args=['-fopenmp']

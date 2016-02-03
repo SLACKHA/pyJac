@@ -213,6 +213,8 @@ def performance_tester():
                     mechanism_list[name] = {}
                     mechanism_list[name]['mech'] = f
                     mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
+                    gas = ct.Solution(os.path.isfile(os.path.join(pdir, name, f)))
+                    mechanism_list[name]['ns'] = gas.n_species
 
                     thermo = next((tf for tf in files if 'therm' in tf), None)
                     if thermo is not None:
@@ -233,7 +235,7 @@ def performance_tester():
 
     #langs=['c', 'tchem']
     langs = ['c', 'cuda', 'tchem']
-    for mech_name, mech_info in mechanism_list.iteritems():
+    for mech_name, mech_info in sorted(mechanism_list.items(), x[1]['ns']):
         #get the cantera object
         gas = ct.Solution(os.path.join(home, pdir, mech_name, mech_info['mech']))
         pmod = any([is_pdep(rxn) for rxn in gas.reactions()])

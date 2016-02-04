@@ -213,7 +213,7 @@ def performance_tester():
                     mechanism_list[name] = {}
                     mechanism_list[name]['mech'] = f
                     mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
-                    gas = ct.Solution(os.path.isfile(os.path.join(pdir, name, f)))
+                    gas = ct.Solution(os.path.join(pdir, name, f))
                     mechanism_list[name]['ns'] = gas.n_species
 
                     thermo = next((tf for tf in files if 'therm' in tf), None)
@@ -226,7 +226,7 @@ def performance_tester():
         raise SystemError('TCHEM_HOME environment variable not set.')
 
 
-    cache_opt_base = [True, False]
+    cache_opt_base = [False, True]
     shared_base = [True, False]
     finite_diffs_base = [False, True]
 
@@ -234,8 +234,7 @@ def performance_tester():
     gpu_repeats = 10
 
     #langs=['c', 'tchem']
-    langs = ['c', 'cuda', 'tchem']
-    for mech_name, mech_info in sorted(mechanism_list.items(), x[1]['ns']):
+    for mech_name, mech_info in sorted(mechanism_list.items(), key=lambda x:x[1]['ns']):
         #get the cantera object
         gas = ct.Solution(os.path.join(home, pdir, mech_name, mech_info['mech']))
         pmod = any([is_pdep(rxn) for rxn in gas.reactions()])

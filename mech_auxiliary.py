@@ -192,16 +192,15 @@ void eval_jacob(const double t, const double p, const double* y,
                    )
         file.write('{\n')
         if lang == 'cuda':
-            file.write('    int grid_size = ceil(((double)NUM) / ((double)TARGET_BLOCK_SIZE));\n')
-            file.write('    if (grid_size == 0)\n'
-                       '        grid_size = 1;\n')
             # do cuda mem init and copying
             file.write(
+                'int padded = -1;\n'
                 '#ifdef CONP\n'
-                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, h_mem, d_mem, d_y, d_pres);\n'
+                '    initialize_gpu_memory(NUM, h_mem, d_mem, d_y, d_pres);\n'
                 '#elif CONV\n'
-                '    int padded = initialize_gpu_memory(NUM, TARGET_BLOCK_SIZE, grid_size, h_mem, d_mem, d_y, d_rho);\n'
+                '    initialize_gpu_memory(NUM, h_mem, d_mem, d_y, d_rho);\n'
                 '#endif\n'
+                'exit(-1);\n'
             )
         else:
             file.write('    int padded = NUM;\n')
@@ -268,36 +267,36 @@ void eval_jacob(const double t, const double p, const double* y,
             )
         if lang == 'cuda':
             file.write(
-                '    cudaMallocHost((void**)y_host, padded * NSP * sizeof(double));\n'
+                '    cudaMallocHost((void**)y_host, NUM * NSP * sizeof(double));\n'
                 '#ifdef CONP\n'
-                '    cudaMallocHost((void**)pres_host, padded * sizeof(double));\n'
+                '    cudaMallocHost((void**)pres_host, NUM * sizeof(double));\n'
                 '#elif defined(CONV)\n'
-                '    cudaMallocHost((void**)rho_host, padded * sizeof(double));\n'
+                '    cudaMallocHost((void**)rho_host, NUM * sizeof(double));\n'
                 '#endif\n'
             )
         else:
             file.write(
-                '    (*y_host) = malloc(padded * NSP * sizeof(double));\n'
+                '    (*y_host) = malloc(NUM * NSP * sizeof(double));\n'
                 '#ifdef CONP\n'
-                '    (*pres_host) = malloc(padded * sizeof(double));\n'
+                '    (*pres_host) = malloc(NUM * sizeof(double));\n'
                 '#elif defined(CONV)\n'
-                '    (*rho_host) = malloc(padded * sizeof(double));\n'
+                '    (*rho_host) = malloc(NUM * sizeof(double));\n'
                 '#endif\n'
             )
         file.write(
             '    //load temperature and mass fractions for all threads (cells)\n'
-            '    for (int i = 0; i < padded; ++i) {\n'
+            '    for (int i = 0; i < NUM; ++i) {\n'
             '        (*y_host)[i] = T0;\n'
             '        //loop through species\n'
             '        for (int j = 1; j < NSP; ++j) {\n'
-            '            (*y_host)[i + padded * j] = Yi[j - 1];\n'
+            '            (*y_host)[i + NUM * j] = Yi[j - 1];\n'
             '        }\n'
             '    }\n\n'
             '#ifdef CONV\n'
             '    //calculate density\n'
             '    double rho = getDensity(T0, P, Xi);\n'
             '#endif\n\n'
-            '    for (int i = 0; i < padded; ++i) {\n'
+            '    for (int i = 0; i < NUM; ++i) {\n'
             '#ifdef CONV\n'
             '        (*rho_host)[i] = rho;\n'
             '#elif defined(CONP)\n'
@@ -306,7 +305,7 @@ void eval_jacob(const double t, const double p, const double* y,
             '    }\n'
         )
         if lang == 'cuda':  # copy memory over
-            file.write('    return padded;\n')
+            file.write('    return NUM;\n')
 
         file.write('}\n\n')
 
@@ -320,8 +319,9 @@ void eval_jacob(const double t, const double p, const double* y,
                        '#include "gpu_macros.cuh"\n'
                        '\n'
                        )
-            file.write('int initialize_gpu_memory(int, int, int, '
-                       'mechanism_memory**, mechanism_memory**, double**, double**);\n'
+            file.write('void initialize_gpu_memory(int, mechanism_memory**,'
+                       ' mechanism_memory**, double**, double**);\n'
+                       'size_t get_required_size();\n'
                        'void free_gpu_memory(mechanism_memory**, mechanism_memory**, double**, double**);\n'
                        '\n'
                        '#endif\n')
@@ -329,24 +329,40 @@ void eval_jacob(const double t, const double p, const double* y,
         with open(os.path.join(path, 'gpu_memory.cu'), 'w') as file:
             init_template = 'initialize_pointer(&((*d_mem)->{}), {} * padded)'
             free_template = 'cudaErrorCheck(cudaFree({}))'
+            err_check = '  cudaErrorCheck( {} );\n'
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
-            file.write('int initialize_gpu_memory(int NUM, int block_size, int grid_size, '
-                       'mechanism_memory** h_mem, mechanism_memory** d_mem, '
+            file.write('size_t get_required_size() {\n'
+                       '  //returns the total required size for the mechanism per thread\n'
+                       '  size_t mech_size = 0;\n')
+            for array, size in gpu_memory.iteritems():
+                file.write('  //{}\n'.format(array))
+                file.write('  mech_size += {};\n'.format(size))
+            file.write('  //y_device\n')
+            file.write('  mech_size += NSP;\n')
+            file.write('  //pres_device\n')
+            file.write('  mech_size += 1;\n')
+            file.write('  return mech_size * sizeof(double);\n')
+            file.write('}\n')
+
+            file.write('void initialize_gpu_memory(int padded, mechanism_memory** h_mem,'
+                       ' mechanism_memory** d_mem, '
                        'double** y_device, double** var_device)\n'
                        '{\n'
-                       '  int padded = grid_size * block_size > NUM ? grid_size * block_size : NUM;\n'
                        '  //init vectors\n'
-                       '  cudaOutOfMem( cudaMalloc(y_device, padded * NSP * sizeof(double)) );\n'
-                       '  cudaOutOfMem( cudaMalloc(var_device, padded * sizeof(double)) );\n'
-                       '  // Allocate storage for the device struct\n'
-                       '  cudaOutOfMem( cudaMalloc(d_mem, sizeof(mechanism_memory)) );\n'
-                       '  //allocate the device arrays on the host pointer\n'
-                      )
+                       )
+            file.write('  cudaError_t result;\n')
+            file.write(err_check.format('cudaMalloc(y_device, padded * NSP * sizeof(double))'))
+            file.write(err_check.format('cudaMalloc(var_device, padded * sizeof(double))'))
+            file.write('  // Allocate storage for the device struct\n')
+            file.write(err_check.format('cudaMalloc(d_mem, sizeof(mechanism_memory))'))
+            file.write('  //allocate the device arrays on the host pointer\n')
+
             for array, size in gpu_memory.iteritems():
-                file.write('{}cudaOutOfMem( cudaMalloc(&((*h_mem)->{}), {} * padded * sizeof(double)) ){}'.format(
-                  utils.line_start, array, size, utils.line_end[lang]))
+                file.write(err_check.format(
+                  'cudaMalloc(&((*h_mem)->{}), {} * padded * sizeof(double))'.format(array, size)))
+
             file.write(utils.line_start + 'cudaErrorCheck( '
               'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 
               utils.line_end[lang])
@@ -358,7 +374,6 @@ void eval_jacob(const double t, const double p, const double* y,
                   + utils.line_end[lang])
 
             file.write(
-                       '  return padded;\n'
                        '}\n'
                        )
             file.write('void free_gpu_memory(mechanism_memory** h_mem, mechanism_memory** d_mem, double** d_y, double** d_var)\n'
@@ -386,7 +401,6 @@ void eval_jacob(const double t, const double p, const double* y,
                        )
 
             file.write('#define cudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }\n'
-                       '#define cudaOutOfMem(ans) { if ((ans) == cudaErrorMemoryValueTooLarge) return -1; }\n'
                        'inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)\n'
                        '{\n'
                        '    if (code != cudaSuccess)\n'

@@ -111,7 +111,7 @@ def check_file(filename):
             return 0
 
 def getf(x):
-    return x[x.rindex('jacobs') + len('jacobs') + 1:] if 'jacobs' in x else x
+    return os.path.basename(x)
 
 def compiler(fstruct):
     args = [cmd_compile[fstruct.lang]]
@@ -182,20 +182,18 @@ def performance_tester():
             files += ['fd_jacob']
         else:
             files += ['jacob']
-            if gpu:
-                ext = utils.file_ext['cuda']
-                flist = 'jac_list_cuda'
-            else:
-                ext = utils.file_ext['c']
-                flist = 'jac_list_c'
-            try:
-                with open(os.path.join(build_dir, 'jacobs', flist)) as file:
-                    vals = file.readline().strip().split(' ')
-                    vals = [os.path.join('jacobs', f[:f.index(ext)]) for f in vals]
-                    files += vals
-                    i_dirs.append(os.path.join(build_dir, 'jacobs'))
-            except:
-                pass
+            test_lang = 'c' if not gpu else 'cuda'
+            flists = [('rates', 'rate_list_{}'), ('jacobs', 'jac_list_{}')]
+            for flist in flists:
+                try:
+                    with open(os.path.join(build_dir, flist[0], flist[1].format(test_lang))) as file:
+                        vals = file.readline().strip().split(' ')
+                        vals = [os.path.join(flist[0],
+                                    f[:f.index(utils.file_ext[test_lang])]) for f in vals]
+                        files += vals
+                        i_dirs.append(os.path.join(build_dir, flist[0]))
+                except:
+                    pass
         if gpu:
             files += ['gpu_memory']
 

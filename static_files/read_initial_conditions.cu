@@ -6,18 +6,8 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
- int read_initial_conditions(const char* filename, int NUM, int block_size, double** y_host, double** y_device, double** variable_host, double** variable_device, mechanism_memory** h_mem, mechanism_memory** d_mem, int device=0) {
-    //bytes per thread
-    size_t mech_size = get_required_size();
-    cudaDeviceProp props;
-    cudaErrorCheck( cudaGetDeviceProperties(&props, device) );
-    //memory size in bytes
-    size_t mem_avail = props.totalGlobalMem;
-    //conservatively estimate the maximum allowable threads
-    int max_threads = int(floor(0.8 * float(mech_size) / float(mem_avail)));
-    int padded = max_threads * block_size;
-
-    initialize_gpu_memory(padded, h_mem, d_mem, y_device, variable_device);
+ int read_initial_conditions(const char* filename, int NUM, int block_size, double** y_host, double** variable_host)
+ {    
     (*y_host) = (double*)malloc(NUM * NN * sizeof(double));
     (*variable_host) = (double*)malloc(NUM * sizeof(double));
     FILE *fp = fopen (filename, "rb");

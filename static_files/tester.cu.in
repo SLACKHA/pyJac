@@ -12,7 +12,7 @@
 #include "gpu_memory.cuh"
 #include "launch_bounds.cuh"
 
-int read_initial_conditions(const char*, int, double**, double**, double**, double**, mechanism_memory**, mechanism_memory**);
+int read_initial_conditions(const char*, int, double**, double**);
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 #define GRID_SIZE (blockDim.x * gridDim.x)
@@ -33,6 +33,22 @@ inline void memcpy2D_in(double* dst, const int pitch_dst, double const * src, co
         dst += pitch_dst;
         src += pitch_src;
     }
+}
+
+int init_gpu_mem(double** y_device, double** var_device, mechanism_memory** h_mem, mechanism_memory**d_mem)
+{
+    //bytes per thread
+    size_t mech_size = get_required_size();
+    cudaDeviceProp props;
+    cudaErrorCheck( cudaGetDeviceProperties(&props, device) );
+    //memory size in bytes
+    size_t mem_avail = props.totalGlobalMem;
+    //conservatively estimate the maximum allowable threads
+    int max_threads = int(floor(0.8 * float(mem_avail) / float(mech_size)));
+    int padded = max_threads * block_size;
+
+    initialize_gpu_memory(padded, h_mem, d_mem, y_device, var_device);
+    return padded;
 }
 
 int main (int argc, char *argv[])
@@ -56,7 +72,8 @@ int main (int argc, char *argv[])
     double* var_host;
 
     //padded is the number of threads allowable
-    int padded = read_initial_conditions("$datafile", num_odes, &y_host, &y_device, &var_host, &var_device, &h_mem, &d_mem);
+    read_initial_conditions("$datafile", num_odes, &y_host, &var_host);
+    int padded = init_gpu_mem(&y_device, &var_device, &h_mem, &d_mem);
     int g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
     if (g_num == 0)
         g_num = 1;

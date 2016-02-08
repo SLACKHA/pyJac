@@ -79,7 +79,7 @@ double* fwd_temp = 0;
 #if PRES_MOD_RATES > 0
 	double* pres_mod_temp = 0;
 #endif
-double* spec_rates = 0;
+double* spec_temp = 0;
 double* dy_temp = 0;
 double* jac_temp = 0;
 
@@ -89,12 +89,12 @@ int init()
 	//bytes per thread
     size_t mech_size = get_required_size();
     cudaDeviceProp props;
-    cudaErrorCheck( cudaGetDeviceProperties(&props, device) );
+    cudaErrorCheck( cudaGetDeviceProperties(&props, 0) );
     //memory size in bytes
     size_t mem_avail = props.totalGlobalMem;
     //conservatively estimate the maximum allowable threads
     int max_threads = int(floor(0.8 * float(mem_avail) / float(mech_size)));
-    int padded = max_threads * block_size;
+    int padded = max_threads * TARGET_BLOCK_SIZE;
 
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
 
@@ -119,7 +119,7 @@ int init()
 void cleanup()
 {
 	free(pres_temp);
-	free(mass_temp);
+	free(y_temp);
 	free(conc_temp);
 	free(fwd_temp);
 #if REV_RATES != 0
@@ -140,7 +140,7 @@ void cleanup()
 	cudaErrorCheck( cudaDeviceReset() );
 }
 
-bool run(int num, int padded, int offset, const double* pres, const double* mass_frac,
+void run(int num, int padded, int offset, const double* pres, const double* mass_frac,
 			double* conc, double* fwd_rxn_rates, double* rev_rxn_rates,
 			double* pres_mod, double* spec_rates, double* dy, double* jac)
 {	
@@ -149,14 +149,14 @@ bool run(int num, int padded, int offset, const double* pres, const double* mass
 
 	//copy over our data
 	memcpy(pres_temp, &pres[offset], pitch_host);
-	cudaErrorCheck( cudaMemcpy(dPres, pres_temp, pitch_host, cudaMemcpyHostToDevice) );
-	memcpy2D_in(mass_temp, padded, mass_frac, num, offset, pitch_host, NSP);
-	cudaErrorCheck( cudaMemcpy2D(dMass, pitch_device, mass_temp,
+	cudaErrorCheck( cudaMemcpy(var_device, pres_temp, pitch_host, cudaMemcpyHostToDevice) );
+	memcpy2D_in(y_temp, padded, mass_frac, num, offset, pitch_host, NSP);
+	cudaErrorCheck( cudaMemcpy2D(y_device, pitch_device, y_temp,
 					pitch_device, pitch_host, NSP, cudaMemcpyHostToDevice) );
 
 	//eval dydt
 	//this gets us all arrays but the Jacobian
-	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num_cond, dPres, dMass, h_mem->dy, d_mem);
+	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, var_device, y_device, h_mem->dy, d_mem);
 
 	check_err();
 
@@ -190,7 +190,7 @@ bool run(int num, int padded, int offset, const double* pres, const double* mass
 	memcpy2D_out(dy, num, dy_temp, padded, offset, pitch_host, NSP);
 
 	//jacobian
-	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num_cond, dPres, dMass, h_mem->jac, d_mem);
+	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, var_device, y_device, h_mem->jac, d_mem);
 
 	check_err();
 

@@ -83,7 +83,7 @@ double* spec_temp = 0;
 double* dy_temp = 0;
 double* jac_temp = 0;
 
-int init()
+int init(int num)
 {
 	//determine maximum # of threads for this mechanism
 	//bytes per thread
@@ -95,9 +95,15 @@ int init()
     //conservatively estimate the maximum allowable threads
     int max_threads = int(floor(0.8 * float(mem_avail) / float(mech_size)));
     int padded = max_threads * TARGET_BLOCK_SIZE;
+    if (padded > num)
+    {
+    	int num_blocks = int(ceil(float(num) / float(TARGET_BLOCK_SIZE)));
+    	padded = num_blocks * TARGET_BLOCK_SIZE;
+    }
 
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
 
+    int pitch_device = padded * sizeof(double);
     //now the temp memory on the cpu
 	pres_temp = (double*)malloc(pitch_device);
 	y_temp = (double*)malloc(NSP * pitch_device);
@@ -144,6 +150,7 @@ void run(int num, int padded, int offset, const double* pres, const double* mass
 			double* conc, double* fwd_rxn_rates, double* rev_rxn_rates,
 			double* pres_mod, double* spec_rates, double* dy, double* jac)
 {	
+	int grid_num = padded / num;
 	int pitch_host = num * sizeof(double);
 	int pitch_device = padded * sizeof(double);
 

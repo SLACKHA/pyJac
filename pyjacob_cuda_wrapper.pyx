@@ -8,12 +8,12 @@ cdef extern from "pyjacob.cuh":
     void run(int num, int padded, int offset, const double* pres, const double* mass_frac,
             double* conc, double* fwd_rxn_rates, double* rev_rxn_rates,
             double* pres_mod, double* spec_rates, double* dy, double* jac);
-    int init();
+    int init(int);
     void cleanup();
 
 @cython.boundscheck(False)
 def py_cuinit(int num):
-    return init()
+    return init(num)
 
 @cython.boundscheck(False)
 def py_cuclean():

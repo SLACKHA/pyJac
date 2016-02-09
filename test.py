@@ -334,8 +334,14 @@ class cpyjac_evaluator(object):
     def update(self, index):
         self.index = index
 
+    def clean(self):
+        pass
+
 
 class cupyjac_evaluator(cpyjac_evaluator):
+    def clean(self):
+        self.pyjac.py_cuclean()
+
     def update(self, index):
         self.index = index
         if index % self.num_cond == 0 and index != 0:
@@ -355,7 +361,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
     def __init__(self, build_dir, gas, state_data):
         super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
 
-        self.num_cond = self.pyjac.cu_init()
+        self.num_cond = self.pyjac.py_cuinit(state_data.shape[0])
 
         def czeros(shape):
             arr = np.zeros(shape)
@@ -387,7 +393,8 @@ class cupyjac_evaluator(cpyjac_evaluator):
         pres = self.cuda_state[:, 1].flatten(order='c')
         y = self.cuda_state[:self.num_cond, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
                                                                    .astype(np.dtype('d'), order='c')
-        success = self.pyjac.py_cuall(self.num_cond, self.num_cond, 0, pres, y, test_conc, test_fwd_rates,
+        success = self.pyjac.py_cuall(np.min(self.cuda_state.shape[0], self.num_cond)
+                        self.num_cond, 0, pres, y, test_conc, test_fwd_rates,
                         test_rev_rates, test_pres_mod, test_spec_rates,
                         test_dydt, test_jacob)
 
@@ -990,6 +997,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
             err_jac_tchem[i] = err
 
 
+    pyjacob.clean()
     # Save all error arrays
     np.savez('error_arrays.npz',
              err_dydt=err_dydt, err_jac_norm=err_jac_norm,

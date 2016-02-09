@@ -93,14 +93,12 @@ int init(int num)
     //memory size in bytes
     size_t mem_avail = props.totalGlobalMem;
     //conservatively estimate the maximum allowable threads
-    int max_threads = int(floor(0.8 * float(mem_avail) / float(mech_size)));
-    int padded = max_threads * TARGET_BLOCK_SIZE;
-    if (padded > num)
-    {
-    	int num_blocks = int(ceil(float(num) / float(TARGET_BLOCK_SIZE)));
-    	padded = num_blocks * TARGET_BLOCK_SIZE;
-    }
+    int max_threads = int(floor(0.6 * float(mem_avail) / float(mech_size)));
+    int padded = min(num, max_threads) * TARGET_BLOCK_SIZE;
 
+    printf("%d\t%d\t%d\t%d\n", mem_avail, num, max_threads, padded);
+
+    h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
 
     int pitch_device = padded * sizeof(double);

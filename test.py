@@ -344,24 +344,43 @@ class cupyjac_evaluator(cpyjac_evaluator):
 
     def update(self, index):
         self.index = index
-        if index % self.num_cond == 0 and index != 0:
+        if index % self.num_cond == 0 and index != 0 and self.cuda_state.shape[0] > 0:
+            num_eval = min(self.cuda_state.shape[0], self.num_cond)
+            if num_eval != self.num_cond:
+                #need to redeclare to get the pitches right
+                self.test_conc = czeros((num_eval, gas.n_species))
+                self.test_fwd_rates = czeros((num_eval,gas.n_reactions))
+                self.test_rev_rates = czeros((num_eval,num_rev))
+                self.test_pres_mod = czeros((num_eval,num_pdep))
+                self.test_spec_rates = czeros((num_eval,gas.n_species))
+                self.test_dydt = czeros((num_eval, gas.n_species + 1))
+                self.test_jacob = czeros((num_eval,(gas.n_species) * (gas.n_species)))
             #need to evaluate the next batch
-            mw_avg = czeros(self.num_cond)
-            rho = czeros(self.num_cond)
-            pres = self.cuda_state[:self.num_cond, 1].flatten(order='c')
-            y = self.cuda_state[:self.num_cond, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+            mw_avg = czeros(num_eval)
+            rho = czeros(num_eval)
+            pres = self.cuda_state[:num_eval, 1].flatten(order='c')
+            y = self.cuda_state[:num_eval, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
                                                                        .astype(np.dtype('d'), order='c')
-            self.pyjac.py_cuall(self.num_cond, self.num_cond, 0, pres, y, test_conc, test_fwd_rates,
+            self.pyjac.py_cujac(num_eval, self.num_cond, 0, pres, y, test_conc, test_fwd_rates,
                             test_rev_rates, test_pres_mod, test_spec_rates,
                             test_dydt, test_jacob)
 
-            self.cuda_state = self.cuda_state[self.num_cond:, ]
+            self.cuda_state = self.cuda_state[num_eval:, ]
+
+            self.test_conc = reshaper(self.test_conc, (num_eval, gas.n_species), self.back_spec_map)
+            self.test_fwd_rates = reshaper(self.test_fwd_rates, (num_eval, gas.n_reactions), self.back_rxn_map)
+            self.test_rev_rates = reshaper(self.test_rev_rates, (num_eval, num_rev), self.back_rev_rxn_map)
+            self.test_pres_mod = reshaper(self.test_pres_mod, (num_eval, num_pdep), self.back_pdep_map)
+            self.test_spec_rates = reshaper(self.test_spec_rates, (num_eval,gas.n_species), self.back_spec_map)
+            self.test_dydt = reshaper(self.test_dydt, (num_eval, gas.n_species + 1), self.back_dydt_map)
+            self.test_jacob = reshaper(self.test_jacob, (num_eval, (gas.n_species) * (gas.n_species)))
 
 
     def __init__(self, build_dir, gas, state_data):
         super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
 
         self.num_cond = self.pyjac.py_cuinit(state_data.shape[0])
+        num_eval = min(self.cuda_state.shape[0], self.num_cond)
 
         def czeros(shape):
             arr = np.zeros(shape)
@@ -380,36 +399,35 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.cuda_state = state_data[:, 1:]
 
         #init vectors
-        test_conc = czeros((self.num_cond, gas.n_species))
-        test_fwd_rates = czeros((self.num_cond,gas.n_reactions))
-        test_rev_rates = czeros((self.num_cond,num_rev))
-        test_pres_mod = czeros((self.num_cond,num_pdep))
-        test_spec_rates = czeros((self.num_cond,gas.n_species))
-        test_dydt = czeros((self.num_cond, gas.n_species + 1))
-        test_jacob = czeros((self.num_cond,(gas.n_species) * (gas.n_species)))
+        test_conc = czeros((num_eval, gas.n_species))
+        test_fwd_rates = czeros((num_eval,gas.n_reactions))
+        test_rev_rates = czeros((num_eval,num_rev))
+        test_pres_mod = czeros((num_eval,num_pdep))
+        test_spec_rates = czeros((num_eval,gas.n_species))
+        test_dydt = czeros((num_eval, gas.n_species + 1))
+        test_jacob = czeros((num_eval,(gas.n_species) * (gas.n_species)))
 
-        mw_avg = czeros(self.num_cond)
-        rho = czeros(self.num_cond)
-        pres = self.cuda_state[:, 1].flatten(order='c')
-        y = self.cuda_state[:self.num_cond, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
+        mw_avg = czeros(num_eval)
+        rho = czeros(num_eval)
+        pres = self.cuda_state[:num_eval, 1].flatten(order='c')
+        y = self.cuda_state[:num_eval, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
                                                                    .astype(np.dtype('d'), order='c')
-        success = self.pyjac.py_cuall(np.min(self.cuda_state.shape[0], self.num_cond)
-                        self.num_cond, 0, pres, y, test_conc, test_fwd_rates,
+        self.pyjac.py_cujac(num_eval, self.num_cond, 0, pres, y, test_conc, test_fwd_rates,
                         test_rev_rates, test_pres_mod, test_spec_rates,
                         test_dydt, test_jacob)
 
 
-        self.cuda_state = self.cuda_state[self.num_cond:, ]
+        self.cuda_state = self.cuda_state[num_eval:, ]
                 
         
         #reshape for comparison
-        self.test_conc = reshaper(test_conc, (self.num_cond, gas.n_species), self.back_spec_map)
-        self.test_fwd_rates = reshaper(test_fwd_rates, (self.num_cond, gas.n_reactions), self.back_rxn_map)
-        self.test_rev_rates = reshaper(test_rev_rates, (self.num_cond.num_cond, num_rev), self.back_rev_rxn_map)
-        self.test_pres_mod = reshaper(test_pres_mod, (num_cond, num_pdep), self.back_pdep_map)
-        self.test_spec_rates = reshaper(test_spec_rates, (self.num_cond,gas.n_species), self.back_spec_map)
-        self.test_dydt = reshaper(test_dydt, (self.num_cond, gas.n_species + 1), self.back_dydt_map)
-        self.test_jacob = reshaper(test_jacob, (self.num_cond, (gas.n_species) * (gas.n_species)))
+        self.test_conc = reshaper(test_conc, (num_eval, gas.n_species), self.back_spec_map)
+        self.test_fwd_rates = reshaper(test_fwd_rates, (num_eval, gas.n_reactions), self.back_rxn_map)
+        self.test_rev_rates = reshaper(test_rev_rates, (num_eval, num_rev), self.back_rev_rxn_map)
+        self.test_pres_mod = reshaper(test_pres_mod, (num_eval, num_pdep), self.back_pdep_map)
+        self.test_spec_rates = reshaper(test_spec_rates, (num_eval,gas.n_species), self.back_spec_map)
+        self.test_dydt = reshaper(test_dydt, (num_eval, gas.n_species + 1), self.back_dydt_map)
+        self.test_jacob = reshaper(test_jacob, (num_eval, (gas.n_species) * (gas.n_species)))
         self.index = 0
 
     def eval_conc(self, temp, pres, mass_frac, conc):

@@ -380,7 +380,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
         super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
 
         self.num_cond = self.pyjac.py_cuinit(state_data.shape[0])
-        num_eval = min(self.cuda_state.shape[0], self.num_cond)
+        num_eval = min(state_data.shape[0], self.num_cond)
 
         def czeros(shape):
             arr = np.zeros(shape)

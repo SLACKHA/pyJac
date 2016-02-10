@@ -97,13 +97,18 @@ int init(int num)
     cudaErrorCheck( cudaMemGetInfo (&free_mem, &total_mem) );
     //conservatively estimate the maximum allowable threads
     int max_threads = int(floor(0.8 * ((double)free_mem) / ((double)mech_size)));
-    int padded = min(num, max_threads);
+    int padded = min(num + num % TARGET_BLOCK_SIZE, max_threads);
     padded = padded - padded % TARGET_BLOCK_SIZE;
     if (padded == 0)
     {
         printf("Mechanism is too large to fit into global CUDA memory... exiting.");
         exit(-1);
     }
+
+    printf("Initializing CUDA interface...\n");
+    printf("%ld free bytes of memory found on Device 0.\n", free_mem);
+    printf("%ld bytes required per mechanism thread\n", mech_size);
+    printf("Setting up memory to work on kernels of %d threads, with blocksize %d\n", padded, TARGET_BLOCK_SIZE);
 
     padded = 1;
     h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));

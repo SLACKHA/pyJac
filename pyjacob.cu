@@ -110,7 +110,6 @@ int init(int num)
     printf("%ld bytes required per mechanism thread\n", mech_size);
     printf("Setting up memory to work on kernels of %d threads, with blocksize %d\n", padded, TARGET_BLOCK_SIZE);
 
-    padded = 1;
     h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
 

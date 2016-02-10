@@ -105,8 +105,6 @@ int init(int num)
         exit(-1);
     }
 
-    printf("%ld\t%ld\t%ld\t%ld\t%ld\n", free_mem, mech_size, num, max_threads, padded);
-
     padded = 1;
     h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);

@@ -1679,6 +1679,9 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
         file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
                    utils.line_end[lang]
                    )
+        if lang == 'c':
+            file.write(utils.line_start + 'double dot_prod[{}]'.format(cheb_dim) +
+                            utils.line_end[lang])
 
     if this_plog:
         file.write(utils.line_start + 'double kf2' + utils.line_end[lang])
@@ -2515,7 +2518,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 line += ', T, jac'
                 if has_jnplus_one:
                     line += ', &J_nplusone, J_nplusjplus'
-                if cheb:
+                if cheb and lang == 'cuda':
                     line += ', dot_prod'
                 line += ')'
                 file.write(line + utils.line_end[lang])

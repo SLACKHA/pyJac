@@ -104,8 +104,11 @@ int init(int num)
     	printf("Mechanism is too large to fit into global CUDA memory... exiting.");
     	exit(-1);
     }
-
-    printf("%ld\t%ld\t%ld\t%ld\t%ld\n", free_mem, mech_size, num, max_threads, padded);
+	
+	printf("Initializing CUDA interface...\n");
+    printf("%ld free bytes of memory found on Device 0.\n", free_mem);
+    printf("%ld bytes required per mechanism thread\n", mech_size);
+    printf("Setting up memory to work on kernels of %d threads, with blocksize %d\n", padded, TARGET_BLOCK_SIZE);
 
     h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);

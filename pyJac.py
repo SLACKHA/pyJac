@@ -2183,22 +2183,20 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     ###################################
     # now begin Jacobian evaluation
     ###################################
-
-    # whether this jacobian index has been modified
-    touched = [False for i in range(len(specs) * len(specs))]
-    J_nplusone_touched = False
-    J_nplusjplus_touched = [False for i in range(len(specs))]
-
-    last_split_index = None
-    batch_has_thd = False
-    last_conc_temp = None
-    #thelist = set()
     ###################################
     # partial derivatives of reactions
     ###################################
     success = False
     retry = False
     while not success:
+        # whether this jacobian index has been modified
+        touched = [False for i in range(len(specs) * len(specs))]
+        J_nplusone_touched = False
+        J_nplusjplus_touched = [False for i in range(len(specs))]
+
+        batch_has_thd = False
+        last_conc_temp = None
+
         jac_count = 0
         next_fn_index = 0
         for rind, rxn in enumerate(reacs):

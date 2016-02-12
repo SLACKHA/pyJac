@@ -584,14 +584,11 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                         optimize_cache=cache_optimization, build_path=build_dir,
                         no_shared=no_shared, last_spec=last_spec, auto_diff=False,
                         )
-        if lang == 'cuda':
-            #if it's cuda, we need to make sure the c files
-            #are generated using the same manner
-            #as we're going to use the c interface for testing the jacobian
-            create_jacobian('c', gas=gas,
-                        optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec, auto_diff=True
-                        )
+        #We're going to need the c autodiff interface for testing the jacobian
+        create_jacobian('c', gas=gas,
+                    optimize_cache=cache_optimization, build_path=build_dir,
+                    no_shared=no_shared, last_spec=last_spec, auto_diff=True
+                    )
 
     if compile_jacob:
         #write and compile the dydt python wrapper

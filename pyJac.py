@@ -975,7 +975,7 @@ def write_dcp_dt(file, lang, specs):
         T_mid_buckets[sp.Trange[1]].append(isp)
 
     first = True
-    for T_mid in T_mid_buckets:
+    for T_mid in sorted(T_mid_buckets):
         # write the if statement
         line = utils.line_start + 'if (T <= {:})'.format(T_mid)
         if lang in ['c', 'cuda']:
@@ -991,9 +991,9 @@ def write_dcp_dt(file, lang, specs):
             line += ' {}= '.format('+' if not first else '')
         elif lang in ['fortran', 'matlab']:
             line += ' = {}'.format('working_temp + ' if not first else '')
-        for isp in T_mid_buckets[T_mid]:
+        for i, isp in enumerate(sorted(T_mid_buckets[T_mid])):
             sp = specs[isp]
-            if T_mid_buckets[T_mid].index(isp):
+            if i:
                 line += '\n    + '
 
             y_str = (utils.get_array(lang, 'y', isp + 1)
@@ -1022,9 +1022,9 @@ def write_dcp_dt(file, lang, specs):
         elif lang in ['fortran', 'matlab']:
             line += ' = {}'.format('working_temp + ' if not first else '')
 
-        for isp in T_mid_buckets[T_mid]:
+        for i, isp in enumerate(sorted(T_mid_buckets[T_mid])):
             sp = specs[isp]
-            if T_mid_buckets[T_mid].index(isp):
+            if i:
                 line += '\n    + '
 
             y_str = (utils.get_array(lang, 'y', isp + 1)

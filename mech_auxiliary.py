@@ -363,6 +363,13 @@ void eval_jacob(const double t, const double p, const double* y,
                 file.write(err_check.format(
                   'cudaMalloc(&((*h_mem)->{}), {} * padded * sizeof(double))'.format(array, size)))
 
+            file.write('  //zero out memory if required\n'
+                       '#ifndef FORCE_ZERO\n')
+            for array in ['dy', 'spec_rates', 'jac']:
+                file.write(err_check.format('cudaMemset((*h_mem)->{}, {} * padded * sizeof(double))'.format(
+                                            array, gpu_memory[array])))
+            file.write('#endif\n')
+
             file.write(utils.line_start + 'cudaErrorCheck( '
               'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 
               utils.line_end[lang])

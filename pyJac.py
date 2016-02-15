@@ -2002,7 +2002,10 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                )
     if lang == 'c':
         file.write(utils.line_start +
-                   'double spec_rates[{}];\n'.format(num_s)
+                   'double spec_rates[{}];\n'.format(num_s) +
+                   '#ifndef FORCE_ZERO\n'
+                   '  memset(spec_rates, 0, NSP * sizeof(double));\n'
+                   '#endif\n'
                    )
         file.write(
             utils.line_start +

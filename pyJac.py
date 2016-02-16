@@ -2192,6 +2192,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     success = False
     retry = False
     while not success:
+        if lang == 'cuda' and smm is not None:
+            smm.reset()
         # whether this jacobian index has been modified
         touched = [False for i in range(len(specs) * len(specs))]
         J_nplusone_touched = False

@@ -343,14 +343,14 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.pyjac.py_cuclean()
 
     def __eval(self):
-        num_eval = min(state_data.shape[0], self.num_cond)
-        test_conc = self.czeros((num_eval, gas.n_species))
-        test_fwd_rates = self.czeros((num_eval,gas.n_reactions))
-        test_rev_rates = self.czeros((num_eval,num_rev))
-        test_pres_mod = self.czeros((num_eval,num_pdep))
-        test_spec_rates = self.czeros((num_eval,gas.n_species))
-        test_dydt = self.czeros((num_eval, gas.n_species + 1))
-        test_jacob = self.czeros((num_eval,(gas.n_species) * (gas.n_species)))
+        num_eval = min(self.cuda_state.shape[0], self.num_cond)
+        test_conc = self.czeros((num_eval, self.nsp))
+        test_fwd_rates = self.czeros((num_eval,self.nr))
+        test_rev_rates = self.czeros((num_eval,self.num_rev))
+        test_pres_mod = self.czeros((num_eval,self.num_pdep))
+        test_spec_rates = self.czeros((num_eval,self.nsp))
+        test_dydt = self.czeros((num_eval, self.nsp + 1))
+        test_jacob = self.czeros((num_eval,(self.nsp) * (self.nsp)))
 
         mw_avg = self.czeros(num_eval)
         rho = self.czeros(num_eval)
@@ -365,13 +365,13 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.cuda_state = self.cuda_state[num_eval:, ]
         
         #reshape for comparison
-        self.test_conc = self.reshaper(test_conc, (num_eval, gas.n_species), self.back_spec_map)
-        self.test_fwd_rates = self.reshaper(test_fwd_rates, (num_eval, gas.n_reactions), self.back_rxn_map)
-        self.test_rev_rates = self.reshaper(test_rev_rates, (num_eval, num_rev), self.back_rev_rxn_map)
-        self.test_pres_mod = self.reshaper(test_pres_mod, (num_eval, num_pdep), self.back_pdep_map)
-        self.test_spec_rates = self.reshaper(test_spec_rates, (num_eval,gas.n_species), self.back_spec_map)
-        self.test_dydt = self.reshaper(test_dydt, (num_eval, gas.n_species + 1), self.back_dydt_map)
-        self.test_jacob = self.reshaper(test_jacob, (num_eval, (gas.n_species) * (gas.n_species)))
+        self.test_conc = self.reshaper(test_conc, (num_eval, self.nsp), self.back_spec_map)
+        self.test_fwd_rates = self.reshaper(test_fwd_rates, (num_eval, self.nr), self.back_rxn_map)
+        self.test_rev_rates = self.reshaper(test_rev_rates, (num_eval, self.num_rev), self.back_rev_rxn_map)
+        self.test_pres_mod = self.reshaper(test_pres_mod, (num_eval, self.num_pdep), self.back_pdep_map)
+        self.test_spec_rates = self.reshaper(test_spec_rates, (num_eval,self.nsp), self.back_spec_map)
+        self.test_dydt = self.reshaper(test_dydt, (num_eval, self.nsp + 1), self.back_dydt_map)
+        self.test_jacob = self.reshaper(test_jacob, (num_eval, (self.nsp) * (self.nsp)))
 
     def update(self, index):
         self.index = index
@@ -395,9 +395,12 @@ class cupyjac_evaluator(cpyjac_evaluator):
         if not self.cache_opt:
             self.fwd_spec_map = np.arange(gas.n_species)
 
-        num_rev = np.array([rxn.reversible for rxn in gas.reactions()]).sum()
-        num_pdep = np.array([is_pdep(rxn) for rxn in gas.reactions()]).sum()
+        self.num_rev = np.array([rxn.reversible for rxn in gas.reactions()]).sum()
+        self.num_pdep = np.array([is_pdep(rxn) for rxn in gas.reactions()]).sum()
         self.cuda_state = state_data[:, 1:]
+
+        self.nsp = gas.n_species
+        self.nr = gas.n_reactions
 
         self.__eval()
 

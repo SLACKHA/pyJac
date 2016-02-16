@@ -89,6 +89,8 @@ int init(int num)
 	cudaErrorCheck( cudaSetDevice(device) );
 	//reset device
 	cudaErrorCheck( cudaDeviceReset() );
+	//prefer L1 for speed
+	cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
 	//determine maximum # of threads for this mechanism
 	//bytes per thread
     size_t mech_size = get_required_size();
@@ -112,42 +114,11 @@ int init(int num)
 
     h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
-
-    size_t pitch_device = padded * sizeof(double);
-    //now the temp memory on the cpu
-	pres_temp = (double*)malloc(pitch_device);
-	y_temp = (double*)malloc(NSP * pitch_device);
-	conc_temp = (double*)malloc(NSP * pitch_device);
-	fwd_temp = (double*)malloc(FWD_RATES * pitch_device);
-#if REV_RATES != 0
-	rev_temp = (double*)malloc(REV_RATES * pitch_device);
-#endif
-#if PRES_MOD_RATES != 0
-	pres_mod_temp = (double*)malloc(PRES_MOD_RATES * pitch_device);
-#endif
-	spec_temp = (double*)malloc(NSP * pitch_device);
-	dy_temp = (double*)malloc(NSP * pitch_device);
-	jac_temp = (double*)malloc(NSP * NSP * pitch_device);
-
     return padded;
 }
 
 void cleanup()
 {
-	free(pres_temp);
-	free(y_temp);
-	free(conc_temp);
-	free(fwd_temp);
-#if REV_RATES != 0
-	free(rev_temp);
-#endif
-#if PRES_MOD_RATES != 0
-	free(pres_mod_temp);
-#endif
-	free(spec_temp);
-	free(dy_temp);
-	free(jac_temp);
-	
 	//clean up
 	free_gpu_memory(&h_mem, &d_mem, &y_device, &var_device);
 	free(h_mem);

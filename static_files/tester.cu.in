@@ -35,22 +35,6 @@ inline void memcpy2D_in(double* dst, const int pitch_dst, double const * src, co
     }
 }
 
-int init_gpu_mem(double** y_device, double** var_device, mechanism_memory** h_mem, mechanism_memory**d_mem)
-{
-    //bytes per thread
-    size_t mech_size = get_required_size();
-    cudaDeviceProp props;
-    cudaErrorCheck( cudaGetDeviceProperties(&props, device) );
-    //memory size in bytes
-    size_t mem_avail = props.totalGlobalMem;
-    //conservatively estimate the maximum allowable threads
-    int max_threads = int(floor(0.8 * float(mem_avail) / float(mech_size)));
-    int padded = max_threads * block_size;
-
-    initialize_gpu_memory(padded, h_mem, d_mem, y_device, var_device);
-    return padded;
-}
-
 int main (int argc, char *argv[])
 {
     int num_odes = 1;
@@ -60,8 +44,25 @@ int main (int argc, char *argv[])
     }
 
     cudaErrorCheck (cudaSetDevice (0) );
-
+    //reset device
+    cudaErrorCheck( cudaDeviceReset() );
+    //prefer L1 for speed
     cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+    //determine maximum # of threads for this mechanism
+    //bytes per thread
+    size_t mech_size = get_required_size();
+    size_t free_mem = 0;
+    size_t total_mem = 0;
+    cudaErrorCheck( cudaMemGetInfo (&free_mem, &total_mem) );
+    //conservatively estimate the maximum allowable threads
+    int max_threads = int(floor(0.8 * ((double)free_mem) / ((double)mech_size)));
+    int padded = min(num, max_threads);
+    padded = padded - padded % TARGET_BLOCK_SIZE;
+    if (padded == 0)
+    {
+        printf("Mechanism is too large to fit into global CUDA memory... exiting.");
+        exit(-1);
+    }
 
     mechanism_memory * d_mem = 0;
     mechanism_memory* h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
@@ -71,9 +72,11 @@ int main (int argc, char *argv[])
     double* var_device;
     double* var_host;
 
+    //init gpu memory
+    initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
+
     //padded is the number of threads allowable
     read_initial_conditions("$datafile", num_odes, &y_host, &var_host);
-    int padded = init_gpu_mem(&y_device, &var_device, &h_mem, &d_mem);
     int g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
     if (g_num == 0)
         g_num = 1;

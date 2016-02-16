@@ -2648,8 +2648,12 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     limit = (CParams.Max_Spec_Lines if lang == 'c'
                   else CUDAParams.Max_Spec_Lines)
     
+    touched_copy = touched[:]
+    J_nplusjplus_touched_copy = J_nplusjplus_touched[:]
     success = False
     while not success:
+        touched = touched_copy[:]
+        J_nplusjplus = J_nplusjplus_touched_copy[:]
         next_fn_index = 0
         for k_sp, sp_k in enumerate(specs):
             if do_unroll and k_sp == next_fn_index:

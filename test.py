@@ -374,8 +374,8 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.test_jacob = self.reshaper(test_jacob, (num_eval, (self.nsp) * (self.nsp)))
 
     def update(self, index):
-        self.index = index
-        if (index + 1) % self.num_cond == 0 and index != 0 and self.cuda_state.shape[0] > 0:
+        self.index = index % self.num_cond
+        if index % self.num_cond == 0 and index != 0 and self.cuda_state.shape[0] > 0:
             self.__eval()
 
     def czeros(self, shape):
@@ -575,7 +575,6 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         create_jacobian('c', gas=gas,
                     optimize_cache=cache_optimization, build_path=build_dir,
                     no_shared=no_shared, last_spec=last_spec, auto_diff=True
-                            last_spec=last_spec
                     )
 
     if compile_jacob:

@@ -1,12 +1,12 @@
 """Handles shared memory usage to accelerate memory accesses for CUDA"""
 
 # Standard libraries
+import os
 from math import floor
 
 # Local imports
-import CUDAParams
-import utils
-import os
+from .. import utils
+from . import CUDAParams
 
 class variable(object):
     def __init__(self, base, index, lang='cuda'):

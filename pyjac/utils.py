@@ -8,7 +8,6 @@ from math import log10, floor
 from argparse import ArgumentParser
 
 # Local imports
-import CUDAParams
 
 line_start = '  '
 comment = dict(c='//', cuda='//',

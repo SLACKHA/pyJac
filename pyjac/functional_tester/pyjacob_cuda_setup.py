@@ -1,4 +1,4 @@
-import  os
+import os
 from os.path import join as pjoin
 from setuptools import setup
 from distutils.extension import Extension
@@ -61,7 +61,7 @@ except AttributeError:
 sources = ['pyjacob_cuda_wrapper.pyx',
            'pyjacob.cu',
            'out/chem_utils.cu',
-           'out/dydt.cu', 
+           'out/dydt.cu',
            'out/rxn_rates.cu',
            'out/rxn_rates_pres_mod.cu',
            'out/spec_rates.cu',
@@ -96,9 +96,9 @@ ext = Extension('cu_pyjacob',
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
-                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v', '-c', 
+                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v', '-c',
                                     '--compiler-options', "'-fPIC'",
-                                    '--ftz=false', '--prec-div=true', 
+                                    '--ftz=false', '--prec-div=true',
                                     '--prec-sqrt=true']},
                 include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes
                 )
@@ -127,7 +127,7 @@ def customize_linker_for_nvcc(self):
         self.linker_so = [x for x in self.linker_so if not '-pthread' in x]
         self.linker_exe = [x for x in self.linker_exe if not '-pthread' in x]
         self.compiler_cxx = [x for x in self.compiler_cxx if not '-pthread' in x]
-        
+
         super(target_desc, objects, output_filename, output_dir,
             libraries, library_dirs, runtime_library_dirs, export_symbols,
             debug, extra_preargs, extra_postargs, build_temp, target_lang)
@@ -138,19 +138,19 @@ def customize_linker_for_nvcc(self):
         self.compiler_cxx = default_compiler_cxx[:]
 
     self.link = link
-    
+
 
 
 def customize_compiler_for_nvcc(self):
     """inject deep into distutils to customize how the dispatch
     to gcc/nvcc works.
-    
+
     If you subclass UnixCCompiler, it's not trivial to get your subclass
     injected in, and still have the right customizations (i.e.
     distutils.sysconfig.customize_compiler) run on it. So instead of going
     the OO route, I have this. Note, it's kindof like a wierd functional
     subclassing going on."""
-    
+
     # tell the compiler it can processes .cu
     self.src_extensions.append('.cu')
 

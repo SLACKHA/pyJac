@@ -13,8 +13,8 @@ from copy import deepcopy
 import numpy as np
 
 # Local imports
-import chem_utilities as chem
-import utils
+from .. import utils
+from . import chem_utilities as chem
 
 # Related module
 CANTERA_FLAG = False

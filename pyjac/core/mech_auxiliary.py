@@ -10,12 +10,12 @@ import sys
 import itertools
 
 # Local imports
-import chem_utilities as chem
-import utils
+from .. import utils
+from . import chem_utilities as chem
 
 def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions='',
                                  old_spec_order=None, old_rxn_order=None,
-                                 cache_optimized=False, last_spec=None, 
+                                 cache_optimized=False, last_spec=None,
                                  autodiff=False):
     if lang in ['matlab', 'fortran']:
         raise NotImplementedError
@@ -29,7 +29,7 @@ def write_mechanism_initializers(path, lang, specs, reacs, initial_conditions=''
 #include "header.h"
 #include "ad_dydt.h"
 void eval_jacob(const double t, const double p, const double* y,
-                         double* jac) { 
+                         double* jac) {
     using adept::adouble; // Import Stack and adouble from adept
     adept::Stack stack; // Where the derivative information is stored
     std::vector<adouble> in(NSP); // Vector of active input variables
@@ -95,7 +95,7 @@ void eval_jacob(const double t, const double p, const double* y,
         # make cache optimized easy to recognize
         if cache_optimized:
             file.write('//Cache Optimized\n')
-        file.write('{}#define FORCE_ZERO\n'.format(utils.comment[lang] 
+        file.write('{}#define FORCE_ZERO\n'.format(utils.comment[lang]
           if not utils.FORCE_ZERO_OUT else ''))
         file.write('//last_spec {}\n'.format(last_spec))
 
@@ -182,11 +182,11 @@ void eval_jacob(const double t, const double p, const double* y,
             needed_arr_conv = ['double** ' + a + '_host' for a in needed_arr_conv]
         file.write('#ifdef CONP\n'
                    '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                           ', '.join(needed_arr), 
+                                                                           ', '.join(needed_arr),
                                                                             ', mechanism_memory** h_mem, mechanism_memory** d_mem' if lang == 'cuda' else '') +
                    '#elif CONV\n'
                    '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                           ', '.join(needed_arr_conv), 
+                                                                           ', '.join(needed_arr_conv),
                                                                             ', mechanism_memory** h_mem, mechanism_memory** d_mem' if lang == 'cuda' else '') +
                    '#endif\n'
                    )
@@ -373,7 +373,7 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write('#endif\n')
 
             file.write(utils.line_start + 'cudaErrorCheck( '
-              'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' + 
+              'cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )' +
               utils.line_end[lang])
             file.write(utils.line_start + utils.comment[lang] + 'zero out required values\n')
 

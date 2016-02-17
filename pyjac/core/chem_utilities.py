@@ -7,7 +7,6 @@ from __future__ import division
 
 # Standard libraries
 import math
-
 import numpy as np
 
 __all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',

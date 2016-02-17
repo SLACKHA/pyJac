@@ -1,6 +1,6 @@
 import sys
 
-import utils
+from . import utils
 from .core import create_jacobian
 
 

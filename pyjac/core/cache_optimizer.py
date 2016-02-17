@@ -13,9 +13,10 @@ import pickle
 import os
 from operator import itemgetter
 
-# Local imports
-import utils
 import numpy as np
+
+# Local imports
+from .. import utils
 
 LOOKBACK=1
 USE_THD=True
@@ -142,7 +143,7 @@ def optimize_cache(specs, reacs, multi_thread,
             for sp, eff in rxn.thd_body_eff:
                 spind = name_map[sp]
                 eff_map[rind][spind] = eff
-    
+
     def get_rxn_tiebreak(rind, rxn_to_sp, spec_mapping):
         bt = bitarray(sdummy)
         for sp in rxn_to_sp[rind]:
@@ -159,7 +160,7 @@ def optimize_cache(specs, reacs, multi_thread,
 
     maxcount = None
     ind = None
-    # select the first reaction as the one with the species 
+    # select the first reaction as the one with the species
     #that participate in the most distinct reactions
     ind = max(range(nr), key=lambda x: get_rxn_tiebreak(x, rxn_to_sp, spec_mapping))
 
@@ -173,7 +174,7 @@ def optimize_cache(specs, reacs, multi_thread,
     while len(reacs_left):
         #the next reaction is the one that best matches the previous one
         #in case of a tie a tie breaker is used:
-        #     the number of of the distinct reactions the species in the reaction are in 
+        #     the number of of the distinct reactions the species in the reaction are in
         maxcount = None
         ind = None
         last_tiebreak = None
@@ -185,7 +186,7 @@ def optimize_cache(specs, reacs, multi_thread,
                     mapping = mapping | reac_mapping[fwd_rxn_mapping[last_ind]]
                 #number of species shared in by the reactions
                 #minus the number that are in this candidate and not the last reaction
-                count = ((reac_mapping[rind] | mapping).count() - 
+                count = ((reac_mapping[rind] | mapping).count() -
                             ((reac_mapping[rind] ^ mapping) & reac_mapping[rind]).count())
 
                 if USE_THD:
@@ -252,7 +253,7 @@ def optimize_cache(specs, reacs, multi_thread,
                     mapping = mapping | spec_mapping[fwd_spec_mapping[last_ind]]
                 #number of reactions shared with the last species
                 #minus the number that are not
-                count = ((spec_mapping[spind] | mapping).count() - 
+                count = ((spec_mapping[spind] | mapping).count() -
                             ((spec_mapping[spind] ^ mapping) & spec_mapping[spind]).count())
 
                 divisor = spec_mapping[spind].count()

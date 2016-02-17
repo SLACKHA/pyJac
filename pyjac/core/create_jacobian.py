@@ -11,18 +11,16 @@ import sys
 import math
 import os
 
-from utils import get_parser
-
 # Local imports
-import chem_utilities as chem
-import mech_interpret as mech
-import rate_subs as rate
-import utils
-import mech_auxiliary as aux
-import CUDAParams
-import CParams
-import cache_optimizer as cache
-import shared_memory as shared
+from .. import utils
+from . import chem_utilities as chem
+from . import mech_interpret as mech
+from . import rate_subs as rate
+from . import mech_auxiliary as aux
+from . import CUDAParams
+from . import CParams
+from . import cache_optimizer as cache
+from . import shared_memory as shared
 
 
 def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
@@ -606,8 +604,8 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
                        utils.line_end[lang]
                        )
         else:
-            file.write(utils.line_start + 
-                'double * {} dBdT = d_mem->dBdT'.format(utils.restrict[lang]) + 
+            file.write(utils.line_start +
+                'double * {} dBdT = d_mem->dBdT'.format(utils.restrict[lang]) +
                 utils.line_end[lang])
     t_mid = {}
     for i_rxn in rev_reacs:
@@ -1801,8 +1799,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     file.write('void eval_jacob (const double, const double, '
                'const double * {0}, double * {0}{1});\n'
                '\n'
-               '#endif\n'.format(utils.restrict[lang], 
-                ', const mechanism_memory * {}'.format(utils.restrict[lang]) 
+               '#endif\n'.format(utils.restrict[lang],
+                ', const mechanism_memory * {}'.format(utils.restrict[lang])
                 if lang == 'cuda' else '')
                )
     file.close()
@@ -1835,7 +1833,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
         line += ('void eval_jacob (const double t, const double pres, '
                  'const double * {0} y, double * {0} jac{1}) {{\n\n'.format(
                  utils.restrict[lang],
-                 ', const mechanism_memory * {} d_mem'.format(utils.restrict[lang]) 
+                 ', const mechanism_memory * {} d_mem'.format(utils.restrict[lang])
                 if lang == 'cuda' else ''))
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
@@ -1901,13 +1899,13 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
         file.write(utils.line_start + 'conc = zeros({},1);\n'.format(num_s)
                    )
     file.write(utils.line_start + 'double y_N' + utils.line_end[lang])
-    file.write(utils.line_start + 'eval_conc(' + 
-               utils.get_array(lang, 'y', 0) + 
-               ', pres, &' + 
+    file.write(utils.line_start + 'eval_conc(' +
+               utils.get_array(lang, 'y', 0) +
+               ', pres, &' +
                (utils.get_array(lang, 'y', 1) if lang != 'cuda' else
-                'y[GRID_DIM]') + 
+                'y[GRID_DIM]') +
                ', &y_N, &mw_avg, &rho, conc)' +
-                utils.line_end[lang] + 
+                utils.line_end[lang] +
                '\n'
                )
 
@@ -1925,7 +1923,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     # evaluate forward and reverse reaction rates
     if lang in ['c', 'cuda']:
         if lang == 'cuda':
-            file.write(utils.line_start + 
+            file.write(utils.line_start +
                 'double * {} fwd_rates = d_mem->fwd_rates'.format(
                     utils.restrict[lang]) +
                 utils.line_end[lang])
@@ -1934,7 +1932,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
         if num_rev == 0:
             file.write(utils.line_start + 'double* rev_rates = 0;\n')
         elif lang == 'cuda':
-            file.write(utils.line_start + 
+            file.write(utils.line_start +
                 'double * {} rev_rates = d_mem->rev_rates'.format(
                     utils.restrict[lang]) +
                 utils.line_end[lang])
@@ -1943,7 +1941,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                        'double rev_rates[{}];\n'.format(num_rev)
                        )
         if cuda_cheb:
-            file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang]) 
+            file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang])
                    + utils.line_end[lang])
 
         file.write(utils.line_start +
@@ -1973,7 +1971,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                    'double * {} pres_mod = d_mem->pres_mod{}'.format(
                     utils.restrict[lang], utils.line_end[lang])
                    )
-        
+
 
 
     if len(pdep_reacs):
@@ -2142,7 +2140,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
             file.write(utils.line_start +
                        ('double dot_prod[{}]'.format(dim) if lang == 'c'
                        else 'double * {} dot_prod = d_mem->dot_prod'.format(
-                        utils.restrict[lang])) + 
+                        utils.restrict[lang])) +
                        utils.line_end[lang]
                        )
 
@@ -2500,7 +2498,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 #test file size for CUDA
                 #to avoid killing nvcc
                 if jac_count == 0:
-                    with open(os.path.join(path, 'jacobs', 'jacob_{}{}'.format(jac_count, 
+                    with open(os.path.join(path, 'jacobs', 'jacob_{}{}'.format(jac_count,
                                 utils.file_ext[lang]))) as readfile:
                         num_lines = sum(1 for line in readfile)
                     if num_lines > limit:
@@ -2649,7 +2647,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                   else CUDAParams.Jacob_Spec_Unroll)
     limit = (CParams.Max_Spec_Lines if lang == 'c'
                   else CUDAParams.Max_Spec_Lines)
-    
+
     touched_copy = touched[:]
     J_nplusjplus_touched_copy = J_nplusjplus_touched[:]
     success = False
@@ -2789,7 +2787,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 file.write('}\n\n')
                 file = file_store
                 #check that file length is under limit
-                with open(os.path.join(path, 'jacobs', 'jacob_{}{}'.format(jac_count, 
+                with open(os.path.join(path, 'jacobs', 'jacob_{}{}'.format(jac_count,
                             utils.file_ext[lang]))) as readfile:
                     num_lines = sum(1 for line in readfile)
                 if num_lines > limit:
@@ -3178,7 +3176,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
 
 
 if __name__ == "__main__":
-    args = get_parser()
+    args = utils.get_parser()
 
     create_jacobian(lang=args.lang,
                     mech_name=args.input,

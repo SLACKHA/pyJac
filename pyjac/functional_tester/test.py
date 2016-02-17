@@ -21,7 +21,6 @@ except ImportError:
     raise
 
 # Local imports
-import utils
 from .. import utils
 from ..core.create_jacobian import create_jacobian
 from . import partially_stirred_reactor as pasr

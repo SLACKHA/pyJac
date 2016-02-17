@@ -14,13 +14,13 @@ import math
 import os
 
 # Local imports
-import chem_utilities as chem
-import mech_interpret as mech
-import utils
-import CUDAParams
-import cache_optimizer as cache
-import mech_auxiliary as aux
-import shared_memory as shared
+from .. import utils
+from . import chem_utilities as chem
+from . import mech_interpret as mech
+from . import CUDAParams
+from . import cache_optimizer as cache
+from . import mech_auxiliary as aux
+from . import shared_memory as shared
 
 
 def rxn_rate_const(A, b, E):

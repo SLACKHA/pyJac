@@ -349,7 +349,7 @@ def get_parser():
                         default=False,
                         action='store_true',
                         help='Use this option to generate file for use with the '
-                             'Adept autodifferntiation library.')
+                             'Adept autodifferentiation library.')
 
     args = parser.parse_args()
     return args

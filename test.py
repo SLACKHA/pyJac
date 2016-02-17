@@ -532,13 +532,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     # get the cantera object
     gas = ct.Solution(mech_filename)
     # Remove reactions with zero pre-exponental factors
-    gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
-                      species=gas.species(),
-                      reactions=[rxn for rxn in gas.reactions() if
-                                 isinstance(rxn, ct.ElementaryReaction) and
-                                 rxn.rate.pre_exponential_factor != 0.0
-                                 ]
-                      )
+    #gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+    #                  species=gas.species(),
+    #                  reactions=[rxn for rxn in gas.reactions() if
+    #                             isinstance(rxn, ct.ElementaryReaction) and
+    #                            rxn.rate.pre_exponential_factor != 0.0
+    #                             ]
+    #                  )
 
     if only_rxn is not None:
         reacs = [int(x) for x in only_rxn.split(',')]

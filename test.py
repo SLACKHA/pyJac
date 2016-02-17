@@ -375,7 +375,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
 
     def update(self, index):
         self.index = index
-        if index % self.num_cond == 0 and index != 0 and self.cuda_state.shape[0] > 0:
+        if (index + 1) % self.num_cond == 0 and index != 0 and self.cuda_state.shape[0] > 0:
             self.__eval()
 
     def czeros(self, shape):

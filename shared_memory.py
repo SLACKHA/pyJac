@@ -59,7 +59,7 @@ class shared_memory_manager(object):
         self.shared_indexes.append(shared_index)
         self.eviction_marking[shared_index] = False
         if self.on_eviction is not None:
-            self.on_eviction(var, self.__get_string(shared_index))
+            self.on_eviction(var, self.__get_string(shared_index), shared_index)
     def add_to_dictionary(self, val):
         assert len(self.shared_indexes)
         self.shared_dict[self.shared_indexes.pop()] = val
@@ -135,7 +135,7 @@ class shared_memory_manager(object):
                     file.write(' ' * indent + self.__get_string(ind) + ' = ' + val.to_string() +
                                 utils.line_end['cuda'])
 
-        return [x for x in self.shared_dict.itervalues() if not x in old_variables]
+        return [x not in old_variables for x in self.shared_dict.itervalues()]
 
     def mark_for_eviction(self, variables):
         """Like the eviction method, but only evicts if not used in the next load"""
@@ -147,9 +147,13 @@ class shared_memory_manager(object):
         else:
             return self.skeleton.format('threadIdx.x + {} * blockDim.x'.format(index))
 
+    def get_index(self, var):
+        our_ind, our_var = next((val for val in self.shared_dict.iteritems() if val[1] == var), (None, None))
+        return our_ind, our_var
+
     def get_array(self, lang, thevar, index, twod=None):
         var = variable(thevar, index, lang)
-        our_ind, our_var = next((val for val in self.shared_dict.iteritems() if val[1] == var), (None, None))
+        our_ind, our_var = self.get_index(var)
         if our_var is not None:
             #mark as used
             our_var.reset()

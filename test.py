@@ -133,7 +133,7 @@ class autodiff_jacob:
         """
 
         y = np.hstack((gas.T, gas.Y[self.fwd_spec_map][:-1]))
-        
+
         jacob = np.zeros((gas.n_species * gas.n_species))
 
         self.jac.ad_eval_jacobian(0, gas.P, y, jacob)
@@ -174,7 +174,7 @@ class cpyjac_evaluator(object):
         A = np.empty_like(B)
         A[:] = B
         return A
-    
+
     def check_numbers(self, build_dir, gas, filename='mechanism.h'):
         """Ensures numbers of species and forward reaction match.
         """
@@ -186,15 +186,15 @@ class cpyjac_evaluator(object):
                     match = re.search(r'^#define NSP (\d+)$', line)
                     if match:
                         n_spec = int(match.group(1))
-                
+
                 if n_reac is None:
                     match = re.search(r'^#define FWD_RATES (\d+)$', line)
                     if match:
                         n_reac = int(match.group(1))
-                
+
                 if n_spec is not None and n_reac is not None:
                     break
-        
+
         if n_spec != gas.n_species:
             print('Error: species counts do not match between '
                   'mechanism.h and Cantera.')
@@ -203,7 +203,7 @@ class cpyjac_evaluator(object):
             print('Error: forward reaction counts do not match between '
                   'mechanism.h and Cantera.')
             sys.exit(1)
-    
+
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
         self.fwd_spec_map = np.array(range(gas.n_species))
         with open(os.path.join(build_dir, filename), 'r') as file:
@@ -531,11 +531,21 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     # get the cantera object
     gas = ct.Solution(mech_filename)
+    # Remove reactions with zero pre-exponental factors
+    gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+                      species=gas.species(),
+                      reactions=[rxn for rxn in gas.reactions() if
+                                 isinstance(rxn, ct.ElementaryReaction) and
+                                 rxn.rate.pre_exponential_factor != 0.0
+                                 ]
+                      )
+
     if only_rxn is not None:
         reacs = [int(x) for x in only_rxn.split(',')]
         gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
-                            species=gas.species(),
-                            reactions=[gas.reaction(rxn) for rxn in reacs])
+                          species=gas.species(),
+                          reactions=[gas.reaction(rxn) for rxn in reacs]
+                          )
 
     if generate_jacob:
         #remove the old jaclist
@@ -565,6 +575,7 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
         create_jacobian('c', gas=gas,
                     optimize_cache=cache_optimization, build_path=build_dir,
                     no_shared=no_shared, last_spec=last_spec, auto_diff=True
+                            last_spec=last_spec
                     )
 
     if compile_jacob:

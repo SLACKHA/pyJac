@@ -229,7 +229,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     return ''.join(line_list)
 
 
-def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping, 
+def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                     smm=None, auto_diff=False):
     """Write reaction rate subroutine.
 
@@ -267,7 +267,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
     pre = '__device__ ' if lang == 'cuda' else ''
     file_prefix = 'ad_' if auto_diff else ''
     pres_ref = '&' if auto_diff else ''
-    file = open(os.path.join(path, '{}rates'.format(file_prefix) 
+    file = open(os.path.join(path, '{}rates'.format(file_prefix)
                                 + utils.header_ext[lang]), 'w')
     file.write('#ifndef RATES_HEAD\n'
                '#define RATES_HEAD\n'
@@ -360,7 +360,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
                      ' const {1} * {3} C, {1} * {3} fwd_rxn_rates, '
                      '{1} * {3} rev_rxn_rates{4}) {{\n'.format(
                      '_{}'.format(rate_count) if rate_count is not None else '',
-                     double_type, pres_ref, utils.restrict[lang], 
+                     double_type, pres_ref, utils.restrict[lang],
                      ', {} * {} dot_prod'.format(double_type, utils.restrict[lang]) if cuda_cheb else ''
                      )
                      )
@@ -477,7 +477,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
             file.write('\n')
 
-    rrange = (0, len(reacs)) if not do_unroll else (0, CUDAParams.Rates_Unroll) 
+    rrange = (0, len(reacs)) if not do_unroll else (0, CUDAParams.Rates_Unroll)
     write_sub_intro(file, not do_unroll, rrange[0], rrange[1])
 
     def __get_arrays(sp, factor=1.0):
@@ -819,7 +819,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
     return
 
 
-def write_rxn_pressure_mod(path, lang, specs, reacs, 
+def write_rxn_pressure_mod(path, lang, specs, reacs,
                             fwd_rxn_mapping, smm=None, auto_diff=False):
     """Write subroutine to for reaction pressure dependence modifications.
 
@@ -996,7 +996,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
 
     if lang == 'c':
         file.write('  {} logT = log(T);\n'
-                   '  {} m = pres / ({:.8e} * T);\n'.format(double_type, 
+                   '  {} m = pres / ({:.8e} * T);\n'.format(double_type,
                                                     double_type, chem.RU)
                    )
     elif lang == 'cuda':
@@ -1236,7 +1236,7 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
     return
 
 
-def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping, 
+def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
                     fwd_rxn_mapping, smm=None, auto_diff=False):
     """Write subroutine to evaluate species rates of production.
 
@@ -2053,7 +2053,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     if lang == 'cuda': pre = '__device__ '
 
     # first write header file
-    file = open(os.path.join(path, file_prefix + 'dydt' + 
+    file = open(os.path.join(path, file_prefix + 'dydt' +
                             utils.header_ext[lang]), 'w')
     file.write('#ifndef DYDT_HEAD\n'
                '#define DYDT_HEAD\n'
@@ -2066,7 +2066,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
                    'using adept::adouble;\n')
     file.write('{0}void dydt (const double, const {1}{2}, '
                'const {1} * {3}, {1} * {3}'.format(pre, double_type, pres_ref,
-                                utils.restrict[lang]) + 
+                                utils.restrict[lang]) +
                ('' if lang == 'c' else
                     ', const mechanism_memory * {}'.format(utils.restrict[lang])) +
                ');\n'
@@ -2081,7 +2081,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
 
     file.write('#include "{0}chem_utils{1}"\n'
-               '#include "{0}rates{1}"\n'.format(file_prefix, 
+               '#include "{0}rates{1}"\n'.format(file_prefix,
                                             utils.header_ext[lang]))
     if lang == 'cuda':
         file.write('#include "gpu_memory.cuh"\n'
@@ -2125,14 +2125,14 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     # evaluate reaction rates
     rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     if lang == 'cuda':
-        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang])
                    + utils.line_end[lang])
     else:
         file.write('  // local arrays holding reaction rates\n'
                    '  {} fwd_rates[{}];\n'.format(double_type, len(reacs))
                    )
     if rev_reacs and lang == 'cuda':
-        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang])
                    + utils.line_end[lang])
     elif rev_reacs:
         file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
@@ -2141,7 +2141,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     cheb = False
     if any(rxn.cheb for rxn in reacs) and lang == 'cuda':
         cheb = True
-        file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang]) 
+        file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang])
                    + utils.line_end[lang])
     file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) +
                ', pres, conc, fwd_rates, rev_rates{});\n\n'.format(', dot_prod'
@@ -2176,7 +2176,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     if lang == 'c':
         file.write('&' + utils.get_array(lang, 'dy', 1) + ', &dy_N)')
     elif lang == 'cuda':
-        file.write('spec_rates, &' + utils.get_array(lang, 'spec_rates', len(specs) - 1) + 
+        file.write('spec_rates, &' + utils.get_array(lang, 'spec_rates', len(specs) - 1) +
                     ')')
     file.write(utils.line_end[lang])
 
@@ -2208,7 +2208,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     line += '(' + utils.get_array(lang, 'cp', len(specs) - 1) + ' * y_N)'
     file.write(line + utils.line_end[lang] + '\n')
 
-    file.write('  // local array for species enthalpies\n' + 
+    file.write('  // local array for species enthalpies\n' +
               ('  {} h[{}]'.format(double_type, len(specs)) if lang != 'cuda'
                else '  double * {} h = d_mem->h'.format(utils.restrict[lang]))
                + utils.line_end[lang])
@@ -2281,7 +2281,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
                    )
         elif lang == 'cuda':
             file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                       ' = ' + utils.get_array(lang, 'spec_rates', isp) + 
+                       ' = ' + utils.get_array(lang, 'spec_rates', isp) +
                        ' * ({:.16e} / rho);\n'.format(sp.mw)
                        )
         if not specs_nonzero[isp]:
@@ -2298,7 +2298,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     file.write(pre + 'void dydt (const double t, const {0} rho, '
                      'const {0} * {1} y, {0} * {1} dy{2}) {{\n\n'.format(double_type,
                      utils.restrict[lang],
-                     '' if lang != 'cuda' else 
+                     '' if lang != 'cuda' else
                      ', mechanism_memory * {} d_mem'.format(utils.restrict[lang]))
                )
 
@@ -2323,14 +2323,14 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     # evaluate reaction rates
     rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
     if lang == 'cuda':
-        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang])
                    + utils.line_end[lang])
     else:
         file.write('  // local arrays holding reaction rates\n'
                    '  {} fwd_rates[{}];\n'.format(double_type, len(reacs))
                    )
     if rev_reacs and lang == 'cuda':
-        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang]) 
+        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang])
                    + utils.line_end[lang])
     elif rev_reacs:
         file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
@@ -2358,7 +2358,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
 
     # species rate of change of molar concentration
     file.write('  // evaluate species molar net production rates\n'
-               '  {} dy_N;'.format(double_type) + 
+               '  {} dy_N;'.format(double_type) +
                '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
     file.write('&' + utils.get_array(lang, 'dy', 1) if lang != 'cuda'
            else '&dy[GRID_DIM]')
@@ -2388,7 +2388,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
     file.write(line + utils.line_end[lang] + '\n')
 
     # evaluate internal energy
-    file.write('  // local array for species internal energies\n' + 
+    file.write('  // local array for species internal energies\n' +
               ('  {} u[{}]'.format(double_type, len(specs)) if lang != 'cuda'
                else '  double * {} u = d_mem->h'.format(utils.restrict[lang]))
                + utils.line_end[lang])
@@ -2460,7 +2460,7 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
                    )
         elif lang == 'cuda':
             file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                       ' = ' + utils.get_array(lang, 'spec_rates', isp) + 
+                       ' = ' + utils.get_array(lang, 'spec_rates', isp) +
                        ' * ({:.16e} / rho);\n'.format(sp.mw)
                        )
         if not specs_nonzero[isp]:
@@ -2596,8 +2596,8 @@ def write_mass_mole(path, lang, specs):
         file.write('  // calculate mass fractions\n')
         for isp in range(len(specs) - 1):
             sp = specs[isp]
-            file.write('  ' + utils.get_array(arr_lang, 'Y', isp) + 
-                        ' = ' + 
+            file.write('  ' + utils.get_array(arr_lang, 'Y', isp) +
+                        ' = ' +
                         utils.get_array(arr_lang, 'X', isp) +
                        ' * {:.16e} / mw_avg;\n'.format(sp.mw)
                        )
@@ -2693,7 +2693,7 @@ def write_mass_mole(path, lang, specs):
         for isp in range(len(specs) - 1):
             file.write('  ' + utils.get_array(arr_lang, 'X', isp)
                       + ' = ' +
-                      utils.get_array(arr_lang, 'Y', isp) + 
+                      utils.get_array(arr_lang, 'Y', isp) +
                        ' * mw_avg / {:.16e};\n'.format(specs[isp].mw)
                        )
         file.write('\n'
@@ -2769,7 +2769,7 @@ def write_mass_mole(path, lang, specs):
                    '  double mw_avg = 0.0;\n'
                    )
         for isp in range(len(specs) - 1):
-            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'X', isp) + 
+            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'X', isp) +
                        ' * {:.16e};\n'.format(specs[isp].mw)
                        )
         file.write(utils.line_start + 'mw_avg += X_N * ' +
@@ -2804,7 +2804,7 @@ def write_mass_mole(path, lang, specs):
     return
 
 if __name__ == "__main__":
-    from pyJac import create_jacobian
+    from . import create_jacobian
     args = utils.get_parser()
     create_jacobian(lang=args.lang,
                 mech_name=args.input,

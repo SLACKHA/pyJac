@@ -33,9 +33,9 @@ except ImportError:
     raise
 
 # Local imports
-import utils
-from pyJac import create_jacobian
-import partially_stirred_reactor as pasr
+from .. import utils
+from ..core.pyJac import create_jacobian
+from . import partially_stirred_reactor as pasr
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -120,7 +120,7 @@ def compiler(fstruct):
     args.extend(include)
     args.extend([
         '-I.' + os.path.sep + fstruct.build_dir,
-        '-c', os.path.join(fstruct.build_dir, fstruct.filename + 
+        '-c', os.path.join(fstruct.build_dir, fstruct.filename +
                     utils.file_ext[fstruct.lang]),
         '-o', os.path.join(fstruct.test_dir, getf(fstruct.filename) + '.o')
         ])
@@ -169,7 +169,7 @@ def performance_tester():
     def get_file_list(pmod, gpu=False, FD=False, tchem=False):
         i_dirs = [build_dir]
         if tchem:
-            files = ['test', 'read_initial_conditions', 
+            files = ['test', 'read_initial_conditions',
                         'mechanism', 'mass_mole']
             return i_dirs, files
         files = ['chem_utils', 'dydt', 'spec_rates',
@@ -204,7 +204,7 @@ def performance_tester():
     for name in os.listdir(pdir):
         if os.path.isdir(os.path.join(pdir, name)):
             #check for cti
-            files = [f for f in os.listdir(os.path.join(pdir, name)) if 
+            files = [f for f in os.listdir(os.path.join(pdir, name)) if
                         os.path.isfile(os.path.join(pdir, name, f))]
             for f in files:
                 if f.endswith('.cti'):
@@ -336,7 +336,7 @@ def performance_tester():
                         #write the tester
                         file_data = {'datafile' : os.path.join(the_path, 'data.bin')}
                         if lang == 'c' or lang == 'cuda':
-                            with open(os.path.join(home, 'static_files', 
+                            with open(os.path.join(home, 'static_files',
                                                     'tester{}.in'.format(utils.file_ext[temp_lang]))
                                                    , 'r') as file:
                                 src = Template(file.read())
@@ -344,11 +344,11 @@ def performance_tester():
                         else:
                             file_data['mechfile'] = mech_info['chemkin']
                             file_data['thermofile'] = mech_info['thermo']
-                            with open(os.path.join(home, 'static_files', 
+                            with open(os.path.join(home, 'static_files',
                                                    'tc_tester.c.in'), 'r') as file:
                                 src = Template(file.read())
                             src = src.substitute(file_data)
-                        with open(os.path.join(build_dir, 
+                        with open(os.path.join(build_dir,
                                               'test{}'.format(utils.file_ext[temp_lang]))
                                               , 'w') as file:
                             file.write(src)
@@ -359,7 +359,7 @@ def performance_tester():
 
                         #get file lists
                         i_dirs, files = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
-                        
+
                         # Compile generated source code
                         structs = [file_struct(temp_lang, f, flags[temp_lang], i_dirs, build_dir, test_dir) for f in files]
 
@@ -374,7 +374,7 @@ def performance_tester():
 
                         if lang == 'tchem':
                             #copy periodic table and mechanisms in
-                            shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'), 
+                            shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'),
                                                     'periodictable.dat')
 
                         with open(data_output, 'a+') as file:

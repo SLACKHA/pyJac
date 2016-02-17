@@ -22,8 +22,9 @@ except ImportError:
 
 # Local imports
 import utils
-from pyJac import create_jacobian
-import partially_stirred_reactor as pasr
+from .. import utils
+from ..core.create_jacobian import create_jacobian
+from . import partially_stirred_reactor as pasr
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -363,7 +364,7 @@ class cupyjac_evaluator(cpyjac_evaluator):
 
 
         self.cuda_state = self.cuda_state[num_eval:, ]
-        
+
         #reshape for comparison
         self.test_conc = self.reshaper(test_conc, (num_eval, self.nsp), self.back_spec_map)
         self.test_fwd_rates = self.reshaper(test_fwd_rates, (num_eval, self.nr), self.back_rxn_map)

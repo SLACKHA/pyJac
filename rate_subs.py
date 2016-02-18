@@ -1419,7 +1419,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
                         line += ' {}= '.format(sign)
                     first_use[spind] = False
             else:
-                line += ' {}= '.format(sign if first_use[spind] else '')
+                line += ' {}= '.format(sign if not first_use[spind] else '')
                 if not seen[spind] and nu < 0:
                     line += sign
                 first_use[spind] = False

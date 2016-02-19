@@ -1008,10 +1008,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     if not do_not_remove:
         # Cleanup all compiled files.
-        for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
+        for f in ['adjacob.so', 'adjacob_wrapper.cpp']:
             os.remove(f)
         if lang == 'cuda':
             for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
+                os.remove(f)
+        if lang == 'c':
+            for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
                 os.remove(f)
 
         # Now clean build directory

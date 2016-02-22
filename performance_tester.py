@@ -213,6 +213,8 @@ def performance_tester():
                     mechanism_list[name]['chemkin'] = f.replace('.cti', '.dat')
                     gas = ct.Solution(os.path.join(pdir, name, f))
                     mechanism_list[name]['ns'] = gas.n_species
+                    #shared memory bug still exists for Sarathy
+                    mechanism_list[name]['shared'] = not 'Sarathy' in name
 
                     thermo = next((tf for tf in files if 'therm' in tf), None)
                     if thermo is not None:
@@ -275,10 +277,10 @@ def performance_tester():
         the_path = os.getcwd()
         first_run = True
 
-        for lang in langs:
+        for lang in utils.langs:
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
             if lang == 'cuda':
-                shared = shared_base
+                shared = shared_base if mech_info['shared'] else [False]
                 finite_diffs = finite_diffs_base
                 cache_opt = cache_opt_base
             elif lang == 'c':

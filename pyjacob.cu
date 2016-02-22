@@ -10,13 +10,10 @@
 #include <stdio.h>
 #include <math.h>
 #include <assert.h>
-#ifndef SHARED_SIZE
-	#define SHARED_SIZE (0)
-#endif
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 
-//#define ECHECK
+#define ECHECK
 
 __global__
 void k_dydt(const int num, const double* pres, const double* y, double * dy, const mechanism_memory* d_mem)
@@ -84,6 +81,8 @@ double* dy_temp = 0;
 double* jac_temp = 0;
 int device = 0;
 
+#define USE_MEM (0.5)
+
 int init(int num)
 {
 	cudaErrorCheck( cudaSetDevice(device) );
@@ -98,7 +97,7 @@ int init(int num)
     size_t total_mem = 0;
     cudaErrorCheck( cudaMemGetInfo (&free_mem, &total_mem) );
     //conservatively estimate the maximum allowable threads
-    int max_threads = int(floor(0.8 * ((double)free_mem) / ((double)mech_size)));
+    int max_threads = int(floor(USE_MEM * ((double)free_mem) / ((double)mech_size)));
     int padded = min(num, max_threads);
     padded = padded - padded % TARGET_BLOCK_SIZE;
     if (padded == 0)

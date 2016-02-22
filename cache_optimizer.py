@@ -300,8 +300,8 @@ def optimize_cache(specs, reacs, multi_thread,
         for rind in range(nr):
             rxn = reacs[rind]
             plot = set(rxn.reac + rxn.prod)
-            #if USE_THD:
-            #    plot = plot.union(set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp]))
+            if USE_THD:
+                plot = plot.union(set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp]))
             plot = [name_map[sp] for sp in plot if sp]
             for sp in plot:
                 arr[rind, sp] = [0, 0, 0]
@@ -333,8 +333,8 @@ def optimize_cache(specs, reacs, multi_thread,
         for rind in fwd_rxn_mapping:
             rxn = reacs[rind]
             plot = set(rxn.reac + rxn.prod)
-            #if USE_THD:
-            #    plot = plot.union(set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp]))
+            if USE_THD:
+                plot = plot.union(set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp]))
             plot = [name_map[sp] for sp in plot if sp]
             for sp in plot:
                 arr[rind, sp] = [0, 0, 0]

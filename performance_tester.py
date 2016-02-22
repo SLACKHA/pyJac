@@ -115,7 +115,7 @@ def getf(x):
 
 def compiler(fstruct):
     args = [cmd_compile[fstruct.lang]]
-    args.extend(flags[fstruct.lang])
+    args.extend(fstruct.args)
     include = ['-I./' + d for d in fstruct.i_dirs]
     args.extend(include)
     args.extend([
@@ -361,15 +361,17 @@ def performance_tester():
                         i_dirs, files = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
                         
                         # Compile generated source code
-                        structs = [file_struct(temp_lang, f, flags[temp_lang] + (['-DFINITE_DIFF'] if FD else [])
-                            , i_dirs, build_dir, test_dir) for f in files]
+                        structs = [file_struct(temp_lang, f, i_dirs, 
+                                        (['-DFINITE_DIFF'] if FD else []) +
+                                        flags[temp_lang], 
+                                        build_dir, test_dir) for f in files]
 
                         pool = multiprocessing.Pool()
                         results = pool.map(compiler, structs)
                         pool.close()
                         pool.join()
                         if any(r == -1 for r in results):
-                            sys.exit(-1)
+                           sys.exit(-1)
 
                         linker(lang, temp_lang, test_dir, files)
 

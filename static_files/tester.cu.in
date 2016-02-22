@@ -1,8 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "jacob.cuh"
-
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -11,6 +9,14 @@
 #include "timer.h"
 #include "gpu_memory.cuh"
 #include "launch_bounds.cuh"
+
+#ifdef FINITE_DIFF
+__device__
+void eval_jacob (const double, const double, const double *, double *, const mechanism_memory*,
+                       double*);
+#else
+#include "jacob.cuh"
+#endif
 
 void read_initial_conditions(const char*, int, double**, double**);
 

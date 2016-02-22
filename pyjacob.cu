@@ -140,9 +140,13 @@ void run(int num, int padded, const double* pres, const double* mass_frac,
 	cudaErrorCheck( cudaMemcpy2D(y_device, pitch_device, mass_frac,
 					pitch_host, pitch_host, NSP, cudaMemcpyHostToDevice) );
 
+	size_t smem = 0;
+	#ifdef SHARED_SIZE
+		smem = SHARED_SIZE;
+	#endif
 	//eval dydt
 	//this gets us all arrays but the Jacobian
-	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, var_device, y_device, h_mem->dy, d_mem);
+	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, smem>>>(num, var_device, y_device, h_mem->dy, d_mem);
 
 	check_err();
 
@@ -170,7 +174,7 @@ void run(int num, int padded, const double* pres, const double* mass_frac,
 									NSP, cudaMemcpyDeviceToHost) );
 
 	//jacobian
-	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, SHARED_SIZE>>>(num, var_device, y_device, h_mem->jac, d_mem);
+	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, smem>>>(num, var_device, y_device, h_mem->jac, d_mem);
 
 	check_err();
 

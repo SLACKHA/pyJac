@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
- int read_initial_conditions(const char* filename, int NUM, int block_size, double** y_host, double** variable_host)
+ void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host)
  {    
     (*y_host) = (double*)malloc(NUM * NN * sizeof(double));
     (*variable_host) = (double*)malloc(NUM * sizeof(double));
@@ -55,5 +55,4 @@
 #endif
     }
     fclose (fp);
-    return padded;
 }

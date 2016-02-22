@@ -292,7 +292,7 @@ def performance_tester():
 
             for FD in finite_diffs:
                 if FD:
-                    shutil.copy(os.path.join(home, 'fd_jacob{}'.format(utils.file_ext[temp_lang])),
+                    shutil.copy(os.path.join(home, 'static_files', 'fd_jacob{}'.format(utils.file_ext[temp_lang])),
                                 os.path.join(build_dir, 'fd_jacob{}'.format(utils.file_ext[temp_lang])))
                     shared = [False]
                     cache_opt = [False]
@@ -361,7 +361,8 @@ def performance_tester():
                         i_dirs, files = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
                         
                         # Compile generated source code
-                        structs = [file_struct(temp_lang, f, flags[temp_lang], i_dirs, build_dir, test_dir) for f in files]
+                        structs = [file_struct(temp_lang, f, flags[temp_lang] + (['-DFINITE_DIFF'] if FD else [])
+                            , i_dirs, build_dir, test_dir) for f in files]
 
                         pool = multiprocessing.Pool()
                         results = pool.map(compiler, structs)

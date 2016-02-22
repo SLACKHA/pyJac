@@ -200,10 +200,10 @@ def optimize_cache(specs, reacs, multi_thread,
                         shared = np.where(diff[non_zero] == 0.)[0].shape[0]
                         count += shared - non_shared
 
-                divisor = reac_mapping[rind].count()
-                if USE_THD and reacs[rind].thd_body_eff:
-                    divisor += non_zero[0].shape[0]
-                count = 0 if divisor == 0 else float(count) / float(divisor)
+                #divisor = reac_mapping[rind].count()
+                #if USE_THD and reacs[rind].thd_body_eff:
+                #    divisor += non_zero[0].shape[0]
+                #count = 0 if divisor == 0 else float(count) / float(divisor)
 
                 if maxcount is None or count >= maxcount:
                     #compute tiebreak score
@@ -255,8 +255,10 @@ def optimize_cache(specs, reacs, multi_thread,
                 count = ((spec_mapping[spind] | mapping).count() - 
                             ((spec_mapping[spind] ^ mapping) & spec_mapping[spind]).count())
 
-                divisor = spec_mapping[spind].count()
-                count = 0 if divisor == 0 else float(count) / float(divisor)
+                #divisor = reac_mapping[rind].count()
+                #if USE_THD and reacs[rind].thd_body_eff:
+                #    divisor += non_zero[0].shape[0]
+                #count = 0 if divisor == 0 else float(count) / float(divisor)
 
                 if maxcount is None or count >= maxcount:
                     #compute tiebreak score

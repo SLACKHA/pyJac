@@ -233,7 +233,7 @@ def performance_tester():
     cpu_repeats = 10
     gpu_repeats = 10
 
-    #langs=['c', 'tchem']
+    langs=['c', 'cuda', 'tchem']
     for mech_name, mech_info in sorted(mechanism_list.items(), key=lambda x:x[1]['ns']):
         #get the cantera object
         gas = ct.Solution(os.path.join(home, pdir, mech_name, mech_info['mech']))
@@ -277,7 +277,7 @@ def performance_tester():
         the_path = os.getcwd()
         first_run = True
 
-        for lang in utils.langs:
+        for lang in langs:
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
             if lang == 'cuda':
                 shared = shared_base if mech_info['shared'] else [False]

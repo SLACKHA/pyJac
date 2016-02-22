@@ -383,7 +383,7 @@ def performance_tester():
                                 for i in range(todo[stepsize]):
                                     print(i, "/", todo[stepsize])
                                     subprocess.check_call([os.path.join(the_path, test_dir, 'speedtest'),
-                                    str(num_conditions)], stdout=file)
+                                    str(stepsize)], stdout=file)
 
 
 if __name__=='__main__':

@@ -329,7 +329,7 @@ def performance_tester():
                                             force_optimize=first_run
                                             )
                             if opt:
-                                first_run = False
+                                first_run = not any(x > 0 for x in todo) and first_run
 
                         #now we need to write the reader
                         shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])),

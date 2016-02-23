@@ -1278,6 +1278,8 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang])
                    )
+        if lang == 'cuda' and smm is not None:
+            file.write('#include <assert.h>\n')
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n')
@@ -1339,6 +1341,9 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
         return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
             else shared.variable('(*dy_N)', None)
 
+    if lang == 'cuda' and smm is not None:
+        file.write('  assert(threadIdx.x + {} * blockDim.x < {});\n'.format(
+            smm.shared_per_thread - 1, smm.shared_per_block))
     first_use = [True for spec in specs]
     first_smem_use = {}
     seen = [False for spec in specs]

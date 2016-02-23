@@ -135,7 +135,7 @@ class shared_memory_manager(object):
                     file.write(' ' * indent + self.__get_string(ind) + ' = ' + val.to_string() +
                                 utils.line_end['cuda'])
 
-        return [x not in old_variables for x in self.shared_dict.itervalues()]
+        return {k:(v not in old_variables) for k, v in self.shared_dict.iteritems()}
 
     def mark_for_eviction(self, variables):
         """Like the eviction method, but only evicts if not used in the next load"""

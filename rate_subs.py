@@ -1339,7 +1339,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
             else shared.variable('(*dy_N)', None)
 
     first_use = [True for spec in specs]
-    first_smem_use = []
+    first_smem_use = {}
     seen = [False for spec in specs]
     new_loads = []
     def __on_eviction(sp, shared, shared_ind):

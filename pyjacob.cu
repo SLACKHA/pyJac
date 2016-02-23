@@ -91,6 +91,10 @@ int init(int num)
 #ifdef PREFERL1
 	//prefer L1 for speed
 	cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+	cudaFuncCache L1type;
+	cudaErrorCheck(cudaDeviceGetCacheConfig(&L1type));
+	assert(L1type == cudaFuncCachePreferL1);
+	printf("L1 Cache size increased...\n");
 #endif
 	//determine maximum # of threads for this mechanism
 	//bytes per thread

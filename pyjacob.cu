@@ -81,15 +81,17 @@ double* dy_temp = 0;
 double* jac_temp = 0;
 int device = 0;
 
-#define USE_MEM (0.5)
+#define USE_MEM (0.8)
 
 int init(int num)
 {
 	cudaErrorCheck( cudaSetDevice(device) );
 	//reset device
 	cudaErrorCheck( cudaDeviceReset() );
+#ifdef PREFERL1
 	//prefer L1 for speed
 	cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+#endif
 	//determine maximum # of threads for this mechanism
 	//bytes per thread
     size_t mech_size = get_required_size();
@@ -99,7 +101,7 @@ int init(int num)
     //conservatively estimate the maximum allowable threads
     int max_threads = int(floor(USE_MEM * ((double)free_mem) / ((double)mech_size)));
     int padded = min(num, max_threads);
-    padded = padded - padded % TARGET_BLOCK_SIZE;
+    padded += (TARGET_BLOCK_SIZE - padded % TARGET_BLOCK_SIZE);
     if (padded == 0)
     {
     	printf("Mechanism is too large to fit into global CUDA memory... exiting.");

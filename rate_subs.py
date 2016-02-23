@@ -312,10 +312,11 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         next_file = 0
 
     get_array = utils.get_array
-    if lang == 'cuda' and smm is not None and not do_unroll:
+    if lang == 'cuda' and smm is not None:
         smm.reset()
         get_array = smm.get_array
-        smm.write_init(file, indent=2)
+        if not do_unroll:
+            smm.write_init(file, indent=2)
 
     def write_header(lang, rate_count):
         with open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
@@ -410,8 +411,8 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
         if smm is not None:
             smm.reset()
-            get_array = smm.get_array
-            smm.write_init(file, indent=2)
+            if defines:
+                smm.write_init(file, indent=2)
 
         if defines:
             if lang == 'c':

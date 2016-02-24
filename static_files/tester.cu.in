@@ -95,8 +95,8 @@ int main (int argc, char *argv[])
     initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
 
     #ifdef FINITE_DIFF
-    double* y_temp = 0;
-    cudaErrorCheck( cudaMalloc(&y_temp, padded * NSP * sizeof(double)) );
+    double* y_gpu_temp = 0;
+    cudaErrorCheck( cudaMalloc(&y_gpu_temp, padded * NSP * sizeof(double)) );
     #endif
 
     //padded is the number of threads allowable
@@ -119,12 +119,12 @@ int main (int argc, char *argv[])
             memcpy2D_in(y_temp, padded, y_host, num_odes,
                             num_solved, num_cond * sizeof(double), NSP);
             memcpy(var_temp, &var_host[num_solved], num_cond * sizeof(double));
-            cudaErrorCheck( cudaMemcpy (var_device, var_temp, padded * sizeof(double), cudaMemcpyHostToDevice));
+            cudaErrorCheck( cudaMemcpy (var_device, var_temp, num_cond * sizeof(double), cudaMemcpyHostToDevice));
             cudaErrorCheck( cudaMemcpy (y_device, y_temp, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
             #ifdef FINITE_DIFF
-                jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, var_device, y_device, d_mem, y_temp);
+                jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, var_device, y_device, d_mem, y_gpu_temp);
             #else
-                jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, var_device, y_device, d_mem);
+                jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, var_device, y_device, d_mem);
             #endif
             num_solved += num_cond;
         }
@@ -136,7 +136,7 @@ int main (int argc, char *argv[])
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
         #ifdef FINITE_DIFF
-            jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, var_device, y_device, d_mem, y_temp);
+            jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, var_device, y_device, d_mem, y_gpu_temp);
         #else
             jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, var_device, y_device, d_mem);
         #endif
@@ -146,6 +146,7 @@ int main (int argc, char *argv[])
     printf("%d,%.15le\n", num_odes, runtime);
     cudaErrorCheck( cudaPeekAtLastError() );
     cudaErrorCheck( cudaDeviceSynchronize() );
+    cudaErrorCheck( cudaFree(y_gpu_temp) );
     free_gpu_memory(&h_mem, &d_mem, &y_device, &var_device);
     free(y_host);
     free(var_host);

@@ -325,7 +325,8 @@ def performance_tester():
                                             num_blocks=8, num_threads=64,
                                             force_optimize=first_run
                                             )
-                            first_run = False
+                            if opt:
+                                first_run = False
                         #now we need to write the reader
                         shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])),
                                     os.path.join(os.getcwd(), build_dir, 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])))

@@ -310,16 +310,14 @@ def performance_tester():
                         if lang != 'cuda':
                             repeats = cpu_repeats
                             num_completed = check_file(data_output)
-                            if num_completed >= repeats:
-                                continue
                             todo = {num_conditions: repeats - num_completed}
                         else:
                             repeats = gpu_repeats
                             todo = check_step_file(data_output, steplist)
-                            if all(todo[x] >= repeats for x in todo):
-                                continue
                             for x in todo:
                                 todo[x] = repeats - todo[x]
+                        if not any(todo[x] > 0 for x in todo):
+                            continue
 
                         if lang != 'tchem':
                             create_jacobian(lang, mech_info['mech'],

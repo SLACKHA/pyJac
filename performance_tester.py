@@ -180,20 +180,23 @@ def performance_tester():
             files += ['rxn_rates_pres_mod']
         if FD:
             files += ['fd_jacob']
+            flists = []
         else:
             files += ['jacob']
-            test_lang = 'c' if not gpu else 'cuda'
-            flists = [('rates', 'rate_list_{}'), ('jacobs', 'jac_list_{}')]
-            for flist in flists:
-                try:
-                    with open(os.path.join(build_dir, flist[0], flist[1].format(test_lang))) as file:
-                        vals = file.readline().strip().split(' ')
-                        vals = [os.path.join(flist[0],
-                                    f[:f.index(utils.file_ext[test_lang])]) for f in vals]
-                        files += vals
-                        i_dirs.append(os.path.join(build_dir, flist[0]))
-                except:
-                    pass
+            flists = [('jacobs', 'jac_list_{}')]
+
+        test_lang = 'c' if not gpu else 'cuda'
+        flists += [('rates', 'rate_list_{}')]
+        for flist in flists:
+            try:
+                with open(os.path.join(build_dir, flist[0], flist[1].format(test_lang))) as file:
+                    vals = file.readline().strip().split(' ')
+                    vals = [os.path.join(flist[0],
+                                f[:f.index(utils.file_ext[test_lang])]) for f in vals]
+                    files += vals
+                    i_dirs.append(os.path.join(build_dir, flist[0]))
+            except:
+                pass
         if gpu:
             files += ['gpu_memory']
 

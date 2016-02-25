@@ -37,7 +37,7 @@ except ImportError:
 import utils
 from pyJac import create_jacobian
 import partially_stirred_reactor as pasr
-from optionLoop import optionloop
+from optionLoop.optionloop import optionloop
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -236,17 +236,17 @@ def performance_tester():
     cpu_repeats = 10
     gpu_repeats = 10
 
-    c_params = defaultdict(False, {'lang' : 'c',
-                                    'cache_opt' : [False, True],
-                                    'finite_diffs' : [False, True]]})
-    op = optionloop(c_params)
-    cuda_params = defaultdict(False, {'lang' : 'cuda',
-                                    'cache_opt' : [False, True],
-                                    'shared' : [False, True]
-                                    'finite_diffs' : [False, True]]})
-    op = op + optionloop(cuda_params)
-    tchem_params = defaultdict(False, {'lang' : 'tchem'})
-    op = op + optionloop(tchem_params)
+    def false_factory():
+        return False
+
+    c_params = {'lang' : 'c',
+                'cache_opt' : [False, True],
+                'finite_diffs' : [False, True]}
+    cuda_params = {'lang' : 'cuda',
+                    'cache_opt' : [False, True],
+                    'shared' : [False, True],
+                    'finite_diffs' : [False, True]}
+    tchem_params = {'lang' : 'tchem'}
 
     for mech_name, mech_info in sorted(mechanism_list.items(), key=lambda x:x[1]['ns']):
         #get the cantera object
@@ -290,6 +290,9 @@ def performance_tester():
 
         the_path = os.getcwd()
         first_run = True
+        op = optionloop(c_params, false_factory)
+        op = op + optionloop(cuda_params, false_factory)
+        op = op + optionloop(tchem_params, false_factory)
 
         for state in op:
             lang = state['lang']

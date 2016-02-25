@@ -146,7 +146,9 @@ int main (int argc, char *argv[])
     printf("%d,%.15le\n", num_odes, runtime);
     cudaErrorCheck( cudaPeekAtLastError() );
     cudaErrorCheck( cudaDeviceSynchronize() );
+#ifdef FINITE_DIFF
     cudaErrorCheck( cudaFree(y_gpu_temp) );
+#endif
     free_gpu_memory(&h_mem, &d_mem, &y_device, &var_device);
     free(y_host);
     free(var_host);

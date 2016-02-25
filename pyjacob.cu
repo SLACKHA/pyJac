@@ -105,7 +105,8 @@ int init(int num)
     //conservatively estimate the maximum allowable threads
     int max_threads = int(floor(USE_MEM * ((double)free_mem) / ((double)mech_size)));
     int padded = min(num, max_threads);
-    padded += (TARGET_BLOCK_SIZE - padded % TARGET_BLOCK_SIZE);
+    //padded is next factor of block size up
+    padded = int(ceil(padded / float(TARGET_BLOCK_SIZE)) * TARGET_BLOCK_SIZE);
     if (padded == 0)
     {
     	printf("Mechanism is too large to fit into global CUDA memory... exiting.");

@@ -162,7 +162,7 @@ class file_struct(object):
         self.build_dir = build_dir
         self.test_dir = test_dir
 
-def performance_tester():
+def performance_tester(use_old_opt):
     pdir = 'performance'
     home = os.getcwd()
     build_dir = 'out'
@@ -322,7 +322,7 @@ def performance_tester():
             if not any(todo[x] > 0 for x in todo):
                 continue
 
-            if os.path.isfile(build_dir, 'optimized.pickle') and not use_old_opt:
+            if os.path.isfile(os.path.join(os.getcwd(), build_dir, 'optimized.pickle')) and not use_old_opt:
                 raise Exception('Previous optimization file found... exiting')
 
             if lang != 'tchem':
@@ -402,4 +402,5 @@ if __name__=='__main__':
                         required=False,
                         help='If true, allows the performance_tester to use any old optimization files found'
                         )
-    performance_tester()
+    args = parser.parse_args()
+    performance_tester(args.use_old_opt)

@@ -294,6 +294,10 @@ def performance_tester(use_old_opt):
         op = op + optionloop(cuda_params, false_factory)
         op = op + optionloop(tchem_params, false_factory)
 
+        haveOpt = False
+        if os.path.isfile(os.path.join(os.getcwd(), build_dir, 'optimized.pickle')):
+            haveOpt = True
+
         for state in op:
             lang = state['lang']
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
@@ -322,7 +326,7 @@ def performance_tester(use_old_opt):
             if not any(todo[x] > 0 for x in todo):
                 continue
 
-            if os.path.isfile(os.path.join(os.getcwd(), build_dir, 'optimized.pickle')) and not use_old_opt:
+            if opt and haveOpt and not use_old_opt:
                 raise Exception('Previous optimization file found... exiting')
 
             if lang != 'tchem':
@@ -333,6 +337,7 @@ def performance_tester(use_old_opt):
                                 num_blocks=8, num_threads=64,
                                 multi_thread=multiprocessing.cpu_count()
                                 )
+
             #now we need to write the reader
             shutil.copy(os.path.join(home, 'static_files', 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])),
                         os.path.join(os.getcwd(), build_dir, 'read_initial_conditions{}'.format(utils.file_ext[temp_lang])))

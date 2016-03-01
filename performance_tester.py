@@ -50,7 +50,7 @@ cmd_compile = dict(c='gcc',
 flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                 '-fopenmp'],
              icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
-             cuda=['-O3', '-arch=sm_20',
+             cuda=['-O3', '-arch=sm_20', '-lineinfo',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
                    '-dc']

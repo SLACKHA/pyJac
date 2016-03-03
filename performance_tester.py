@@ -250,8 +250,8 @@ def performance_tester(use_old_opt, num_threads):
 
     #set up testing environment
     env = os.environ.copy()
-    env['OMP_NUM_THREADS'] = num_threads
-    env['MKL_NUM_THREADS'] = num_threads
+    env['OMP_NUM_THREADS'] = str(num_threads)
+    env['MKL_NUM_THREADS'] = str(num_threads)
 
     for mech_name, mech_info in sorted(mechanism_list.items(), key=lambda x:x[1]['ns']):
         #get the cantera object

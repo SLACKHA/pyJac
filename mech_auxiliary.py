@@ -352,7 +352,6 @@ void eval_jacob(const double t, const double p, const double* y,
                        '{\n'
                        '  //init vectors\n'
                        )
-            file.write('  cudaError_t result;\n')
             file.write(err_check.format('cudaMalloc(y_device, padded * NSP * sizeof(double))'))
             file.write(err_check.format('cudaMalloc(var_device, padded * sizeof(double))'))
             file.write('  // Allocate storage for the device struct\n')

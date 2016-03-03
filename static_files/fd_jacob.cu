@@ -21,8 +21,9 @@
 #endif
 
 __device__
-void eval_jacob (const double t, const double pres, const double * cy, double * jac, const mechanism_memory* d_mem,
-                       double* y_temp) {
+void eval_jacob (const double t, const double pres, const double * __restrict__ cy,
+                    double * __restrict__ jac, const mechanism_memory* __restrict__ d_mem,
+                    double* __restrict__ y_temp) {
   double* dy = d_mem->dy;
   double ewt[NSP];
   

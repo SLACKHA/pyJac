@@ -25,10 +25,11 @@ int main(int argc, char *argv[])
   int withtab = 0;
   TC_initChem( mechfile, thermofile, withtab, 1.0) ;
 
-  double jac[NSP * NSP] = {0};
   StartTimer();
+  #pragma omp parallel for
   for(int tid = 0; tid < num_odes; ++tid)
   {
+      double jac[NSP * NSP] = {0};
       TC_setThermoPres(var_host[tid]) ;
       TC_getJacTYNm1anl ( &y_host[tid * NN], NSP, jac ) ;
   }

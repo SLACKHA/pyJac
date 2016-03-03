@@ -162,7 +162,7 @@ class file_struct(object):
         self.build_dir = build_dir
         self.test_dir = test_dir
 
-def performance_tester(use_old_opt):
+def performance_tester(use_old_opt, num_threads):
     pdir = 'performance'
     home = os.getcwd()
     build_dir = 'out'
@@ -247,6 +247,11 @@ def performance_tester(use_old_opt):
                     'shared' : [False, True],
                     'finite_diffs' : [False, True]}
     tchem_params = {'lang' : 'tchem'}
+
+    #set up testing environment
+    env = os.environ.copy()
+    env['OMP_NUM_THREADS'] = num_threads
+    env['MKL_NUM_THREADS'] = num_threads
 
     for mech_name, mech_info in sorted(mechanism_list.items(), key=lambda x:x[1]['ns']):
         #get the cantera object
@@ -394,7 +399,7 @@ def performance_tester(use_old_opt):
                     for i in range(todo[stepsize]):
                         print(i, "/", todo[stepsize])
                         subprocess.check_call([os.path.join(the_path, test_dir, 'speedtest'),
-                        str(stepsize)], stdout=file)
+                        str(stepsize)], stdout=file, env=env)
 
 
 if __name__=='__main__':
@@ -407,5 +412,10 @@ if __name__=='__main__':
                         required=False,
                         help='If true, allows the performance_tester to use any old optimization files found'
                         )
+    parser.add_argument('-nt', '--num_omp_threads',
+                        type=int,
+                        default=12,
+                        required=False,
+                        help='The number of threads to use for OpenMP parallelization of the C codes.')
     args = parser.parse_args()
-    performance_tester(args.use_old_opt)
+    performance_tester(args.use_old_opt, args.num_omp_threads)

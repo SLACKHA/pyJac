@@ -121,7 +121,8 @@ int main (int argc, char *argv[])
                             num_solved, num_cond * sizeof(double), NSP);
             memcpy(var_temp, &var_host[num_solved], num_cond * sizeof(double));
             cudaErrorCheck( cudaMemcpy (var_device, var_temp, num_cond * sizeof(double), cudaMemcpyHostToDevice));
-            cudaErrorCheck( cudaMemcpy (y_device, y_temp, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
+            cudaErrorCheck( cudaMemcpy2D (y_device, padded * sizeof(double), y_temp, padded * sizeof(double),
+                                            num_cond * sizeof(double), NSP, cudaMemcpyHostToDevice));
             #ifdef FINITE_DIFF
                 jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, var_device, y_device, d_mem, y_gpu_temp);
             #else
@@ -135,7 +136,8 @@ int main (int argc, char *argv[])
     else
     {
         cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-        cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
+        cudaErrorCheck( cudaMemcpy2D(y_device,  padded * sizeof(double), y_host, num_odes * sizeof(double),
+                                                num_odes * sizeof(double), NSP, cudaMemcpyHostToDevice) );
         #ifdef FINITE_DIFF
             jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, var_device, y_device, d_mem, y_gpu_temp);
         #else

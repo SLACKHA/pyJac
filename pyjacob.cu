@@ -64,8 +64,6 @@ inline void memcpy2D_in(double* dst, const int pitch_dst, double const * src, co
 
 mechanism_memory * d_mem = 0;
 mechanism_memory * h_mem = 0;
-double* y_device = 0;
-double* var_device = 0;
 double* y_temp = 0;
 double* pres_temp = 0;
 double* conc_temp = 0;
@@ -119,14 +117,14 @@ int init(int num)
     printf("Setting up memory to work on kernels of %d threads, with blocksize %d\n", padded, TARGET_BLOCK_SIZE);
 
     h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
-    initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
+    initialize_gpu_memory(padded, &h_mem, &d_mem);
     return padded;
 }
 
 void cleanup()
 {
 	//clean up
-	free_gpu_memory(&h_mem, &d_mem, &y_device, &var_device);
+	free_gpu_memory(&h_mem, &d_mem);
 	free(h_mem);
 
 	//reset device
@@ -142,8 +140,8 @@ void run(int num, int padded, const double* pres, const double* mass_frac,
 	size_t pitch_device = padded * sizeof(double);
 
 	//copy over our data
-	cudaErrorCheck( cudaMemcpy(var_device, pres, pitch_host, cudaMemcpyHostToDevice) );
-	cudaErrorCheck( cudaMemcpy2D(y_device, pitch_device, mass_frac,
+	cudaErrorCheck( cudaMemcpy(h_mem->var, pres, pitch_host, cudaMemcpyHostToDevice) );
+	cudaErrorCheck( cudaMemcpy2D(h_mem->y, pitch_device, mass_frac,
 					pitch_host, pitch_host, NSP, cudaMemcpyHostToDevice) );
 
 	size_t smem = 0;
@@ -152,7 +150,7 @@ void run(int num, int padded, const double* pres, const double* mass_frac,
 	#endif
 	//eval dydt
 	//this gets us all arrays but the Jacobian
-	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, smem>>>(num, var_device, y_device, h_mem->dy, d_mem);
+	k_dydt<<<grid_num, TARGET_BLOCK_SIZE, smem>>>(num, h_mem->var, h_mem->y, h_mem->dy, d_mem);
 
 	check_err();
 
@@ -180,7 +178,7 @@ void run(int num, int padded, const double* pres, const double* mass_frac,
 									NSP, cudaMemcpyDeviceToHost) );
 
 	//jacobian
-	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, smem>>>(num, var_device, y_device, h_mem->jac, d_mem);
+	k_eval_jacob<<<grid_num, TARGET_BLOCK_SIZE, smem>>>(num, h_mem->var, h_mem->y, h_mem->jac, d_mem);
 
 	check_err();
 

@@ -322,7 +322,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        )
             file.write('void initialize_gpu_memory(int, mechanism_memory**,'
                        ' mechanism_memory**);\n'
-                       'size_t get_required_size();\n'
+                       'size_t required_mechanism_size();\n'
                        'void free_gpu_memory(mechanism_memory**, mechanism_memory**);\n'
                        '\n'
                        '#endif\n')
@@ -334,7 +334,7 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
-            file.write('size_t get_required_size() {\n'
+            file.write('size_t required_mechanism_size() {\n'
                        '  //returns the total required size for the mechanism per thread\n'
                        '  size_t mech_size = 0;\n')
             for array, size in gpu_memory.iteritems():

@@ -96,7 +96,7 @@ int init(int num)
 #endif
 	//determine maximum # of threads for this mechanism
 	//bytes per thread
-    size_t mech_size = get_required_size();
+    size_t mech_size = required_mechanism_size();
     size_t free_mem = 0;
     size_t total_mem = 0;
     cudaErrorCheck( cudaMemGetInfo (&free_mem, &total_mem) );

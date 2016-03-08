@@ -1,8 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "jacob.cuh"
-
 
 #include <cuda.h>
 #include <cuda_runtime.h>
@@ -12,16 +10,32 @@
 #include "gpu_memory.cuh"
 #include "launch_bounds.cuh"
 
-int read_initial_conditions(const char*, int, double**, double**);
+#ifdef FINITE_DIFF
+__device__
+void eval_jacob (const double, const double, const double *, double *, const mechanism_memory*,
+                       double*);
+#else
+#include "jacob.cuh"
+#endif
+
+void read_initial_conditions(const char*, int, double**, double**);
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
 #define GRID_SIZE (blockDim.x * gridDim.x)
 __global__
+#ifdef FINITE_DIFF
+void jac_driver(int NUM, const double* pres, const double* y, const mechanism_memory* d_mem, double* y_temp)
+#else
 void jac_driver(int NUM, const double* pres, const double* y, const mechanism_memory* d_mem)
+#endif
 {
     if (T_ID < NUM)
     {
+    #ifdef FINITE_DIFF
+        eval_jacob (0, pres[T_ID], y, d_mem->jac, d_mem, y_temp);
+    #else
         eval_jacob (0, pres[T_ID], y, d_mem->jac, d_mem);
+    #endif
     }
 }
 
@@ -46,18 +60,21 @@ int main (int argc, char *argv[])
     cudaErrorCheck (cudaSetDevice (0) );
     //reset device
     cudaErrorCheck( cudaDeviceReset() );
+    //bump up shared mem bank size
+    cudaErrorCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));
     //prefer L1 for speed
     cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
     //determine maximum # of threads for this mechanism
     //bytes per thread
-    size_t mech_size = get_required_size();
+    size_t mech_size = required_mechanism_size();
     size_t free_mem = 0;
     size_t total_mem = 0;
     cudaErrorCheck( cudaMemGetInfo (&free_mem, &total_mem) );
     //conservatively estimate the maximum allowable threads
     int max_threads = int(floor(0.8 * ((double)free_mem) / ((double)mech_size)));
-    int padded = min(num, max_threads);
-    padded = padded - padded % TARGET_BLOCK_SIZE;
+    int padded = min(num_odes, max_threads);
+    //padded is next factor of block size up
+    padded = int(ceil(padded / float(TARGET_BLOCK_SIZE)) * TARGET_BLOCK_SIZE);
     if (padded == 0)
     {
         printf("Mechanism is too large to fit into global CUDA memory... exiting.");
@@ -67,13 +84,21 @@ int main (int argc, char *argv[])
     mechanism_memory * d_mem = 0;
     mechanism_memory* h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
 
-    double* y_device;
     double* y_host;
-    double* var_device;
     double* var_host;
 
+    size_t smem = 0;
+    #ifdef SHARED_SIZE
+        smem = SHARED_SIZE;
+    #endif
+
     //init gpu memory
-    initialize_gpu_memory(padded, &h_mem, &d_mem, &y_device, &var_device);
+    initialize_gpu_memory(padded, &h_mem, &d_mem);
+
+    #ifdef FINITE_DIFF
+    double* y_gpu_temp = 0;
+    cudaErrorCheck( cudaMalloc(&y_gpu_temp, padded * NSP * sizeof(double)) );
+    #endif
 
     //padded is the number of threads allowable
     read_initial_conditions("$datafile", num_odes, &y_host, &var_host);
@@ -95,12 +120,13 @@ int main (int argc, char *argv[])
             memcpy2D_in(y_temp, padded, y_host, num_odes,
                             num_solved, num_cond * sizeof(double), NSP);
             memcpy(var_temp, &var_host[num_solved], num_cond * sizeof(double));
-            cudaErrorCheck( cudaMemcpy (var_device, var_temp, padded * sizeof(double), cudaMemcpyHostToDevice));
-            cudaErrorCheck( cudaMemcpy (y_device, y_temp, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
-            #ifdef SHARED_SIZE
-                jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, d_mem);
+            cudaErrorCheck( cudaMemcpy (h_mem->var, var_temp, num_cond * sizeof(double), cudaMemcpyHostToDevice));
+            cudaErrorCheck( cudaMemcpy2D (h_mem->y, padded * sizeof(double), y_temp, padded * sizeof(double),
+                                            num_cond * sizeof(double), NSP, cudaMemcpyHostToDevice));
+            #ifdef FINITE_DIFF
+                jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, h_mem->var, h_mem->y, d_mem, y_gpu_temp);
             #else
-                jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, d_mem);
+                jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, h_mem->var, h_mem->y, d_mem);
             #endif
             num_solved += num_cond;
         }
@@ -109,12 +135,13 @@ int main (int argc, char *argv[])
     }
     else
     {
-        cudaErrorCheck( cudaMemcpy (var_device, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
-        cudaErrorCheck( cudaMemcpy (y_device, y_host, padded * NSP * sizeof(double), cudaMemcpyHostToDevice));
-        #ifdef SHARED_SIZE
-            jac_driver <<< dimGrid, dimBlock, SHARED_SIZE >>> (num_odes, var_device, y_device, d_mem);
+        cudaErrorCheck( cudaMemcpy (h_mem->var, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
+        cudaErrorCheck( cudaMemcpy2D(h_mem->y,  padded * sizeof(double), y_host, num_odes * sizeof(double),
+                                                num_odes * sizeof(double), NSP, cudaMemcpyHostToDevice) );
+        #ifdef FINITE_DIFF
+            jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, h_mem->var, h_mem->y, d_mem, y_gpu_temp);
         #else
-            jac_driver <<< dimGrid, dimBlock >>> (num_odes, var_device, y_device, d_mem);
+            jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, h_mem->var, h_mem->y, d_mem);
         #endif
     }
     cudaDeviceSynchronize();
@@ -122,7 +149,10 @@ int main (int argc, char *argv[])
     printf("%d,%.15le\n", num_odes, runtime);
     cudaErrorCheck( cudaPeekAtLastError() );
     cudaErrorCheck( cudaDeviceSynchronize() );
-    free_gpu_memory(&h_mem, &d_mem, &y_device, &var_device);
+#ifdef FINITE_DIFF
+    cudaErrorCheck( cudaFree(y_gpu_temp) );
+#endif
+    free_gpu_memory(&h_mem, &d_mem);
     free(y_host);
     free(var_host);
     free(h_mem);

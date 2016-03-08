@@ -96,10 +96,10 @@ ext = Extension('cu_pyjacob',
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
-                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v', '-c',
+                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v', 
                                     '--compiler-options', "'-fPIC'",
-                                    '--ftz=false', '--prec-div=true',
-                                    '--prec-sqrt=true']},
+                                    '--ftz=false', '--prec-div=true', 
+                                    '--prec-sqrt=true', '-m64']},
                 include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes
                 )
 
@@ -165,14 +165,18 @@ def customize_compiler_for_nvcc(self):
         if os.path.splitext(src)[1] == '.cu':
             # use the cuda for .cu files
             self.set_executable('compiler_so', CUDA['nvcc'])
+            the_cc = cc_args[:] 
             # use only a subset of the extra_postargs, which are 1-1 translated
             # from the extra_compile_args in the Extension class
-            postargs = extra_postargs['nvcc']
-            cc_args[-1] = '-dc'
+            postargs = extra_postargs['nvcc'][:]
+            the_cc.extend(postargs)
+            the_cc.append('-dc')
+            postargs = []
         else:
-            postargs = extra_postargs['gcc']
+            the_cc = cc_args[:] 
+            postargs = extra_postargs['gcc'][:]
 
-        super(obj, src, ext, cc_args, postargs, pp_opts)
+        super(obj, src, ext, the_cc, postargs, pp_opts)
         # reset the default compiler_so, which we might have changed for cuda
         self.compiler_so = default_compiler_so
 

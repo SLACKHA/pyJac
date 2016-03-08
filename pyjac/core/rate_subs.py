@@ -312,10 +312,11 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         next_file = 0
 
     get_array = utils.get_array
-    if lang == 'cuda' and smm is not None and not do_unroll:
+    if lang == 'cuda' and smm is not None:
         smm.reset()
         get_array = smm.get_array
-        smm.write_init(file, indent=2)
+        if not do_unroll:
+            smm.write_init(file, indent=2)
 
     def write_header(lang, rate_count):
         with open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
@@ -410,8 +411,8 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
         if smm is not None:
             smm.reset()
-            get_array = smm.get_array
-            smm.write_init(file, indent=2)
+            if defines:
+                smm.write_init(file, indent=2)
 
         if defines:
             if lang == 'c':
@@ -1277,6 +1278,8 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang])
                    )
+        if lang == 'cuda' and smm is not None:
+            file.write('#include <assert.h>\n')
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n')
@@ -1326,24 +1329,6 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
         line += '  sp_rates = zeros({},1);\n'.format(len(specs))
     file.write(line)
 
-    get_array = utils.get_array
-    if lang == 'cuda' and smm is not None:
-        smm.reset()
-        get_array = smm.get_array
-        smm.write_init(file, indent=2)
-
-        cuda_unloaded = [False for spec in specs]
-        def __on_eviction(sp, shared):
-            index = len(specs) - 1 if sp.index is None else sp.index
-            file.write('  {} {}= {}'.format(sp.to_string(), '+'
-                                    if cuda_unloaded[index] or
-                                    cuda_loaded[index] else '',
-                                    shared
-                                    )
-                                    + utils.line_end[lang])
-            cuda_unloaded[index] = True
-
-        smm.set_on_eviction(__on_eviction)
 
     def __get_var(spind):
         if spind + 1 == len(specs):
@@ -1351,9 +1336,34 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
         else:
             line = '  ' + get_array(lang, 'sp_rates', spind)
         return line
-    new_loads = []
-    cuda_loaded = [False for spec in specs]
+
+    def __get_smm_var(sp):
+        return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
+            else shared.variable('(*dy_N)', None)
+
+    if lang == 'cuda' and smm is not None:
+        file.write('  assert(threadIdx.x + {} * blockDim.x < {});\n'.format(
+            smm.shared_per_thread - 1, smm.shared_per_block))
+    first_use = [True for spec in specs]
+    first_smem_use = {}
     seen = [False for spec in specs]
+    new_loads = []
+    def __on_eviction(sp, shared, shared_ind):
+        index = len(specs) - 1 if sp.index is None else sp.index
+        file.write('  {} {}= {}'.format(sp.to_string(), 
+                    # is only a += if the species in question has been updated
+                    # previously
+                   '+' if not first_use[index] else '',
+                   shared) + utils.line_end[lang])
+        first_use[index] = False
+
+    get_array = utils.get_array
+    if lang == 'cuda' and smm is not None:
+        smm.reset()
+        get_array = smm.get_array
+        smm.write_init(file, indent=2)
+        smm.set_on_eviction(__on_eviction)
+
     #loop through reaction
     for rind in range(len(reacs)):
         print_ind = fwd_rxn_mapping[rind]
@@ -1361,26 +1371,21 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
                     'rxn {}'.format(print_ind) + '\n')
         rxn = reacs[rind]
         #get allowed species
-        my_specs = set(rxn.reac + rxn.prod)
+        my_specs = [x for x in set(rxn.reac + rxn.prod)
+                        if utils.get_nu(x, rxn) != 0.]
         if lang == 'cuda' and smm is not None:
-            def __get_smm_var(sp):
-                return shared.variable('sp_rates', sp) if sp + 1 != len(specs) \
-                    else shared.variable('(*dy_N)', None)
             the_vars = [__get_smm_var(sp) for sp in my_specs]
             # estimate usages
             usages = []
             for sp in set(rxn.reac + rxn.prod):
                 temp = rind + 1
                 while (temp < len(reacs) and
-                      (sp in reacs[temp].reac or
-                       sp in reacs[temp].prod)
-                       ):
+                      utils.get_nu(sp, reacs[temp])) != 0.:
                     temp += 1
                 usages.append(temp - rind - 1)
-            new_loads = smm.load_into_shared(file, the_vars,
+            first_smem_use = smm.load_into_shared(file, the_vars,
                                              usages, load=False
                                              )
-            new_loads = [x.index for x in new_loads]
 
         # loop through species
         for spind in my_specs:
@@ -1396,21 +1401,34 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
 
             sign = '-' if nu < 0 else '+'
             line = __get_var(spind)
-            if lang == 'cuda':
-                valin = spind in new_loads
-                #if we're loading it and it's already been touched
-                #we need to do a += when we unload
-                cuda_loaded[spind] |= valin and seen[spind]
-                line += ' {}= {}'.format(sign if not valin and
-                                         seen[spind] else '',
-                                         sign if (valin or
-                                         not seen[spind]) and
-                                         nu < 0 else ''
-                                         )
+            if lang == 'cuda' and smm is not None:
+                tempvar = __get_smm_var(spind)
+                smem_ind, smem_var = smm.get_index(tempvar)
+                if smem_ind is not None:
+                    #this is loaded into shared memory
+                    if first_smem_use[smem_ind]:
+                        #if it's the first time the value has been used
+                        #use an ='s
+                        line += ' = {}'.format(sign if sign == '-' else '')
+                    else:
+                        #otherwise +/- =
+                        line += ' {}= '.format(sign)
+                    first_smem_use[smem_ind] = False
+                else:
+                    #this is not loaded into shared memory
+                    if first_use[spind]:
+                        #if it's the first time the value has been used
+                        #use an ='s
+                        line += ' = {}'.format(sign if sign == '-' else '')
+                    else:
+                        #otherwise +/- =
+                        line += ' {}= '.format(sign)
+                    first_use[spind] = False
             else:
-                line += ' {}= '.format(sign if seen[spind] else '')
+                line += ' {}= '.format(sign if not first_use[spind] else '')
                 if not seen[spind] and nu < 0:
                     line += sign
+                first_use[spind] = False
             nu = abs(nu)
             if nu != 1.0:
                 if utils.is_integer(nu):

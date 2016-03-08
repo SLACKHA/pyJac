@@ -243,6 +243,7 @@ def is_integer(val):
 
 
 def get_parser():
+    import multiprocessing
     # command line arguments
     parser = ArgumentParser(description='pyJac: Generates source code '
                                         'for analytical chemical '
@@ -318,7 +319,7 @@ def get_parser():
     parser.add_argument('-mt', '--multi-threaded',
                         type=int,
                         dest='multi_thread',
-                        default=None,
+                        default=multiprocessing.cpu_count(),
                         required=False,
                         help='The number of threads to use during the '
                              'optimization process.'

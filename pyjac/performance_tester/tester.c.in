@@ -13,11 +13,12 @@ void read_initial_conditions(const char* filename, int NUM, double** y_host, dou
         double* y_host;
         double* var_host;
         read_initial_conditions("$datafile", num_odes, &y_host, &var_host);
-        
-        double jac[NSP * NSP] = {0};
+
         StartTimer();
+        #pragma omp parallel for
         for(int tid = 0; tid < num_odes; ++tid)
         {
+            double jac[NSP * NSP] = {0};
             eval_jacob(0, var_host[tid], &y_host[tid * NN], jac);
         }
         double runtime = GetTimer();

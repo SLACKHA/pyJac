@@ -21,18 +21,28 @@
 #endif
 
 __device__
-void eval_jacob (const double t, const double pres, const double * cy, double * jac) {
-  double y[NSP];
-  double dy[NSP];
+void eval_jacob (const double t, const double pres, const double * __restrict__ cy,
+                    double * __restrict__ jac, const mechanism_memory* __restrict__ d_mem,
+                    double* __restrict__ y_temp) {
+  double* dy = d_mem->dy;
   double ewt[NSP];
   
   #pragma unroll
   for (int i = 0; i < NSP; ++i) {
-    ewt[i] = ATOL + (RTOL * fabs(cy[i]));
-    y[i] = cy[i];
+    y_temp[INDEX(i)] = cy[INDEX(i)];
+    ewt[i] = ATOL + (RTOL * fabs(cy[INDEX(i)]));
   }
 
-  dydt (t, pres, y, dy);
+  dydt (t, pres, cy, dy, d_mem);
+  #if FD_ORD == 1
+  #pragma unroll
+  for (int j = 0; j < NSP; ++j) {
+      #pragma unroll
+      for (int i = 0; i < NSP; ++i) {
+        jac[INDEX(i + NSP*j)] = dy[INDEX(i)];
+      }
+  }
+  #endif
   
   // unit roundoff of machine
   double srur = sqrt(DBL_EPSILON);
@@ -40,47 +50,47 @@ void eval_jacob (const double t, const double pres, const double * cy, double * 
   double sum = 0.0;
   #pragma unroll
   for (int i = 0; i < NSP; ++i) {
-    sum += (ewt[i] * dy[i]) * (ewt[i] * dy[i]);
+    sum += (ewt[i] * dy[INDEX(i)]) * (ewt[i] * dy[INDEX(i)]);
   }
   double fac = sqrt(sum / ((double)(NSP)));
   double r0 = 1000.0 * RTOL * DBL_EPSILON * ((double)(NSP)) * fac;
-  double f_temp[NSP];
+  
   
   #pragma unroll
   for (int j = 0; j < NSP; ++j) {
-    double yj_orig = y[j];
+    double yj_orig = y_temp[INDEX(j)];
     double r = fmax(srur * fabs(yj_orig), r0 / ewt[j]);
     
     #if FD_ORD == 1
-      y[j] = yj_orig + r;
-      dydt (t, pres, y, f_temp);
+      y_temp[INDEX(j)] = yj_orig + r;
+      dydt (t, pres, y_temp, dy, d_mem);
         
       #pragma unroll
       for (int i = 0; i < NSP; ++i) {
-        jac[i + NSP*j] = (f_temp[i] - dy[i]) / r;
+        jac[INDEX(i + NSP*j)] = (dy[INDEX(i)] - jac[INDEX(i + NSP*j)]) / r;
       }
     #else
       #pragma unroll
       for (int i = 0; i < NSP; ++i) {
-        jac[i + NSP*j] = 0.0;
+        jac[INDEX(i + NSP*j)] = 0.0;
       }
       #pragma unroll
       for (int k = 0; k < FD_ORD; ++k) {
-        y[j] = yj_orig + x_coeffs[k] * r;
-        dydt (t, pres, y, f_temp);
+        y_temp[INDEX(j)] = yj_orig + x_coeffs[k] * r;
+        dydt (t, pres, y_temp, dy, d_mem);
         
         #pragma unroll
         for (int i = 0; i < NSP; ++i) {
-          jac[i + NSP*j] += y_coeffs[k] * f_temp[i];
+          jac[INDEX(i + NSP*j)] += y_coeffs[k] * y_temp[INDEX(i)];
         }
       }
       #pragma unroll
       for (int i = 0; i < NSP; ++i) {
-        jac[i + NSP*j] /= r;
+        jac[INDEX(i + NSP*j)] /= r;
       }
     #endif
     
-    y[j] = yj_orig;
+    y_temp[INDEX(j)] = yj_orig;
   }
   
 }

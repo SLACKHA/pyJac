@@ -691,7 +691,8 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
                                  np.sum(state_data[i, ls + 1:])
 
     if condition_numbers is not None:
-        state_data = state_data[[int(x) for x in condition_numbers.split(',')], :]
+        condition_numbers = [int(x) for x in  condition_numbers.split(',')]
+        state_data = state_data[[x for x in condition_numbers], :]
 
     tchem_jac = None
     if tchem_flag:
@@ -712,11 +713,12 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
     err_jac_tchem = np.zeros(num_trials)
 
     for i, state in enumerate(state_data):
+        cn = i if condition_numbers is None else condition_numbers[i]
         #update index in case we're using cuda
-        pyjacob.update(i)
+        pyjacob.update(cn)
 
         if tchem_flag:
-            tchem_jac.update(i)
+            tchem_jac.update(cn)
 
         temp = state[1]
         pres = state[2]
@@ -1008,10 +1010,13 @@ def test(lang, build_dir, mech_filename, therm_filename=None,
 
     if not do_not_remove:
         # Cleanup all compiled files.
-        for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
+        for f in ['adjacob.so', 'adjacob_wrapper.cpp']:
             os.remove(f)
         if lang == 'cuda':
             for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
+                os.remove(f)
+        if lang == 'c':
+            for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
                 os.remove(f)
 
         # Now clean build directory

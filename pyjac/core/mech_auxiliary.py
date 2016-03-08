@@ -58,7 +58,8 @@ void eval_jacob(const double t, const double p, const double* y,
                   'cp' : 'NSP',
                   'h' : 'NSP',
                   'dBdT' : 'NSP',
-                  'jac' : 'NSP * NSP'
+                  'jac' : 'NSP * NSP',
+                  'var' : '1'
                   }
     if any( len(specs) - 1 in reac.reac + reac.prod and
             utils.get_nu(len(specs) - 1, reac) for reac in reacs ):
@@ -196,9 +197,9 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write(
                 'int padded = -1;\n'
                 '#ifdef CONP\n'
-                '    initialize_gpu_memory(NUM, h_mem, d_mem, d_y, d_pres);\n'
+                '    initialize_gpu_memory(NUM, h_mem, d_mem);\n'
                 '#elif CONV\n'
-                '    initialize_gpu_memory(NUM, h_mem, d_mem, d_y, d_rho);\n'
+                '    initialize_gpu_memory(NUM, h_mem, d_mem);\n'
                 '#endif\n'
                 'exit(-1);\n'
             )
@@ -320,9 +321,9 @@ void eval_jacob(const double t, const double p, const double* y,
                        '\n'
                        )
             file.write('void initialize_gpu_memory(int, mechanism_memory**,'
-                       ' mechanism_memory**, double**, double**);\n'
-                       'size_t get_required_size();\n'
-                       'void free_gpu_memory(mechanism_memory**, mechanism_memory**, double**, double**);\n'
+                       ' mechanism_memory**);\n'
+                       'size_t required_mechanism_size();\n'
+                       'void free_gpu_memory(mechanism_memory**, mechanism_memory**);\n'
                        '\n'
                        '#endif\n')
 
@@ -333,7 +334,7 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write('#include "gpu_memory.cuh"\n'
                        '\n')
 
-            file.write('size_t get_required_size() {\n'
+            file.write('size_t required_mechanism_size() {\n'
                        '  //returns the total required size for the mechanism per thread\n'
                        '  size_t mech_size = 0;\n')
             for array, size in gpu_memory.iteritems():
@@ -347,14 +348,10 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write('}\n')
 
             file.write('void initialize_gpu_memory(int padded, mechanism_memory** h_mem,'
-                       ' mechanism_memory** d_mem, '
-                       'double** y_device, double** var_device)\n'
+                       ' mechanism_memory** d_mem)\n'
                        '{\n'
                        '  //init vectors\n'
                        )
-            file.write('  cudaError_t result;\n')
-            file.write(err_check.format('cudaMalloc(y_device, padded * NSP * sizeof(double))'))
-            file.write(err_check.format('cudaMalloc(var_device, padded * sizeof(double))'))
             file.write('  // Allocate storage for the device struct\n')
             file.write(err_check.format('cudaMalloc(d_mem, sizeof(mechanism_memory))'))
             file.write('  //allocate the device arrays on the host pointer\n')
@@ -380,14 +377,12 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write(
                        '}\n'
                        )
-            file.write('void free_gpu_memory(mechanism_memory** h_mem, mechanism_memory** d_mem, double** d_y, double** d_var)\n'
+            file.write('void free_gpu_memory(mechanism_memory** h_mem, mechanism_memory** d_mem)\n'
                        '{\n'
                        )
             for array in gpu_memory:
                 file.write(utils.line_start + free_template.format('(*h_mem)->{}'.format(array)) + utils.line_end[lang])
             file.write(utils.line_start + free_template.format('*d_mem') + utils.line_end[lang])
-            file.write(utils.line_start + free_template.format('*d_y') + utils.line_end[lang])
-            file.write(utils.line_start + free_template.format('*d_var') + utils.line_end[lang])
             file.write('}\n')
 
     if lang == 'cuda':

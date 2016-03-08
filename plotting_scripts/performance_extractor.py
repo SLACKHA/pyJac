@@ -41,6 +41,14 @@ class data_point(object):
 		self.x = x
 		self.y = y
 
+	def __repr__(self):
+		return self.__str__()
+
+	def __str__(self):
+		return "lang={},\tmech={},\tFD={},\tsmem={}\tco={}\n".format(self.lang, self.mechanism,
+			self.finite_difference, self.smem, self.cache_opt)
+
+
 def get_data(home_dir=None):
 	if home_dir is None:
 		home_dir = os.path.join(sys.path[0], '../')
@@ -51,12 +59,12 @@ def get_data(home_dir=None):
 	#ok, now we have a list of data directories, open each and look for the text files
 	data = []
 	for directory in dirs:
-		thedir = os.path.join(d, directory, 'test')
+		thedir = os.path.join(d, directory)
 		#get text files
 		files = [o for o in os.listdir(thedir) if
 					os.path.isfile(os.path.join(thedir,o)) and
 					o.endswith('.txt')]
-		mechanism = next(s for s in os.listdir(os.path.join(d, directory))
+		mechanism = next(s for s in os.listdir(thedir)
 					if s.endswith('.cti'))
 		gas = ct.Solution(os.path.join(d, directory, mechanism))
 		for filename in files:

@@ -3,9 +3,9 @@
 from fullscale_comp import fullscale_comp
 import numpy as np
 
-text_loc = [(3, -50, 4), #fd
-			(3, -20, -0.9), #pyjac
-			(1, -10, 0.4) #tchem
+text_loc = [(3, -350, -2.0), #fd
+			(3, -350, -1.2), #pyjac
+			(1, -200, 0.3) #tchem
 			]
 fit_params, data = fullscale_comp('c', text_loc=text_loc, loc_override=2)
 
@@ -26,3 +26,5 @@ for i in range(len(data[fit_params.index(tC)])):
 
 print('The x intercept of pyJac with FD is:  {}'.format(
 	np.power(pJ[2] / fD[2], 1.0 / (fD[3] - pJ[3]))))
+for i in range(len(data[fit_params.index(fD)])):
+	print data[fit_params.index(fD)][i] / data[fit_params.index(pJ)][i]

@@ -8,7 +8,7 @@ matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 import numpy as np
-def plot(plotdata, marker, name, miny, plot_std=True, norm=None, return_y=False, reacs_as_x=False,
+def plot(plotdata, marker, name, miny, plot_std=True, norm=None, return_y=False, reacs_as_x=True,
           color=None, hollow=False):
     if reacs_as_x:
       plotdata = sorted(plotdata, key=lambda x: x.num_reacs)

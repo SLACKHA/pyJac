@@ -38,7 +38,7 @@ def get_fullscale(data):
     return data
 
 def fit_order(plotdata, y, std, order, color='k', text_loc=None, fontsize=10):
-    x = sorted([x.num_specs for x in plotdata])
+    x = sorted([x.num_reacs for x in plotdata])
     maxx = int(x[-1])
 
     def fit_func(p, x):
@@ -76,16 +76,16 @@ def fit_order(plotdata, y, std, order, color='k', text_loc=None, fontsize=10):
         xbase += xoffset
         ybase += yoffset
         if order != 1:
-            label = r'{:.1e}$N_S^{{{:.2}}}$'.format(c, order)
+            label = r'{:.1e}$N_R^{{{:.2}}}$'.format(c, order)
         elif order == 1:
-            label = r'{:.1e}$N_S$'.format(c, order)
+            label = r'{:.1e}$N_R$'.format(c, order)
 
         plt.text(xbase, ybase, label, fontsize=fontsize)
     else:
         if order != 1:
-            label = r'{:.1e}$N_S^{{{:.2}}}$'.format(c, order)
+            label = r'{:.1e}$N_R^{{{:.2}}}$'.format(c, order)
         elif order == 1:
-            label = r'{:.1e}$N_S$'.format(c, order)
+            label = r'{:.1e}$N_R$'.format(c, order)
 
     plt.plot(range(maxx + 1), c * np.array(range(maxx + 1))**order,
                 'k-', color=color)
@@ -171,7 +171,7 @@ def fullscale_comp(lang, plot_std=True, homedir=None,
     # add some text for labels, title and axes ticks
     ax.set_ylabel('Mean evaluation time / condition (ms)')
     #ax.set_title('GPU Jacobian Evaluation Performance for {} mechanism'.format(thedir))
-    ax.set_xlabel('Number of species')
+    ax.set_xlabel('Number of Reactions')
     #ax.legend(loc=0)
     plt.savefig('{}_norm.pdf'.format(desc))
     plt.close()

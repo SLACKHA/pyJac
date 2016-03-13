@@ -35,8 +35,8 @@ except ImportError:
 
 # Local imports
 from .. import utils
-from ..core import create_jacobian
-from .optionLoop import optionloop
+from ..core.create_jacobian import create_jacobian
+from .optionLoop.optionloop import optionloop
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -161,11 +161,11 @@ class file_struct(object):
         self.build_dir = build_dir
         self.test_dir = test_dir
 
-def performance_tester(use_old_opt, num_threads):
-    pdir = 'performance'
-    home = os.getcwd()
+def performance_tester(home, pdir, use_old_opt, num_threads):
     build_dir = 'out'
     test_dir = 'test'
+
+    pdir = os.path.abspath(pdir)
 
     def get_file_list(pmod, gpu=False, FD=False, tchem=False):
         i_dirs = [build_dir]
@@ -254,11 +254,11 @@ def performance_tester(use_old_opt, num_threads):
 
     for mech_name, mech_info in sorted(mechanism_list.items(), key=lambda x:x[1]['ns']):
         #get the cantera object
-        gas = ct.Solution(os.path.join(home, pdir, mech_name, mech_info['mech']))
+        gas = ct.Solution(os.path.join(pdir, mech_name, mech_info['mech']))
         pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
 
         #ensure directory structure is valid
-        os.chdir(os.path.join(home, pdir, mech_name))
+        os.chdir(os.path.join(pdir, mech_name))
         subprocess.check_call(['mkdir', '-p', build_dir])
         subprocess.check_call(['mkdir', '-p', test_dir])
 
@@ -266,7 +266,7 @@ def performance_tester(use_old_opt, num_threads):
         with open(os.path.join('data.bin'), 'wb') as file:
             pass
 
-        npy_files = [f for f in os.listdir(os.path.join(home, pdir, mech_name))
+        npy_files = [f for f in os.listdir(os.path.join(pdir, mech_name))
                         if f.endswith('.npy')
                         and os.path.isfile(f)]
         num_conditions = 0

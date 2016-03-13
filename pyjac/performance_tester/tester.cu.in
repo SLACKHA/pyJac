@@ -112,6 +112,7 @@ int main (int argc, char *argv[])
     {
         double* y_temp = (double*)malloc(padded * NSP * sizeof(double));
         double* var_temp = (double*)malloc(padded * NSP * sizeof(double));
+        double* jac_temp = (double*)malloc(padded * NSP * NSP * sizeof(double));
         int num_solved = 0;
         while (num_solved < num_odes)
         {
@@ -128,6 +129,8 @@ int main (int argc, char *argv[])
             #else
                 jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, h_mem->var, h_mem->y, d_mem);
             #endif
+            cudaErrorCheck( cudaMemcpy2D (jac_temp, padded * sizeof(double), h_mem->jac, padded * sizeof(double),
+                                            num_cond * sizeof(double), NSP * NSP, cudaMemcpyDeviceToHost));
             num_solved += num_cond;
         }
         free(y_temp);

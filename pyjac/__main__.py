@@ -1,7 +1,7 @@
 import sys
 
 from . import utils
-from .core import create_jacobian
+from .core.create_jacobian import create_jacobian
 
 
 def main(args=None):

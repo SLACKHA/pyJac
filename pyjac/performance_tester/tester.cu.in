@@ -135,9 +135,11 @@ int main (int argc, char *argv[])
         }
         free(y_temp);
         free(var_temp);
+        free(jac_temp);
     }
     else
     {
+        double* jac_temp = (double*)malloc(padded * NSP * NSP * sizeof(double));
         cudaErrorCheck( cudaMemcpy (h_mem->var, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
         cudaErrorCheck( cudaMemcpy2D(h_mem->y,  padded * sizeof(double), y_host, num_odes * sizeof(double),
                                                 num_odes * sizeof(double), NSP, cudaMemcpyHostToDevice) );
@@ -146,6 +148,9 @@ int main (int argc, char *argv[])
         #else
             jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, h_mem->var, h_mem->y, d_mem);
         #endif
+        cudaErrorCheck( cudaMemcpy2D (jac_temp, padded * sizeof(double), h_mem->jac, padded * sizeof(double),
+                                            num_odes * sizeof(double), NSP * NSP, cudaMemcpyDeviceToHost));
+        free(jac_temp);
     }
     cudaDeviceSynchronize();
     double runtime = GetTimer();

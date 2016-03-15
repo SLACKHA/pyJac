@@ -174,7 +174,7 @@ def optimize_cache(specs, reacs, multi_thread,
                     force_optimize, build_path,
                      last_spec, consider_thd=False,
                      improve_cutoff=50,
-                     rand_init_tries=1000,
+                     rand_init_tries=10000,
                      lookback=1):
     """
     Utilizes the Numberjack package to optimize species
@@ -304,6 +304,9 @@ def optimize_cache(specs, reacs, multi_thread,
     reverse_rxn_mapping = [fwd_rxn_mapping.index(i) for i in range(len(fwd_rxn_mapping))]
 
     plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping)
+
+    specs = specs[fwd_spec_mapping]
+    reacs = reacs[fwd_rxn_mapping]
     
     # save to avoid reoptimization if possible
     with open(os.path.join(build_path, 'optimized.pickle'), 'wb') as file:

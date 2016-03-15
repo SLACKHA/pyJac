@@ -20,7 +20,7 @@ def main(args=None):
                     multi_thread=args.multi_thread,
                     force_optimize=args.force_optimize,
                     build_path=args.build_path,
-                    skip_jac=True,
+                    skip_jac=args.skip_jac,
                     last_spec=args.last_species,
                     auto_diff=args.auto_diff
                     )

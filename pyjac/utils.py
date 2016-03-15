@@ -350,6 +350,12 @@ def get_parser():
                         action='store_true',
                         help='Use this option to generate file for use with the '
                              'Adept autodifferentiation library.')
+    parser.add_argument('-sj', '--skip_jac',
+                        required=False,
+                        default=False,
+                        action='store_true',
+                        help='If specified, this option turns off Jacobian generation '
+                             '(only rate subs are generated)')
 
     args = parser.parse_args()
     return args

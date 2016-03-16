@@ -58,33 +58,33 @@ try:
 except AttributeError:
     numpy_include = numpy.get_numpy_include()
 
-sources = ['pyjacob_cuda_wrapper.pyx',
-           'pyjacob.cu',
-           'out/chem_utils.cu',
-           'out/dydt.cu',
-           'out/rxn_rates.cu',
-           'out/rxn_rates_pres_mod.cu',
-           'out/spec_rates.cu',
-           'out/jacob.cu',
-           'out/gpu_memory.cu'
+sources = ['$homepath/pyjacob_cuda_wrapper.pyx',
+           '$homepath/pyjacob.cu',
+           '$buildpath/chem_utils.cu',
+           '$buildpath/dydt.cu',
+           '$buildpath/rxn_rates.cu',
+           '$buildpath/rxn_rates_pres_mod.cu',
+           '$buildpath/spec_rates.cu',
+           '$buildpath/jacob.cu',
+           '$buildpath/gpu_memory.cu'
            ]
-includes = ['out/', './']
+includes = ['$buildpath', '$homepath']
 
 # Look for file with list of Jacobian files
-if os.path.exists('out/rates') and os.path.isfile('out/rates/rate_list_cuda'):
-    with open('out/rates/rate_list_cuda', 'r') as f:
+if os.path.exists('$buildpath/rates') and os.path.isfile('$buildpath/rates/rate_list_cuda'):
+    with open('$buildpath/rates/rate_list_cuda', 'r') as f:
         line = f.readline()
     files = line.split()
-    sources += ['out/rates/' + f for f in files]
-    includes += ['out/rates/']
+    sources += ['$buildpath/rates/' + f for f in files]
+    includes += ['$buildpath/rates/']
 
 # Look for file with list of Jacobian files
-if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_cuda'):
-    with open('out/jacobs/jac_list_cuda', 'r') as f:
+if os.path.exists('$buildpath/jacobs') and os.path.isfile('$buildpath/jacobs/jac_list_cuda'):
+    with open('$buildpath/jacobs/jac_list_cuda', 'r') as f:
         line = f.readline()
     files = line.split()
-    sources += ['out/jacobs/' + f for f in files]
-    includes += ['out/jacobs/']
+    sources += ['$buildpath/jacobs/' + f for f in files]
+    includes += ['$buildpath/jacobs/']
 
 ext = Extension('cu_pyjacob',
                 sources=sources,

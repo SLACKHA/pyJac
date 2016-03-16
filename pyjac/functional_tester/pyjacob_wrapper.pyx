@@ -3,18 +3,18 @@
 import numpy as np
 cimport numpy as np
 
-cdef extern from "out/dydt.h":
+cdef extern from "dydt.h":
     void dydt(double t, double pres, double* y, double* dy)
 
-cdef extern from "out/jacob.h":
+cdef extern from "jacob.h":
     void eval_jacob (const double t, const double pres, const double* y, double* jac)
 
-cdef extern from "out/rates.h":
+cdef extern from "rates.h":
     void eval_rxn_rates (const double T, const double pres, const double* C, double* fwd_rxn_rates, double* rev_rxn_rates)
     void eval_spec_rates (const double * fwd_rates, const double * rev_rates, const double * pres_mod, double * sp_rates, double* dy_N)
     void get_rxn_pres_mod (const double T, const double pres, const double * C, double * pres_mod)
 
-cdef extern from "out/chem_utils.h":
+cdef extern from "chem_utils.h":
     void eval_conc (const double T, const double pres, const double * mass_frac, double * y_N, double * mw_avg, double * rho, double * conc)
 
 def py_dydt(np.double_t t,

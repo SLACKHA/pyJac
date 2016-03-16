@@ -19,8 +19,8 @@ shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'),
             'periodictable.dat'
             )
 
-sources = ['pytchem_wrapper.pyx', 'py_tchem.c']
-includes = ['out/', './']
+sources = ['$homepath/pytchem_wrapper.pyx', '$homepath/py_tchem.c']
+includes = ['$buildpath', '$homepath']
 
 ext = Extension('py_tchem',
                 sources=sources,

@@ -7,25 +7,25 @@ import parallel_compiler as pcc
 import numpy
 import os
 
-sources = ['pyjacob_wrapper.pyx',
-           'out/dydt.c',
-           'out/rxn_rates.c',
-           'out/rxn_rates_pres_mod.c',
-           'out/spec_rates.c',
-           'out/chem_utils.c',
-           'out/jacob.c'
+sources = ['$homepath/pyjacob_wrapper.pyx',
+           '$buildpath/dydt.c',
+           '$buildpath/rxn_rates.c',
+           '$buildpath/rxn_rates_pres_mod.c',
+           '$buildpath/spec_rates.c',
+           '$buildpath/chem_utils.c',
+           '$buildpath/jacob.c'
            ]
-includes = ['out/']
+includes = ['$buildpath/']
 
 distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
 
 # Look for file with list of Jacobian files
-if os.path.exists('out/jacobs') and os.path.isfile('out/jacobs/jac_list_c'):
-    with open('out/jacobs/jac_list_c', 'r') as f:
+if os.path.exists('$buildpath/jacobs') and os.path.isfile('$buildpath/jacobs/jac_list_c'):
+    with open('$buildpath/jacobs/jac_list_c', 'r') as f:
         line = f.readline()
     files = line.split()
-    sources += ['out/jacobs/' + f for f in files]
-    includes += ['out/jacobs/']
+    sources += ['$buildpath/jacobs/' + f for f in files]
+    includes += ['$buildpath/jacobs/']
 
 ext_modules=[Extension("pyjacob",
      sources=sources,

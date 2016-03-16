@@ -5,7 +5,7 @@ import numpy as np
 
 cimport numpy as np
 
-cdef extern from "out/jacob.h":
+cdef extern from "jacob.h":
     void eval_jacob (const double t, const double pres, const double* y, double* jac)
 
 def ad_eval_jacobian(np.double_t t,

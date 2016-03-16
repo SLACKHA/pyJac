@@ -8,15 +8,15 @@ import parallel_compiler as pcc
 import numpy
 import os
 
-sources = ['adjacob_wrapper.pyx',
-           'out/ad_dydt.c',
-           'out/ad_rxn_rates.c',
-           'out/ad_rxn_rates_pres_mod.c',
-           'out/ad_spec_rates.c',
-           'out/ad_chem_utils.c',
-           'out/ad_jac.c'
+sources = ['$homepath/adjacob_wrapper.pyx',
+           '$buildpath/ad_dydt.c',
+           '$buildpath/ad_rxn_rates.c',
+           '$buildpath/ad_rxn_rates_pres_mod.c',
+           '$buildpath/ad_spec_rates.c',
+           '$buildpath/ad_chem_utils.c',
+           '$buildpath/ad_jac.c'
            ]
-includes = ['out/']
+includes = ['$buildpath/', '$homepath/']
 
 distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
 

@@ -97,7 +97,7 @@ void eval_jacob(const double t, const double p, const double* y,
         if cache_optimized:
             file.write('//Cache Optimized\n')
         file.write('{}#define FORCE_ZERO\n'.format(utils.comment[lang]
-          if not utils.FORCE_ZERO_OUT else ''))
+          if (not utils.FORCE_ZERO_OUT and lang == 'cuda') else ''))
         file.write('//last_spec {}\n'.format(last_spec))
 
         # convience: write species indexes

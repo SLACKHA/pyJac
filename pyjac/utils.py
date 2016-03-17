@@ -334,7 +334,7 @@ def get_parser():
     parser.add_argument('-b', '--build_path',
                         required=False,
                         default='./out/',
-                        help='The folder to generate the mechanism in.'
+                        help='The folder to generate the Jacobian and rate subroutines in.'
                         )
     parser.add_argument('-ls', '--last_species',
                         required=False,

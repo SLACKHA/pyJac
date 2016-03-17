@@ -1,0 +1,3 @@
+reclusive-include pyjac/core *.py
+reclusive-include pyjac/functional_tester *.py *.pyx *.yaml *.c *.h *.cu *.cuh *.in
+reclusive-include pyjac/peformance_tester *.c *.cu *.in *.h *.py

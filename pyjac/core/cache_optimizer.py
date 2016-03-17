@@ -14,6 +14,8 @@ import os
 import itertools
 
 import numpy as np
+import time
+import datetime
 
 # Local imports
 from .. import utils
@@ -73,7 +75,7 @@ def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
 def optimizer_loop_star(args):
     return optimizer_loop(*args)
 
-def optimizer_loop(starting_order, mapping, lookback, improve_cutoff):
+def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tries):
     nvar = len(starting_order)
     order = starting_order[:]
 
@@ -115,59 +117,67 @@ def optimizer_loop(starting_order, mapping, lookback, improve_cutoff):
 
     nvar = next((i for i, val in enumerate(order) if mapping[val].count() == 0), nvar)
 
-    last_improvement = 0
     starting_score = __global_score()
     global_max = starting_score
     global_max_order = order[:]
-    while last_improvement < improve_cutoff:
-        mincount = None
-        mininds = None
-        #first scan to see the 'worst' placed reaction
-        for i in range(nvar):
-            count = __get_score(mapping[order[i]], i)
-
-            if mincount is None or count < mincount:
-                mincount = count
-                mininds = [i]
-            elif mincount is not None and count == mincount:
-                mininds += [i]
-
-        moves = []
-        for min_ind in mininds: 
-            maxcount = None
-            maxind = None
-            #we now have the 'worst' location selected
-            #let's find the 'best place to put it'
-
+    for bottom_outs in range(random_tries):
+        last_improvement = 0
+        while last_improvement < improve_cutoff:
+            mincount = None
+            mininds = None
+            #first scan to see the 'worst' placed reaction
             for i in range(nvar):
-                if i == min_ind:
-                    continue
+                count = __get_score(mapping[order[i]], i)
 
-                 #get the score
-                count = __get_score(mapping[order[min_ind]], i)
+                if mincount is None or count < mincount:
+                    mincount = count
+                    mininds = [i]
+                elif mincount is not None and count == mincount:
+                    mininds += [i]
 
-                if maxcount is None or count > maxcount:
-                    maxcount = count
-                    maxind = i
+            moves = []
+            for min_ind in mininds: 
+                maxcount = None
+                maxind = None
+                #we now have the 'worst' location selected
+                #let's find the 'best place to put it'
 
-            moves.append((min_ind, maxcount, maxind))
+                for i in range(nvar):
+                    if i == min_ind:
+                        continue
 
-        best_move = np.argmax([x[1] for x in moves])
-        minind, maxcount, maxind = moves[best_move]
-        #now move to the better spot
-        order.insert(maxind, order.pop(minind))
+                     #get the score
+                    count = __get_score(mapping[order[min_ind]], i)
 
-        #and compute the score
-        score = __global_score()
-        if score <= starting_score:
-            last_improvement += 1
-        else:
-            last_improvement = 0
-            starting_score = score
-        if score > global_max:
-            global_max = score
-            global_max_order = order[:]
-        #print(score, starting_score)
+                    if maxcount is None or count > maxcount:
+                        maxcount = count
+                        maxind = i
+
+                moves.append((min_ind, maxcount, maxind))
+
+            best_move = np.argmax([x[1] for x in moves])
+            minind, maxcount, maxind = moves[best_move]
+            #now move to the better spot
+            order.insert(maxind, order.pop(minind))
+
+            #and compute the score
+            score = __global_score()
+            if score <= starting_score:
+                last_improvement += 1
+            else:
+                last_improvement = 0
+                starting_score = score
+            if score > global_max:
+                global_max = score
+                global_max_order = order[:]
+
+        #we hit a minimum, let's make a random move see if that helps
+        ind1 = np.random.randint(len(order))
+        ind2 = ind1
+        while ind2 == ind1:
+            ind1 = np.random.randint(len(order))
+        order.insert(ind1, order.pop(ind2))
+
     return global_max, global_max_order
 
 def optimize_cache(specs, reacs, multi_thread,
@@ -175,7 +185,10 @@ def optimize_cache(specs, reacs, multi_thread,
                      last_spec, consider_thd=False,
                      improve_cutoff=50,
                      rand_init_tries=10000,
-                     lookback=1):
+                     lookback_max=2,
+                     rand_restarts_max=5,
+                     max_time=1*60 #10 min
+                     ):
     """
     Utilizes the Numberjack package to optimize species
     and reaction orders in the mechanism to attempt to improve cache hit rates.
@@ -275,38 +288,101 @@ def optimize_cache(specs, reacs, multi_thread,
                 spind = name_map[sp]
                 eff_map[rind][spind] = eff
 
+    def copy_mapping(mapping):
+        return [bitarray(ba) for ba in mapping]
+
     mapping_list = []
     pool = multiprocessing.Pool(multi_thread if multi_thread else 1)
 
-    fwd_rxn_mapping = [x for x in range(nr)]
-    mapping_list.append(fwd_rxn_mapping)
-    if rand_init_tries:
-        for i in range(rand_init_tries):
-            mapping_list.append(np.random.permutation(nr).tolist())
-    val = pool.map(optimizer_loop_star, 
-            itertools.izip(mapping_list, itertools.repeat(reac_mapping), 
-                itertools.repeat(lookback), itertools.repeat(improve_cutoff)))
-    fwd_rxn_mapping = val[np.argmax([x[0] for x in val])][1][:]
+    lookback_list = np.random.randint(1, high=lookback_max+1, size=rand_init_tries+1)
+    rand_restarts_list = np.random.randint(1, high=rand_restarts_max+1, size=rand_init_tries+1)
+    improve_cutoff_list = np.random.randint(improve_cutoff*0.5, high=improve_cutoff*1.5, size=rand_init_tries+1)
 
-    fwd_spec_mapping = [i for i in range(nsp) if i != last_spec]
-    mapping_list = [fwd_spec_mapping]
+    fwd_rxn_mapping = [x for x in range(nr)]
+    result_list = []
     if rand_init_tries:
         for i in range(rand_init_tries):
-            mapping_list.append(
-                np.random.permutation([i for i in range(nsp) if i != last_spec]).tolist())
-    
-    val = pool.map(optimizer_loop_star, 
-            itertools.izip(mapping_list, itertools.repeat(spec_mapping), 
-                itertools.repeat(lookback), itertools.repeat(improve_cutoff)))
-    fwd_spec_mapping = val[np.argmax([x[0] for x in val])][1][:] + [last_spec]
+            if i == 0:
+                mapping_list = fwd_rxn_mapping[:]
+            else:
+                mapping_list = np.random.permutation(nr).tolist()
+            lookback_val = np.random.randint(1, high=lookback_max+1)
+            improve_cutoff_val = np.random.randint(improve_cutoff*0.5, high=improve_cutoff*2.)
+            rand_restarts_val = np.random.randint(1, high=rand_restarts_max+1)
+            result_list.append(
+                pool.apply_async(optimizer_loop,
+                                 (mapping_list, copy_mapping(reac_mapping), 
+                                  lookback_val, improve_cutoff_val, rand_restarts_val)))
+
+
+    time_start = datetime.datetime.now()
+    complete = False
+    while datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time) \
+            and not complete:
+            time.sleep(30)
+            complete = sum(x.ready() for x in result_list)
+            print('Reaction Optimization {}% complete...'.format(
+                100. * complete / float(len(result_list))))
+            complete = complete == len(result_list)
+
+    if not complete:
+        try:
+            pool.close()
+            pool.terminate()
+            pool.join()
+        except:
+            pass
+
+    result_list = [r.get() for r in result_list if r.ready()]
+    fwd_rxn_mapping = result_list[np.argmax([x[0] for x in result_list])][1][:]
+
+    pool = multiprocessing.Pool(multi_thread if multi_thread else 1)
+
+    result_list = []
+    fwd_spec_mapping = [i for i in range(nsp) if i != last_spec]
+    if rand_init_tries:
+        for i in range(rand_init_tries):
+            if i == 0:
+                mapping_list = fwd_spec_mapping[:]
+            else:
+                mapping_list = np.random.permutation(nsp).tolist()
+                mapping_list = [x for x in mapping_list if x != last_spec]
+            lookback_val = np.random.randint(1, high=lookback_max+1)
+            improve_cutoff_val = np.random.randint(improve_cutoff*0.5, high=improve_cutoff*2.)
+            rand_restarts_val = np.random.randint(1, high=rand_restarts_max+1)
+            result_list.append(
+                pool.apply_async(optimizer_loop,
+                                 (mapping_list, copy_mapping(spec_mapping), 
+                                  lookback_val, improve_cutoff_val, rand_restarts_val)))
+   
+    time_start = datetime.datetime.now()
+    complete = False
+    while datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time) \
+            and not complete:
+            time.sleep(30)
+            complete = sum(x.ready() for x in result_list)
+            print('Species Optimization {}% complete...'.format(
+                100. * complete / float(len(result_list))))
+            complete = complete == len(result_list)
+
+    if not complete:
+        try:
+            pool.close()
+            pool.terminate()
+            pool.join()
+        except:
+            pass
+
+    result_list = [r.get() for r in result_list if r.ready()]
+    fwd_spec_mapping = result_list[np.argmax([x[0] for x in result_list])][1][:] + [last_spec]
 
     reverse_spec_mapping = [fwd_spec_mapping.index(i) for i in range(len(fwd_spec_mapping))]
     reverse_rxn_mapping = [fwd_rxn_mapping.index(i) for i in range(len(fwd_rxn_mapping))]
 
     plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping)
 
-    specs = specs[fwd_spec_mapping]
-    reacs = reacs[fwd_rxn_mapping]
+    specs = [specs[i] for i in fwd_spec_mapping]
+    reacs = [reacs[i] for i in fwd_rxn_mapping]
     
     # save to avoid reoptimization if possible
     with open(os.path.join(build_path, 'optimized.pickle'), 'wb') as file:

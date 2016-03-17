@@ -183,11 +183,11 @@ def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tri
 def optimize_cache(specs, reacs, multi_thread,
                     force_optimize, build_path,
                      last_spec, consider_thd=False,
-                     improve_cutoff=50,
+                     improve_cutoff=20,
                      rand_init_tries=10000,
                      lookback_max=2,
                      rand_restarts_max=5,
-                     max_time=1*60 #10 min
+                     max_time=100*60 #100 min
                      ):
     """
     Utilizes the Numberjack package to optimize species

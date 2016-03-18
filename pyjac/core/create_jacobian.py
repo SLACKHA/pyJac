@@ -2000,7 +2000,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                )
     if lang == 'c':
         file.write(utils.line_start +
-                   'double spec_rates[{}] = {0};\n'.format(num_s))
+                   'double spec_rates[{}] = {{0}};\n'.format(num_s))
         file.write(
             utils.line_start +
             'eval_spec_rates (fwd_rates, rev_rates, '

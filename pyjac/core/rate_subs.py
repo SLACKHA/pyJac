@@ -2257,30 +2257,6 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         isfirst = False
     line += ')' + utils.line_end[lang] + '\n'
     file.write(line)
-    if any(not x for x in specs_nonzero):
-        isfirst=True
-        line = ('  ' + utils.get_array(lang, 'dy', 0) +
-                ' += (-1.0 / (rho * cp_avg)) * (')
-        for isp, sp in enumerate(specs):
-            if specs_nonzero[isp]:
-                continue
-            if len(line) > 70:
-                line += '\n'
-                file.write(line)
-                line = '       '
-
-            if not isfirst: line += ' + '
-
-            if lang == 'c':
-                arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
-            elif lang == 'cuda':
-                arr = utils.get_array(lang, 'spec_rates', isp)
-            line += ('(' + arr + ' * ' +
-                     utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
-                     )
-
-            isfirst = False
-        line += ')' + utils.line_end[lang]
 
 
     line = ''
@@ -2411,6 +2387,8 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
             )
     isfirst = True
     for isp, sp in enumerate(specs):
+        if not specs_nonzero[isp]:
+            continue
         if len(line) > 70:
             line += '\n'
             file.write(line)

@@ -496,7 +496,7 @@ def generate_setup(setupfile, home_dir, build_dir):
         src = Template(file.read())
     file_data = {'homepath' : home_dir,
                  'buildpath' : build_dir}
-    src = src.substitute(file_data)
+    src = src.safe_substitute(file_data)
     with open(setupfile[:setupfile.rindex('.in')], 'w') as file:
         file.write(src)
 
@@ -1027,13 +1027,13 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     if not do_not_remove:
         # Cleanup all compiled files.
-        for f in ['adjacob.so', 'adjacob_wrapper.cpp']:
+        for f in ['adjacob.so', os.path.join(home_dir, 'adjacob_wrapper.cpp')]:
             os.remove(f)
         if lang == 'cuda':
-            for f in ['cu_pyjacob.so', 'pyjacob_cuda_wrapper.cpp']:
+            for f in ['cu_pyjacob.so', os.path.join(home_dir, 'pyjacob_cuda_wrapper.cpp')]:
                 os.remove(f)
         if lang == 'c':
-            for f in ['pyjacob.so', 'pyjacob_wrapper.c']:
+            for f in ['pyjacob.so', os.path.join(home_dir, 'pyjacob_wrapper.c')]:
                 os.remove(f)
 
         # Now clean build directory

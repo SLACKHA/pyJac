@@ -32,6 +32,10 @@ flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                    '-dc']
              )
 
+shared_flags = dict(c=['-fPIC'],
+                    icc=['-fPIC'],
+                    cuda=['-Xcompiler', '"-fPIC"'])
+
 libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             cuda=['-arch=sm_20'],
             icc=['-m64', '-ipo', '-lm', '-std=c99']
@@ -62,20 +66,24 @@ def compiler(fstruct):
 def libgen(lang, obj_dir, out_dir, filelist, shared):
     command = cmd_lib(lang, shared)
     desc = 'c' if lang != 'cuda' else 'cu'
-    libname = 'lib_{}_pyjac'.format(desc) + lib_ext(shared)
+    libname = 'lib{}_pyjac'.format(desc) + lib_ext(shared)
 
     #remove the old library
     if os.path.exists(os.path.join(out_dir, libname)):
         os.remove(libname)
 
-    command += ['-o', os.path.join(out_dir, libname)]
-    command.extend(libs[lang])
+    if shared:
+        command += ['-o']
+    command += [os.path.join(out_dir, libname)]
+    if shared:
+        command.extend(libs[lang])
     command.extend([os.path.join(obj_dir, getf(f) + '.o') for f in filelist])
 
     try:
         subprocess.check_call(command)
     except subprocess.CalledProcessError:
         print('Error: Generation of pyjac library failed.')
+        print(' '.join(command))
         sys.exit(-1)
 
     return libname
@@ -153,10 +161,11 @@ def generate_library(lang, source_dir, obj_dir=None,
     #get file lists
     i_dirs, files = get_file_list(source_dir, pmod, build_lang, FD=finite_difference)
 
+    sflag = [] if not shared else shared_flags[lang]
     # Compile generated source code
     structs = [file_struct(lang, build_lang, f, i_dirs,
                     (['-DFINITE_DIFF'] if finite_difference else []) +
-                    flags[lang] + (['-fPIC'] if shared else []),
+                    flags[lang] + sflag,
                     source_dir, obj_dir) for f in files]
 
     pool = multiprocessing.Pool()

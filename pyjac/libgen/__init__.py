@@ -1,1 +1,1 @@
-from .libgen import libgen
+from .libgen import generate_library

@@ -37,6 +37,7 @@ except ImportError:
 from .. import utils
 from ..core.create_jacobian import create_jacobian
 from .optionLoop.optionloop import optionloop
+from ..libgen import generate_library
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -134,7 +135,7 @@ def compiler(fstruct):
         return -1
     return 0
 
-def linker(lang, temp_lang, test_dir, filelist):
+def linker(lang, temp_lang, test_dir, filelist, lib=None):
     args = [cmd_compile[temp_lang]]
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
@@ -145,6 +146,10 @@ def linker(lang, temp_lang, test_dir, filelist):
         else:
             raise SystemError('TCHEM_HOME environment variable not set.')
         args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
+
+    if lib:
+        args += ['-L', os.getcwd()]
+        args += ['-l', lib]
 
     try:
         subprocess.check_call(args)
@@ -166,42 +171,6 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
     test_dir = 'test'
 
     pdir = os.path.abspath(pdir)
-
-    def get_file_list(pmod, gpu=False, FD=False, tchem=False):
-        i_dirs = [build_dir]
-        if tchem:
-            files = ['test', 'read_initial_conditions',
-                        'mechanism', 'mass_mole']
-            return i_dirs, files
-        files = ['chem_utils', 'dydt', 'spec_rates',
-             'rxn_rates', 'test', 'read_initial_conditions',
-             'mechanism', 'mass_mole'
-             ]
-        if pmod:
-            files += ['rxn_rates_pres_mod']
-        if FD:
-            files += ['fd_jacob']
-            flists = []
-        else:
-            files += ['jacob']
-            flists = [('jacobs', 'jac_list_{}')]
-
-        test_lang = 'c' if not gpu else 'cuda'
-        flists += [('rates', 'rate_list_{}')]
-        for flist in flists:
-            try:
-                with open(os.path.join(build_dir, flist[0], flist[1].format(test_lang))) as file:
-                    vals = file.readline().strip().split(' ')
-                    vals = [os.path.join(flist[0],
-                                f[:f.index(utils.file_ext[test_lang])]) for f in vals]
-                    files += vals
-                    i_dirs.append(os.path.join(build_dir, flist[0]))
-            except:
-                pass
-        if gpu:
-            files += ['gpu_memory']
-
-        return i_dirs, files
 
     #find the mechanisms to test
     mechanism_list = {}
@@ -371,7 +340,10 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
                         os.path.join(os.getcwd(), build_dir, 'timer.h'))
 
             #get file lists
-            i_dirs, files = get_file_list(pmod, gpu=lang=='cuda', FD=FD, tchem=lang=='tchem')
+            i_dirs = [build_dir]
+            files = ['test', 'read_initial_conditions']
+            if FD:
+                files += ['fd_jacob']
 
             # Compile generated source code
             structs = [file_struct(temp_lang, f, i_dirs,
@@ -386,7 +358,14 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
             if any(r == -1 for r in results):
                sys.exit(-1)
 
-            linker(lang, temp_lang, test_dir, files)
+            lib = None
+            #now build the library
+            if lang != 'tchem':
+                lib = generate_library(lang, build_dir, finite_difference=FD)
+                lib = os.path.normpath(lib)
+                lib = lib[lib.index('lib') + len('lib'):lib.index('.so')]
+
+            linker(lang, temp_lang, test_dir, files, lib)
 
             if lang == 'tchem':
                 #copy periodic table and mechanisms in

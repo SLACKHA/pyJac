@@ -83,7 +83,6 @@ def libgen(lang, obj_dir, out_dir, filelist, shared):
         subprocess.check_call(command)
     except subprocess.CalledProcessError:
         print('Error: Generation of pyjac library failed.')
-        print(' '.join(command))
         sys.exit(-1)
 
     return libname

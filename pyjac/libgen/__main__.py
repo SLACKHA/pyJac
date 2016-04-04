@@ -4,8 +4,8 @@ from .. import utils
 
 if __name__ == '__main__':
     parser = ArgumentParser(
-        description='Tests pyJac versus a finite difference'
-                    ' Cantera jacobian\n'
+        description='Generates a shared/static library '
+        'from previously generated pyJac files using gcc/nvcc.'
         )
     parser.add_argument('-l', '--lang',
                         type=str,
@@ -35,7 +35,7 @@ if __name__ == '__main__':
                         default=False,
                         action='store_true',
                         help='If specified, the generated library will be'
-                             'a static library')
+                             'a static library (required for CUDA).')
 
     args = parser.parse_args()
     generate_library(args.lang, args.source_dir, args.obj_dir,

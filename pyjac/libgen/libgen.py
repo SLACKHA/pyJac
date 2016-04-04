@@ -55,12 +55,12 @@ def getf(x):
     return os.path.basename(x)
 
 def compiler(fstruct):
-    args = [cmd_compile[fstruct.lang]]
-    args.extend(flags[fstruct.lang])
+    args = [cmd_compile[fstruct.build_lang]]
+    args.extend(flags[fstruct.build_lang])
     if fstruct.shared:
-        args.extend(shared_flags[fstruct.lang])
+        args.extend(shared_flags[fstruct.build_lang])
     args.extend(fstruct.args)
-    include = ['-I{}'.format(d) for d in fstruct.i_dirs + includes[fstruct.lang]]
+    include = ['-I{}'.format(d) for d in fstruct.i_dirs + includes[fstruct.build_lang]]
     args.extend(include)
     args.extend([
         '-{}c'.format('d' if fstruct.lang == 'cuda' else ''), 

@@ -121,11 +121,12 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
             raise SystemError('TCHEM_HOME environment variable not set.')
         args.extend(['-L{}'.format(os.path.join(tchem_home, 'lib')), '-ltchem'])
 
-    if lib and not STATIC:
-        args += ['-L{}'.format(os.getcwd())]
-        args += ['-l{}'.format(lib)]
-    elif STATIC:
-        args += [lib]
+    if lib is not None:
+        if STATIC:
+            args += ['-L{}'.format(os.getcwd())]
+            args += ['-l{}'.format(lib)]
+        else:
+            args += [lib]
 
     args.append('-lm')
 
@@ -312,8 +313,6 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
             #get file lists
             i_dirs = [build_dir]
             files = ['test', 'read_initial_conditions']
-            if FD:
-                files += ['fd_jacob']
 
             lib = None
             #now build the library
@@ -322,6 +321,8 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
                 if not STATIC:
                     lib = os.path.normpath(lib)
                     lib = lib[lib.index('lib') + len('lib'):lib.index('.so' if not STATIC else '.a')]
+            else:
+                files += ['mechanism', 'mass_mole']
 
             # Compile generated source code
             structs = [file_struct(lang, temp_lang, f, i_dirs,

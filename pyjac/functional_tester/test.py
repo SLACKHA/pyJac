@@ -590,22 +590,18 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
     if compile_jacob:
         #write and compile the dydt python wrapper
         if lang == 'c':
-            safe_remove(os.path.join(home_dir, 'pyjacob.so'))
+            safe_remove('pyjacob.so')
             generate_wrapper('c', build_dir)
 
-        safe_remove(os.path.join(home_dir, 'adjacob.so'))
+        safe_remove('adjacob.so')
         generate_wrapper('c', build_dir, auto_diff=True)
 
-        try:
-            os.remove('cu_pyjacob.so')
-        except:
-            pass
         if lang == 'cuda':
-            safe_remove(os.path.join(home_dir, 'cu_pyjacob.so'))
+            safe_remove('cu_pyjacob.so')
             generate_wrapper('cuda', build_dir)
 
         if tchem_flag:
-            safe_remove(os.path.join(home_dir, 'py_tchem.so'))
+            safe_remove('py_tchem.so')
             generate_wrapper('tchem', build_dir)
 
     pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
@@ -1000,10 +996,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     if not do_not_remove:
         # Cleanup all compiled files.
-        safe_remove(os.path.join(home_dir, 'adjacob.so'))
-        safe_remove(os.path.join(home_dir, 'cu_pyjacob.so'))
-        safe_remove(os.path.join(home_dir, 'pyjacob.so'))
-        safe_remove(os.path.join(home_dir, 'py_tchem.so'))
+        safe_remove('adjacob.so')
+        safe_remove('cu_pyjacob.so')
+        safe_remove('pyjacob.so')
+        safe_remove('py_tchem.so')
 
         # Now clean build directory
         for root, dirs, files in os.walk('./build', topdown=False):

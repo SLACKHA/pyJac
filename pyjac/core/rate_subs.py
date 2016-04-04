@@ -859,8 +859,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
     # headers
     if lang in ['c', 'cuda']:
         file.write('#include <math.h>\n'
-                   '#include "header{0}"\n'
-                   '#include "rates{0}"\n'.format(utils.header_ext[lang])
+                   '#include "header{1}"\n'
+                   '#include "{0}rates{1}"\n'.format(file_prefix, utils.header_ext[lang])
                    )
 
         if auto_diff:
@@ -1283,7 +1283,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n')
-        file.write('#include "rates{}"\n'.format(utils.header_ext[lang]))
+        file.write('#include "{}rates{}"\n'.format(file_prefix, utils.header_ext[lang]))
         file.write('\n')
 
     num_s = len(specs)
@@ -1554,7 +1554,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
 
     if lang in ['c', 'cuda']:
         file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
-        file.write('#include "chem_utils{}"\n'.format(utils.header_ext[lang]))
+        file.write('#include "{}chem_utils{}"\n'.format(file_prefix, utils.header_ext[lang]))
         if auto_diff:
             file.write('#include "adept.h"\n'
                        'using adept::adouble;\n')

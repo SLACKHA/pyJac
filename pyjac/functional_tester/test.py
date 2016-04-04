@@ -494,7 +494,7 @@ class tchem_evaluator(cpyjac_evaluator):
 
 def safe_remove(file):
     try:
-        os.path.remove(file)
+        os.remove(file)
     except:
         pass
 

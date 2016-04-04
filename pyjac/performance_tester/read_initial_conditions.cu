@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
+__host__
  void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host)
  {    
     (*y_host) = (double*)malloc(NUM * NN * sizeof(double));

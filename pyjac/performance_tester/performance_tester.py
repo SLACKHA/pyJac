@@ -20,7 +20,6 @@ if sys.version_info.major == 3:
 elif sys.version_info.major == 2:
     from itertools import izip as zip
 
-from itertools import permutations, product, chain
 from string import Template
 
 # Related modules
@@ -37,30 +36,10 @@ except ImportError:
 from .. import utils
 from ..core.create_jacobian import create_jacobian
 from .optionLoop.optionloop import optionloop
-from ..libgen import generate_library
+from ..libgen import generate_library, libs, compiler, file_struct, get_cuda_path, flags
 
-# Compiler based on language
-cmd_compile = dict(c='gcc',
-                   icc='icc',
-                   cuda='nvcc'
-                   )
-
-
-# Flags based on language
-flags = dict(c=['-std=c99', '-O3', '-mtune=native',
-                '-fopenmp', '-fPIC'],
-             icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo', '-fPIC'],
-             cuda=['-O3', '-arch=sm_20',
-                   '-I/usr/local/cuda/include/',
-                   '-I/usr/local/cuda/samples/common/inc/',
-                   '-Xcompiler', '"-fPIC"',
-                   '-dc']
-             )
-
-libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
-            cuda=['-arch=sm_20'],
-            icc=['-m64', '-ipo', '-lm', '-std=c99']
-            )
+#cuda only works for static libraries
+STATIC=True
 
 def is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
@@ -93,80 +72,69 @@ def check_step_file(filename, steplist):
         return runs
 
 def check_file(filename):
-        #checks file for existing data
-        #and returns number of runs left to do
-        try:
-            with open(filename, 'r') as file:
-                lines = [line.strip() for line in file.readlines()]
-            num_completed = 0
-            to_find = 2
-            for line in lines:
-                try:
-                    vals = line.split(',')
-                    if len(vals) == to_find:
-                        i = int(vals[0])
-                        f = float(vals[1])
-                        num_completed += 1
-                except:
-                    pass
-            return num_completed
-        except:
-            return 0
+    #checks file for existing data
+    #and returns number of runs left to do
+    try:
+        with open(filename, 'r') as file:
+            lines = [line.strip() for line in file.readlines()]
+        num_completed = 0
+        to_find = 2
+        for line in lines:
+            try:
+                vals = line.split(',')
+                if len(vals) == to_find:
+                    i = int(vals[0])
+                    f = float(vals[1])
+                    num_completed += 1
+            except:
+                pass
+        return num_completed
+    except:
+        return 0
 
 def getf(x):
     return os.path.basename(x)
 
-def compiler(fstruct):
-    args = [cmd_compile[fstruct.lang]]
-    args.extend(fstruct.args)
-    include = ['-I./' + d for d in fstruct.i_dirs]
-    args.extend(include)
-    args.extend([
-        '-I.' + os.path.sep + fstruct.build_dir,
-        '-c', os.path.join(fstruct.build_dir, fstruct.filename +
-                    utils.file_ext[fstruct.lang]),
-        '-o', os.path.join(fstruct.test_dir, getf(fstruct.filename) + '.o')
-        ])
-    args = [val for val in args if val.strip()]
-    try:
-        subprocess.check_call(args)
-    except subprocess.CalledProcessError:
-        print('Error: compilation failed for ' + fstruct.filename +
-                utils.file_ext[fstruct.lang])
-        return -1
-    return 0
+def cmd_link(lang, shared):
+    if lang == 'icc':
+        return ['icc']
+    elif lang == 'c':
+        return ['gcc']
+    elif lang == 'cuda':
+        return ['nvcc'] if not shared else ['g++']
+
+
 
 def linker(lang, temp_lang, test_dir, filelist, lib=None):
-    args = [cmd_compile[temp_lang]]
+    args = cmd_link(temp_lang, not STATIC)
+    if lang == 'cuda' or (not STATIC):
+        args.extend(flags[temp_lang])
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
+    if temp_lang == 'cuda':
+        args.append('-L{}'.format(get_cuda_path()))
     args.extend(libs[temp_lang])
     if lang == 'tchem':
         if os.getenv('TCHEM_HOME'):
             tchem_home = os.getenv('TCHEM_HOME')
         else:
             raise SystemError('TCHEM_HOME environment variable not set.')
-        args.extend(['-L' + os.path.join(tchem_home, 'lib'), '-ltchem'])
+        args.extend(['-L{}'.format(os.path.join(tchem_home, 'lib')), '-ltchem'])
 
-    if lib:
-        args += ['-L', os.getcwd()]
-        args += ['-l', lib]
+    if lib and not STATIC:
+        args += ['-L{}'.format(os.getcwd())]
+        args += ['-l{}'.format(lib)]
+    elif STATIC:
+        args += [lib]
+
+    args.append('-lm')
 
     try:
+        print(' '.join(args))
         subprocess.check_call(args)
     except subprocess.CalledProcessError:
-        print(' '.join(args))
         print('Error: linking of test program failed.')
         sys.exit(1)
-
-class file_struct(object):
-    def __init__(self, lang, filename, i_dirs, args, build_dir, test_dir):
-        self.lang = lang
-        self.filename = filename
-        self.i_dirs = i_dirs
-        self.args = args
-        self.build_dir = build_dir
-        self.test_dir = test_dir
 
 def performance_tester(home, pdir, use_old_opt, num_threads):
     build_dir = 'out'
@@ -347,11 +315,18 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
             if FD:
                 files += ['fd_jacob']
 
+            lib = None
+            #now build the library
+            if lang != 'tchem':
+                lib = generate_library(lang, build_dir, test_dir, finite_difference=FD, shared=not STATIC)
+                if not STATIC:
+                    lib = os.path.normpath(lib)
+                    lib = lib[lib.index('lib') + len('lib'):lib.index('.so' if not STATIC else '.a')]
+
             # Compile generated source code
-            structs = [file_struct(temp_lang, f, i_dirs,
-                            (['-DFINITE_DIFF'] if FD else []) +
-                            flags[temp_lang],
-                            build_dir, test_dir) for f in files]
+            structs = [file_struct(lang, temp_lang, f, i_dirs,
+                            (['-DFINITE_DIFF'] if FD else []),
+                            build_dir, test_dir, not STATIC) for f in files]
 
             pool = multiprocessing.Pool()
             results = pool.map(compiler, structs)
@@ -359,13 +334,6 @@ def performance_tester(home, pdir, use_old_opt, num_threads):
             pool.join()
             if any(r == -1 for r in results):
                sys.exit(-1)
-
-            lib = None
-            #now build the library
-            if lang != 'tchem':
-                lib = generate_library(lang, build_dir, finite_difference=FD)
-                lib = os.path.normpath(lib)
-                lib = lib[lib.index('lib') + len('lib'):lib.index('.so')]
 
             linker(lang, temp_lang, test_dir, files, lib)
 

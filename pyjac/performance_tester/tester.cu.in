@@ -18,6 +18,7 @@ void eval_jacob (const double, const double, const double *, double *, const mec
 #include "jacob.cuh"
 #endif
 
+__host__
 void read_initial_conditions(const char*, int, double**, double**);
 
 #define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))

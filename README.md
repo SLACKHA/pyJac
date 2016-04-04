@@ -36,8 +36,8 @@ In the above, `[options]` indicates where command line options should be specifi
                           The species to move to the end of the mechanism to force mass conservation.  
                           Defaults to (in order) N2, Ar, He.
     -ic STRING, --initial-conditions STRING
-                          A comma separated list of initial conditions to set in the 
-                          set_same_initial_conditions method. 
+                          A comma separated list of initial conditions to set in the
+                          set_same_initial_conditions method.
                           Expected Form: T,P,Species1=...,Species2=...,...
                               Temperature in K
                               Pressure in Atm
@@ -60,7 +60,7 @@ In the above, `[options]` indicates where command line options should be specifi
                           Default is the CPU count returned by multiprocessing
     -fopt, --force-opt
                           Force re-running of cache optimizer.  
-                          By default cache optimizer will turn off if it detects a previous optimization 
+                          By default cache optimizer will turn off if it detects a previous optimization
                           for the same mechanism
     -ad, --auto-diff
                           Generate code for Adept autodifferentiation library (used for validation)
@@ -70,7 +70,7 @@ In the above, `[options]` indicates where command line options should be specifi
 License
 -------
 
-pyJac is released under the modified BSD license, see LICENSE for details.
+`pyJac` is released under the MIT license; see LICENSE for details.
 
 If you use this package as part of a scholarly publication, please cite the following paper in addition to this resource:
 

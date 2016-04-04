@@ -1,3 +1,5 @@
 recursive-include pyjac/core *.py
-recursive-include pyjac/functional_tester *.py *.pyx *.yaml *.c *.h *.cu *.cuh *.in
+recursive-include pyjac/functional_tester *.py *.yaml
 recursive-include pyjac/performance_tester *.c *.cu *.in *.h *.py
+recursive-include pyjac/pywrap *.py *.pyx *.yaml *.c *.h *.cu *.cuh *.in
+recursive-include pyjac/libgen *.py

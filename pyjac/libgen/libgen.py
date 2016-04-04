@@ -57,8 +57,9 @@ def getf(x):
 def compiler(fstruct):
     args = [cmd_compile[fstruct.build_lang]]
     args.extend(flags[fstruct.build_lang])
-    if fstruct.shared:
-        args.extend(shared_flags[fstruct.build_lang])
+
+    #always use fPIC in case we're building wrapper
+    args.extend(shared_flags[fstruct.build_lang])
     args.extend(fstruct.args)
     include = ['-I{}'.format(d) for d in fstruct.i_dirs + includes[fstruct.build_lang]]
     args.extend(include)
@@ -174,6 +175,7 @@ def get_file_list(source_dir, pmod, lang, FD=False):
 def generate_library(lang, source_dir, obj_dir=None,
                         out_dir=None, shared=None,
                         finite_difference=False):
+
     #check lang
     if lang not in flags.keys():
         print 'Cannot generate library for unknown language {}'.format(lang)
@@ -188,13 +190,17 @@ def generate_library(lang, source_dir, obj_dir=None,
 
     build_lang = lang if lang != 'icc' else 'c'
 
-    source_dir = os.path.abspath(source_dir)
+    source_dir = os.path.abspath(os.path.normpath(source_dir))
     if obj_dir is None:
         obj_dir = os.path.join(os.getcwd(), 'obj')
         if not os.path.exists(obj_dir):
             os.makedirs(obj_dir)
+    else:
+        obj_dir = os.path.abspath(os.path.normpath(obj_dir))
     if out_dir is None:
         out_dir = os.getcwd()
+    else:
+        out_dir = os.path.abspath(os.path.normpath(out_dir))
 
     obj_dir = os.path.abspath(obj_dir)
     out_dir = os.path.abspath(out_dir)

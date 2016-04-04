@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from pywrap import generate_wrapper
+from pywrap_gen import generate_wrapper
 from .. import utils
 
 if __name__ == '__main__':
@@ -23,8 +23,7 @@ if __name__ == '__main__':
                         required=False,
                         default=None,
                         help='The folder to place the generated library in')
-
+    
     args = parser.parse_args()
-    generate_wrapper(args.lang, args.source_dir, args.obj_dir,
-        args.out_dir, not args.static)
+    generate_wrapper(args.lang, args.source_dir, args.out_dir)
     

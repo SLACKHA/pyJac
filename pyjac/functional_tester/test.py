@@ -591,11 +591,9 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         #write and compile the dydt python wrapper
         if lang == 'c':
             safe_remove('pyjacob.so')
-            safe_remove('libc_pyjac.a')
             generate_wrapper('c', build_dir)
 
         safe_remove('adjacob.so')
-        safe_remove('libad_pyjac.a')
         generate_wrapper('c', build_dir, auto_diff=True)
 
         try:
@@ -604,7 +602,6 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             pass
         if lang == 'cuda':
             safe_remove('cu_pyjacob.so')
-            safe_remove('libcu_pyjac.a')
             generate_wrapper('cuda', build_dir)
 
         if tchem_flag:
@@ -1006,6 +1003,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         safe_remove('adjacob.so')
         safe_remove('cu_pyjacob.so')
         safe_remove('pyjacob.so')
+        safe_remove('py_tchem.so')
 
         # Now clean build directory
         for root, dirs, files in os.walk('./build', topdown=False):

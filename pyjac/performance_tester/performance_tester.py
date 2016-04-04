@@ -48,11 +48,12 @@ cmd_compile = dict(c='gcc',
 
 # Flags based on language
 flags = dict(c=['-std=c99', '-O3', '-mtune=native',
-                '-fopenmp'],
-             icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
+                '-fopenmp', '-fPIC'],
+             icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo', '-fPIC'],
              cuda=['-O3', '-arch=sm_20',
                    '-I/usr/local/cuda/include/',
                    '-I/usr/local/cuda/samples/common/inc/',
+                   '-Xcompiler', '"-fPIC"',
                    '-dc']
              )
 
@@ -154,6 +155,7 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
     try:
         subprocess.check_call(args)
     except subprocess.CalledProcessError:
+        print(' '.join(args))
         print('Error: linking of test program failed.')
         sys.exit(1)
 

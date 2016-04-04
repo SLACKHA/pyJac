@@ -19,7 +19,7 @@ def cmd_lib(lang, shared):
     if lang == 'c':
         return ['ar', 'rcs'] if not shared else ['gcc', '-shared']
     elif lang == 'cuda':
-        return ['ar', 'rcs'] if not shared else ['nvcc', '-shared']
+        return ['ar', 'rcs'] if not shared else ['gcc', '-shared']
     elif lang == 'icc':
         return ['ar', 'rcs'] if not shared else ['icc', '-shared']
 
@@ -28,8 +28,7 @@ flags = dict(c=['-std=c99', '-O3', '-mtune=native',
              icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
              cuda=['-O3', '-arch=sm_20',
                    '-I/usr/local/cuda/include/',
-                   '-I/usr/local/cuda/samples/common/inc/',
-                   '-dc']
+                   '-I/usr/local/cuda/samples/common/inc/']
              )
 
 shared_flags = dict(c=['-fPIC'],
@@ -37,9 +36,17 @@ shared_flags = dict(c=['-fPIC'],
                     cuda=['-Xcompiler', '"-fPIC"'])
 
 libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
-            cuda=['-arch=sm_20'],
+            cuda=['-lcudart'],
             icc=['-m64', '-ipo', '-lm', '-std=c99']
             )
+
+
+def which(file):
+    for path in os.environ["PATH"].split(os.pathsep):
+        if os.path.exists(os.path.join(path, file)):
+                return os.path.join(path, file)
+
+    return None
 
 def getf(x):
     return os.path.basename(x)
@@ -50,7 +57,8 @@ def compiler(fstruct):
     include = ['-I ' + d for d in fstruct.i_dirs]
     args.extend(include)
     args.extend([
-        '-c', os.path.join(fstruct.source_dir, fstruct.filename +
+        '-{}c'.format('d' if fstruct.lang == 'cuda' else ''), 
+                    os.path.join(fstruct.source_dir, fstruct.filename +
                     utils.file_ext[fstruct.build_lang]),
         '-o', os.path.join(fstruct.obj_dir, getf(fstruct.filename) + '.o')
         ])
@@ -72,10 +80,42 @@ def libgen(lang, obj_dir, out_dir, filelist, shared):
     if os.path.exists(os.path.join(out_dir, libname)):
         os.remove(libname)
 
+    cuda_path = None
+    if lang == 'cuda':
+        temp_cmd = [cmd_compile[lang]]
+        temp_cmd += flags[lang]
+        if shared:
+            temp_cmd += shared_flags[lang]
+
+        cuda_path = which('nvcc')
+        if cuda_path is None:
+            print('nvcc not found!')
+            sys.exit(-1)
+
+        import platform
+        sixtyfourbit = platform.architecture()[0] == '64bit'
+        cuda_path = os.path.dirname(os.path.dirname(cuda_path))
+        cuda_path = os.path.join(cuda_path, 'lib{}'.format('64' if sixtyfourbit else ''))
+
+        temp_cmd += ['-L{}'.format(cuda_path)]
+
+        temp_cmd += ['-dlink']
+        temp_cmd.extend([os.path.join(obj_dir, getf(f) + '.o') for f in filelist])
+        temp_cmd += ['-o', os.path.join(obj_dir, 'cuda_link.o')]
+
+        try:
+            subprocess.check_call(temp_cmd)
+        except subprocess.CalledProcessError:
+            print('Error: Generation of pyjac library failed.')
+            sys.exit(-1)
+        filelist += ['cuda_link']
+
     if shared:
         command += ['-o']
     command += [os.path.join(out_dir, libname)]
     if shared:
+        if lang == 'cuda':
+            command += ['-L{}'.format(cuda_path)]
         command.extend(libs[lang])
     command.extend([os.path.join(obj_dir, getf(f) + '.o') for f in filelist])
 

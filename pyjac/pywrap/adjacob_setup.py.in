@@ -8,14 +8,7 @@ import parallel_compiler as pcc
 import numpy
 import os
 
-sources = ['$homepath/adjacob_wrapper.pyx',
-           '$buildpath/ad_dydt.c',
-           '$buildpath/ad_rxn_rates.c',
-           '$buildpath/ad_rxn_rates_pres_mod.c',
-           '$buildpath/ad_spec_rates.c',
-           '$buildpath/ad_chem_utils.c',
-           '$buildpath/ad_jac.c'
-           ]
+sources = ['$homepath/adjacob_wrapper.pyx']
 includes = ['$buildpath/', '$homepath/']
 
 distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
@@ -30,7 +23,8 @@ ext = [Extension("adjacob",
                          '-DADEPT_STACK_THREAD_UNSAFE', '-fopenmp'],
      language='c++',
      libraries=['adept'],
-     extra_link_args=['-fopenmp']
+     extra_link_args=['-fopenmp'],
+     extra_objects=[os.path.join('$outpath', '$libname')]
      )]
 
 setup(

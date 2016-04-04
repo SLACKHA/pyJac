@@ -56,7 +56,11 @@ def getf(x):
 
 def compiler(fstruct):
     args = [cmd_compile[fstruct.build_lang]]
+    if fstruct.auto_diff:
+        args = ['g++']
     args.extend(flags[fstruct.build_lang])
+    if fstruct.auto_diff:
+        args = [x for x in args if 'std=c99' not in x]
 
     #always use fPIC in case we're building wrapper
     args.extend(shared_flags[fstruct.build_lang])
@@ -92,10 +96,17 @@ def get_cuda_path():
     cuda_path = os.path.join(cuda_path, 'lib{}'.format('64' if sixtyfourbit else ''))
     return cuda_path
 
-def libgen(lang, obj_dir, out_dir, filelist, shared):
+def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
     command = cmd_lib(lang, shared)
 
-    desc = 'c' if lang != 'cuda' else 'cu'
+    if lang == 'cuda':
+        desc = 'cu'
+    elif lang == 'c':
+        if auto_diff:
+            desc = 'ad'
+        else:
+            desc = 'c'
+
     libname = 'lib{}_pyjac'.format(desc)
 
     #remove the old library
@@ -142,13 +153,22 @@ class file_struct(object):
         self.source_dir = source_dir
         self.obj_dir = obj_dir
         self.shared = shared
+        self.auto_diff=False
 
-def get_file_list(source_dir, pmod, lang, FD=False):
+def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
     i_dirs = [source_dir]
+    if AD:
+        files = ['ad_dydt', 'ad_rxn_rates', 'ad_spec_rates',
+                'ad_chem_utils', 'ad_jac']
+        if pmod:
+            files += ['ad_rxn_rates_pres_mod']
+        return i_dirs, files
+
     files = ['chem_utils', 'dydt', 'spec_rates',
          'rxn_rates', 'mechanism', 'mass_mole']
     if pmod:
         files += ['rxn_rates_pres_mod']
+
     if FD:
         files += ['fd_jacob']
         flists = []
@@ -174,7 +194,7 @@ def get_file_list(source_dir, pmod, lang, FD=False):
 
 def generate_library(lang, source_dir, obj_dir=None,
                         out_dir=None, shared=None,
-                        finite_difference=False):
+                        finite_difference=False, auto_diff=False):
 
     #check lang
     if lang not in flags.keys():
@@ -216,12 +236,14 @@ def generate_library(lang, source_dir, obj_dir=None,
                 break
 
     #get file lists
-    i_dirs, files = get_file_list(source_dir, pmod, build_lang, FD=finite_difference)
+    i_dirs, files = get_file_list(source_dir, pmod, build_lang, FD=finite_difference, AD=auto_diff)
 
     # Compile generated source code
     structs = [file_struct(lang, build_lang, f, i_dirs,
                     (['-DFINITE_DIFF'] if finite_difference else []),
                     source_dir, obj_dir, shared) for f in files]
+    for x in structs:
+        x.auto_diff=auto_diff
 
     pool = multiprocessing.Pool()
     results = pool.map(compiler, structs)
@@ -230,5 +252,5 @@ def generate_library(lang, source_dir, obj_dir=None,
     if any(r == -1 for r in results):
        sys.exit(-1)
 
-    libname = libgen(lang, obj_dir, out_dir, files, shared)
+    libname = libgen(lang, obj_dir, out_dir, files, shared, auto_diff)
     return os.path.join(out_dir, libname)

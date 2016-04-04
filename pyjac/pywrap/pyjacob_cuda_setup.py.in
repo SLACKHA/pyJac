@@ -72,7 +72,7 @@ if os.path.exists('$buildpath/jacobs') and os.path.isfile('$buildpath/jacobs/jac
 
 ext = Extension('cu_pyjacob',
                 sources=sources,
-                library_dirs=[CUDA['lib64'], '$outpath'],
+                library_dirs=[CUDA['lib64']],
                 libraries=['cudart'],
                 language='c++',
                 #runtime_library_dirs=[CUDA['lib64']],
@@ -124,7 +124,8 @@ def customize_linker_for_nvcc(self):
         #now call the actual link, with the extra dlink object
         self.linker_so = linker_so_save[:]
 
-        super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o')], output_filename, output_dir,
+        super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o'), '$libname'], 
+            output_filename, output_dir,
             libraries, library_dirs, runtime_library_dirs, export_symbols,
             debug, extra_preargs, extra_postargs, build_temp, target_lang)
 

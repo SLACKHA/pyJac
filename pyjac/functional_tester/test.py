@@ -9,7 +9,6 @@ import sys
 import subprocess
 import pickle
 from argparse import ArgumentParser
-from string import Template
 
 # Related modules
 import numpy as np
@@ -25,6 +24,7 @@ except ImportError:
 from .. import utils
 from ..core.create_jacobian import create_jacobian
 from . import partially_stirred_reactor as pasr
+from ..pywrap import generate_wrapper
 
 # Compiler based on language
 cmd_compile = dict(c='gcc',
@@ -492,6 +492,12 @@ class tchem_evaluator(cpyjac_evaluator):
         jacob[:] = self.test_jacob[self.index, :]
 
 
+def safe_remove(file):
+    try:
+        os.path.remove(file)
+    except:
+        pass
+
 def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
          compile_jacob=True, seed=None, pasr_output_file=None, last_spec=None,
@@ -584,47 +590,26 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
     if compile_jacob:
         #write and compile the dydt python wrapper
         if lang == 'c':
-            try:
-                os.remove('pyjacob.so')
-            except:
-                pass
+            safe_remove('pyjacob.so')
+            safe_remove('libc_pyjac.a')
+            generate_wrapper('c', build_dir)
 
-            generate_setup(os.path.join(home_dir, 'pyjacob_setup.py.in'), home_dir, build_dir)
-            subprocess.check_call(['python2.7', os.path.join(home_dir, 'pyjacob_setup.py'), 
-                                   'build_ext', '--inplace'
-                                   ])
-
-        try:
-            os.remove('adjacob.so')
-        except:
-            pass
-
-        generate_setup(os.path.join(home_dir, 'adjacob_setup.py.in'), home_dir, build_dir)
-        #need to compile this anyways, it's way easier to get the analytical
-        #jacobian evaulator to use the c interface
-        subprocess.check_call(['python2.7', os.path.join(home_dir, 'adjacob_setup.py'), 
-                               'build_ext', '--inplace'
-                               ])
+        safe_remove('adjacob.so')
+        safe_remove('libad_pyjac.a')
+        generate_wrapper('c', build_dir, auto_diff=True)
 
         try:
             os.remove('cu_pyjacob.so')
         except:
             pass
         if lang == 'cuda':
-            generate_setup(os.path.join(home_dir, 'pyjacob_cuda_setup.py.in'), home_dir, build_dir)
-            subprocess.check_call(['python2.7', os.path.join(home_dir, 'pyjacob_cuda_setup.py'),
-                                   'build_ext', '--inplace'
-                                   ])
+            safe_remove('cu_pyjacob.so')
+            safe_remove('libcu_pyjac.a')
+            generate_wrapper('cuda', build_dir)
 
-        try:
-            os.remove('py_tchem.so')
-        except:
-            pass
         if tchem_flag:
-            generate_setup(os.path.join(home_dir, 'pytchem_setup.py.in'))
-            subprocess.check_call(['python2.7', os.path.join(home_dir, 'pytchem_setup.py.in'),
-                                   'build_ext', '--inplace'
-                                   ])
+            safe_remove('py_tchem.so')
+            generate_wrapper('tchem', build_dir)
 
     pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
     rev = any(rxn.reversible for rxn in gas.reactions())
@@ -1018,14 +1003,9 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     if not do_not_remove:
         # Cleanup all compiled files.
-        for f in ['adjacob.so', os.path.join(home_dir, 'adjacob_wrapper.cpp')]:
-            os.remove(f)
-        if lang == 'cuda':
-            for f in ['cu_pyjacob.so', os.path.join(home_dir, 'pyjacob_cuda_wrapper.cpp')]:
-                os.remove(f)
-        if lang == 'c':
-            for f in ['pyjacob.so', os.path.join(home_dir, 'pyjacob_wrapper.c')]:
-                os.remove(f)
+        safe_remove('adjacob.so')
+        safe_remove('cu_pyjacob.so')
+        safe_remove('pyjacob.so')
 
         # Now clean build directory
         for root, dirs, files in os.walk('./build', topdown=False):

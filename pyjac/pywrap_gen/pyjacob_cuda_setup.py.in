@@ -89,7 +89,7 @@ if os.path.exists('$buildpath/jacobs') and os.path.isfile('$buildpath/jacobs/jac
 ext = Extension('cu_pyjacob',
                 sources=sources,
                 library_dirs=[CUDA['lib64']],
-                libraries=['cudart'],
+                libraries=['cudart', '$libname'],
                 language='c++',
                 #runtime_library_dirs=[CUDA['lib64']],
                 # this syntax is specific to this build system

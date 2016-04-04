@@ -12,7 +12,7 @@ distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
 if os.getenv('TCHEM_HOME'):
     tchem_home = os.getenv('TCHEM_HOME')
 else:
-    raise SystemError('TCHEM_HOME environment variable not set.')
+    raise SystemError('TCHEM_HOME environment variable must be set in order to test with TChem.')
 
 # Need to copy periodic table file into local directory... for some reason
 shutil.copy(os.path.join(tchem_home, 'data', 'periodictable.dat'),

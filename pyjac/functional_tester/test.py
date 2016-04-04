@@ -491,15 +491,6 @@ class tchem_evaluator(cpyjac_evaluator):
     def get_jacobian(self, jacob):
         jacob[:] = self.test_jacob[self.index, :]
 
-def generate_setup(setupfile, home_dir, build_dir):
-    with open(setupfile, 'r') as file:
-        src = Template(file.read())
-    file_data = {'homepath' : home_dir,
-                 'buildpath' : build_dir}
-    src = src.safe_substitute(file_data)
-    with open(setupfile[:setupfile.rindex('.in')], 'w') as file:
-        file.write(src)
-
 
 def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,

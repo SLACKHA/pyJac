@@ -122,9 +122,7 @@ void eval_jacob(const double t, const double p, const double* y,
 
         file.write(
             '//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
-            '{} set_same_initial_conditions(int NUM,{} double**, double**{});\n\n'.format(
-                'int' if lang == 'cuda' else 'void', ' double**, double**, ' if lang == 'cuda' else '',
-                ', mechanism_memory**, mechanism_memory**' if lang == 'cuda' else '')
+            'void set_same_initial_conditions(int NUM, double**, double**);\n\n'
             )
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
                    '    void write_jacobian_and_rates_output(int NUM);\n'
@@ -167,42 +165,10 @@ void eval_jacob(const double t, const double p, const double* y,
                 file.write('        y_specs[{0}] = temp[{1}];\n'.format(spec, i))
         file.write('    }\n')
 
-        needed_arr = ['y', 'pres']
-        needed_arr_conv = ['y', 'rho']
-        if lang == 'cuda':
-            needed_arr = [['double** ' + a + '_host', 'double** d_' + a]
-                          for a in needed_arr]
-            needed_arr = [a for a in itertools.chain(*needed_arr)]
-            needed_arr_conv = [
-                ['double** ' + a + '_host', 'double** d_' + a] for a in needed_arr_conv]
-            needed_arr_conv = [a for a in itertools.chain(*needed_arr_conv)]
-        else:
-            needed_arr = ['double** ' + a + '_host' for a in needed_arr]
-            needed_arr_conv = ['double** ' + a + '_host' for a in needed_arr_conv]
-        file.write('#ifdef CONP\n'
-                   '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                           ', '.join(needed_arr),
-                                                                            ', mechanism_memory** h_mem, mechanism_memory** d_mem' if lang == 'cuda' else '') +
-                   '#elif CONV\n'
-                   '{} set_same_initial_conditions(int NUM, {}{}) \n'.format('int' if lang == 'cuda' else 'void',
-                                                                           ', '.join(needed_arr_conv),
-                                                                            ', mechanism_memory** h_mem, mechanism_memory** d_mem' if lang == 'cuda' else '') +
-                   '#endif\n'
-                   )
+        needed_arr = ['y', 'var']
+        needed_arr = ['double** ' + a + '_host' for a in needed_arr]
+        file.write('void set_same_initial_conditions(int NUM, {}) \n'.format(', '.join(needed_arr)))
         file.write('{\n')
-        if lang == 'cuda':
-            # do cuda mem init and copying
-            file.write(
-                'int padded = -1;\n'
-                '#ifdef CONP\n'
-                '    initialize_gpu_memory(NUM, h_mem, d_mem);\n'
-                '#elif CONV\n'
-                '    initialize_gpu_memory(NUM, h_mem, d_mem);\n'
-                '#endif\n'
-                'exit(-1);\n'
-            )
-        else:
-            file.write('    int padded = NUM;\n')
         file.write('    double Xi [NSP] = {0.0};\n'
                    '    //set initial mole fractions here\n\n'
                    '    //Normalize mole fractions to sum to one\n'
@@ -250,7 +216,7 @@ void eval_jacob(const double t, const double p, const double* y,
             '        Xsum += Xi[j];\n'
             '    }\n'
             '    if (Xsum == 0.0) {\n'
-            '        printf("Use of the set initial conditions function requires user implementation!");\n'
+            '        printf("Use of the set initial conditions function requires user implementation!\\n");\n'
             '        exit(-1);\n'
             '    }\n'
             '    for (int j = 0; j < NSP; ++ j) {\n'
@@ -264,24 +230,9 @@ void eval_jacob(const double t, const double p, const double* y,
             '    // set intial temperature, units [K]\n' +
             '    double T0 = {};\n\n'.format(T0)
             )
-        if lang == 'cuda':
-            file.write(
-                '    cudaMallocHost((void**)y_host, NUM * NSP * sizeof(double));\n'
-                '#ifdef CONP\n'
-                '    cudaMallocHost((void**)pres_host, NUM * sizeof(double));\n'
-                '#elif defined(CONV)\n'
-                '    cudaMallocHost((void**)rho_host, NUM * sizeof(double));\n'
-                '#endif\n'
-            )
-        else:
-            file.write(
-                '    (*y_host) = malloc(NUM * NSP * sizeof(double));\n'
-                '#ifdef CONP\n'
-                '    (*pres_host) = malloc(NUM * sizeof(double));\n'
-                '#elif defined(CONV)\n'
-                '    (*rho_host) = malloc(NUM * sizeof(double));\n'
-                '#endif\n'
-            )
+        file.write(
+            '    (*y_host) = (double*)malloc(NUM * NSP * sizeof(double));\n'
+            '    (*var_host) = (double*)malloc(NUM * sizeof(double));\n')
         file.write(
             '    //load temperature and mass fractions for all threads (cells)\n'
             '    for (int i = 0; i < NUM; ++i) {\n'
@@ -297,14 +248,12 @@ void eval_jacob(const double t, const double p, const double* y,
             '#endif\n\n'
             '    for (int i = 0; i < NUM; ++i) {\n'
             '#ifdef CONV\n'
-            '        (*rho_host)[i] = rho;\n'
+            '        (*var_host)[i] = rho;\n'
             '#elif defined(CONP)\n'
-            '        (*pres_host)[i] = P;\n'
+            '        (*var_host)[i] = P;\n'
             '#endif\n'
             '    }\n'
         )
-        if lang == 'cuda':  # copy memory over
-            file.write('    return NUM;\n')
 
         file.write('}\n\n')
 

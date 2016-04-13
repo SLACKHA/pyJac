@@ -122,7 +122,7 @@ void eval_jacob(const double t, const double p, const double* y,
 
         file.write(
             '//Must be implemented by user on a per mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
-            'void set_same_initial_conditions(int NUM, double**, double**);\n\n'
+            'void set_same_initial_conditions(int, double**, double**);\n\n'
             )
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
                    '    void write_jacobian_and_rates_output(int NUM);\n'

@@ -24,28 +24,7 @@ from . import shared_memory as shared
 
 
 def rxn_rate_const(A, b, E):
-    """Returns line with reaction rate calculation (after = sign).
-
-    Notes
-    -----
-    Form of the reaction rate constant (from, e.g., Lu and Law [1]_):
-    .. math::
-        :nowrap:
-        k_f = \begin{cases}
-        A & \text{if } \beta = 0 \text{ and } T_a = 0 \\
-        \exp \left( \log A + \beta \log T \right) &
-        \text{if } \beta \neq 0 \text{ and } \text{if } T_a = 0 \\
-        \exp \left( \log A + \beta \log T - T_a / T \right)	&
-        \text{if } \beta \neq 0 \text{ and } T_a \neq 0 \\
-        \exp \left( \log A - T_a / T \right)
-        & \text{if } \beta = 0 \text{ and } T_a \neq 0 \\
-        A \prod^b T	& \text{if } T_a = 0 \text{ and }
-        b \in \mathbb{Z} \text{ (integers) }
-        \end{cases}
-
-    .. [1] TF Lu and CK Law, "Toward accommodating realistic fuel chemistry
-       in large-scale computations," Progress in Energy and Combustion
-       Science, vol. 35, pp. 192-215, 2009. doi:10.1016/j.pecs.2008.10.002
+    r"""Returns line with reaction rate calculation (after = sign).
 
     Parameters
     ----------
@@ -60,6 +39,32 @@ def rxn_rate_const(A, b, E):
     -------
     line : str
         String with expression for reaction rate.
+
+    Notes
+    -----
+    Form of the reaction rate constant (from, e.g., Lu and Law [1]_):
+
+    .. math::
+        :nowrap:
+
+        k_f = \begin{cases}
+        A & \text{if } \beta = 0 \text{ and } T_a = 0 \\
+        \exp \left( \log A + \beta \log T \right) &
+        \text{if } \beta \neq 0 \text{ and } \text{if } T_a = 0 \\
+        \exp \left( \log A + \beta \log T - T_a / T \right)	&
+        \text{if } \beta \neq 0 \text{ and } T_a \neq 0 \\
+        \exp \left( \log A - T_a / T \right)
+        & \text{if } \beta = 0 \text{ and } T_a \neq 0 \\
+        A \prod^b T	& \text{if } T_a = 0 \text{ and }
+        b \in \mathbb{Z} \text{ (integers) }
+        \end{cases}
+
+    References
+    ----------
+
+    .. [1] TF Lu and CK Law, "Toward accommodating realistic fuel chemistry
+       in large-scale computations," Progress in Energy and Combustion
+       Science, vol. 35, pp. 192-215, 2009. doi:10.1016/j.pecs.2008.10.002
 
     """
 
@@ -1350,7 +1355,7 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
     new_loads = []
     def __on_eviction(sp, shared, shared_ind):
         index = len(specs) - 1 if sp.index is None else sp.index
-        file.write('  {} {}= {}'.format(sp.to_string(), 
+        file.write('  {} {}= {}'.format(sp.to_string(),
                     # is only a += if the species in question has been updated
                     # previously
                    '+' if not first_use[index] else '',

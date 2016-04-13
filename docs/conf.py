@@ -44,7 +44,9 @@ extensions = [
     'sphinx.ext.coverage',
     'sphinx.ext.mathjax',
     'sphinx.ext.viewcode',
-    'alabaster'
+    'alabaster',
+    'sphinx.ext.napoleon',
+#    'numpydoc'
 ]
 
 autodoc_default_flags = ['members', 'show-inheritance']

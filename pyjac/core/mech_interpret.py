@@ -50,10 +50,6 @@ elem_wt = chem.get_elem_wt()
 def read_mech(mech_filename, therm_filename):
     """Read and interpret mechanism file for elements, species, and reactions.
 
-    Note
-    ----
-    Doesn't support element names with digits.
-
     Parameters
     ----------
     mech_filename : str
@@ -71,6 +67,10 @@ def read_mech(mech_filename, therm_filename):
         List of reactions in mechanism.
     units : str
         Units of reactions' Arrhenius coefficients
+
+    Notes
+    -----
+    Doesn't support element names with digits.
 
     """
 

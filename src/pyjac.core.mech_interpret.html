@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.core.mech_interpret module &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pyjac.core.mech_interpret">
+<span id="pyjac-core-mech-interpret-module"></span><h1>pyjac.core.mech_interpret module<a class="headerlink" href="#module-pyjac.core.mech_interpret" title="Permalink to this headline">¶</a></h1>
+<p>Chemkin-format mechanism interpreter module.</p>
+<dl class="function">
+<dt id="pyjac.core.mech_interpret.read_mech">
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">read_mech</code><span class="sig-paren">(</span><em>mech_filename</em>, <em>therm_filename</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/mech_interpret.html#read_mech"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.mech_interpret.read_mech" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read and interpret mechanism file for elements, species, and reactions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;)</li>
+<li><strong>therm_filename</strong> (<em>str, optional</em>) &#8211; Thermodynamic database filename (e.g., &#8216;therm.dat&#8217;)</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>elems</strong> (<em>list of str</em>) &#8211; List of elements in mechanism.</li>
+<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in mechanism.</li>
+<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in mechanism.</li>
+<li><strong>units</strong> (<em>str</em>) &#8211; Units of reactions&#8217; Arrhenius coefficients</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Doesn&#8217;t support element names with digits.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.mech_interpret.read_thermo">
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">read_thermo</code><span class="sig-paren">(</span><em>filename</em>, <em>elems</em>, <em>specs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/mech_interpret.html#read_thermo"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.mech_interpret.read_thermo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read and interpret thermodynamic database for species data.</p>
+<p>Reads the thermodynamic file and returns the species thermodynamic
+coefficients as well as the species-specific temperature range
+values (if given).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of thermo database file.</li>
+<li><strong>elems</strong> (<em>list of str</em>) &#8211; List of element names in mechanism.</li>
+<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in mechanism.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.mech_interpret.read_mech_ct">
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">read_mech_ct</code><span class="sig-paren">(</span><em>filename=None</em>, <em>gas=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/mech_interpret.html#read_mech_ct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.mech_interpret.read_mech_ct" title="Permalink to this definition">¶</a></dt>
+<dd><p>Read and interpret Cantera-format mechanism file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.cti&#8217;). Optional.</li>
+<li><strong>gas</strong> (<em>Cantera Solution object</em>) &#8211; Existing Cantera Solution object to be used. Optional.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>elems</strong> (<em>list of str</em>) &#8211; List of elements in mechanism.</li>
+<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in mechanism.</li>
+<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in mechanism.</li>
+<li><strong>units</strong> (<em>str</em>) &#8211; Units of reactions&#8217; Arrhenius coefficients</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/src/pyjac.core.mech_interpret.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

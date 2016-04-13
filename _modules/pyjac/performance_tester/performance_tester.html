@@ -1,0 +1,456 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.performance_tester.performance_tester &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyjac.performance_tester.performance_tester</h1><div class="highlight"><pre>
+<span></span><span class="ch">#! /usr/bin/env python2.7</span>
+
+<span class="c1"># Python 2 compatibility</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="c1"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<span class="c1"># More Python 2 compatibility</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="nb">zip</span>
+<span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">izip</span> <span class="k">as</span> <span class="nb">zip</span>
+
+<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
+
+<span class="c1"># Related modules</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
+    <span class="kn">from</span> <span class="nn">cantera</span> <span class="kn">import</span> <span class="n">ck2cti</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: Cantera must be installed.&#39;</span><span class="p">)</span>
+    <span class="k">raise</span>
+
+<span class="c1"># Local imports</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">..core.create_jacobian</span> <span class="kn">import</span> <span class="n">create_jacobian</span>
+<span class="kn">from</span> <span class="nn">.optionLoop.optionloop</span> <span class="kn">import</span> <span class="n">optionloop</span>
+<span class="kn">from</span> <span class="nn">..libgen</span> <span class="kn">import</span> <span class="n">generate_library</span><span class="p">,</span> <span class="n">libs</span><span class="p">,</span> <span class="n">compiler</span><span class="p">,</span> <span class="n">file_struct</span><span class="p">,</span> <span class="n">get_cuda_path</span><span class="p">,</span> <span class="n">flags</span>
+
+<span class="c1">#cuda only works for static libraries</span>
+<span class="n">STATIC</span><span class="o">=</span><span class="bp">True</span>
+
+<div class="viewcode-block" id="is_pdep"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.is_pdep">[docs]</a><span class="k">def</span> <span class="nf">is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ThreeBodyReaction</span><span class="p">)</span> <span class="ow">or</span>
+    <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">or</span>
+    <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="check_step_file"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.check_step_file">[docs]</a><span class="k">def</span> <span class="nf">check_step_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">steplist</span><span class="p">):</span>
+    <span class="c1">#checks file for existing data</span>
+    <span class="c1">#and returns number of runs left to do</span>
+    <span class="c1">#for each # of does in steplist</span>
+    <span class="n">runs</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="n">steplist</span><span class="p">:</span>
+        <span class="n">runs</span><span class="p">[</span><span class="n">step</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="s1">&#39;cuda&#39;</span> <span class="ow">in</span> <span class="n">filename</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()]</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">]</span>
+                    <span class="n">runs</span><span class="p">[</span><span class="n">vals</span><span class="p">[</span><span class="mi">0</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">runs</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">runs</span></div>
+
+<div class="viewcode-block" id="check_file"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.check_file">[docs]</a><span class="k">def</span> <span class="nf">check_file</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="c1">#checks file for existing data</span>
+    <span class="c1">#and returns number of runs left to do</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()]</span>
+        <span class="n">num_completed</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">to_find</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">vals</span><span class="p">)</span> <span class="o">==</span> <span class="n">to_find</span><span class="p">:</span>
+                    <span class="n">i</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">vals</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">f</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">vals</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">num_completed</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">return</span> <span class="n">num_completed</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span></div>
+
+<div class="viewcode-block" id="getf"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.getf">[docs]</a><span class="k">def</span> <span class="nf">getf</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="cmd_link"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.cmd_link">[docs]</a><span class="k">def</span> <span class="nf">cmd_link</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">shared</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;icc&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;icc&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;gcc&#39;</span><span class="p">]</span>
+    <span class="k">elif</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;nvcc&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">shared</span> <span class="k">else</span> <span class="p">[</span><span class="s1">&#39;g++&#39;</span><span class="p">]</span></div>
+
+
+
+<div class="viewcode-block" id="linker"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.linker">[docs]</a><span class="k">def</span> <span class="nf">linker</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">temp_lang</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span> <span class="n">filelist</span><span class="p">,</span> <span class="n">lib</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">cmd_link</span><span class="p">(</span><span class="n">temp_lang</span><span class="p">,</span> <span class="ow">not</span> <span class="n">STATIC</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="ow">or</span> <span class="p">(</span><span class="ow">not</span> <span class="n">STATIC</span><span class="p">):</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">flags</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">])</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_dir</span><span class="p">,</span> <span class="n">getf</span><span class="p">(</span><span class="n">f</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;.o&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">filelist</span><span class="p">])</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">test_dir</span><span class="p">,</span> <span class="s1">&#39;speedtest&#39;</span><span class="p">)])</span>
+    <span class="k">if</span> <span class="n">temp_lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;-L{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">get_cuda_path</span><span class="p">()))</span>
+    <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">libs</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">])</span>
+    <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">):</span>
+            <span class="n">tchem_home</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemError</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME environment variable not set.&#39;</span><span class="p">)</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s1">&#39;-L{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tchem_home</span><span class="p">,</span> <span class="s1">&#39;lib&#39;</span><span class="p">)),</span> <span class="s1">&#39;-ltchem&#39;</span><span class="p">])</span>
+
+    <span class="k">if</span> <span class="n">lib</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">STATIC</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;-L{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">())]</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;-l{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lib</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">args</span> <span class="o">+=</span> <span class="p">[</span><span class="n">lib</span><span class="p">]</span>
+
+    <span class="n">args</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;-lm&#39;</span><span class="p">)</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: linking of test program failed.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="performance_tester"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.performance_tester">[docs]</a><span class="k">def</span> <span class="nf">performance_tester</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="n">pdir</span><span class="p">,</span> <span class="n">use_old_opt</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">):</span>
+    <span class="n">build_dir</span> <span class="o">=</span> <span class="s1">&#39;out&#39;</span>
+    <span class="n">test_dir</span> <span class="o">=</span> <span class="s1">&#39;test&#39;</span>
+
+    <span class="n">pdir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">pdir</span><span class="p">)</span>
+
+    <span class="c1">#find the mechanisms to test</span>
+    <span class="n">mechanism_list</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">pdir</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">name</span><span class="p">)):</span>
+            <span class="c1">#check for cti</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span> <span class="k">if</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">f</span><span class="p">))]</span>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.cti&#39;</span><span class="p">):</span>
+                    <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+                    <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;mech&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span>
+                    <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;chemkin&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;.cti&#39;</span><span class="p">,</span> <span class="s1">&#39;.dat&#39;</span><span class="p">)</span>
+                    <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">f</span><span class="p">))</span>
+                    <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;ns&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span>
+
+                    <span class="n">thermo</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">tf</span> <span class="k">for</span> <span class="n">tf</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="s1">&#39;therm&#39;</span> <span class="ow">in</span> <span class="n">tf</span><span class="p">),</span> <span class="bp">None</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="n">thermo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                        <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;thermo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">thermo</span>
+
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">):</span>
+        <span class="n">tchem_home</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SystemError</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME environment variable not set.&#39;</span><span class="p">)</span>
+
+
+    <span class="n">cache_opt_base</span> <span class="o">=</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">]</span>
+    <span class="n">shared_base</span> <span class="o">=</span> <span class="p">[</span><span class="bp">True</span><span class="p">,</span> <span class="bp">False</span><span class="p">]</span>
+    <span class="n">finite_diffs_base</span> <span class="o">=</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">]</span>
+
+    <span class="n">cpu_repeats</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">gpu_repeats</span> <span class="o">=</span> <span class="mi">10</span>
+
+    <span class="k">def</span> <span class="nf">false_factory</span><span class="p">():</span>
+        <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="n">c_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;cache_opt&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">],</span>
+                <span class="s1">&#39;finite_diffs&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">]}</span>
+    <span class="n">cuda_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;cuda&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;cache_opt&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">],</span>
+                    <span class="s1">&#39;shared&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">],</span>
+                    <span class="s1">&#39;finite_diffs&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="bp">False</span><span class="p">,</span> <span class="bp">True</span><span class="p">]}</span>
+    <span class="n">tchem_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;tchem&#39;</span><span class="p">}</span>
+
+    <span class="c1">#set up testing environment</span>
+    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+    <span class="n">env</span><span class="p">[</span><span class="s1">&#39;OMP_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+    <span class="n">env</span><span class="p">[</span><span class="s1">&#39;MKL_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">mech_name</span><span class="p">,</span> <span class="n">mech_info</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">mechanism_list</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;ns&#39;</span><span class="p">]):</span>
+        <span class="c1">#get the cantera object</span>
+        <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">mech_name</span><span class="p">,</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;mech&#39;</span><span class="p">]))</span>
+        <span class="n">pmod</span> <span class="o">=</span> <span class="nb">any</span><span class="p">([</span><span class="n">is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">)</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()])</span>
+
+        <span class="c1">#ensure directory structure is valid</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">mech_name</span><span class="p">))</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s1">&#39;mkdir&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">])</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s1">&#39;mkdir&#39;</span><span class="p">,</span> <span class="s1">&#39;-p&#39;</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">])</span>
+
+        <span class="c1">#clear old data</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data.bin&#39;</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="k">pass</span>
+
+        <span class="n">npy_files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pdir</span><span class="p">,</span> <span class="n">mech_name</span><span class="p">))</span>
+                        <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.npy&#39;</span><span class="p">)</span>
+                        <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">f</span><span class="p">)]</span>
+        <span class="n">num_conditions</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1">#load PaSR data for different pressures/conditions, and save to binary c file</span>
+        <span class="k">for</span> <span class="n">npy</span> <span class="ow">in</span> <span class="n">npy_files</span><span class="p">:</span>
+            <span class="n">state_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">npy</span><span class="p">)</span>
+            <span class="n">state_data</span> <span class="o">=</span> <span class="n">state_data</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">state_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span>
+                                <span class="n">state_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+                                <span class="n">state_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+                                <span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;data.bin&#39;</span><span class="p">),</span> <span class="s2">&quot;ab&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                    <span class="n">state_data</span><span class="o">.</span><span class="n">tofile</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+
+            <span class="n">num_conditions</span> <span class="o">+=</span> <span class="n">state_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">num_conditions</span><span class="p">)</span>
+
+        <span class="c1">#figure out gpu steps</span>
+        <span class="n">step_size</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">steplist</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="n">step_size</span> <span class="o">&lt;</span> <span class="n">num_conditions</span><span class="p">:</span>
+            <span class="n">steplist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">step_size</span><span class="p">)</span>
+            <span class="n">step_size</span> <span class="o">*=</span> <span class="mi">2</span>
+        <span class="k">if</span> <span class="n">step_size</span> <span class="o">/</span> <span class="mi">2</span> <span class="o">!=</span> <span class="n">num_conditions</span><span class="p">:</span>
+            <span class="n">steplist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">num_conditions</span><span class="p">)</span>
+
+        <span class="n">the_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="n">first_run</span> <span class="o">=</span> <span class="bp">True</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">c_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">cuda_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">tchem_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+
+        <span class="n">haveOpt</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">)):</span>
+            <span class="n">haveOpt</span> <span class="o">=</span> <span class="bp">True</span>
+
+        <span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">op</span><span class="p">:</span>
+            <span class="n">lang</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;lang&#39;</span><span class="p">]</span>
+            <span class="n">temp_lang</span> <span class="o">=</span> <span class="s1">&#39;c&#39;</span> <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;cuda&#39;</span> <span class="k">else</span> <span class="s1">&#39;cuda&#39;</span>
+            <span class="n">FD</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;finite_diffs&#39;</span><span class="p">]</span>
+            <span class="k">if</span> <span class="n">FD</span><span class="p">:</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="s1">&#39;fd_jacob{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">])),</span>
+                            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;fd_jacob{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">])))</span>
+
+            <span class="n">opt</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;cache_opt&#39;</span><span class="p">]</span>
+            <span class="n">smem</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;shared&#39;</span><span class="p">]</span>
+
+            <span class="n">data_output</span> <span class="o">=</span> <span class="s1">&#39;{}_{}_{}_{}_output.txt&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;co&#39;</span> <span class="k">if</span> <span class="n">opt</span> <span class="k">else</span> <span class="s1">&#39;nco&#39;</span><span class="p">,</span>
+                                                        <span class="s1">&#39;smem&#39;</span> <span class="k">if</span> <span class="n">smem</span> <span class="k">else</span> <span class="s1">&#39;nosmem&#39;</span><span class="p">,</span>
+                                                        <span class="s1">&#39;fd&#39;</span> <span class="k">if</span> <span class="n">FD</span> <span class="k">else</span> <span class="s1">&#39;ajac&#39;</span><span class="p">)</span>
+
+            <span class="n">data_output</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">the_path</span><span class="p">,</span> <span class="n">data_output</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+                <span class="n">repeats</span> <span class="o">=</span> <span class="n">cpu_repeats</span>
+                <span class="n">num_completed</span> <span class="o">=</span> <span class="n">check_file</span><span class="p">(</span><span class="n">data_output</span><span class="p">)</span>
+                <span class="n">todo</span> <span class="o">=</span> <span class="p">{</span><span class="n">num_conditions</span><span class="p">:</span> <span class="n">repeats</span> <span class="o">-</span> <span class="n">num_completed</span><span class="p">}</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">repeats</span> <span class="o">=</span> <span class="n">gpu_repeats</span>
+                <span class="n">todo</span> <span class="o">=</span> <span class="n">check_step_file</span><span class="p">(</span><span class="n">data_output</span><span class="p">,</span> <span class="n">steplist</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">todo</span><span class="p">:</span>
+                    <span class="n">todo</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">=</span> <span class="n">repeats</span> <span class="o">-</span> <span class="n">todo</span><span class="p">[</span><span class="n">x</span><span class="p">]</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">todo</span><span class="p">[</span><span class="n">x</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">todo</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">opt</span> <span class="ow">and</span> <span class="n">haveOpt</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">use_old_opt</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Previous optimization file found... exiting&#39;</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
+                <span class="n">create_jacobian</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;mech&#39;</span><span class="p">],</span>
+                                <span class="n">optimize_cache</span><span class="o">=</span><span class="n">opt</span><span class="p">,</span>
+                                <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
+                                <span class="n">no_shared</span><span class="o">=</span><span class="ow">not</span> <span class="n">smem</span><span class="p">,</span>
+                                <span class="n">num_blocks</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+                                <span class="n">multi_thread</span><span class="o">=</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+                                <span class="p">)</span>
+
+            <span class="c1">#now we need to write the reader</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="s1">&#39;read_initial_conditions{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">])),</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;read_initial_conditions{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">])))</span>
+
+            <span class="c1">#write the tester</span>
+            <span class="n">file_data</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;datafile&#39;</span> <span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">the_path</span><span class="p">,</span> <span class="s1">&#39;data.bin&#39;</span><span class="p">)}</span>
+            <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span> <span class="ow">or</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span>
+                                        <span class="s1">&#39;tester{}.in&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">]))</span>
+                                       <span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                    <span class="n">src</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+                <span class="n">src</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">file_data</span><span class="p">[</span><span class="s1">&#39;mechfile&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;chemkin&#39;</span><span class="p">]</span>
+                <span class="n">file_data</span><span class="p">[</span><span class="s1">&#39;thermofile&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;thermo&#39;</span><span class="p">]</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span>
+                                       <span class="s1">&#39;tc_tester.c.in&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                    <span class="n">src</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+                <span class="n">src</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span>
+                                  <span class="s1">&#39;test{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">temp_lang</span><span class="p">]))</span>
+                                  <span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">src</span><span class="p">)</span>
+
+            <span class="c1">#copy timer</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="s1">&#39;timer.h&#39;</span><span class="p">),</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;timer.h&#39;</span><span class="p">))</span>
+
+            <span class="c1">#get file lists</span>
+            <span class="n">i_dirs</span> <span class="o">=</span> <span class="p">[</span><span class="n">build_dir</span><span class="p">]</span>
+            <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;test&#39;</span><span class="p">,</span> <span class="s1">&#39;read_initial_conditions&#39;</span><span class="p">]</span>
+
+            <span class="n">lib</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="c1">#now build the library</span>
+            <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
+                <span class="n">lib</span> <span class="o">=</span> <span class="n">generate_library</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span> <span class="n">finite_difference</span><span class="o">=</span><span class="n">FD</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="ow">not</span> <span class="n">STATIC</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">STATIC</span><span class="p">:</span>
+                    <span class="n">lib</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">lib</span><span class="p">)</span>
+                    <span class="n">lib</span> <span class="o">=</span> <span class="n">lib</span><span class="p">[</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">):</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.so&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">STATIC</span> <span class="k">else</span> <span class="s1">&#39;.a&#39;</span><span class="p">)]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">files</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;mechanism&#39;</span><span class="p">,</span> <span class="s1">&#39;mass_mole&#39;</span><span class="p">]</span>
+
+            <span class="c1"># Compile generated source code</span>
+            <span class="n">structs</span> <span class="o">=</span> <span class="p">[</span><span class="n">file_struct</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">temp_lang</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="n">i_dirs</span><span class="p">,</span>
+                            <span class="p">([</span><span class="s1">&#39;-DFINITE_DIFF&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="n">FD</span> <span class="k">else</span> <span class="p">[]),</span>
+                            <span class="n">build_dir</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span> <span class="ow">not</span> <span class="n">STATIC</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">files</span><span class="p">]</span>
+
+            <span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">()</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">compiler</span><span class="p">,</span> <span class="n">structs</span><span class="p">)</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+            <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">results</span><span class="p">):</span>
+               <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">linker</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">temp_lang</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span> <span class="n">files</span><span class="p">,</span> <span class="n">lib</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
+                <span class="c1">#copy periodic table and mechanisms in</span>
+                <span class="n">shutil</span><span class="o">.</span><span class="n">copy</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">tchem_home</span><span class="p">,</span> <span class="s1">&#39;data&#39;</span><span class="p">,</span> <span class="s1">&#39;periodictable.dat&#39;</span><span class="p">),</span>
+                                        <span class="s1">&#39;periodictable.dat&#39;</span><span class="p">)</span>
+
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data_output</span><span class="p">,</span> <span class="s1">&#39;a+&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">stepsize</span> <span class="ow">in</span> <span class="n">todo</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">todo</span><span class="p">[</span><span class="n">stepsize</span><span class="p">]):</span>
+                        <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="n">todo</span><span class="p">[</span><span class="n">stepsize</span><span class="p">])</span>
+                        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">the_path</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span> <span class="s1">&#39;speedtest&#39;</span><span class="p">),</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">stepsize</span><span class="p">)],</span> <span class="n">stdout</span><span class="o">=</span><span class="nb">file</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

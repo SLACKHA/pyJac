@@ -1,0 +1,258 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.utils module &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pyjac.utils">
+<span id="pyjac-utils-module"></span><h1>pyjac.utils module<a class="headerlink" href="#module-pyjac.utils" title="Permalink to this headline">¶</a></h1>
+<p>Module containing utility functions.</p>
+<dl class="function">
+<dt id="pyjac.utils.get_species_mappings">
+<code class="descclassname">pyjac.utils.</code><code class="descname">get_species_mappings</code><span class="sig-paren">(</span><em>num_specs</em>, <em>last_species</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#get_species_mappings"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.get_species_mappings" title="Permalink to this definition">¶</a></dt>
+<dd><p>Consolidate the forward/backwards species mapping
+in one place.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.get_nu">
+<code class="descclassname">pyjac.utils.</code><code class="descname">get_nu</code><span class="sig-paren">(</span><em>isp</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#get_nu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.get_nu" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the net nu of species isp for the reaction rxn</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.read_str_num">
+<code class="descclassname">pyjac.utils.</code><code class="descname">read_str_num</code><span class="sig-paren">(</span><em>string</em>, <em>sep=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#read_str_num"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.read_str_num" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a list of floats pulled from a string.</p>
+<p>Delimiter is optional; if not specified, uses whitespace.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>string</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; String to be parsed.</li>
+<li><strong>sep</strong> (<em>str, optional</em>) &#8211; Delimiter (default is None, which means consecutive whitespace).</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Floats separated by <cite>sep</cite> in <cite>string</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.split_str">
+<code class="descclassname">pyjac.utils.</code><code class="descname">split_str</code><span class="sig-paren">(</span><em>seq</em>, <em>length</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#split_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.split_str" title="Permalink to this definition">¶</a></dt>
+<dd><p>Separate a string seq into length-sized pieces.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; String containing sequence of smaller strings of constant length.</li>
+<li><strong>length</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Length of individual sequences.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">List of strings of length <cite>length</cite> from <cite>seq</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of str</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.create_dir">
+<code class="descclassname">pyjac.utils.</code><code class="descname">create_dir</code><span class="sig-paren">(</span><em>path</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#create_dir"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.create_dir" title="Permalink to this definition">¶</a></dt>
+<dd><p>Creates a new directory based on input path.</p>
+<p>No error if path already exists, but other error is reported.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of directory to be created</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.get_array">
+<code class="descclassname">pyjac.utils.</code><code class="descname">get_array</code><span class="sig-paren">(</span><em>lang</em>, <em>name</em>, <em>index</em>, <em>twod=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#get_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.get_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a language and an index, returns the proper string index formatted
+into the appropriate array characters (e.g., [] or ()).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; One of the accepted languages</li>
+<li><strong>name</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The name of the array</li>
+<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index to format</li>
+<li><strong>twod</strong> (<em>int, optional</em>) &#8211; If not None and the lang is fortan or matlab this will be formatted
+as a second index in the array.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.get_index">
+<code class="descclassname">pyjac.utils.</code><code class="descname">get_index</code><span class="sig-paren">(</span><em>lang</em>, <em>index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#get_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.get_index" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given an integer index this function will return the proper string
+version of the index based on the language and other considerations</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; One of the supported languages</li>
+<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">The string corresponding to the correct index to be formatted into the code</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.reassign_species_lists">
+<code class="descclassname">pyjac.utils.</code><code class="descname">reassign_species_lists</code><span class="sig-paren">(</span><em>reacs</em>, <em>specs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#reassign_species_lists"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.reassign_species_lists" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given a list of ReacInfo, and SpecInfo&#8217;s, this method will update the
+ReacInfo&#8217;s reactants / products / third body list to integers
+representing the species&#8217; index in the list.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.is_integer">
+<code class="descclassname">pyjac.utils.</code><code class="descname">is_integer</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#is_integer"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.is_integer" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns whether a value is an integer regardless of whether
+it is a float or an int</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.utils.get_parser">
+<code class="descclassname">pyjac.utils.</code><code class="descname">get_parser</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/utils.html#get_parser"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.utils.get_parser" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/src/pyjac.utils.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

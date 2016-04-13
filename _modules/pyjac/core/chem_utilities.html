@@ -1,0 +1,397 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.core.chem_utilities &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyjac.core.chem_utilities</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Module containing element dict, species and reaction classes, and constants.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Python 2 compatibility</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+
+<span class="c1"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;RU&#39;</span><span class="p">,</span> <span class="s1">&#39;RUC&#39;</span><span class="p">,</span> <span class="s1">&#39;RU_JOUL&#39;</span><span class="p">,</span> <span class="s1">&#39;PA&#39;</span><span class="p">,</span> <span class="s1">&#39;get_elem_wt&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;ReacInfo&#39;</span><span class="p">,</span> <span class="s1">&#39;SpecInfo&#39;</span><span class="p">,</span> <span class="s1">&#39;calc_spec_smh&#39;</span><span class="p">]</span>
+
+<span class="c1"># universal gas constants, SI units</span>
+<span class="n">RU</span> <span class="o">=</span> <span class="mf">8314.4621</span>  <span class="c1"># J/(kmole * K)</span>
+<span class="n">RU_JOUL</span> <span class="o">=</span> <span class="mf">8.3144621</span>
+<span class="n">RUC</span> <span class="o">=</span> <span class="p">(</span><span class="n">RU</span> <span class="o">/</span> <span class="mf">4.18400</span><span class="p">)</span>  <span class="c1"># cal/(mole * K)</span>
+
+<span class="c1"># Avogadro&#39;s number</span>
+<span class="n">AVAG</span> <span class="o">=</span> <span class="mf">6.0221367e23</span>
+
+<span class="c1"># pressure of one standard atmosphere [Pa]</span>
+<span class="n">PA</span> <span class="o">=</span> <span class="mf">101325.0</span>
+
+
+<span class="k">class</span> <span class="nc">CommonEqualityMixin</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">False</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
+                        <span class="k">return</span> <span class="bp">False</span>
+                <span class="k">elif</span> <span class="n">value</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
+                    <span class="k">return</span> <span class="bp">False</span>
+            <span class="k">return</span> <span class="bp">True</span>
+        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">False</span>
+
+    <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="get_elem_wt"><a class="viewcode-back" href="../../../src/pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.get_elem_wt">[docs]</a><span class="k">def</span> <span class="nf">get_elem_wt</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Returns dict with built-in element names and atomic weights [kg/kmol].</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    elem_wt : dict</span>
+<span class="sd">        Dictionary with element name keys and atomic weight [kg/kmol] values.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">elem_wt</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">([</span>
+        <span class="p">(</span><span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="mf">1.00794</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;he&#39;</span><span class="p">,</span> <span class="mf">4.00260</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;li&#39;</span><span class="p">,</span> <span class="mf">6.93900</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;be&#39;</span><span class="p">,</span> <span class="mf">9.01220</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="mf">10.81100</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="mf">12.0110</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;n&#39;</span><span class="p">,</span> <span class="mf">14.00674</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;o&#39;</span><span class="p">,</span> <span class="mf">15.99940</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;f&#39;</span><span class="p">,</span> <span class="mf">18.99840</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ne&#39;</span><span class="p">,</span> <span class="mf">20.18300</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;na&#39;</span><span class="p">,</span> <span class="mf">22.98980</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;mg&#39;</span><span class="p">,</span> <span class="mf">24.31200</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;al&#39;</span><span class="p">,</span> <span class="mf">26.98150</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;si&#39;</span><span class="p">,</span> <span class="mf">28.08600</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;p&#39;</span><span class="p">,</span> <span class="mf">30.97380</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;s&#39;</span><span class="p">,</span> <span class="mf">32.06400</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;cl&#39;</span><span class="p">,</span> <span class="mf">35.45300</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ar&#39;</span><span class="p">,</span> <span class="mf">39.94800</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;k&#39;</span><span class="p">,</span> <span class="mf">39.10200</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ca&#39;</span><span class="p">,</span> <span class="mf">40.08000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;sc&#39;</span><span class="p">,</span> <span class="mf">44.95600</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ti&#39;</span><span class="p">,</span> <span class="mf">47.90000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;v&#39;</span><span class="p">,</span> <span class="mf">50.94200</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;cr&#39;</span><span class="p">,</span> <span class="mf">51.99600</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;mn&#39;</span><span class="p">,</span> <span class="mf">54.93800</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fe&#39;</span><span class="p">,</span> <span class="mf">55.84700</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;co&#39;</span><span class="p">,</span> <span class="mf">58.93320</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ni&#39;</span><span class="p">,</span> <span class="mf">58.71000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;cu&#39;</span><span class="p">,</span> <span class="mf">63.54000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;zn&#39;</span><span class="p">,</span> <span class="mf">65.37000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ga&#39;</span><span class="p">,</span> <span class="mf">69.72000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ge&#39;</span><span class="p">,</span> <span class="mf">72.59000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;as&#39;</span><span class="p">,</span> <span class="mf">74.92160</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;se&#39;</span><span class="p">,</span> <span class="mf">78.96000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;br&#39;</span><span class="p">,</span> <span class="mf">79.90090</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;kr&#39;</span><span class="p">,</span> <span class="mf">83.80000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;rb&#39;</span><span class="p">,</span> <span class="mf">85.47000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;sr&#39;</span><span class="p">,</span> <span class="mf">87.62000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="mf">88.90500</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;zr&#39;</span><span class="p">,</span> <span class="mf">91.22000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;nb&#39;</span><span class="p">,</span> <span class="mf">92.90600</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;mo&#39;</span><span class="p">,</span> <span class="mf">95.94000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;tc&#39;</span><span class="p">,</span> <span class="mf">99.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ru&#39;</span><span class="p">,</span> <span class="mf">101.07000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;rh&#39;</span><span class="p">,</span> <span class="mf">102.90500</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;pd&#39;</span><span class="p">,</span> <span class="mf">106.40000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ag&#39;</span><span class="p">,</span> <span class="mf">107.87000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;cd&#39;</span><span class="p">,</span> <span class="mf">112.40000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;in&#39;</span><span class="p">,</span> <span class="mf">114.82000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;sn&#39;</span><span class="p">,</span> <span class="mf">118.69000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;sb&#39;</span><span class="p">,</span> <span class="mf">121.75000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;te&#39;</span><span class="p">,</span> <span class="mf">127.60000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;i&#39;</span><span class="p">,</span> <span class="mf">126.90440</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;xe&#39;</span><span class="p">,</span> <span class="mf">131.30000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;cs&#39;</span><span class="p">,</span> <span class="mf">132.90500</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ba&#39;</span><span class="p">,</span> <span class="mf">137.34000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;la&#39;</span><span class="p">,</span> <span class="mf">138.91000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ce&#39;</span><span class="p">,</span> <span class="mf">140.12000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pr&#39;</span><span class="p">,</span> <span class="mf">140.90700</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;nd&#39;</span><span class="p">,</span> <span class="mf">144.24000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;pm&#39;</span><span class="p">,</span> <span class="mf">145.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;sm&#39;</span><span class="p">,</span> <span class="mf">150.35000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;eu&#39;</span><span class="p">,</span> <span class="mf">151.96000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;gd&#39;</span><span class="p">,</span> <span class="mf">157.25000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tb&#39;</span><span class="p">,</span> <span class="mf">158.92400</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;dy&#39;</span><span class="p">,</span> <span class="mf">162.50000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ho&#39;</span><span class="p">,</span> <span class="mf">164.93000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;er&#39;</span><span class="p">,</span> <span class="mf">167.26000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tm&#39;</span><span class="p">,</span> <span class="mf">168.93400</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;yb&#39;</span><span class="p">,</span> <span class="mf">173.04000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lu&#39;</span><span class="p">,</span> <span class="mf">174.99700</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;hf&#39;</span><span class="p">,</span> <span class="mf">178.49000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ta&#39;</span><span class="p">,</span> <span class="mf">180.94800</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="mf">183.85000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;re&#39;</span><span class="p">,</span> <span class="mf">186.20000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;os&#39;</span><span class="p">,</span> <span class="mf">190.20000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ir&#39;</span><span class="p">,</span> <span class="mf">192.20000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;pt&#39;</span><span class="p">,</span> <span class="mf">195.09000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;au&#39;</span><span class="p">,</span> <span class="mf">196.96700</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;hg&#39;</span><span class="p">,</span> <span class="mf">200.59000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;tl&#39;</span><span class="p">,</span> <span class="mf">204.37000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;pb&#39;</span><span class="p">,</span> <span class="mf">207.19000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;bi&#39;</span><span class="p">,</span> <span class="mf">208.98000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;po&#39;</span><span class="p">,</span> <span class="mf">210.00000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;at&#39;</span><span class="p">,</span> <span class="mf">210.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;rn&#39;</span><span class="p">,</span> <span class="mf">222.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;fr&#39;</span><span class="p">,</span> <span class="mf">223.00000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;ra&#39;</span><span class="p">,</span> <span class="mf">226.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;ac&#39;</span><span class="p">,</span> <span class="mf">227.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;th&#39;</span><span class="p">,</span> <span class="mf">232.03800</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;pa&#39;</span><span class="p">,</span> <span class="mf">231.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;u&#39;</span><span class="p">,</span> <span class="mf">238.03000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;np&#39;</span><span class="p">,</span> <span class="mf">237.00000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;pu&#39;</span><span class="p">,</span> <span class="mf">242.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;am&#39;</span><span class="p">,</span> <span class="mf">243.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;cm&#39;</span><span class="p">,</span> <span class="mf">247.00000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;bk&#39;</span><span class="p">,</span> <span class="mf">249.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;cf&#39;</span><span class="p">,</span> <span class="mf">251.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;es&#39;</span><span class="p">,</span> <span class="mf">254.00000</span><span class="p">),</span>
+        <span class="p">(</span><span class="s1">&#39;fm&#39;</span><span class="p">,</span> <span class="mf">253.00000</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">,</span> <span class="mf">2.01410</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;e&#39;</span><span class="p">,</span> <span class="mf">5.48578e-4</span><span class="p">)</span>
+    <span class="p">])</span>
+    <span class="k">return</span> <span class="n">elem_wt</span></div>
+
+
+<div class="viewcode-block" id="ReacInfo"><a class="viewcode-back" href="../../../src/pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo">[docs]</a><span class="k">class</span> <span class="nc">ReacInfo</span><span class="p">(</span><span class="n">CommonEqualityMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Reaction class.</span>
+
+<span class="sd">    Contains all information about a single reaction.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rev : bool</span>
+<span class="sd">        True if reversible reaction, False if irreversible.</span>
+<span class="sd">    reactants : list of str</span>
+<span class="sd">        List of reactant species names.</span>
+<span class="sd">    reac_nu : list of int/float</span>
+<span class="sd">        List of reactant stoichiometric coefficients, either int or float.</span>
+<span class="sd">    products : list of str</span>
+<span class="sd">        List of product species names.</span>
+<span class="sd">    prod_nu : list of int/float</span>
+<span class="sd">        List of product stoichiometric coefficients, either int or float.</span>
+<span class="sd">    A : float</span>
+<span class="sd">        Arrhenius pre-exponential coefficient.</span>
+<span class="sd">    b : float</span>
+<span class="sd">        Arrhenius temperature exponent.</span>
+<span class="sd">    E : float</span>
+<span class="sd">        Arrhenius activation energy.</span>
+<span class="sd">    rev_par : list of float, optional</span>
+<span class="sd">        List of reverse Arrhenius coefficients (default empty).</span>
+<span class="sd">    dup : bool, optional</span>
+<span class="sd">        Duplicate reaction flag (default False).</span>
+<span class="sd">    thd : bool, optional</span>
+<span class="sd">        Third-body reaction flag (default False).</span>
+<span class="sd">    thd_body : list of list of [str, float], optional</span>
+<span class="sd">        List of third body names and efficiencies (default empty).</span>
+<span class="sd">    pdep : bool, optional</span>
+<span class="sd">        Pressure-dependence flag (default False).</span>
+<span class="sd">    pdep_sp : str, optional</span>
+<span class="sd">        Name of specific third-body or &#39;M&#39; (default &#39;&#39;).</span>
+<span class="sd">    low : list of float, optional</span>
+<span class="sd">        List of low-pressure-limit Arrhenius coefficients (default empty).</span>
+<span class="sd">    high : list of float, optional</span>
+<span class="sd">        List of high-pressure-limit Arrhenius coefficients (default empty).</span>
+<span class="sd">    troe : bool, optional</span>
+<span class="sd">        Troe pressure-dependence formulation flag (default False).</span>
+<span class="sd">    troe_par : list of float, optional</span>
+<span class="sd">        List of Troe formulation constants (default empty).</span>
+<span class="sd">    sri : bool, optional</span>
+<span class="sd">        SRI pressure-dependence formulation flag (default False).</span>
+<span class="sd">    sri_par : list of float, optional</span>
+<span class="sd">        List of SRI formulation constants (default empty).</span>
+
+<span class="sd">    Notes</span>
+<span class="sd">    -----</span>
+<span class="sd">    `rev` does not require `rev_par`; if no explicit coefficients, the</span>
+<span class="sd">    reverse reaction rate will be calculated through the equilibrium</span>
+<span class="sd">    constant.</span>
+<span class="sd">    Only one of [`low`,`high`] can be defined.</span>
+<span class="sd">    If `troe` and `sri` are both False, then the Lindemann is assumed.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">reactants</span><span class="p">,</span> <span class="n">reac_nu</span><span class="p">,</span> <span class="n">products</span><span class="p">,</span> <span class="n">prod_nu</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">E</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reac</span> <span class="o">=</span> <span class="n">reactants</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reac_nu</span> <span class="o">=</span> <span class="n">reac_nu</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prod</span> <span class="o">=</span> <span class="n">products</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">prod_nu</span> <span class="o">=</span> <span class="n">prod_nu</span>
+
+        <span class="c1">## Arrhenius coefficients</span>
+        <span class="c1"># pre-exponential factor [m, kmol, s]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">A</span> <span class="o">=</span> <span class="n">A</span>
+        <span class="c1"># Temperature exponent [-]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">b</span> <span class="o">=</span> <span class="n">b</span>
+        <span class="c1"># Activation energy, stored as activation temperature [K]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">E</span> <span class="o">=</span> <span class="n">E</span>
+
+        <span class="c1"># reversible reaction properties</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rev</span> <span class="o">=</span> <span class="n">rev</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rev_par</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># reverse A, b, E</span>
+
+        <span class="c1"># duplicate reaction</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dup</span> <span class="o">=</span> <span class="bp">False</span>
+
+        <span class="c1"># third-body efficiencies</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thd_body</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thd_body_eff</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># in pairs with species and efficiency</span>
+
+        <span class="c1"># pressure dependence</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">troe</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">troe_par</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sri</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sri_par</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1"># Parameters for pressure-dependent reaction parameterized by</span>
+        <span class="c1"># bivariate Chebyshev polynomial in temperature and pressure.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1"># Number of temperature values over which fit computed.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_n_temp</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Number of pressure values over which fit computed.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_n_pres</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="c1"># Pressure limits for Chebyshev fit [Pa]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_plim</span> <span class="o">=</span> <span class="p">[</span><span class="mf">0.001</span> <span class="o">*</span> <span class="n">PA</span><span class="p">,</span> <span class="mf">100.</span> <span class="o">*</span> <span class="n">PA</span><span class="p">]</span>
+        <span class="c1"># Temperature limits for Chebyshev fit [K]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_tlim</span> <span class="o">=</span> <span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">2500.</span><span class="p">]</span>
+        <span class="c1"># 2D array of Chebyshev fit coefficients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_par</span> <span class="o">=</span> <span class="bp">None</span>
+
+        <span class="c1"># Parameters for pressure-dependent reaction parameterized by</span>
+        <span class="c1"># logarithmically interpolating between Arrhenius rate expressions at</span>
+        <span class="c1"># various pressures.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plog</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="c1"># List of arrays with [pressure [Pa], A, b, E]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plog_par</span> <span class="o">=</span> <span class="bp">None</span></div>
+
+
+<div class="viewcode-block" id="SpecInfo"><a class="viewcode-back" href="../../../src/pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo">[docs]</a><span class="k">class</span> <span class="nc">SpecInfo</span><span class="p">(</span><span class="n">CommonEqualityMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Species class.</span>
+
+<span class="sd">    Contains all information about a single species.</span>
+
+<span class="sd">    Attributes</span>
+<span class="sd">    ----------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        Name of species.</span>
+<span class="sd">    elem : list of list of [str, float]</span>
+<span class="sd">        Elemental composition in [element, number] pairs.</span>
+<span class="sd">    mw : float</span>
+<span class="sd">        Molecular weight.</span>
+<span class="sd">    hi : list of float</span>
+<span class="sd">        High-temperature range NASA thermodynamic coefficients.</span>
+<span class="sd">    lo : list of float</span>
+<span class="sd">        Low-temperature range NASA thermodynamic coefficients.</span>
+<span class="sd">    Trange : list of float</span>
+<span class="sd">        Temperatures defining ranges of thermodynamic polynomial fits</span>
+<span class="sd">        (low, middle, high), default ([300, 1000, 5000]).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+
+        <span class="c1"># elemental composition</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">elem</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="c1"># molecular weight [kg/kmol]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mw</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="c1"># high-temp range thermodynamic coefficients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">hi</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+        <span class="c1"># low-temp range thermodynamic coefficients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lo</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="mi">7</span><span class="p">)</span>
+        <span class="c1"># temperature [K] range for thermodynamic coefficients</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">Trange</span> <span class="o">=</span> <span class="p">[</span><span class="mf">300.0</span><span class="p">,</span> <span class="mf">1000.0</span><span class="p">,</span> <span class="mf">5000.0</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="calc_spec_smh"><a class="viewcode-back" href="../../../src/pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.calc_spec_smh">[docs]</a><span class="k">def</span> <span class="nf">calc_spec_smh</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">specs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate standard-state entropies minus enthalpies for all species.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    T : float</span>
+<span class="sd">        Temperature of gas mixture.</span>
+<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">        List of species.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    spec_smh : list of float</span>
+<span class="sd">        List of species&#39; standard-state entropies minus enthalpies.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">spec_smh</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="n">Tlog</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">T</span><span class="p">)</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">T</span> <span class="o">*</span> <span class="n">T</span>
+    <span class="n">T3</span> <span class="o">=</span> <span class="n">T2</span> <span class="o">*</span> <span class="n">T</span>
+    <span class="n">T4</span> <span class="o">=</span> <span class="n">T3</span> <span class="o">*</span> <span class="n">T</span>
+
+    <span class="n">Thalf</span> <span class="o">=</span> <span class="n">T</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">T2</span> <span class="o">=</span> <span class="n">T2</span> <span class="o">/</span> <span class="mf">6.0</span>
+    <span class="n">T3</span> <span class="o">=</span> <span class="n">T3</span> <span class="o">/</span> <span class="mf">12.0</span>
+    <span class="n">T4</span> <span class="o">=</span> <span class="n">T4</span> <span class="o">/</span> <span class="mf">20.0</span>
+
+    <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">T</span> <span class="o">&lt;=</span> <span class="n">sp</span><span class="o">.</span><span class="n">Trange</span><span class="p">[</span><span class="mi">1</span><span class="p">]:</span>
+            <span class="n">smh</span> <span class="o">=</span> <span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">Tlog</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">Thalf</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span>
+                   <span class="n">T2</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">T3</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">T4</span> <span class="o">-</span> <span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">/</span> <span class="n">T</span><span class="p">)</span> <span class="o">+</span>
+                   <span class="n">sp</span><span class="o">.</span><span class="n">lo</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+                   <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">smh</span> <span class="o">=</span> <span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">Tlog</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="n">Thalf</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">*</span>
+                   <span class="n">T2</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">*</span> <span class="n">T3</span> <span class="o">+</span> <span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">*</span> <span class="n">T4</span> <span class="o">-</span> <span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span> <span class="o">/</span> <span class="n">T</span><span class="p">)</span> <span class="o">+</span>
+                   <span class="n">sp</span><span class="o">.</span><span class="n">hi</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+                   <span class="p">)</span>
+
+        <span class="n">spec_smh</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">smh</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="p">(</span><span class="n">spec_smh</span><span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

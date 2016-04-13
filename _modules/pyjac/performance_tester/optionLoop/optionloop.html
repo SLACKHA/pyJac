@@ -1,0 +1,310 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.performance_tester.optionLoop.optionloop &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../../../../index.html" />
+    <link rel="up" title="Module code" href="../../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyjac.performance_tester.optionLoop.optionloop</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Provides implementation of a simple iteratable dictionary structure</span>
+<span class="sd">that can be used to iterate over options in a single for-loop.</span>
+
+<span class="sd">No longer will you need a million nested for-loops...</span>
+
+<span class="sd">The optionloop works as follows:</span>
+
+<span class="sd">Example</span>
+<span class="sd">-------</span>
+
+<span class="sd">First, initialize a dictionary with various keys and values, e.g.:</span>
+
+<span class="sd">&gt;&gt;&gt; d = {&#39;doThingX&#39; : [True, False], &#39;doThingY&#39; : False,</span>
+<span class="sd">...     &#39;thingZValue&#39; : [&#39;a&#39;, &#39;b&#39;, 1]}</span>
+
+<span class="sd">Next create the option loop:</span>
+
+<span class="sd">&gt;&gt;&gt; oploop = optionloop(d)</span>
+
+<span class="sd">Finally iterate and get your values:</span>
+
+<span class="sd">&gt;&gt;&gt; for state in oploop:</span>
+<span class="sd">&gt;&gt;&gt;     doX = state[&#39;doThingX&#39;]</span>
+<span class="sd">&gt;&gt;&gt;     doY = state[&#39;doThingY&#39;]</span>
+<span class="sd">&gt;&gt;&gt;     zVal = state[&#39;thingZValue&#39;]</span>
+
+<span class="sd">&gt;&gt;&gt;     f(doX, doY, zVal)</span>
+
+<span class="sd">This is intended to replace an equivalent looping structure of:</span>
+
+<span class="sd">&gt;&gt;&gt; for doX in doThingX:</span>
+<span class="sd">&gt;&gt;&gt;     for doY in doThingY:</span>
+<span class="sd">&gt;&gt;&gt;         for zVal in thingZValue:</span>
+<span class="sd">&gt;&gt;&gt;             f(doX, doY, zVal)</span>
+
+<span class="sd">which quickly becomes cumbersome.</span>
+
+<span class="sd">Also, option loops can be added to create even more complex looping structures, e.g.:</span>
+
+<span class="sd">&gt;&gt;&gt; d1 = {&#39;lang&#39; : [&#39;c&#39;], &#39;doThingX&#39; : [True, False]}</span>
+<span class="sd">&gt;&gt;&gt; d2 = {&#39;lang&#39; : [&#39;fortran&#39;], &#39;doThingX&#39; : [True, False], &#39;doThingY&#39; : [True, False]}</span>
+
+<span class="sd">&gt;&gt;&gt; oploop1 = optionloop(d1)</span>
+<span class="sd">&gt;&gt;&gt; oploop2 = optionloop(d2)</span>
+<span class="sd">&gt;&gt;&gt; oploop = oploop1 + oploop2</span>
+
+<span class="sd">&gt;&gt;&gt; for state in oploop:</span>
+<span class="sd">&gt;&gt;&gt;     f(state)</span>
+
+<span class="sd">is equivalent to:</span>
+
+<span class="sd">&gt;&gt;&gt; langs = [&#39;c&#39;, &#39;fortran&#39;]</span>
+<span class="sd">&gt;&gt;&gt; doThingX = [True, False]</span>
+<span class="sd">&gt;&gt;&gt; doThingY = [True, False]</span>
+
+<span class="sd">&gt;&gt;&gt; for lang in langs:</span>
+<span class="sd">&gt;&gt;&gt;     if lang == &#39;c&#39;:</span>
+<span class="sd">&gt;&gt;&gt;         for doX in doThingX:</span>
+<span class="sd">&gt;&gt;&gt;             f(lang, doX)</span>
+<span class="sd">&gt;&gt;&gt;     elif lang == &#39;fortran&#39;:</span>
+<span class="sd">&gt;&gt;&gt;         for doX in doThingX:</span>
+<span class="sd">&gt;&gt;&gt;             for doY in doThingY:</span>
+<span class="sd">&gt;&gt;&gt;                 f(lang, doX, doY)</span>
+
+<span class="sd">&gt;&gt;&gt; d = OrderedDict()</span>
+<span class="sd">&gt;&gt;&gt; d[&#39;a&#39;] = [False, True]</span>
+<span class="sd">&gt;&gt;&gt; d[&#39;b&#39;] = [False]</span>
+<span class="sd">&gt;&gt;&gt; d[&#39;c&#39;] = [1, 2, 3]</span>
+<span class="sd">&gt;&gt;&gt; oploop = optionloop(d)</span>
+<span class="sd">&gt;&gt;&gt; for state in oploop:</span>
+<span class="sd">&gt;&gt;&gt;     f(state)</span>
+
+<span class="sd">is equivalent to:</span>
+
+<span class="sd">&gt;&gt;&gt; for a in [False, True]:</span>
+<span class="sd">&gt;&gt;&gt;     for b in [False]:</span>
+<span class="sd">&gt;&gt;&gt;         for c in [1, 2, 3]:</span>
+<span class="sd">&gt;&gt;&gt;             f(a,b,c)</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">namedtuple</span>
+<span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
+
+<div class="viewcode-block" id="optionloop"><a class="viewcode-back" href="../../../../src/pyjac.performance_tester.optionLoop.optionloop.html#pyjac.performance_tester.optionLoop.optionloop.optionloop">[docs]</a><span class="k">class</span> <span class="nc">optionloop</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="optionloop.optionloopconcat"><a class="viewcode-back" href="../../../../src/pyjac.performance_tester.optionLoop.optionloop.html#pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat">[docs]</a>    <span class="k">class</span> <span class="nc">optionloopconcat</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">oploop_list</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">oplooplist</span> <span class="o">=</span> <span class="n">oploop_list</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">master_index</span> <span class="o">=</span> <span class="mi">0</span>
+
+<div class="viewcode-block" id="optionloop.optionloopconcat.check_all"><a class="viewcode-back" href="../../../../src/pyjac.performance_tester.optionLoop.optionloop.html#pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat.check_all">[docs]</a>        <span class="k">def</span> <span class="nf">check_all</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Checks to see that all option loops are unstarted.</span>
+<span class="sd">            &quot;&quot;&quot;</span>
+            <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">oploop</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">for</span> <span class="n">oploop</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">)</span> \
+                    <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_index</span> <span class="o">==</span> <span class="mi">0</span></div>
+
+        <span class="k">def</span> <span class="nf">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">master_index</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">master_index</span><span class="p">]</span><span class="o">.</span><span class="n">__next__</span><span class="p">()</span>
+                <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">master_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__next__</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">StopIteration</span><span class="p">()</span>
+
+        <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">self</span>
+
+        <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Cannot add to already started option loop!&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">optionloop</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">):</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">check_all</span><span class="p">():</span>
+                    <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Cannot add already started option loop!&#39;</span><span class="p">)</span>
+
+                <span class="n">thelist</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">[:]</span>
+                <span class="n">thelist</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">optionloop</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">(</span><span class="n">thelist</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">optionloop</span><span class="p">):</span>
+                <span class="k">return</span> <span class="n">optionloop</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">[:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">other</span><span class="p">])</span>
+
+        <span class="nb">next</span> <span class="o">=</span> <span class="n">__next__</span> <span class="c1">#python 2 compatiblity</span></div>
+
+
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initializing_dictionary</span><span class="p">,</span> <span class="n">default_dict_factory</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Initializes the optionloop.</span>
+
+<span class="sd">        @param initializing_dictionary :</span>
+<span class="sd">        The basis of the option loop.</span>
+<span class="sd">        The various options to iterate are the keys of the dictionary,</span>
+<span class="sd">        while the value(s) associated with the key are iterated over</span>
+
+<span class="sd">        @param default_dict_factory :</span>
+<span class="sd">        if not None, default dicts will be returned using this factory</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">initializing_dictionary</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span> <span class="o">=</span> <span class="n">initializing_dictionary</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">index_index</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">)):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">value</span><span class="p">]</span>
+                <span class="n">size</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">value</span><span class="p">]</span>
+                    <span class="n">size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">([</span><span class="n">value</span><span class="p">])</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_index</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">index_index</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="c1"># the maximum index is the multiplicative sum</span>
+            <span class="c1"># of the length of all interior arrays</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">index_index</span> <span class="o">*=</span> <span class="n">size</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">default_dict_factory</span> <span class="o">=</span> <span class="n">default_dict_factory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_dd</span> <span class="o">=</span> <span class="n">default_dict_factory</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span>
+
+    <span class="k">def</span> <span class="nf">__next__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_dd</span><span class="p">:</span>
+            <span class="n">value_list</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">default_dict_factory</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">value_list</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">startlen</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">index_index</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mydict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="n">value_list</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">value</span><span class="p">[(</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">/</span> <span class="n">startlen</span><span class="p">)</span> <span class="o">%</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)]</span>
+                <span class="n">startlen</span> <span class="o">*=</span> <span class="nb">len</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">StopIteration</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">value_list</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">assert</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">optionloop</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">),</span> \
+            <span class="s2">&quot;Adding object of type {} to option loop undefined&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">):</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">other</span><span class="o">.</span><span class="n">check_all</span><span class="p">():</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Cannot add option loops once iteration has begun...&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">([</span><span class="bp">self</span><span class="p">]</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">oplooplist</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">other</span><span class="o">.</span><span class="n">index</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s1">&#39;Cannot add option loops once iteration has begun...&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">optionloopconcat</span><span class="p">([</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="nb">next</span> <span class="o">=</span> <span class="n">__next__</span> <span class="c1">#python 2 compatiblity</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../src/index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

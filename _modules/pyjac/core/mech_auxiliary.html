@@ -1,0 +1,495 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.core.mech_auxiliary &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyjac.core.mech_auxiliary</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Writes mechanism header and output testing files&quot;&quot;&quot;</span>
+
+<span class="c1"># Python 2 compatibility</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="c1"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">itertools</span>
+
+<span class="c1"># Local imports</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">chem_utilities</span> <span class="k">as</span> <span class="n">chem</span>
+
+<div class="viewcode-block" id="write_mechanism_initializers"><a class="viewcode-back" href="../../../src/pyjac.core.mech_auxiliary.html#pyjac.core.mech_auxiliary.write_mechanism_initializers">[docs]</a><span class="k">def</span> <span class="nf">write_mechanism_initializers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">initial_conditions</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
+                                 <span class="n">old_spec_order</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">old_rxn_order</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                 <span class="n">cache_optimized</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                                 <span class="n">autodiff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;matlab&#39;</span><span class="p">,</span> <span class="s1">&#39;fortran&#39;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">if</span> <span class="n">autodiff</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;ad_jac.c&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="c1">#need to write the autodiff jacobian</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">#include &lt;vector&gt;</span>
+<span class="s2">#include &quot;adept.h&quot;</span>
+<span class="s2">#include &quot;header.h&quot;</span>
+<span class="s2">#include &quot;ad_dydt.h&quot;</span>
+<span class="s2">void eval_jacob(const double t, const double p, const double* y,</span>
+<span class="s2">                         double* jac) {</span>
+<span class="s2">    using adept::adouble; // Import Stack and adouble from adept</span>
+<span class="s2">    adept::Stack stack; // Where the derivative information is stored</span>
+<span class="s2">    std::vector&lt;adouble&gt; in(NSP); // Vector of active input variables</span>
+<span class="s2">    adept::set_values(&amp;in[0], NSP, y); // Initialize adouble inputs</span>
+<span class="s2">    adouble pres = p;</span>
+<span class="s2">    stack.new_recording(); // Start recording</span>
+<span class="s2">    std::vector&lt;adouble&gt; out(NSP); // Create vector of active output variables</span>
+<span class="s2">    dydt(t, pres, &amp;in[0], &amp;out[0]); // Run algorithm</span>
+<span class="s2">    stack.independent(&amp;in[0], NSP); // Identify independent variables</span>
+<span class="s2">    stack.dependent(&amp;out[0], NSP); // Identify dependent variables</span>
+<span class="s2">    stack.jacobian(jac); // Compute &amp; store Jacobian in jac</span>
+<span class="s2">}</span>
+<span class="s2">            &quot;&quot;&quot;</span>
+            <span class="p">)</span>
+
+    <span class="c1"># some information variables</span>
+    <span class="n">have_rev_rxns</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">reac</span><span class="o">.</span><span class="n">rev</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">)</span>
+    <span class="n">have_pdep_rxns</span> <span class="o">=</span> <span class="nb">any</span><span class="p">(</span><span class="n">reac</span><span class="o">.</span><span class="n">thd_body</span> <span class="ow">or</span> <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">)</span>
+
+    <span class="n">gpu_memory</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;y&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;dy&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;conc&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;fwd_rates&#39;</span> <span class="p">:</span> <span class="s1">&#39;FWD_RATES&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;rev_rates&#39;</span> <span class="p">:</span> <span class="s1">&#39;REV_RATES&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;spec_rates&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;cp&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;h&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;dBdT&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;jac&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP * NSP&#39;</span><span class="p">,</span>
+                  <span class="s1">&#39;var&#39;</span> <span class="p">:</span> <span class="s1">&#39;1&#39;</span>
+                  <span class="p">}</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">in</span> <span class="n">reac</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">reac</span><span class="o">.</span><span class="n">prod</span> <span class="ow">and</span>
+            <span class="n">utils</span><span class="o">.</span><span class="n">get_nu</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">reac</span><span class="p">)</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="p">):</span>
+        <span class="n">gpu_memory</span><span class="p">[</span><span class="s1">&#39;J_nplusjplus&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;NSP&#39;</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">r</span><span class="o">.</span><span class="n">thd_body</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">):</span>
+        <span class="n">gpu_memory</span><span class="p">[</span><span class="s1">&#39;pres_mod&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRES_MOD_RATES&#39;</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">cheb</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">):</span>
+        <span class="n">dim</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">cheb_n_temp</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">cheb</span><span class="p">)</span>
+        <span class="n">gpu_memory</span><span class="p">[</span><span class="s1">&#39;dot_prod&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">dim</span><span class="p">)</span>
+
+    <span class="c1"># the mechanism header defines a number of useful preprocessor defines, as</span>
+    <span class="c1"># well as defining method stubs for setting initial conditions</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;mechanism{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])),</span>
+              <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef MECHANISM_{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span>
+                   <span class="s1">&#39;#define MECHANISM_{}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span>
+                   <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &lt;cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &lt;cuda_runtime.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &lt;helper_cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &quot;launch_bounds.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &quot;gpu_macros.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">struct mechanism_memory {</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="p">:</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  double * {};</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">))</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;};</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &lt;string.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="c1"># for memset</span>
+
+        <span class="c1"># make cache optimized easy to recognize</span>
+        <span class="k">if</span> <span class="n">cache_optimized</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Cache Optimized</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//last_spec {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last_spec</span><span class="p">))</span>
+
+        <span class="c1"># convience: write species indexes</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;/* Species Indexes</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;{}  {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)))</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;*/</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Number of species</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#define NSP {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">))</span> <span class="o">+</span>
+                   <span class="s1">&#39;//Number of variables. NN = NSP + 1 (temperature)</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+                   <span class="s1">&#39;#define NN {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                   <span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Number of forward reactions</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+                   <span class="s1">&#39;#define FWD_RATES {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">))</span> <span class="o">+</span>
+                   <span class="s1">&#39;//Number of reversible reactions</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">+</span>
+                   <span class="s1">&#39;#define REV_RATES {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                   <span class="nb">len</span><span class="p">([</span><span class="n">reac</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">rev</span><span class="p">]))</span>
+                   <span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Number of reactions with pressure modified rates</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#define PRES_MOD_RATES {}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="nb">len</span><span class="p">([</span><span class="n">reac</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">reac</span><span class="o">.</span><span class="n">thd_body</span><span class="p">]))</span>
+            <span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s1">&#39;//Must be implemented by user on a per mechanism basis in mechanism{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
+            <span class="s1">&#39;void set_same_initial_conditions(int, double**, double**);</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+            <span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#if defined (RATES_TEST) || defined (PROFILER)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;    void write_jacobian_and_rates_output(int NUM);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;//apply masking of ICs for cache optimized mechanisms</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;void apply_mask(double*);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;void apply_reverse_mask(double*);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#endif</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="n">reversed_specs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)):</span>
+        <span class="n">reversed_specs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">old_spec_order</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+    <span class="c1"># now the mechanism file</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;mechanism&#39;</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &quot;mass_mole{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+          <span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
+        <span class="s1">&#39;#include &lt;stdio.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="s1">&#39;#include &quot;mechanism{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]))</span>
+        <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &quot;gpu_memory.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    //apply masking of ICs for cache optimized mechanisms</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    void apply_mask(double* y_specs) {</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache_optimized</span> <span class="ow">or</span> <span class="n">last_spec</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        double temp [NSP];</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">old_spec_order</span><span class="p">):</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    //reverse masking of ICs for cache optimized mechanisms</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    void apply_reverse_mask(double* y_specs) {</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">cache_optimized</span> <span class="ow">or</span> <span class="n">last_spec</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        double temp [NSP];</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reversed_specs</span><span class="p">):</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="n">needed_arr</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;var&#39;</span><span class="p">]</span>
+        <span class="n">needed_arr</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;double** &#39;</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="s1">&#39;_host&#39;</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">needed_arr</span><span class="p">]</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void set_same_initial_conditions(int NUM, {}) </span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">needed_arr</span><span class="p">)))</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    double Xi [NSP] = {0.0};</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;    //set initial mole fractions here</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;    //Normalize mole fractions to sum to one</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;    double Xsum = 0.0;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="p">)</span>
+        <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">T0</span> <span class="o">=</span> <span class="mi">1600</span>
+        <span class="n">P</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">initial_conditions</span> <span class="o">!=</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">conditions</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">initial_conditions</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">conditions</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Initial conditions improperly specified, expecting form T,P,Species1=...,Species2=...&quot;</span><span class="p">)</span>
+                    <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Error in initial conditions list, not comma separated&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">T0</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">conditions</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">P</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">conditions</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">mole_list</span> <span class="o">=</span> <span class="n">conditions</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Could not parse initial T or P as floats...&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Error in initial mole list, initial moles do not follow SPECIES_NAME=VALUE format&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Unknown (non-float) value found as initial mole number in list&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">next</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">split</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span>
+                             <span class="n">mole_list</span><span class="p">]</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Unknown species in initial mole list&quot;</span><span class="p">)</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    Xi[{}] = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s1">&#39;    for (int j = 0; j &lt; NSP; ++ j) {</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        Xsum += Xi[j];</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    if (Xsum == 0.0) {</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        printf(&quot;Use of the set initial conditions function requires user implementation!</span><span class="se">\\</span><span class="s1">n&quot;);</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        exit(-1);</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    for (int j = 0; j &lt; NSP; ++ j) {</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        Xi[j] /= Xsum;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    }</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    //convert to mass fractions</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    double Yi[NSP - 1] = {0.0};</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    mole2mass(Xi, Yi);</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    //set initial pressure, units [PA]</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;    double P = {};</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">chem</span><span class="o">.</span><span class="n">PA</span> <span class="o">*</span> <span class="n">P</span><span class="p">)</span> <span class="o">+</span>
+            <span class="s1">&#39;    // set intial temperature, units [K]</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+            <span class="s1">&#39;    double T0 = {};</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">T0</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s1">&#39;    (*y_host) = (double*)malloc(NUM * NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    (*var_host) = (double*)malloc(NUM * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s1">&#39;    //load temperature and mass fractions for all threads (cells)</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    for (int i = 0; i &lt; NUM; ++i) {</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        (*y_host)[i] = T0;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        //loop through species</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        for (int j = 1; j &lt; NSP; ++j) {</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;            (*y_host)[i + NUM * j] = Yi[j - 1];</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        }</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    }</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;#ifdef CONV</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    //calculate density</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    double rho = getDensity(T0, P, Xi);</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;#endif</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    for (int i = 0; i &lt; NUM; ++i) {</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;#ifdef CONV</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        (*var_host)[i] = rho;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;#elif defined(CONP)</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        (*var_host)[i] = P;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="p">)</span>
+
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+        <span class="n">mem_template</span> <span class="o">=</span> <span class="s1">&#39;double* {};&#39;</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;gpu_memory.cuh&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef GPU_MEMORY_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#define GPU_MEMORY_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &quot;header{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
+                       <span class="s1">&#39;#include &quot;gpu_macros.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void initialize_gpu_memory(int, mechanism_memory**,&#39;</span>
+                       <span class="s1">&#39; mechanism_memory**);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;size_t required_mechanism_size();</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;void free_gpu_memory(mechanism_memory**, mechanism_memory**);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;gpu_memory.cu&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">init_template</span> <span class="o">=</span> <span class="s1">&#39;initialize_pointer(&amp;((*d_mem)-&gt;{}), {} * padded)&#39;</span>
+            <span class="n">free_template</span> <span class="o">=</span> <span class="s1">&#39;cudaErrorCheck(cudaFree({}))&#39;</span>
+            <span class="n">err_check</span> <span class="o">=</span> <span class="s1">&#39;  cudaErrorCheck( {} );</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &quot;gpu_memory.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;size_t required_mechanism_size() {</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  //returns the total required size for the mechanism per thread</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  size_t mech_size = 0;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">))</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  mech_size += {};</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">size</span><span class="p">))</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //y_device</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  mech_size += NSP;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //pres_device</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  mech_size += 1;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  return mech_size * sizeof(double);</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void initialize_gpu_memory(int padded, mechanism_memory** h_mem,&#39;</span>
+                       <span class="s1">&#39; mechanism_memory** d_mem)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  //init vectors</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  // Allocate storage for the device struct</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;cudaMalloc(d_mem, sizeof(mechanism_memory))&#39;</span><span class="p">))</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //allocate the device arrays on the host pointer</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                  <span class="s1">&#39;cudaMalloc(&amp;((*h_mem)-&gt;{}), {} * padded * sizeof(double))&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">size</span><span class="p">)))</span>
+
+            <span class="n">zero_vals</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;spec_rates&#39;</span><span class="p">,</span> <span class="s1">&#39;dy&#39;</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">]</span>
+            <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">zero_vals</span><span class="p">:</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;cudaErrorCheck( &#39;</span>
+                  <span class="s1">&#39;cudaMemset((*h_mem)-&gt;{}, 0, {} * padded * sizeof(double)) )&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gpu_memory</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
+                  <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;cudaErrorCheck( &#39;</span>
+              <span class="s1">&#39;cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )&#39;</span> <span class="o">+</span>
+              <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;zero out required values</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                       <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void free_gpu_memory(mechanism_memory** h_mem, mechanism_memory** d_mem)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+            <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="p">:</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">free_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;(*h_mem)-&gt;{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">))</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">free_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;*d_mem&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;gpu_macros.cuh&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef GPU_MACROS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#define GPU_MACROS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &lt;stdio.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &lt;cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &lt;cuda_runtime.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#include &lt;helper_cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#define GRID_DIM (blockDim.x * gridDim.x)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;#define INDEX(i) (threadIdx.x + blockDim.x * blockIdx.x + (i) * GRID_DIM)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#define cudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;    if (code != cudaSuccess)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;    {</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;        fprintf(stderr,&quot;GPUassert: </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> </span><span class="si">%d</span><span class="se">\\</span><span class="s1">n&quot;, cudaGetErrorString(code), file, line);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;        if (abort) exit(code);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="write_header"><a class="viewcode-back" href="../../../src/pyjac.core.mech_auxiliary.html#pyjac.core.mech_auxiliary.write_header">[docs]</a><span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Writes minimal header file used by all other source files.</span>
+
+<span class="sd">    :param path:</span>
+<span class="sd">        Path where files are being written.</span>
+<span class="sd">    :param lang: {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
+<span class="sd">        Language type.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;matlab&#39;</span><span class="p">,</span> <span class="s1">&#39;fortran&#39;</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;header&#39;</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef HEAD</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#define HEAD</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#include &lt;stdlib.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#include &lt;math.h&gt;&#39;</span>
+                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;/** Constant pressure or volume. */</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#define CONP</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;//#define CONV</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;/** Include mechanism header to get NSP and NN **/</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#include &quot;mechanism{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
+                   <span class="s1">&#39;// OpenMP</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#ifdef _OPENMP</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39; #include &lt;omp.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#else</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39; #define omp_get_max_threads() 1</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39; #define omp_get_num_threads() 1</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
+                  <span class="p">)</span></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

@@ -1,0 +1,194 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.core.shared_memory module &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pyjac.core.shared_memory">
+<span id="pyjac-core-shared-memory-module"></span><h1>pyjac.core.shared_memory module<a class="headerlink" href="#module-pyjac.core.shared_memory" title="Permalink to this headline">¶</a></h1>
+<p>Handles shared memory usage to accelerate memory accesses for CUDA</p>
+<dl class="class">
+<dt id="pyjac.core.shared_memory.variable">
+<em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">variable</code><span class="sig-paren">(</span><em>base</em>, <em>index</em>, <em>lang='cuda'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="pyjac.core.shared_memory.variable.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.variable.update">
+<code class="descname">update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable.update" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.variable.to_string">
+<code class="descname">to_string</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable.to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable.to_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pyjac.core.shared_memory.shared_memory_manager">
+<em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">shared_memory_manager</code><span class="sig-paren">(</span><em>blocks_per_sm=8</em>, <em>num_threads=64</em>, <em>L1_PREFERRED=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.force_eviction">
+<code class="descname">force_eviction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.force_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.force_eviction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap">
+<code class="descname">evict_longest_gap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.evict_longest_gap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap" title="Permalink to this definition">¶</a></dt>
+<dd><p>evicts the entry that has gone the longest without use</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.evict">
+<code class="descname">evict</code><span class="sig-paren">(</span><em>shared_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.evict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.evict" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.add_to_dictionary">
+<code class="descname">add_to_dictionary</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.add_to_dictionary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.add_to_dictionary" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.set_on_eviction">
+<code class="descname">set_on_eviction</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.set_on_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.set_on_eviction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.reset">
+<code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.reset" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.write_init">
+<code class="descname">write_init</code><span class="sig-paren">(</span><em>file</em>, <em>indent=4</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.write_init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.write_init" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.load_into_shared">
+<code class="descname">load_into_shared</code><span class="sig-paren">(</span><em>file</em>, <em>variables</em>, <em>estimated_usage=None</em>, <em>indent=2</em>, <em>load=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.load_into_shared"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.load_into_shared" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.mark_for_eviction">
+<code class="descname">mark_for_eviction</code><span class="sig-paren">(</span><em>variables</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.mark_for_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.mark_for_eviction" title="Permalink to this definition">¶</a></dt>
+<dd><p>Like the eviction method, but only evicts if not used in the next load</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.get_index">
+<code class="descname">get_index</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.get_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.get_index" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyjac.core.shared_memory.shared_memory_manager.get_array">
+<code class="descname">get_array</code><span class="sig-paren">(</span><em>lang</em>, <em>thevar</em>, <em>index</em>, <em>twod=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.get_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.get_array" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/src/pyjac.core.shared_memory.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

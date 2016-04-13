@@ -1,0 +1,7 @@
+pyjac.pywrap.adjacob_wrapper module
+===================================
+
+.. automodule:: pyjac.pywrap.adjacob_wrapper
+    :members:
+    :undoc-members:
+    :show-inheritance:

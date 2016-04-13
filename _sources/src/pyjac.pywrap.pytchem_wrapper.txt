@@ -1,0 +1,7 @@
+pyjac.pywrap.pytchem_wrapper module
+===================================
+
+.. automodule:: pyjac.pywrap.pytchem_wrapper
+    :members:
+    :undoc-members:
+    :show-inheritance:

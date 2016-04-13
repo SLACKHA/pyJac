@@ -1,0 +1,301 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.functional_tester.partially_stirred_reactor module &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pyjac.functional_tester.partially_stirred_reactor">
+<span id="pyjac-functional-tester-partially-stirred-reactor-module"></span><h1>pyjac.functional_tester.partially_stirred_reactor module<a class="headerlink" href="#module-pyjac.functional_tester.partially_stirred_reactor" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.Stream">
+<em class="property">class </em><code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">Stream</code><span class="sig-paren">(</span><em>gas</em>, <em>flow</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#Stream"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Stream" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+</dd></dl>
+
+<dl class="class">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.Particle">
+<em class="property">class </em><code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">Particle</code><span class="sig-paren">(</span><em>gas</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#Particle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dl class="method">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.Particle.react">
+<code class="descname">react</code><span class="sig-paren">(</span><em>dt</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#Particle.react"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Particle.react" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform reaction timestep by advancing network.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.equivalence_ratio">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">equivalence_ratio</code><span class="sig-paren">(</span><em>gas</em>, <em>eq_ratio</em>, <em>fuel</em>, <em>oxidizer</em>, <em>complete_products</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#equivalence_ratio"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.equivalence_ratio" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the mixture mole fractions from the equivalence ratio.</p>
+<p>Given the equivalence ratio, fuel mixture, oxidizer mixture,
+the products of complete combustion, and any additional species for
+the mixture, return a string containing the mole fractions of the
+species, suitable for setting the state of the input ThermoPhase.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>gas</strong> &#8211; Cantera ThermoPhase object containing the desired species.</li>
+<li><strong>eq_ratio</strong> &#8211; Equivalence ratio</li>
+<li><strong>fuel</strong> &#8211; Dictionary of molecules in the fuel mixture and the fraction of
+each molecule in the fuel mixture</li>
+<li><strong>oxidizer</strong> &#8211; Dictionary of molecules in the oxidizer mixture and the
+fraction of each molecule in the oxidizer mixture.</li>
+<li><strong>complete_products</strong> &#8211; List of species in the products of complete combustion.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.pairwise">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">pairwise</code><span class="sig-paren">(</span><em>iterable</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#pairwise"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.pairwise" title="Permalink to this definition">¶</a></dt>
+<dd><p>s -&gt; (s0,s1), (s2,s3), (s4, s5), ...</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.mix_substep">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">mix_substep</code><span class="sig-paren">(</span><em>particles</em>, <em>dt</em>, <em>tau_mix</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#mix_substep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.mix_substep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pairwise mixing step.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>particles</strong> &#8211; List of Particle objects.</li>
+<li><strong>dt</strong> &#8211; Time step [s] to increment particles.</li>
+<li><strong>tau_mix</strong> &#8211; Mixing timescale [s].</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.reaction_worker">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">reaction_worker</code><span class="sig-paren">(</span><em>part_tup</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#reaction_worker"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.reaction_worker" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.reaction_substep">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">reaction_substep</code><span class="sig-paren">(</span><em>particles</em>, <em>dt</em>, <em>mech</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#reaction_substep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.reaction_substep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Advance each of the particles in time through reactions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>particles</strong> &#8211; List of Particle objects.</li>
+<li><strong>dt</strong> &#8211; Time step [s] to increment particles.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.select_pairs">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">select_pairs</code><span class="sig-paren">(</span><em>particles</em>, <em>num_pairs</em>, <em>num_skip=0</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#select_pairs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.select_pairs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Randomly select pair(s) of particles and move to end of list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>particles</strong> &#8211; List of Particle objects.</li>
+<li><strong>num_pairs</strong> &#8211; Number of pairs to be selected and moved.</li>
+<li><strong>num_skip</strong> &#8211; Number of pairs at end of list to be skipped. Optional, default 0.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.inflow">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">inflow</code><span class="sig-paren">(</span><em>streams</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#inflow"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.inflow" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine index of stream for next inflowing particle.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>streams</strong> &#8211; List of Stream objects for inlet streams.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.save_data">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">save_data</code><span class="sig-paren">(</span><em>idx</em>, <em>time</em>, <em>particles</em>, <em>data</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#save_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.save_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save temperature and species mass fraction from all particles to array.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>idx</strong> &#8211; Index of timestep.</li>
+<li><strong>time</strong> &#8211; Current time [s].</li>
+<li><strong>particles</strong> &#8211; List of Particle objects.</li>
+<li><strong>data</strong> &#8211; ndarray of particle data for all timesteps.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.run_simulation">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">run_simulation</code><span class="sig-paren">(</span><em>mech, case, init_temp, pres, eq_ratio, fuel, oxidizer, complete_products=['CO2', 'H2O', 'N2'], num_part=100, tau_res=0.01, tau_mix=0.001, tau_pair=0.001, num_res=10</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#run_simulation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.run_simulation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Perform partially stirred reactor (PaSR) simulation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>mech</strong> &#8211; Mechanism filename (in Cantera format).</li>
+<li><strong>case</strong> &#8211; &#8216;Premixed&#8217; or &#8216;Non-premixed&#8217;.</li>
+<li><strong>init_temp</strong> &#8211; Initial temperature [K].</li>
+<li><strong>pres</strong> &#8211; Pressure [atm].</li>
+<li><strong>eq_ratio</strong> &#8211; Equivalence ratio.</li>
+<li><strong>fuel</strong> &#8211; Dictionary of molecules in the fuel mixture and the fraction of
+each molecule in the fuel mixture.</li>
+<li><strong>oxidizer</strong> &#8211; Dictionary of molecules in the oxidizer mixture and the
+fraction of each molecule in the oxidizer mixture.</li>
+<li><strong>complete_products</strong> &#8211; List of species in the products of complete combustion.
+Optional, default [CO2, H2O, N2].</li>
+<li><strong>num_part</strong> &#8211; Number of particles. Optional, default 100.</li>
+<li><strong>tau_res</strong> &#8211; Residence time [s]. Optional, default 10 [ms].</li>
+<li><strong>tau_mix</strong> &#8211; Mixing timescale [s]. Optional, default 1 [ms].</li>
+<li><strong>tau_pair</strong> &#8211; Pairing timescale [s]. Optional, default 1 [ms].</li>
+<li><strong>num_res</strong> &#8211; Numer of residence times to simulate. Optional, default 5.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.parse_input_file">
+<code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">parse_input_file</code><span class="sig-paren">(</span><em>input_file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#parse_input_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.parse_input_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse input file for PaSR operating parameters.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_file</strong> &#8211; Filename with YAML-format input file.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/src/pyjac.functional_tester.partially_stirred_reactor.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

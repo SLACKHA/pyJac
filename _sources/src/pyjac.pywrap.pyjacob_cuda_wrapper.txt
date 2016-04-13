@@ -1,0 +1,7 @@
+pyjac.pywrap.pyjacob_cuda_wrapper module
+========================================
+
+.. automodule:: pyjac.pywrap.pyjacob_cuda_wrapper
+    :members:
+    :undoc-members:
+    :show-inheritance:

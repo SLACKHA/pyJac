@@ -1,0 +1,364 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.core.create_jacobian module &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-pyjac.core.create_jacobian">
+<span id="pyjac-core-create-jacobian-module"></span><h1>pyjac.core.create_jacobian module<a class="headerlink" href="#module-pyjac.core.create_jacobian" title="Permalink to this headline">¶</a></h1>
+<p>Creates source code for calculating analytical Jacobian matrix.</p>
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.calculate_shared_memory">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">calculate_shared_memory</code><span class="sig-paren">(</span><em>rind</em>, <em>rxn</em>, <em>specs</em>, <em>reacs</em>, <em>rev_reacs</em>, <em>pdep_reacs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#calculate_shared_memory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.calculate_shared_memory" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dr_dy">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dr_dy</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rev_reacs</em>, <em>rxn</em>, <em>rind</em>, <em>pind</em>, <em>nspec</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dr_dy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dr_dy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_rates">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_rates</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_rates" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dr_dy_species">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dr_dy_species</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>pind</em>, <em>j_sp</em>, <em>sp_j</em>, <em>rind</em>, <em>rev_reacs</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dr_dy_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dr_dy_species" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_kc">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_kc</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_kc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_kc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.get_infs">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_infs</code><span class="sig-paren">(</span><em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_infs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_infs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dt_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_comment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dy_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_comment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dy_y_finish_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_y_finish_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_y_finish_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_y_finish_comment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dt_t_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_t_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>sp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_t_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_t_comment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dt_y_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_y_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>sp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_y_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_y_comment" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.get_rxn_params_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_rxn_params_dt</code><span class="sig-paren">(</span><em>rxn</em>, <em>rev=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_rxn_params_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_rxn_params_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_db_dt_def">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_db_dt_def</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>rev_reacs</em>, <em>dBdT_flag</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_db_dt_def"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_db_dt_def" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.get_db_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_db_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_db_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_db_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_pr">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_pr</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>pdep_reacs</em>, <em>rxn</em>, <em>get_array</em>, <em>last_conc_temp=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_pr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_pr" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_troe">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_troe</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_troe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_troe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_sri">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sri</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sri" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.get_pdep_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_pdep_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>rev_reacs</em>, <em>rind</em>, <em>pind</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_pdep_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_pdep_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_sri_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sri_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>beta_0minf</em>, <em>E_0minf</em>, <em>k0kinf</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sri_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sri_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_troe_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_troe_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>beta_0minf</em>, <em>E_0minf</em>, <em>k0kinf</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_troe_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_troe_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dcp_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dcp_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dcp_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dcp_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.get_elementary_rxn_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_elementary_rxn_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>rind</em>, <em>rev_idx</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_elementary_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_elementary_rxn_dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write contribution from temperature derivative of reaction rate for
+elementary reaction.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_cheb_ut">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_cheb_ut</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_cheb_ut"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_cheb_ut" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_cheb_rxn_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_cheb_rxn_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>jline</em>, <em>rxn</em>, <em>rind</em>, <em>rev_idx</em>, <em>specs</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_cheb_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_cheb_rxn_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_plog_rxn_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_plog_rxn_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>jline</em>, <em>specs</em>, <em>rxn</em>, <em>rind</em>, <em>rev_idx</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_plog_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_plog_rxn_dt" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dt_y">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_y</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>sp</em>, <em>isp</em>, <em>num_s</em>, <em>touched</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_y" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dt_y_division">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_y_division</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>num_s</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_y_division"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_y_division" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dt_completion">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_completion</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>J_nplusone_touched</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_completion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_completion" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_sub_intro">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sub_intro</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>number</em>, <em>rate_list</em>, <em>this_rev</em>, <em>this_pdep</em>, <em>have_pres_mod_temp</em>, <em>batch_has_m</em>, <em>this_thd</em>, <em>this_troe</em>, <em>this_sri</em>, <em>this_cheb</em>, <em>cheb_dim</em>, <em>this_plog</em>, <em>no_shared</em>, <em>has_nsp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sub_intro"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sub_intro" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes the header and definitions for of any of the various sub-functions</p>
+<p>Returns the opened file</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dy_intros">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_intros</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>number</em>, <em>have_jnplus_jplus</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_intros"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_intros" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_jacobian">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_jacobian</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>seen_sp</em>, <em>smm=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_jacobian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write Jacobian subroutine in desired language.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
+<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in the mechanism.</li>
+<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in the mechanism.</li>
+<li><strong>seen_sp</strong> (<em>list of bool</em>) &#8211; List of booleans, False if species i has an (identically) zero species rate</li>
+<li><strong>smm</strong> (<em>shared_memory_manager, optional</em>) &#8211; If not None, use this to manage shared memory optimization</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_sparse_multiplier">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sparse_multiplier</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>touched</em>, <em>nvars</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sparse_multiplier"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sparse_multiplier" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write a subroutine that multiplies the non-zero entries of the
+Jacobian with a column &#8216;j&#8217; of another matrix.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
+<li><strong>inidicies</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of indicies where the Jacobian is non-zero</li>
+<li><strong>nvars</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; How many variables in the Jacobian matrix</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.create_jacobian">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">create_jacobian</code><span class="sig-paren">(</span><em>lang</em>, <em>mech_name=None</em>, <em>therm_name=None</em>, <em>gas=None</em>, <em>optimize_cache=False</em>, <em>initial_state=''</em>, <em>num_blocks=8</em>, <em>num_threads=64</em>, <em>no_shared=False</em>, <em>L1_preferred=True</em>, <em>multi_thread=None</em>, <em>force_optimize=False</em>, <em>build_path='./out/'</em>, <em>last_spec=None</em>, <em>skip_jac=False</em>, <em>auto_diff=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#create_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.create_jacobian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create Jacobian subroutine from mechanism.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Language type.</li>
+<li><strong>mech_name</strong> (<em>str, optional</em>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;).
+This or gas must be specified</li>
+<li><strong>therm_name</strong> (<em>str, optional</em>) &#8211; Thermodynamic database filename (e.g. &#8216;therm.dat&#8217;)
+or nothing if info in mechanism file.</li>
+<li><strong>gas</strong> (<em>cantera.Solution, optional</em>) &#8211; The mechanism to generate the Jacobian for.  This or mech_name must be specified</li>
+<li><strong>optimize_cache</strong> (<em>bool, optional</em>) &#8211; If true, use the greedy optimizer to attempt to
+improve cache hit rates</li>
+<li><strong>initial_state</strong> (<em>str, optional</em>) &#8211; A comma separated list of the initial conditions to use in form
+T,P,X (e.g. 800,1,H2=1.0,O2=0.5). Temperature in K, P in atm</li>
+<li><strong>num_blocks</strong> (<em>int, optional</em>) &#8211; The target number of blocks / sm to achieve for cuda</li>
+<li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The target number of threads / block to achieve for cuda</li>
+<li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If true, do not use the shared_memory_manager
+to attempt to optimize for CUDA</li>
+<li><strong>L1_preferred</strong> (<em>bool, optional</em>) &#8211; If true, prefer a larger L1 cache
+and a smaller shared memory size for CUDA</li>
+<li><strong>multi_thread</strong> (<em>int, optional</em>) &#8211; The number of threads to use during optimization</li>
+<li><strong>force_optimize</strong> (<em>bool, optional</em>) &#8211; If true, redo the cache optimization even if the same mechanism</li>
+<li><strong>build_path</strong> (<em>str, optional</em>) &#8211; The output directory for the jacobian files</li>
+<li><strong>last_spec</strong> (<em>str, optional</em>) &#8211; If specified, the species to assign to the last index.
+Typically should be N2, Ar, He or another inert bath gas</li>
+<li><strong>skip_jac</strong> (<em>bool, optional</em>) &#8211; If True, only the reaction rate subroutines will be generated</li>
+<li><strong>auto_diff</strong> (<em>bool, optional</em>) &#8211; If True, generate files for use with the Adept autodifferention library.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+      |
+      <a href="../_sources/src/pyjac.core.create_jacobian.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

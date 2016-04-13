@@ -1,0 +1,877 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>pyjac.functional_tester.partially_stirred_reactor &mdash; pyJac 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" />
+   
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for pyjac.functional_tester.partially_stirred_reactor</h1><div class="highlight"><pre>
+<span></span><span class="c1"># Python 2 compatibility</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+
+<span class="c1"># Standard libraries</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">product</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+
+<span class="c1"># More Python 2 compatibility</span>
+<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">izip</span> <span class="k">as</span> <span class="nb">zip</span>
+
+<span class="c1"># Related modules</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: NumPy must be installed.&#39;</span><span class="p">)</span>
+    <span class="k">raise</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
+    <span class="kn">from</span> <span class="nn">cantera</span> <span class="kn">import</span> <span class="n">ck2cti</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: Cantera must be installed.&#39;</span><span class="p">)</span>
+    <span class="k">raise</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">yaml</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Warning: YAML must be installed to read input file.&#39;</span><span class="p">)</span>
+
+<span class="c1"># Parallel processing for reaction substep</span>
+<span class="n">parallel</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Warning: multiprocessing not installed&#39;</span><span class="p">)</span>
+    <span class="n">parallel</span> <span class="o">=</span> <span class="bp">False</span>
+
+<div class="viewcode-block" id="Stream"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.Stream">[docs]</a><span class="k">class</span> <span class="nc">Stream</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">flow</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">flow</span>
+
+        <span class="c1"># Running variable of flow rate</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">xflow</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp</span></div>
+
+
+<div class="viewcode-block" id="Particle"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.Particle">[docs]</a><span class="k">class</span> <span class="nc">Particle</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gas</span> <span class="o">=</span> <span class="n">gas</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reac</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">IdealGasConstPressureReactor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netw</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">ReactorNet</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">reac</span><span class="p">])</span>
+
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comp</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Return or set composition.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">comp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+                <span class="n">Y</span> <span class="o">=</span> <span class="n">comp</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+                <span class="n">h</span> <span class="o">=</span> <span class="n">comp</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">Y</span> <span class="o">=</span> <span class="n">comp</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">NotImplemented</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">HPY</span> <span class="o">=</span> <span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">Y</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">reac</span><span class="o">.</span><span class="n">syncState</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span>
+
+    <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__radd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="n">other</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+            <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">h</span><span class="p">,</span> <span class="n">Y</span><span class="p">))</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span> <span class="o">*</span> <span class="n">other</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__rmul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span> <span class="o">*</span> <span class="n">other</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+    <span class="k">def</span> <span class="nf">__iadd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">HPY</span> <span class="o">=</span> <span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">Y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reac</span><span class="o">.</span><span class="n">syncState</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__isub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">HPY</span> <span class="o">=</span> <span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">Y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reac</span><span class="o">.</span><span class="n">syncState</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__imul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">*</span> <span class="n">other</span>
+            <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">*</span> <span class="n">other</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">HPY</span> <span class="o">=</span> <span class="n">h</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">Y</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">reac</span><span class="o">.</span><span class="n">syncState</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">reinitialize</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+<div class="viewcode-block" id="Particle.react"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.Particle.react">[docs]</a>    <span class="k">def</span> <span class="nf">react</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Perform reaction timestep by advancing network.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="n">dt</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="equivalence_ratio"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.equivalence_ratio">[docs]</a><span class="k">def</span> <span class="nf">equivalence_ratio</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">eq_ratio</span><span class="p">,</span> <span class="n">fuel</span><span class="p">,</span> <span class="n">oxidizer</span><span class="p">,</span> <span class="n">complete_products</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Calculate the mixture mole fractions from the equivalence ratio.</span>
+
+<span class="sd">    Given the equivalence ratio, fuel mixture, oxidizer mixture,</span>
+<span class="sd">    the products of complete combustion, and any additional species for</span>
+<span class="sd">    the mixture, return a string containing the mole fractions of the</span>
+<span class="sd">    species, suitable for setting the state of the input ThermoPhase.</span>
+
+<span class="sd">    :param gas:</span>
+<span class="sd">        Cantera ThermoPhase object containing the desired species.</span>
+<span class="sd">    :param eq_ratio:</span>
+<span class="sd">        Equivalence ratio</span>
+<span class="sd">    :param fuel:</span>
+<span class="sd">        Dictionary of molecules in the fuel mixture and the fraction of</span>
+<span class="sd">        each molecule in the fuel mixture</span>
+<span class="sd">    :param oxidizer:</span>
+<span class="sd">        Dictionary of molecules in the oxidizer mixture and the</span>
+<span class="sd">        fraction of each molecule in the oxidizer mixture.</span>
+<span class="sd">    :param complete_products:</span>
+<span class="sd">        List of species in the products of complete combustion.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">reactants</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+    <span class="n">cprod_elems</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">fuel_elems</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">oxid_elems</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="c1"># Check sum of fuel and oxidizer values; normalize if greater than 1</span>
+    <span class="n">fuel_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">fuel</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">fuel_sum</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">fuel</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">fuel</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">fuel_sum</span>
+
+    <span class="n">oxid_sum</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">oxidizer</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="k">if</span> <span class="n">oxid_sum</span> <span class="o">&gt;</span> <span class="mf">1.0</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">oxidizer</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">oxidizer</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span> <span class="o">=</span> <span class="n">x</span> <span class="o">/</span> <span class="n">oxid_sum</span>
+
+    <span class="c1"># Check oxidation state of complete products</span>
+    <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="n">complete_products</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">element_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">cprod_elems</span><span class="p">:</span>
+            <span class="n">cprod_elems</span><span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="p">{}</span>
+
+        <span class="n">cprod_elems</span><span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()][</span><span class="n">sp</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_atoms</span><span class="p">(</span><span class="n">sp</span><span class="p">,</span> <span class="n">el</span><span class="p">))</span>
+
+    <span class="n">num_C_cprod</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">cprod_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">num_H_cprod</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">cprod_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+    <span class="n">num_O_cprod</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">cprod_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;O&#39;</span><span class="p">,</span> <span class="p">{</span><span class="mi">0</span><span class="p">:</span> <span class="mi">0</span><span class="p">})</span><span class="o">.</span><span class="n">values</span><span class="p">())</span>
+
+    <span class="n">oxid_state</span> <span class="o">=</span> <span class="mi">4</span><span class="o">*</span><span class="n">num_C_cprod</span> <span class="o">+</span> <span class="n">num_H_cprod</span> <span class="o">-</span> <span class="mi">2</span><span class="o">*</span><span class="n">num_O_cprod</span>
+    <span class="k">if</span> <span class="n">oxid_state</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Warning: One or more products of incomplete combustion &#39;</span>
+              <span class="s1">&#39;were specified.&#39;</span><span class="p">)</span>
+
+    <span class="c1"># Find the number of H, C, and O atoms in the fuel molecules.</span>
+    <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="n">fuel</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">gas</span><span class="o">.</span><span class="n">element_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">el</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">fuel_elems</span><span class="p">:</span>
+            <span class="n">fuel_elems</span><span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">fuel_elems</span><span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">+=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_atoms</span><span class="p">(</span><span class="n">sp</span><span class="p">,</span> <span class="n">el</span><span class="p">)</span> <span class="o">*</span> <span class="n">fuel</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span>
+
+    <span class="n">num_C_fuel</span> <span class="o">=</span> <span class="n">fuel_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;C&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">num_H_fuel</span> <span class="o">=</span> <span class="n">fuel_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;H&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">num_O_fuel</span> <span class="o">=</span> <span class="n">fuel_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;O&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Find the number of H, C, and O atoms in the oxidizer molecules.</span>
+    <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">product</span><span class="p">(</span><span class="n">oxidizer</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span> <span class="n">gas</span><span class="o">.</span><span class="n">element_names</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">el</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">oxid_elems</span><span class="p">:</span>
+            <span class="n">oxid_elems</span><span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">=</span> <span class="mi">0</span>
+
+        <span class="n">oxid_elems</span><span class="p">[</span><span class="n">el</span><span class="o">.</span><span class="n">upper</span><span class="p">()]</span> <span class="o">+=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_atoms</span><span class="p">(</span><span class="n">sp</span><span class="p">,</span> <span class="n">el</span><span class="p">)</span> <span class="o">*</span> <span class="n">oxidizer</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span>
+
+    <span class="n">num_O_oxid</span> <span class="o">=</span> <span class="n">oxid_elems</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;O&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+
+    <span class="c1"># Check that all of the elements specified in the fuel and oxidizer</span>
+    <span class="c1"># are present in the complete products and vice versa.</span>
+    <span class="k">for</span> <span class="n">el</span> <span class="ow">in</span> <span class="n">cprod_elems</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="p">((</span><span class="nb">sum</span><span class="p">(</span><span class="n">cprod_elems</span><span class="p">[</span><span class="n">el</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">fuel_elems</span><span class="p">[</span><span class="n">el</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span>
+             <span class="n">oxid_elems</span><span class="p">[</span><span class="n">el</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">cprod_elems</span><span class="p">[</span><span class="n">el</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">())</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span>
+            <span class="p">(</span><span class="n">fuel_elems</span><span class="p">[</span><span class="n">el</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">or</span> <span class="n">oxid_elems</span><span class="p">[</span><span class="n">el</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">))):</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: Must specify all elements in the fuel + oxidizer &#39;</span>
+                  <span class="s1">&#39;in the complete products and vice-versa&#39;</span><span class="p">)</span>
+            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Compute the amount of oxidizer required to consume all the</span>
+    <span class="c1"># carbon and hydrogen in the complete products</span>
+    <span class="k">if</span> <span class="n">num_C_cprod</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">cprod_elems</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">ox</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">cprod_elems</span><span class="p">[</span><span class="s1">&#39;O&#39;</span><span class="p">][</span><span class="n">sp</span><span class="p">]</span>
+                  <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">spec</span> <span class="k">if</span> <span class="n">cprod_elems</span><span class="p">[</span><span class="s1">&#39;C&#39;</span><span class="p">][</span><span class="n">sp</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">C_multiplier</span> <span class="o">=</span> <span class="n">ox</span><span class="o">/</span><span class="n">num_C_cprod</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">C_multiplier</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">if</span> <span class="n">num_H_cprod</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">spec</span> <span class="o">=</span> <span class="n">cprod_elems</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="n">ox</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">cprod_elems</span><span class="p">[</span><span class="s1">&#39;O&#39;</span><span class="p">][</span><span class="n">sp</span><span class="p">]</span>
+                  <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">spec</span> <span class="k">if</span> <span class="n">cprod_elems</span><span class="p">[</span><span class="s1">&#39;H&#39;</span><span class="p">][</span><span class="n">sp</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">])</span>
+        <span class="n">H_multiplier</span> <span class="o">=</span> <span class="n">ox</span><span class="o">/</span><span class="n">num_H_cprod</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">H_multiplier</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c1"># Compute how many O atoms are required to oxidize everybody</span>
+    <span class="n">num_O_req</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_C_fuel</span> <span class="o">*</span> <span class="n">C_multiplier</span> <span class="o">+</span>
+                 <span class="n">num_H_fuel</span> <span class="o">*</span> <span class="n">H_multiplier</span> <span class="o">-</span> <span class="n">num_O_fuel</span><span class="p">)</span>
+    <span class="n">O_mult</span> <span class="o">=</span> <span class="n">num_O_req</span> <span class="o">/</span> <span class="n">num_O_oxid</span>
+
+    <span class="c1"># Find the total number of moles in the fuel + oxidizer mixture</span>
+    <span class="n">total_oxid_moles</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">O_mult</span> <span class="o">*</span> <span class="n">amt</span> <span class="k">for</span> <span class="n">amt</span> <span class="ow">in</span> <span class="n">oxidizer</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+    <span class="n">total_fuel_moles</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">([</span><span class="n">eq_ratio</span> <span class="o">*</span> <span class="n">amt</span> <span class="k">for</span> <span class="n">amt</span> <span class="ow">in</span> <span class="n">fuel</span><span class="o">.</span><span class="n">values</span><span class="p">()])</span>
+    <span class="n">total_reactant_moles</span> <span class="o">=</span> <span class="n">total_oxid_moles</span> <span class="o">+</span> <span class="n">total_fuel_moles</span>
+
+    <span class="c1"># Compute the mole fractions of the fuel and oxidizer components</span>
+    <span class="c1"># given that a certain portion of the mixture will have been taken</span>
+    <span class="c1"># up by the additional species, if any.</span>
+    <span class="k">for</span> <span class="n">species</span><span class="p">,</span> <span class="n">ox_amt</span> <span class="ow">in</span> <span class="n">oxidizer</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">molefrac</span> <span class="o">=</span> <span class="n">ox_amt</span> <span class="o">*</span> <span class="n">O_mult</span><span class="o">/</span><span class="n">total_reactant_moles</span>
+        <span class="n">add_spec</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">species</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">molefrac</span><span class="p">)])</span>
+        <span class="n">reactants</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">reactants</span><span class="p">,</span> <span class="n">add_spec</span><span class="p">])</span>
+
+    <span class="k">for</span> <span class="n">species</span><span class="p">,</span> <span class="n">fuel_amt</span> <span class="ow">in</span> <span class="n">fuel</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">molefrac</span> <span class="o">=</span> <span class="n">fuel_amt</span><span class="o">*</span><span class="n">eq_ratio</span><span class="o">/</span><span class="n">total_reactant_moles</span>
+        <span class="n">add_spec</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">species</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">molefrac</span><span class="p">)])</span>
+        <span class="n">reactants</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">reactants</span><span class="p">,</span> <span class="n">add_spec</span><span class="p">])</span>
+
+    <span class="c1"># Take off the first character, which is a comma</span>
+    <span class="n">reactants</span> <span class="o">=</span> <span class="n">reactants</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+    <span class="k">return</span> <span class="n">reactants</span></div>
+
+
+<div class="viewcode-block" id="pairwise"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.pairwise">[docs]</a><span class="k">def</span> <span class="nf">pairwise</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;s -&gt; (s0,s1), (s2,s3), (s4, s5), ...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="mix_substep"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.mix_substep">[docs]</a><span class="k">def</span> <span class="nf">mix_substep</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">tau_mix</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Pairwise mixing step.</span>
+
+<span class="sd">    :param particles:</span>
+<span class="sd">        List of Particle objects.</span>
+<span class="sd">    :param dt:</span>
+<span class="sd">        Time step [s] to increment particles.</span>
+<span class="sd">    :param tau_mix:</span>
+<span class="sd">        Mixing timescale [s].</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">decay</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="n">tau_mix</span><span class="p">))</span>
+    <span class="k">for</span> <span class="n">p1</span><span class="p">,</span> <span class="n">p2</span> <span class="ow">in</span> <span class="n">pairwise</span><span class="p">(</span><span class="n">particles</span><span class="p">):</span>
+        <span class="n">delt</span> <span class="o">=</span> <span class="p">(</span><span class="n">p1</span> <span class="o">-</span> <span class="n">p2</span><span class="p">)</span> <span class="o">*</span> <span class="n">decay</span>
+        <span class="n">p1</span> <span class="o">-=</span> <span class="n">delt</span>
+        <span class="n">p2</span> <span class="o">+=</span> <span class="n">delt</span>
+
+        <span class="c1"># Update with new compositions</span>
+        <span class="n">comp1</span> <span class="o">=</span> <span class="n">p1</span><span class="p">()</span>
+        <span class="n">comp2</span> <span class="o">=</span> <span class="n">p2</span><span class="p">()</span>
+        <span class="n">particles</span><span class="p">[</span><span class="n">particles</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">p1</span><span class="p">)](</span><span class="n">comp1</span><span class="p">)</span>
+        <span class="n">particles</span><span class="p">[</span><span class="n">particles</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">p2</span><span class="p">)](</span><span class="n">comp2</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="reaction_worker"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.reaction_worker">[docs]</a><span class="k">def</span> <span class="nf">reaction_worker</span><span class="p">(</span><span class="n">part_tup</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mech</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">dt</span> <span class="o">=</span> <span class="n">part_tup</span>
+    <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">mech</span><span class="p">)</span>
+    <span class="n">gas</span><span class="o">.</span><span class="n">TPY</span> <span class="o">=</span> <span class="n">T</span><span class="p">,</span><span class="n">P</span><span class="p">,</span><span class="n">Y</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">Particle</span><span class="p">(</span><span class="n">gas</span><span class="p">)</span>
+    <span class="n">p</span><span class="o">.</span><span class="n">react</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">p</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="reaction_substep"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.reaction_substep">[docs]</a><span class="k">def</span> <span class="nf">reaction_substep</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">mech</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Advance each of the particles in time through reactions.</span>
+
+<span class="sd">    :param particles:</span>
+<span class="sd">        List of Particle objects.</span>
+<span class="sd">    :param dt:</span>
+<span class="sd">        Time step [s] to increment particles.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">parallel</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
+            <span class="n">p</span><span class="o">.</span><span class="n">react</span><span class="p">(</span><span class="n">dt</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">pool</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">Pool</span><span class="p">()</span>
+        <span class="n">jobs</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="c1">#set up a new particle runner for each</span>
+        <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
+            <span class="n">jobs</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">mech</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">,</span> <span class="n">dt</span><span class="p">])</span>
+        <span class="n">jobs</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">jobs</span><span class="p">)</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">pool</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">reaction_worker</span><span class="p">,</span> <span class="n">jobs</span><span class="p">)</span>
+
+        <span class="n">pool</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">pool</span><span class="o">.</span><span class="n">join</span><span class="p">()</span>
+        <span class="c1">#and finally update the states of our particles on the main</span>
+        <span class="c1">#thread</span>
+        <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">particles</span><span class="p">):</span>
+            <span class="n">p</span><span class="p">(</span><span class="n">comp</span><span class="o">=</span><span class="n">results</span><span class="p">[</span><span class="n">i</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="select_pairs"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.select_pairs">[docs]</a><span class="k">def</span> <span class="nf">select_pairs</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">num_pairs</span><span class="p">,</span> <span class="n">num_skip</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Randomly select pair(s) of particles and move to end of list.</span>
+
+<span class="sd">    :param particles:</span>
+<span class="sd">        List of Particle objects.</span>
+<span class="sd">    :param num_pairs:</span>
+<span class="sd">        Number of pairs to be selected and moved.</span>
+<span class="sd">    :param num_skip:</span>
+<span class="sd">        Number of pairs at end of list to be skipped. Optional, default 0.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">for</span> <span class="n">i_pair</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_pairs</span><span class="p">):</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">randint</span><span class="p">((</span><span class="nb">len</span><span class="p">(</span><span class="n">particles</span><span class="p">)</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">-</span> <span class="n">i_pair</span> <span class="o">-</span> <span class="n">num_skip</span><span class="p">)</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># Commute particles at random</span>
+        <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">()</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="n">temp_comp</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">i</span><span class="p">]()</span>
+            <span class="n">particles</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">particles</span><span class="p">[</span><span class="n">j</span><span class="p">]())</span>
+            <span class="n">particles</span><span class="p">[</span><span class="n">j</span><span class="p">](</span><span class="n">temp_comp</span><span class="p">)</span>
+
+        <span class="c1"># Swap with pair at end of list</span>
+        <span class="n">i_last</span> <span class="o">=</span> <span class="o">-</span><span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">i_pair</span> <span class="o">+</span> <span class="n">num_skip</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">temp_comp</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">i</span><span class="p">]()</span>
+        <span class="n">particles</span><span class="p">[</span><span class="n">i</span><span class="p">](</span><span class="n">particles</span><span class="p">[</span><span class="n">i_last</span><span class="p">]())</span>
+        <span class="n">particles</span><span class="p">[</span><span class="n">i_last</span><span class="p">](</span><span class="n">temp_comp</span><span class="p">)</span>
+
+        <span class="n">temp_comp</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="n">j</span><span class="p">]()</span>
+        <span class="n">particles</span><span class="p">[</span><span class="n">j</span><span class="p">](</span><span class="n">particles</span><span class="p">[</span><span class="n">i_last</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]())</span>
+        <span class="n">particles</span><span class="p">[</span><span class="n">i_last</span> <span class="o">+</span> <span class="mi">1</span><span class="p">](</span><span class="n">temp_comp</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="inflow"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.inflow">[docs]</a><span class="k">def</span> <span class="nf">inflow</span><span class="p">(</span><span class="n">streams</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Determine index of stream for next inflowing particle.</span>
+
+<span class="sd">    :param streams:</span>
+<span class="sd">        List of Stream objects for inlet streams.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Find stream with largest running flow rate</span>
+    <span class="n">sum_flows</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">fl_max</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">i_inflow</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">stream</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">streams</span><span class="p">):</span>
+        <span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">xflow</span> <span class="o">+=</span> <span class="n">stream</span><span class="o">.</span><span class="n">flow</span>
+        <span class="n">sum_flows</span> <span class="o">+=</span> <span class="n">stream</span><span class="o">.</span><span class="n">flow</span>
+
+        <span class="k">if</span> <span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">xflow</span> <span class="o">&gt;</span> <span class="n">fl_max</span><span class="p">:</span>
+            <span class="n">fl_max</span> <span class="o">=</span> <span class="n">streams</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">xflow</span>
+            <span class="n">i_inflow</span> <span class="o">=</span> <span class="n">i</span>
+
+    <span class="c1"># Check sum of flows</span>
+    <span class="k">if</span> <span class="n">sum_flows</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: sum_flows = {:.4}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sum_flows</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Now reduce running flow rate of selected stream</span>
+    <span class="n">streams</span><span class="p">[</span><span class="n">i_inflow</span><span class="p">]</span><span class="o">.</span><span class="n">xflow</span> <span class="o">-=</span> <span class="n">sum_flows</span>
+    <span class="k">return</span> <span class="n">i_inflow</span></div>
+
+
+<div class="viewcode-block" id="save_data"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.save_data">[docs]</a><span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Save temperature and species mass fraction from all particles to array.</span>
+
+<span class="sd">    :param idx:</span>
+<span class="sd">        Index of timestep.</span>
+<span class="sd">    :param time:</span>
+<span class="sd">        Current time [s].</span>
+<span class="sd">    :param particles:</span>
+<span class="sd">        List of Particle objects.</span>
+<span class="sd">    :param data:</span>
+<span class="sd">        ndarray of particle data for all timesteps.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">particles</span><span class="p">):</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">T</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">P</span>
+
+        <span class="n">mass_frac</span> <span class="o">=</span> <span class="n">p</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]</span>
+        <span class="c1"># Zero out any negative mass fractions</span>
+        <span class="n">mass_frac</span><span class="p">[</span><span class="n">mass_frac</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">3</span><span class="p">:]</span> <span class="o">=</span> <span class="n">mass_frac</span></div>
+
+
+<div class="viewcode-block" id="run_simulation"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.run_simulation">[docs]</a><span class="k">def</span> <span class="nf">run_simulation</span><span class="p">(</span><span class="n">mech</span><span class="p">,</span> <span class="n">case</span><span class="p">,</span> <span class="n">init_temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">eq_ratio</span><span class="p">,</span> <span class="n">fuel</span><span class="p">,</span> <span class="n">oxidizer</span><span class="p">,</span>
+                   <span class="n">complete_products</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;CO2&#39;</span><span class="p">,</span><span class="s1">&#39;H2O&#39;</span><span class="p">,</span><span class="s1">&#39;N2&#39;</span><span class="p">],</span>
+                   <span class="n">num_part</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">tau_res</span><span class="o">=</span><span class="p">(</span><span class="mf">10.</span><span class="o">/</span><span class="mf">1000.</span><span class="p">),</span> <span class="n">tau_mix</span><span class="o">=</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mf">1000.</span><span class="p">),</span>
+                   <span class="n">tau_pair</span><span class="o">=</span><span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="mf">1000.</span><span class="p">),</span> <span class="n">num_res</span><span class="o">=</span><span class="mi">10</span>
+                   <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Perform partially stirred reactor (PaSR) simulation.</span>
+
+<span class="sd">    :param mech:</span>
+<span class="sd">        Mechanism filename (in Cantera format).</span>
+<span class="sd">    :param case:</span>
+<span class="sd">        &#39;Premixed&#39; or &#39;Non-premixed&#39;.</span>
+<span class="sd">    :param init_temp:</span>
+<span class="sd">        Initial temperature [K].</span>
+<span class="sd">    :param pres:</span>
+<span class="sd">        Pressure [atm].</span>
+<span class="sd">    :param eq_ratio:</span>
+<span class="sd">        Equivalence ratio.</span>
+<span class="sd">    :param fuel:</span>
+<span class="sd">        Dictionary of molecules in the fuel mixture and the fraction of</span>
+<span class="sd">        each molecule in the fuel mixture.</span>
+<span class="sd">    :param oxidizer:</span>
+<span class="sd">        Dictionary of molecules in the oxidizer mixture and the</span>
+<span class="sd">        fraction of each molecule in the oxidizer mixture.</span>
+<span class="sd">    :param complete_products:</span>
+<span class="sd">        List of species in the products of complete combustion.</span>
+<span class="sd">        Optional, default [CO2, H2O, N2].</span>
+<span class="sd">    :param num_part:</span>
+<span class="sd">        Number of particles. Optional, default 100.</span>
+<span class="sd">    :param tau_res:</span>
+<span class="sd">        Residence time [s]. Optional, default 10 [ms].</span>
+<span class="sd">    :param tau_mix:</span>
+<span class="sd">        Mixing timescale [s]. Optional, default 1 [ms].</span>
+<span class="sd">    :param tau_pair:</span>
+<span class="sd">        Pairing timescale [s]. Optional, default 1 [ms].</span>
+<span class="sd">    :param num_res:</span>
+<span class="sd">        Numer of residence times to simulate. Optional, default 5.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Time step control</span>
+    <span class="c1"># Potential for adjusting time step, but unused for now.</span>
+    <span class="n">dt_max</span> <span class="o">=</span> <span class="mf">0.1</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="n">tau_res</span><span class="p">,</span> <span class="n">tau_pair</span><span class="p">)</span>
+    <span class="n">dt_min</span> <span class="o">=</span> <span class="n">dt_max</span>
+    <span class="n">dt_avg</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">dt_max</span> <span class="o">+</span> <span class="n">dt_min</span><span class="p">)</span>
+
+    <span class="n">dt_sub</span> <span class="o">=</span> <span class="mf">0.040</span> <span class="o">*</span> <span class="n">tau_mix</span>
+    <span class="n">num_substeps</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="nb">int</span><span class="p">(</span><span class="n">dt_max</span> <span class="o">/</span> <span class="n">dt_sub</span><span class="p">)</span>
+
+    <span class="n">time_end</span> <span class="o">=</span> <span class="n">num_res</span> <span class="o">*</span> <span class="n">tau_res</span>
+    <span class="n">num_steps</span> <span class="o">=</span> <span class="p">(</span><span class="n">time_end</span> <span class="o">/</span> <span class="n">dt_avg</span><span class="p">)</span>
+
+    <span class="c1"># Set initial conditions</span>
+    <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">mech</span><span class="p">)</span>
+
+    <span class="c1"># Determine reactants</span>
+    <span class="n">reactants</span> <span class="o">=</span> <span class="n">equivalence_ratio</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">eq_ratio</span><span class="p">,</span> <span class="n">fuel</span><span class="p">,</span>
+                                  <span class="n">oxidizer</span><span class="p">,</span> <span class="n">complete_products</span>
+                                  <span class="p">)</span>
+
+    <span class="c1"># Inlet streams</span>
+    <span class="k">if</span> <span class="n">case</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;premixed&#39;</span><span class="p">:</span>
+        <span class="c1"># Premixed</span>
+        <span class="n">flow_rates</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">fuel_air</span> <span class="o">=</span> <span class="mf">0.95</span><span class="p">,</span> <span class="n">pilot</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">case</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s1">&#39;non-premixed&#39;</span><span class="p">:</span>
+        <span class="c1"># Non-premixed</span>
+        <span class="n">flow_rates</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">air</span> <span class="o">=</span> <span class="mf">0.85</span><span class="p">,</span> <span class="n">fuel</span> <span class="o">=</span> <span class="mf">0.05</span><span class="p">,</span> <span class="n">pilot</span> <span class="o">=</span> <span class="mf">0.1</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: case needs to be either premixed or non-premixed.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">inlet_streams</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">src</span> <span class="ow">in</span> <span class="n">flow_rates</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">src</span> <span class="o">==</span> <span class="s1">&#39;fuel&#39;</span><span class="p">:</span>
+            <span class="n">reacs</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">amt</span> <span class="ow">in</span> <span class="n">fuel</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">add_sp</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">amt</span><span class="p">)])</span>
+                <span class="n">reacs</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">reacs</span><span class="p">,</span> <span class="n">add_sp</span><span class="p">])</span>
+            <span class="n">reacs</span> <span class="o">=</span> <span class="n">reacs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+            <span class="n">gas</span><span class="o">.</span><span class="n">TPX</span> <span class="o">=</span> <span class="n">init_temp</span><span class="p">,</span> <span class="n">pres</span> <span class="o">*</span> <span class="n">ct</span><span class="o">.</span><span class="n">one_atm</span><span class="p">,</span> <span class="n">fuel</span> <span class="o">+</span> <span class="s1">&#39;:1.0&#39;</span>
+            <span class="n">fuel_stream</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">flow_rates</span><span class="p">[</span><span class="s1">&#39;fuel&#39;</span><span class="p">])</span>
+            <span class="n">inlet_streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fuel_stream</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">src</span> <span class="o">==</span> <span class="s1">&#39;air&#39;</span><span class="p">:</span>
+            <span class="n">reacs</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+            <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">amt</span> <span class="ow">in</span> <span class="n">oxidizer</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                <span class="n">add_sp</span> <span class="o">=</span> <span class="s1">&#39;:&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">amt</span><span class="p">)])</span>
+                <span class="n">reacs</span> <span class="o">=</span> <span class="s1">&#39;,&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">reacs</span><span class="p">,</span> <span class="n">add_sp</span><span class="p">])</span>
+            <span class="n">reacs</span> <span class="o">=</span> <span class="n">reacs</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span>
+
+            <span class="n">gas</span><span class="o">.</span><span class="n">TPX</span> <span class="o">=</span> <span class="n">init_temp</span><span class="p">,</span> <span class="n">pres</span> <span class="o">*</span> <span class="n">ct</span><span class="o">.</span><span class="n">one_atm</span><span class="p">,</span> <span class="s1">&#39;O2:0.21,N2:0.79&#39;</span>
+            <span class="n">air_stream</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">flow_rates</span><span class="p">[</span><span class="s1">&#39;air&#39;</span><span class="p">])</span>
+            <span class="n">inlet_streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">air_stream</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">src</span> <span class="o">==</span> <span class="s1">&#39;fuel_air&#39;</span><span class="p">:</span>
+            <span class="n">gas</span><span class="o">.</span><span class="n">TPX</span> <span class="o">=</span> <span class="n">init_temp</span><span class="p">,</span> <span class="n">pres</span> <span class="o">*</span> <span class="n">ct</span><span class="o">.</span><span class="n">one_atm</span><span class="p">,</span> <span class="n">reactants</span>
+            <span class="n">fuel_air_stream</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">flow_rates</span><span class="p">[</span><span class="s1">&#39;fuel_air&#39;</span><span class="p">])</span>
+            <span class="n">inlet_streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fuel_air_stream</span><span class="p">)</span>
+
+    <span class="c1"># Pilot always present</span>
+    <span class="c1"># Get equilibrium composition for pilot and initial conditions</span>
+    <span class="n">gas</span><span class="o">.</span><span class="n">TPX</span> <span class="o">=</span> <span class="n">init_temp</span><span class="p">,</span> <span class="n">pres</span> <span class="o">*</span> <span class="n">ct</span><span class="o">.</span><span class="n">one_atm</span><span class="p">,</span> <span class="n">reactants</span>
+    <span class="n">gas</span><span class="o">.</span><span class="n">equilibrate</span><span class="p">(</span><span class="s1">&#39;HP&#39;</span><span class="p">)</span>
+    <span class="n">pilot_stream</span> <span class="o">=</span> <span class="n">Stream</span><span class="p">(</span><span class="n">gas</span><span class="p">,</span> <span class="n">flow_rates</span><span class="p">[</span><span class="s1">&#39;pilot&#39;</span><span class="p">])</span>
+    <span class="n">inlet_streams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pilot_stream</span><span class="p">)</span>
+
+    <span class="c1"># Initialize all particles with pilot composition</span>
+    <span class="n">particles</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_part</span><span class="p">):</span>
+        <span class="n">g</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">mech</span><span class="p">)</span>
+        <span class="n">g</span><span class="o">.</span><span class="n">TPX</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">P</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">X</span>
+        <span class="n">particles</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Particle</span><span class="p">(</span><span class="n">g</span><span class="p">))</span>
+
+    <span class="c1"># Random seed</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">()</span>
+
+    <span class="n">time</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">i_step</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="n">part_out</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">part_pair</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">temp_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">temp_mean</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">T</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">])</span>
+
+    <span class="c1"># Array of full particle data for all timesteps</span>
+    <span class="n">particle_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">num_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_part</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">+</span> <span class="mi">3</span><span class="p">])</span>
+    <span class="n">save_data</span><span class="p">(</span><span class="n">i_step</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">particle_data</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Time [ms]  Temperature [K]&#39;</span><span class="p">)</span>
+    <span class="n">temp_mean</span><span class="p">[</span><span class="n">i_step</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">T</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">])</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;{:6.2f}  {:9.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">time</span><span class="o">*</span><span class="mf">1000.</span><span class="p">,</span> <span class="n">temp_mean</span><span class="p">[</span><span class="n">i_step</span><span class="p">]))</span>
+
+    <span class="k">while</span> <span class="n">time</span> <span class="o">&lt;</span> <span class="n">time_end</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">i_step</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&gt;=</span> <span class="n">num_steps</span><span class="p">:</span>
+            <span class="c1">#need to resize arrays</span>
+            <span class="n">times</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">times</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+            <span class="n">temp_mean</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">temp_mean</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)))</span>
+            <span class="n">particle_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">particle_data</span><span class="p">,</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">([</span><span class="n">num_steps</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_part</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">+</span> <span class="mi">3</span><span class="p">])),</span>
+                <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">num_steps</span> <span class="o">*=</span> <span class="mi">2</span>
+
+        <span class="k">if</span> <span class="p">(</span><span class="n">time</span> <span class="o">+</span> <span class="n">dt_max</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">time_end</span><span class="p">:</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="n">time_end</span> <span class="o">-</span> <span class="n">time</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">dt</span> <span class="o">=</span> <span class="n">dt_max</span>
+
+        <span class="n">part_out</span> <span class="o">+=</span> <span class="n">num_part</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="n">tau_res</span>
+        <span class="n">npart_out</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">part_out</span><span class="p">))</span>
+        <span class="n">part_out</span> <span class="o">-=</span> <span class="n">npart_out</span>
+
+        <span class="c1"># Select num_pairs random pairs of particles for each</span>
+        <span class="c1"># inflow/outflow particle and shift to end.</span>
+        <span class="n">num_fl_pairs</span> <span class="o">=</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">npart_out</span>
+        <span class="n">select_pairs</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">num_fl_pairs</span><span class="p">)</span>
+
+        <span class="c1"># Set alternate particles to inflow properties</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">npart_out</span><span class="p">):</span>
+            <span class="n">i_str</span> <span class="o">=</span> <span class="n">inflow</span><span class="p">(</span><span class="n">inlet_streams</span><span class="p">)</span>
+            <span class="n">particles</span><span class="p">[</span><span class="mi">1</span> <span class="o">-</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)](</span><span class="n">inlet_streams</span><span class="p">[</span><span class="n">i_str</span><span class="p">]())</span>
+
+        <span class="c1"># Now perform pairing</span>
+        <span class="n">part_pair</span> <span class="o">+=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">num_part</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="n">tau_pair</span>
+        <span class="n">num_pairs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">part_pair</span><span class="p">))</span>
+        <span class="n">part_pair</span> <span class="o">-=</span> <span class="n">num_pairs</span>
+        <span class="n">select_pairs</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">num_pairs</span><span class="p">,</span> <span class="n">num_fl_pairs</span><span class="p">)</span>
+
+        <span class="c1"># Rotate particles</span>
+        <span class="n">temp_comp</span> <span class="o">=</span> <span class="n">particles</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]()</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="p">[</span><span class="n">i</span><span class="o">*</span><span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_pairs</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)]:</span>
+            <span class="c1">#particles[-i] = particles[-(i+2)]</span>
+            <span class="n">particles</span><span class="p">[</span><span class="o">-</span><span class="n">i</span><span class="p">](</span><span class="n">particles</span><span class="p">[</span><span class="o">-</span><span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">)])</span>
+        <span class="n">particles</span><span class="p">[</span><span class="o">-</span><span class="p">(</span><span class="n">num_pairs</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)](</span><span class="n">temp_comp</span><span class="p">)</span>
+
+        <span class="c1"># Now loop over mix-react substeps</span>
+        <span class="n">dt_sub</span> <span class="o">=</span> <span class="n">dt</span> <span class="o">/</span> <span class="n">num_substeps</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_substeps</span><span class="p">):</span>
+            <span class="n">mix_substep</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dt_sub</span><span class="p">,</span> <span class="n">tau_mix</span><span class="p">)</span>
+            <span class="n">reaction_substep</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dt_sub</span><span class="p">,</span> <span class="n">mech</span><span class="p">)</span>
+
+        <span class="n">time</span> <span class="o">+=</span> <span class="n">dt</span>
+        <span class="n">i_step</span> <span class="o">+=</span> <span class="mi">1</span>
+
+        <span class="c1"># Save mean properties</span>
+        <span class="n">temp_mean</span><span class="p">[</span><span class="n">i_step</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">T</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">])</span>
+        <span class="n">times</span><span class="p">[</span><span class="n">i_step</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span>
+
+        <span class="c1"># Save full data</span>
+        <span class="n">save_data</span><span class="p">(</span><span class="n">i_step</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">particle_data</span><span class="p">)</span>
+
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;{:6.2f}  {:9.1f}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">time</span><span class="o">*</span><span class="mf">1000.</span><span class="p">,</span> <span class="n">temp_mean</span><span class="p">[</span><span class="n">i_step</span><span class="p">]))</span>
+
+    <span class="n">times</span> <span class="o">=</span> <span class="n">times</span><span class="p">[:</span><span class="n">i_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">temp_mean</span> <span class="o">=</span> <span class="n">temp_mean</span><span class="p">[:</span><span class="n">i_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="n">particle_data</span> <span class="o">=</span> <span class="n">particle_data</span><span class="p">[:</span><span class="n">i_step</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:,</span> <span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">particle_data</span></div>
+
+
+<div class="viewcode-block" id="parse_input_file"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.parse_input_file">[docs]</a><span class="k">def</span> <span class="nf">parse_input_file</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Parse input file for PaSR operating parameters.</span>
+
+<span class="sd">    :param input_file:</span>
+<span class="sd">        Filename with YAML-format input file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="n">pars</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+    <span class="n">case</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;case&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">case</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;premixed&#39;</span><span class="p">,</span> <span class="s1">&#39;non-premixed&#39;</span><span class="p">]:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: case needs to be one of &#39;</span>
+              <span class="s1">&#39;&quot;premixed&quot; or &quot;non-premixed&quot;.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;temperature&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: (initial) temperature needs to be specified.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pressure&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: pressure needs to be specified.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">eq_ratio</span> <span class="o">=</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;equivalence ratio&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">eq_ratio</span> <span class="ow">or</span> <span class="n">eq_ratio</span> <span class="o">&lt;</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: eq_ratio needs to be specified and &gt; 0.0.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;fuel&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: fuel species and mole fraction need to specified.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;oxidizer&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: oxidizer species and mole fractions &#39;</span>
+              <span class="s1">&#39;need to be specified.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;complete products&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: need to specify list of complete products.&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+
+    <span class="c1"># Optional inputs</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;number of particles&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">pars</span><span class="p">[</span><span class="s1">&#39;number of particles&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;residence time&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">pars</span><span class="p">[</span><span class="s1">&#39;residence time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">10.e-3</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;mixing time&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">pars</span><span class="p">[</span><span class="s1">&#39;mixing time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.e-3</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;pairing time&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">pars</span><span class="p">[</span><span class="s1">&#39;pairing time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.e-3</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">pars</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;number of residence times&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">):</span>
+        <span class="n">pars</span><span class="p">[</span><span class="s1">&#39;number of residence times&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">5</span>
+
+    <span class="k">return</span> <span class="n">pars</span></div>
+
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>
+    <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;Runs partially stirred reactor &#39;</span>
+                                        <span class="s1">&#39;(PaSR) simulation.&#39;</span>
+                            <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-i&#39;</span><span class="p">,</span> <span class="s1">&#39;--input&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Input file in YAML format for PaSR simulation.&#39;</span>
+                        <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-m&#39;</span><span class="p">,</span> <span class="s1">&#39;--mech&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Mechanism input file in either Cantera format.&#39;</span>
+                        <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-t&#39;</span><span class="p">,</span> <span class="s1">&#39;--thermo&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Thermodynamic input file, optional.&#39;</span>
+                        <span class="p">)</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-o&#39;</span><span class="p">,</span> <span class="s1">&#39;--output&#39;</span><span class="p">,</span>
+                        <span class="nb">type</span><span class="o">=</span><span class="nb">str</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="s1">&#39;pasr_output.npy&#39;</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;PaSR results file (.npy).&#39;</span>
+                        <span class="p">)</span>
+    <span class="n">args</span> <span class="o">=</span> <span class="n">parser</span><span class="o">.</span><span class="n">parse_args</span><span class="p">()</span>
+
+    <span class="n">inputs</span> <span class="o">=</span> <span class="n">parse_input_file</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">input</span><span class="p">)</span>
+    <span class="n">particle_data</span> <span class="o">=</span> <span class="n">run_simulation</span><span class="p">(</span>
+        <span class="n">args</span><span class="o">.</span><span class="n">mech</span><span class="p">,</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;case&#39;</span><span class="p">],</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;temperature&#39;</span><span class="p">],</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;pressure&#39;</span><span class="p">],</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;equivalence ratio&#39;</span><span class="p">],</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;fuel&#39;</span><span class="p">],</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;oxidizer&#39;</span><span class="p">],</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;complete products&#39;</span><span class="p">],</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;number of particles&#39;</span><span class="p">],</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;residence time&#39;</span><span class="p">],</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;mixing time&#39;</span><span class="p">],</span>
+        <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;pairing time&#39;</span><span class="p">],</span> <span class="n">inputs</span><span class="p">[</span><span class="s1">&#39;number of residence times&#39;</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">args</span><span class="o">.</span><span class="n">output</span><span class="p">,</span> <span class="n">particle_data</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+<h3>Navigation</h3>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../src/index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

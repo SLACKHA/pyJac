@@ -21,8 +21,8 @@ Documentation
    :maxdepth: 1
 
    overview
-   installing
    examples
+   installing
    src/index
 
 

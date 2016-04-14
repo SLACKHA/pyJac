@@ -929,6 +929,24 @@ def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
 
 
 def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
+    """Writes section of line for temperature partial derivative of Troe falloff.
+
+    Parameters
+    ----------
+    lang : str
+        Programming language, {'c', 'cuda'}
+    rxn : `ReacInfo`
+        Reaction of interest; pressure dependence expressed with Troe falloff
+    beta_0minf : float
+    E_0minf : float
+    k0kinf : float
+
+    Returns
+    -------
+    jline : str
+        Line fragment with Troe temperature derivative
+
+    """
     jline = (' + (((1.0 / '
              '(Fcent * (1.0 + A * A / (B * B)))) - '
              'lnF_AB * ('
@@ -965,6 +983,8 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
 
 
 def write_dcp_dt(file, lang, specs):
+    """
+    """
     T_mid_buckets = {}
     # put all of the same T_mids together
     for isp, sp in enumerate(specs):
@@ -1163,6 +1183,8 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
 
 def write_cheb_ut(file, lang, rxn):
+    """
+    """
     line_list = []
     line_list.append('cheb_temp_0 = 1')
     line_list.append('cheb_temp_1 = Pred')
@@ -1460,6 +1482,8 @@ def write_dt_y(file, lang, specs, sp, isp, num_s,
 
 
 def write_dt_y_division(file, lang, specs, num_s, get_array):
+    """
+    """
     line = utils.line_start + utils.comment[lang]
     line += ('Complete dT/dy calculations\n')
     file.write(line)
@@ -1529,7 +1553,33 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
     """
     Writes the header and definitions for of any of the various sub-functions
 
-    Returns the opened file
+    Parameters
+    ----------
+    path : str
+        Path to build directory for file.
+    lang : str {'c', 'cuda'}
+        Programming language
+    number : int
+        Jacobian file number
+    rate_list :
+    this_rev :
+    this_pdep :
+    have_pres_mod_temp :
+    batch_has_m :
+    this_thd :
+    this_troe :
+    this_sri :
+    this_cheb :
+    cheb_dim :
+    this_plog :
+    no_shared :
+    has_nsp :
+
+    Returns
+    -------
+    file : file object
+        Opened Jacobian file
+
     """
     with open(os.path.join(path, 'jacob_' + str(number) +
               utils.header_ext[lang]), 'w'
@@ -1751,7 +1801,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     ----------
     path : str
         Path to build directory for file.
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
+    lang : str {'c', 'cuda', 'fortran', 'matlab'}
         Programming language.
     specs : list of SpecInfo
         List of species in the mechanism.
@@ -1760,7 +1810,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     seen_sp : list of bool
         List of booleans, False if species i has an (identically) zero species rate
     smm : shared_memory_manager, optional
-        If not None, use this to manage shared memory optimization
+        If not ``None``, use this to manage shared memory optimization
 
     Returns
     -------
@@ -2863,7 +2913,7 @@ def write_sparse_multiplier(path, lang, touched, nvars):
     inidicies : list
         A list of indicies where the Jacobian is non-zero
     nvars : int
-        How many variables in the Jacobian matrix
+        Number of variables in the Jacobian matrix
 
     Returns
     -------
@@ -2981,30 +3031,30 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
         improve cache hit rates
     initial_state : str, optional
         A comma separated list of the initial conditions to use in form
-        T,P,X (e.g. 800,1,H2=1.0,O2=0.5). Temperature in K, P in atm
+        T,P,X (e.g. '800,1,H2=1.0,O2=0.5'). Temperature in K, P in atm
     num_blocks : int, optional
         The target number of blocks / sm to achieve for cuda
     num_threads : int, optional
         The target number of threads / block to achieve for cuda
     no_shared : bool, optional
-        If true, do not use the shared_memory_manager
+        If ``True``, do not use the shared_memory_manager
         to attempt to optimize for CUDA
     L1_preferred : bool, optional
-        If true, prefer a larger L1 cache
+        If ``True``, prefer a larger L1 cache
         and a smaller shared memory size for CUDA
     multi_thread : int, optional
         The number of threads to use during optimization
     force_optimize : bool, optional
-        If true, redo the cache optimization even if the same mechanism
+        If ``True``, redo the cache optimization even if the same mechanism
     build_path : str, optional
         The output directory for the jacobian files
     last_spec : str, optional
         If specified, the species to assign to the last index.
         Typically should be N2, Ar, He or another inert bath gas
     skip_jac : bool, optional
-        If True, only the reaction rate subroutines will be generated
+        If ``True``, only the reaction rate subroutines will be generated
     auto_diff : bool, optional
-        If True, generate files for use with the Adept autodifferention library.
+        If ``True``, generate files for use with the Adept autodifferention library.
 
     Returns
     -------

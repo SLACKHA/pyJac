@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module for writing species/reaction rate subroutines.
 
 This is kept separate from Jacobian creation module in order
@@ -148,11 +149,27 @@ def rxn_rate_const(A, b, E):
 def get_cheb_rate(lang, rxn, write_defns=True):
     """
     Given a reaction, and a temperature and pressure, this routine
-    will generate code to evaluate the Chebyshev rate efficiently
+    will generate code to evaluate the Chebyshev rate efficiently.
 
-    Assumes:
-    Existence of variables dot_prod* of sized at least rxn.cheb_n_temp
-    Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1
+    Note
+    ----
+    Assumes existence of variables dot_prod* of sized at least rxn.cheb_n_temp
+    Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.
+
+    Parameters
+    ----------
+    lang : str
+        Programming language
+    rxn : `ReacInfo`
+        Reaction with Chebyshev pressure dependence.
+    write_defns : bool, optional
+        If ``True`` (default), write calculation of ``Tred`` and ``Pred``.
+
+    Returns
+    -------
+    line : list of `str`
+        Line with evaluation of Chebyshev reaction rate.
+
     """
 
     line_list = []
@@ -246,19 +263,19 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         Path to build directory for file.
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Programming language.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in the mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in the mechanism.
     fwd_rxn_mapping : List of integers
         The index of the reaction in the original mechanism
-    smm : shared_memory_manager, optional
-        If not None, the shared_memory_manager to use for CUDA optimizations
+    smm : `shared_memory_manager`, optional
+        If not ``None`` (default), `shared_memory_manager` for CUDA optimizations
     auto_diff : bool, optional
-        If True, generate files for use with the Adept autodifferention library.
+        If ``True``, generate files for Adept autodifferention library.
 
     Returns
-    _______
+    -------
     None
 
     """
@@ -324,6 +341,20 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             smm.write_init(file, indent=2)
 
     def write_header(lang, rate_count):
+        """Writes reaction rate header file.
+
+        Parameters
+        ----------
+        lang : str
+            Programming language
+        rate_count : int
+            Number of reaction rate files.
+
+        Returns
+        -------
+        None
+
+        """
         with open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
                         rate_count, utils.header_ext[lang])), 'w') as file:
             line = ('#ifndef RATES_HEAD_{0}\n'
@@ -345,6 +376,27 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             file.write('#endif\n')
 
     def write_sub_intro(file, defines, start, end, rate_count=None):
+        """Write introduction to reaction rate subroutine.
+
+        Parameters
+        ----------
+        file : file
+            Open file for reaction rate subroutines
+        defines : bool
+            If ``True``, write variable definitions
+        start : int
+            Index of initial reaction for this subroutine
+        end : int
+            Index of final reaction for this subroutine
+        rate_count : int, optional
+            Number of reaction rate files.
+
+        Returns
+        -------
+        None
+
+        """
+
         pre = '  '
         line = ''
         if lang == 'cuda': line = '__device__ '
@@ -826,7 +878,8 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
 
 def write_rxn_pressure_mod(path, lang, specs, reacs,
-                            fwd_rxn_mapping, smm=None, auto_diff=False):
+                           fwd_rxn_mapping, smm=None, auto_diff=False
+                           ):
     """Write subroutine to for reaction pressure dependence modifications.
 
     Parameters
@@ -835,16 +888,16 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
         Path to build directory for file.
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Language type.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in mechanism.
-    fwd_rxn_mapping : List of integers
+    fwd_rxn_mapping : List of int
         The order of the reaction in the original mechanism
-    smm : shared_memory_manager, optional
-        If not None, the shared_memory_manager to use for CUDA optimizations
+    smm : `shared_memory_manager`, optional
+        If not ```None```, `shared_memory_manager` to use for CUDA optimizations
     auto_diff : bool, optional
-        If True, generate files for use with the Adept autodifferention library.
+        If ```True```, generate files for Adept autodifferention library.
 
     Returns
     -------
@@ -1252,22 +1305,22 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
         Path to build directory for file.
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Programming language.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in mechanism.
     fwd_spec_mapping : list of int
         the index of the species in the original mechanism
     fwd_rxn_mapping : list of int
         the index of the reactions in the original mechanism
     smm : shared_memory_manager, optional
-        If not None, the shared_memory_manager to use for CUDA optimizations
+        If not ```None```, `shared_memory_manager` to use for CUDA optimizations
     auto_diff : bool, optional
-        If True, generate files for use with the Adept autodifferention library.
+        If ```True```, generate files for Adept autodifferention library.
 
     Returns
     -------
-    seen : a list of bools, True if species rate i is not identically zero
+    seen : list of `bool`, ``True`` if species rate i is not identically zero
 
     """
 
@@ -1503,10 +1556,10 @@ def write_chem_utils(path, lang, specs, auto_diff):
         Path to build directory for file.
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Programming language.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in the mechanism.
     auto_diff : bool, optional
-        If True, generate files for use with the Adept autodifferention library.
+        If ``True``, generate files for Adept autodifferention library.
 
     Returns
     -------
@@ -2046,14 +2099,14 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
         Path to build directory for file.
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Programming language.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in the mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in the mechanism.
     specs_nonzero : list of bool
-        List of bools indicating species with zero net production in the mechanism
+        List of `bool` indicating species with zero net production
     auto_diff : bool, optional
-        If True, generate files for use with the Adept autodifferention library.
+        If ``True``, generate files for Adept autodifferention library.
 
     Returns
     -------
@@ -2446,7 +2499,7 @@ def write_mass_mole(path, lang, specs):
         Path to build directory for file.
     lang : {'c', 'cuda', 'fortran', 'matlab'}
         Programming language.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in mechanism.
 
     Returns

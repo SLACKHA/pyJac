@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Chemkin-format mechanism interpreter module.
 """
 
@@ -25,15 +26,14 @@ try:
 except ImportError:
     CANTERA_FLAG = False
 
-# Supported units list for pre-exponential factor
 pre_units = ['moles', 'molecules']
+"""list(`str`): Supported units list for pre-exponential factor"""
 
-# Supported units list for activation energy
 act_energy_units = ['kelvins', 'evolts', 'cal/mole', 'joules/kmole',
                     'kcal/mole', 'joules/mole', 'kjoules/mole'
                     ]
+"""list(`str`): Supported units list for activation energy"""
 
-# Activation energy conversion factor
 act_energy_fact = dict({'kelvins': 1.0,
                         'evolts': 11595.,
                         'cal/mole': 4.184 / chem.RU_JOUL,
@@ -42,6 +42,7 @@ act_energy_fact = dict({'kelvins': 1.0,
                         'kjoules/mole': 1000.0 / chem.RU_JOUL,
                         'joules/kmole': 1. / (chem.RU_JOUL * 1000.)
                         })
+"""dict: Activation energy conversion factor"""
 
 # get local element atomic weight dict
 elem_wt = chem.get_elem_wt()
@@ -61,9 +62,9 @@ def read_mech(mech_filename, therm_filename):
     -------
     elems : list of str
         List of elements in mechanism.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in mechanism.
     units : str
         Units of reactions' Arrhenius coefficients
@@ -724,7 +725,7 @@ def read_thermo(filename, elems, specs):
         Name of thermo database file.
     elems : list of str
         List of element names in mechanism.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in mechanism.
 
     Returns
@@ -869,16 +870,16 @@ def read_mech_ct(filename=None, gas=None):
     ----------
     filename : str
         Reaction mechanism filename (e.g. 'mech.cti'). Optional.
-    gas : Cantera Solution object
+    gas : `cantera.Solution` object
         Existing Cantera Solution object to be used. Optional.
 
     Returns
     -------
     elems : list of str
         List of elements in mechanism.
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in mechanism.
     units : str
         Units of reactions' Arrhenius coefficients

@@ -96,11 +96,11 @@ def convert_mech(mech_filename, therm_filename=None):
     """Convert a mechanism and return a string with the filename.
 
     Convert a CHEMKIN format mechanism to the Cantera CTI format using
-    the Cantera built-in script `ck2cti`.
+    the Cantera built-in script ``ck2cti``.
 
     :param mech_filename:
         Filename of the input CHEMKIN format mechanism. The converted
-        CTI file will have the same name, but with `.cti` extension.
+        CTI file will have the same name, but with ``.cti`` extension.
     :param thermo_filename:
         Filename of the thermodynamic database. Optional if the
         thermodynamic database is present in the mechanism input.
@@ -662,7 +662,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
     else:
         pyjacob = cpyjac_evaluator(build_dir, gas)
 
-     # The test data from Cantera does not use the 1 - Yn approach
+    # The test data from Cantera does not use the 1 - Yn approach
     # and thus mass is not explicitly, strictly conserved
     # Although this effect is typically very small e.g. O(1e-16)
     # it can have a large effect on the error in certain cases

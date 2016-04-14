@@ -40,6 +40,24 @@
   <div class="section" id="module-pyjac.core.mech_interpret">
 <span id="pyjac-core-mech-interpret-module"></span><h1>pyjac.core.mech_interpret module<a class="headerlink" href="#module-pyjac.core.mech_interpret" title="Permalink to this headline">¶</a></h1>
 <p>Chemkin-format mechanism interpreter module.</p>
+<dl class="data">
+<dt id="pyjac.core.mech_interpret.pre_units">
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">pre_units</code><em class="property"> = ['moles', 'molecules']</em><a class="headerlink" href="#pyjac.core.mech_interpret.pre_units" title="Permalink to this definition">¶</a></dt>
+<dd><p>list(<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; Supported units list for pre-exponential factor</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="pyjac.core.mech_interpret.act_energy_units">
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">act_energy_units</code><em class="property"> = ['kelvins', 'evolts', 'cal/mole', 'joules/kmole', 'kcal/mole', 'joules/mole', 'kjoules/mole']</em><a class="headerlink" href="#pyjac.core.mech_interpret.act_energy_units" title="Permalink to this definition">¶</a></dt>
+<dd><p>list(<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; Supported units list for activation energy</p>
+</dd></dl>
+
+<dl class="data">
+<dt id="pyjac.core.mech_interpret.act_energy_fact">
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">act_energy_fact</code><em class="property"> = {'joules/kmole': 0.00012027236253804078, 'cal/mole': 0.5032195648591627, 'kcal/mole': 503.2195648591627, 'evolts': 11595.0, 'kjoules/mole': 120.2723625380408, 'joules/mole': 0.1202723625380408, 'kelvins': 1.0}</em><a class="headerlink" href="#pyjac.core.mech_interpret.act_energy_fact" title="Permalink to this definition">¶</a></dt>
+<dd><p><em>dict</em> &#8211; Activation energy conversion factor</p>
+</dd></dl>
+
 <dl class="function">
 <dt id="pyjac.core.mech_interpret.read_mech">
 <code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">read_mech</code><span class="sig-paren">(</span><em>mech_filename</em>, <em>therm_filename</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/mech_interpret.html#read_mech"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.mech_interpret.read_mech" title="Permalink to this definition">¶</a></dt>
@@ -56,8 +74,8 @@
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
 <li><strong>elems</strong> (<em>list of str</em>) &#8211; List of elements in mechanism.</li>
-<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in mechanism.</li>
-<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of reactions in mechanism.</li>
 <li><strong>units</strong> (<em>str</em>) &#8211; Units of reactions&#8217; Arrhenius coefficients</li>
 </ul>
 </p>
@@ -83,7 +101,7 @@ values (if given).</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of thermo database file.</li>
 <li><strong>elems</strong> (<em>list of str</em>) &#8211; List of element names in mechanism.</li>
-<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in mechanism.</li>
 </ul>
 </td>
 </tr>
@@ -107,14 +125,14 @@ values (if given).</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.cti&#8217;). Optional.</li>
-<li><strong>gas</strong> (<em>Cantera Solution object</em>) &#8211; Existing Cantera Solution object to be used. Optional.</li>
+<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object) &#8211; Existing Cantera Solution object to be used. Optional.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
 <li><strong>elems</strong> (<em>list of str</em>) &#8211; List of elements in mechanism.</li>
-<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in mechanism.</li>
-<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of reactions in mechanism.</li>
 <li><strong>units</strong> (<em>str</em>) &#8211; Units of reactions&#8217; Arrhenius coefficients</li>
 </ul>
 </p>

@@ -970,6 +970,24 @@
 
 
 <div class="viewcode-block" id="write_troe_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_troe_dt">[docs]</a><span class="k">def</span> <span class="nf">write_troe_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">beta_0minf</span><span class="p">,</span> <span class="n">E_0minf</span><span class="p">,</span> <span class="n">k0kinf</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Writes section of line for temperature partial derivative of Troe falloff.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        Programming language, {&#39;c&#39;, &#39;cuda&#39;}</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        Reaction of interest; pressure dependence expressed with Troe falloff</span>
+<span class="sd">    beta_0minf : float</span>
+<span class="sd">    E_0minf : float</span>
+<span class="sd">    k0kinf : float</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jline : str</span>
+<span class="sd">        Line fragment with Troe temperature derivative</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jline</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39; + (((1.0 / &#39;</span>
              <span class="s1">&#39;(Fcent * (1.0 + A * A / (B * B)))) - &#39;</span>
              <span class="s1">&#39;lnF_AB * (&#39;</span>
@@ -1006,6 +1024,8 @@
 
 
 <div class="viewcode-block" id="write_dcp_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dcp_dt">[docs]</a><span class="k">def</span> <span class="nf">write_dcp_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">T_mid_buckets</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="c1"># put all of the same T_mids together</span>
     <span class="k">for</span> <span class="n">isp</span><span class="p">,</span> <span class="n">sp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">):</span>
@@ -1204,6 +1224,8 @@
 
 
 <div class="viewcode-block" id="write_cheb_ut"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_cheb_ut">[docs]</a><span class="k">def</span> <span class="nf">write_cheb_ut</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">line_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">line_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;cheb_temp_0 = 1&#39;</span><span class="p">)</span>
     <span class="n">line_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;cheb_temp_1 = Pred&#39;</span><span class="p">)</span>
@@ -1501,6 +1523,8 @@
 
 
 <div class="viewcode-block" id="write_dt_y_division"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_y_division">[docs]</a><span class="k">def</span> <span class="nf">write_dt_y_division</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">num_s</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
     <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;Complete dT/dy calculations</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
@@ -1570,7 +1594,33 @@
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Writes the header and definitions for of any of the various sub-functions</span>
 
-<span class="sd">    Returns the opened file</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path to build directory for file.</span>
+<span class="sd">    lang : str {&#39;c&#39;, &#39;cuda&#39;}</span>
+<span class="sd">        Programming language</span>
+<span class="sd">    number : int</span>
+<span class="sd">        Jacobian file number</span>
+<span class="sd">    rate_list :</span>
+<span class="sd">    this_rev :</span>
+<span class="sd">    this_pdep :</span>
+<span class="sd">    have_pres_mod_temp :</span>
+<span class="sd">    batch_has_m :</span>
+<span class="sd">    this_thd :</span>
+<span class="sd">    this_troe :</span>
+<span class="sd">    this_sri :</span>
+<span class="sd">    this_cheb :</span>
+<span class="sd">    cheb_dim :</span>
+<span class="sd">    this_plog :</span>
+<span class="sd">    no_shared :</span>
+<span class="sd">    has_nsp :</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    file : file object</span>
+<span class="sd">        Opened Jacobian file</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;jacob_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">number</span><span class="p">)</span> <span class="o">+</span>
               <span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]),</span> <span class="s1">&#39;w&#39;</span>
@@ -1792,7 +1842,7 @@
 <span class="sd">    ----------</span>
 <span class="sd">    path : str</span>
 <span class="sd">        Path to build directory for file.</span>
-<span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
+<span class="sd">    lang : str {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Programming language.</span>
 <span class="sd">    specs : list of SpecInfo</span>
 <span class="sd">        List of species in the mechanism.</span>
@@ -1801,7 +1851,7 @@
 <span class="sd">    seen_sp : list of bool</span>
 <span class="sd">        List of booleans, False if species i has an (identically) zero species rate</span>
 <span class="sd">    smm : shared_memory_manager, optional</span>
-<span class="sd">        If not None, use this to manage shared memory optimization</span>
+<span class="sd">        If not ``None``, use this to manage shared memory optimization</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -2904,7 +2954,7 @@
 <span class="sd">    inidicies : list</span>
 <span class="sd">        A list of indicies where the Jacobian is non-zero</span>
 <span class="sd">    nvars : int</span>
-<span class="sd">        How many variables in the Jacobian matrix</span>
+<span class="sd">        Number of variables in the Jacobian matrix</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -3022,30 +3072,30 @@
 <span class="sd">        improve cache hit rates</span>
 <span class="sd">    initial_state : str, optional</span>
 <span class="sd">        A comma separated list of the initial conditions to use in form</span>
-<span class="sd">        T,P,X (e.g. 800,1,H2=1.0,O2=0.5). Temperature in K, P in atm</span>
+<span class="sd">        T,P,X (e.g. &#39;800,1,H2=1.0,O2=0.5&#39;). Temperature in K, P in atm</span>
 <span class="sd">    num_blocks : int, optional</span>
 <span class="sd">        The target number of blocks / sm to achieve for cuda</span>
 <span class="sd">    num_threads : int, optional</span>
 <span class="sd">        The target number of threads / block to achieve for cuda</span>
 <span class="sd">    no_shared : bool, optional</span>
-<span class="sd">        If true, do not use the shared_memory_manager</span>
+<span class="sd">        If ``True``, do not use the shared_memory_manager</span>
 <span class="sd">        to attempt to optimize for CUDA</span>
 <span class="sd">    L1_preferred : bool, optional</span>
-<span class="sd">        If true, prefer a larger L1 cache</span>
+<span class="sd">        If ``True``, prefer a larger L1 cache</span>
 <span class="sd">        and a smaller shared memory size for CUDA</span>
 <span class="sd">    multi_thread : int, optional</span>
 <span class="sd">        The number of threads to use during optimization</span>
 <span class="sd">    force_optimize : bool, optional</span>
-<span class="sd">        If true, redo the cache optimization even if the same mechanism</span>
+<span class="sd">        If ``True``, redo the cache optimization even if the same mechanism</span>
 <span class="sd">    build_path : str, optional</span>
 <span class="sd">        The output directory for the jacobian files</span>
 <span class="sd">    last_spec : str, optional</span>
 <span class="sd">        If specified, the species to assign to the last index.</span>
 <span class="sd">        Typically should be N2, Ar, He or another inert bath gas</span>
 <span class="sd">    skip_jac : bool, optional</span>
-<span class="sd">        If True, only the reaction rate subroutines will be generated</span>
+<span class="sd">        If ``True``, only the reaction rate subroutines will be generated</span>
 <span class="sd">    auto_diff : bool, optional</span>
-<span class="sd">        If True, generate files for use with the Adept autodifferention library.</span>
+<span class="sd">        If ``True``, generate files for use with the Adept autodifferention library.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>

@@ -39,7 +39,8 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.core.rate_subs</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Module for writing species/reaction rate subroutines.</span>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;Module for writing species/reaction rate subroutines.</span>
 
 <span class="sd">This is kept separate from Jacobian creation module in order</span>
 <span class="sd">to create only the rate subroutines if desired.</span>
@@ -189,11 +190,27 @@
 <div class="viewcode-block" id="get_cheb_rate"><a class="viewcode-back" href="../../../src/pyjac.core.rate_subs.html#pyjac.core.rate_subs.get_cheb_rate">[docs]</a><span class="k">def</span> <span class="nf">get_cheb_rate</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">write_defns</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Given a reaction, and a temperature and pressure, this routine</span>
-<span class="sd">    will generate code to evaluate the Chebyshev rate efficiently</span>
+<span class="sd">    will generate code to evaluate the Chebyshev rate efficiently.</span>
 
-<span class="sd">    Assumes:</span>
-<span class="sd">    Existence of variables dot_prod* of sized at least rxn.cheb_n_temp</span>
-<span class="sd">    Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1</span>
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    Assumes existence of variables dot_prod* of sized at least rxn.cheb_n_temp</span>
+<span class="sd">    Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        Programming language</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        Reaction with Chebyshev pressure dependence.</span>
+<span class="sd">    write_defns : bool, optional</span>
+<span class="sd">        If ``True`` (default), write calculation of ``Tred`` and ``Pred``.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    line : list of `str`</span>
+<span class="sd">        Line with evaluation of Chebyshev reaction rate.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">line_list</span> <span class="o">=</span> <span class="p">[]</span>
@@ -287,19 +304,19 @@
 <span class="sd">        Path to build directory for file.</span>
 <span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Programming language.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in the mechanism.</span>
-<span class="sd">    reacs : list of ReacInfo</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in the mechanism.</span>
 <span class="sd">    fwd_rxn_mapping : List of integers</span>
 <span class="sd">        The index of the reaction in the original mechanism</span>
-<span class="sd">    smm : shared_memory_manager, optional</span>
-<span class="sd">        If not None, the shared_memory_manager to use for CUDA optimizations</span>
+<span class="sd">    smm : `shared_memory_manager`, optional</span>
+<span class="sd">        If not ``None`` (default), `shared_memory_manager` for CUDA optimizations</span>
 <span class="sd">    auto_diff : bool, optional</span>
-<span class="sd">        If True, generate files for use with the Adept autodifferention library.</span>
+<span class="sd">        If ``True``, generate files for Adept autodifferention library.</span>
 
 <span class="sd">    Returns</span>
-<span class="sd">    _______</span>
+<span class="sd">    -------</span>
 <span class="sd">    None</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -365,6 +382,20 @@
             <span class="n">smm</span><span class="o">.</span><span class="n">write_init</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rate_count</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Writes reaction rate header file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lang : str</span>
+<span class="sd">            Programming language</span>
+<span class="sd">        rate_count : int</span>
+<span class="sd">            Number of reaction rate files.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;rates&#39;</span><span class="p">,</span> <span class="s1">&#39;rxn_rates_{}{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                         <span class="n">rate_count</span><span class="p">,</span> <span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
             <span class="n">line</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;#ifndef RATES_HEAD_{0}</span><span class="se">\n</span><span class="s1">&#39;</span>
@@ -386,6 +417,27 @@
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">write_sub_intro</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">defines</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">,</span> <span class="n">rate_count</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Write introduction to reaction rate subroutine.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        file : file</span>
+<span class="sd">            Open file for reaction rate subroutines</span>
+<span class="sd">        defines : bool</span>
+<span class="sd">            If ``True``, write variable definitions</span>
+<span class="sd">        start : int</span>
+<span class="sd">            Index of initial reaction for this subroutine</span>
+<span class="sd">        end : int</span>
+<span class="sd">            Index of final reaction for this subroutine</span>
+<span class="sd">        rate_count : int, optional</span>
+<span class="sd">            Number of reaction rate files.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="n">pre</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span>
         <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span> <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;__device__ &#39;</span>
@@ -867,7 +919,8 @@
 
 
 <div class="viewcode-block" id="write_rxn_pressure_mod"><a class="viewcode-back" href="../../../src/pyjac.core.rate_subs.html#pyjac.core.rate_subs.write_rxn_pressure_mod">[docs]</a><span class="k">def</span> <span class="nf">write_rxn_pressure_mod</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span>
-                            <span class="n">fwd_rxn_mapping</span><span class="p">,</span> <span class="n">smm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+                           <span class="n">fwd_rxn_mapping</span><span class="p">,</span> <span class="n">smm</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span>
+                           <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Write subroutine to for reaction pressure dependence modifications.</span>
 
 <span class="sd">    Parameters</span>
@@ -876,16 +929,16 @@
 <span class="sd">        Path to build directory for file.</span>
 <span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Language type.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in mechanism.</span>
-<span class="sd">    reacs : list of ReacInfo</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in mechanism.</span>
-<span class="sd">    fwd_rxn_mapping : List of integers</span>
+<span class="sd">    fwd_rxn_mapping : List of int</span>
 <span class="sd">        The order of the reaction in the original mechanism</span>
-<span class="sd">    smm : shared_memory_manager, optional</span>
-<span class="sd">        If not None, the shared_memory_manager to use for CUDA optimizations</span>
+<span class="sd">    smm : `shared_memory_manager`, optional</span>
+<span class="sd">        If not ```None```, `shared_memory_manager` to use for CUDA optimizations</span>
 <span class="sd">    auto_diff : bool, optional</span>
-<span class="sd">        If True, generate files for use with the Adept autodifferention library.</span>
+<span class="sd">        If ```True```, generate files for Adept autodifferention library.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1293,22 +1346,22 @@
 <span class="sd">        Path to build directory for file.</span>
 <span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Programming language.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in mechanism.</span>
-<span class="sd">    reacs : list of ReacInfo</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in mechanism.</span>
 <span class="sd">    fwd_spec_mapping : list of int</span>
 <span class="sd">        the index of the species in the original mechanism</span>
 <span class="sd">    fwd_rxn_mapping : list of int</span>
 <span class="sd">        the index of the reactions in the original mechanism</span>
 <span class="sd">    smm : shared_memory_manager, optional</span>
-<span class="sd">        If not None, the shared_memory_manager to use for CUDA optimizations</span>
+<span class="sd">        If not ```None```, `shared_memory_manager` to use for CUDA optimizations</span>
 <span class="sd">    auto_diff : bool, optional</span>
-<span class="sd">        If True, generate files for use with the Adept autodifferention library.</span>
+<span class="sd">        If ```True```, generate files for Adept autodifferention library.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    seen : a list of bools, True if species rate i is not identically zero</span>
+<span class="sd">    seen : list of `bool`, ``True`` if species rate i is not identically zero</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -1544,10 +1597,10 @@
 <span class="sd">        Path to build directory for file.</span>
 <span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Programming language.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in the mechanism.</span>
 <span class="sd">    auto_diff : bool, optional</span>
-<span class="sd">        If True, generate files for use with the Adept autodifferention library.</span>
+<span class="sd">        If ``True``, generate files for Adept autodifferention library.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -2087,14 +2140,14 @@
 <span class="sd">        Path to build directory for file.</span>
 <span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Programming language.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in the mechanism.</span>
-<span class="sd">    reacs : list of ReacInfo</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in the mechanism.</span>
 <span class="sd">    specs_nonzero : list of bool</span>
-<span class="sd">        List of bools indicating species with zero net production in the mechanism</span>
+<span class="sd">        List of `bool` indicating species with zero net production</span>
 <span class="sd">    auto_diff : bool, optional</span>
-<span class="sd">        If True, generate files for use with the Adept autodifferention library.</span>
+<span class="sd">        If ``True``, generate files for Adept autodifferention library.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -2487,7 +2540,7 @@
 <span class="sd">        Path to build directory for file.</span>
 <span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Programming language.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in mechanism.</span>
 
 <span class="sd">    Returns</span>

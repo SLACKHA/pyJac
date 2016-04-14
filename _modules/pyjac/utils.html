@@ -39,7 +39,8 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.utils</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Module containing utility functions.</span>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;Module containing utility functions.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Standard libraries</span>
@@ -48,48 +49,68 @@
 <span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">log10</span><span class="p">,</span> <span class="n">floor</span>
 <span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
 
-<span class="c1"># Local imports</span>
+<span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;line_start&#39;</span><span class="p">,</span> <span class="s1">&#39;comment&#39;</span><span class="p">,</span> <span class="s1">&#39;langs&#39;</span><span class="p">,</span> <span class="s1">&#39;file_ext&#39;</span><span class="p">,</span> <span class="s1">&#39;restrict&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;header_ext&#39;</span><span class="p">,</span> <span class="s1">&#39;line_end&#39;</span><span class="p">,</span> <span class="s1">&#39;exp_10_fun&#39;</span><span class="p">,</span> <span class="s1">&#39;array_chars&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;get_species_mappings&#39;</span><span class="p">,</span> <span class="s1">&#39;get_nu&#39;</span><span class="p">,</span> <span class="s1">&#39;read_str_num&#39;</span><span class="p">,</span> <span class="s1">&#39;split_str&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;create_dir&#39;</span><span class="p">,</span> <span class="s1">&#39;get_array&#39;</span><span class="p">,</span> <span class="s1">&#39;get_index&#39;</span><span class="p">,</span> <span class="s1">&#39;reassign_species_lists&#39;</span><span class="p">,</span>
+           <span class="s1">&#39;is_integer&#39;</span><span class="p">,</span> <span class="s1">&#39;get_parser&#39;</span>
+           <span class="p">]</span>
 
 <span class="n">line_start</span> <span class="o">=</span> <span class="s1">&#39;  &#39;</span>
 <span class="n">comment</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;//&#39;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s1">&#39;//&#39;</span><span class="p">,</span>
-                <span class="n">fortran</span><span class="o">=</span><span class="s1">&#39;!&#39;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s1">&#39;%&#39;</span><span class="p">)</span>
+               <span class="n">fortran</span><span class="o">=</span><span class="s1">&#39;!&#39;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s1">&#39;%&#39;</span>
+               <span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;dict: comment characters for each language&quot;&quot;&quot;</span>
 
-<span class="c1"># list of supported languages</span>
 <span class="n">langs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;cuda&#39;</span><span class="p">,</span> <span class="s1">&#39;fortran&#39;</span><span class="p">,</span> <span class="s1">&#39;matlab&#39;</span><span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;list(`str`): list of supported languages&quot;&quot;&quot;</span>
 
-<span class="c1"># source code file extensions based on language</span>
-<span class="n">file_ext</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;.c&#39;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s1">&#39;.cu&#39;</span><span class="p">,</span>
-                <span class="n">fortran</span><span class="o">=</span><span class="s1">&#39;.f90&#39;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s1">&#39;.m&#39;</span>
-                <span class="p">)</span>
+<span class="n">file_ext</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;.c&#39;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s1">&#39;.cu&#39;</span><span class="p">,</span> <span class="n">fortran</span><span class="o">=</span><span class="s1">&#39;.f90&#39;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s1">&#39;.m&#39;</span><span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;dict: source code file extensions based on language&quot;&quot;&quot;</span>
 
 <span class="n">restrict</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;c&#39;</span> <span class="p">:</span> <span class="s1">&#39;__restrict__&#39;</span><span class="p">,</span>
             <span class="s1">&#39;cuda&#39;</span> <span class="p">:</span> <span class="s1">&#39;__restrict__&#39;</span><span class="p">}</span>
+<span class="sd">&quot;&quot;&quot;dict: language-dependent keyword for restrict&quot;&quot;&quot;</span>
 
-<span class="c1"># header extensions based on language</span>
 <span class="n">header_ext</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;.h&#39;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s1">&#39;.cuh&#39;</span><span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;dict: header extensions based on language&quot;&quot;&quot;</span>
 
-<span class="c1"># line endings dependent on language</span>
 <span class="n">line_end</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s1">&#39;;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span>
                 <span class="n">fortran</span><span class="o">=</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s1">&#39;;</span><span class="se">\n</span><span class="s1">&#39;</span>
                 <span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;dict: line endings dependent on language&quot;&quot;&quot;</span>
 
-<span class="c1"># exp10 functions for various languages</span>
 <span class="n">exp_10_fun</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s2">&quot;pow(10.0, &quot;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s1">&#39;exp10(&#39;</span><span class="p">,</span>
                   <span class="n">fortran</span><span class="o">=</span><span class="s1">&#39;exp(log(10) * &#39;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s1">&#39;exp(log(10.0) * &#39;</span>
                   <span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;dict: exp10 functions for various languages&quot;&quot;&quot;</span>
 
-<span class="c1"># the characters to format an index into an array per language</span>
 <span class="n">array_chars</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s2">&quot;[{}]&quot;</span><span class="p">,</span> <span class="n">cuda</span><span class="o">=</span><span class="s2">&quot;[INDEX({})]&quot;</span><span class="p">,</span>
                    <span class="n">fortran</span><span class="o">=</span><span class="s2">&quot;({})&quot;</span><span class="p">,</span> <span class="n">matlab</span><span class="o">=</span><span class="s2">&quot;({})&quot;</span>
                    <span class="p">)</span>
+<span class="sd">&quot;&quot;&quot;dict: the characters to format an index into an array per language&quot;&quot;&quot;</span>
 
 <span class="c1"># if false, zero values will be assumed to have been set previously (by memset etc.)</span>
 <span class="c1"># and can be skipped, to increase efficiency</span>
 
 <div class="viewcode-block" id="get_species_mappings"><a class="viewcode-back" href="../../src/pyjac.utils.html#pyjac.utils.get_species_mappings">[docs]</a><span class="k">def</span> <span class="nf">get_species_mappings</span><span class="p">(</span><span class="n">num_specs</span><span class="p">,</span> <span class="n">last_species</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Consolidate the forward/backwards species mapping</span>
-<span class="sd">    in one place.</span>
+<span class="sd">    Maps species indices around species moved to last position.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_specs : int</span>
+<span class="sd">        Number of species.</span>
+<span class="sd">    last_species : int</span>
+<span class="sd">        Index of species being moved to end of system.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fwd_species_map : list of `int`</span>
+<span class="sd">        List of original indices in new order</span>
+<span class="sd">    back_species_map : list of `int`</span>
+<span class="sd">        List of new indicies in original order</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">fwd_species_map</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_specs</span><span class="p">)</span>
@@ -111,9 +132,21 @@
     <span class="k">return</span> <span class="n">fwd_species_map</span><span class="p">,</span> <span class="n">back_species_map</span></div>
 
 
-
 <div class="viewcode-block" id="get_nu"><a class="viewcode-back" href="../../src/pyjac.utils.html#pyjac.utils.get_nu">[docs]</a><span class="k">def</span> <span class="nf">get_nu</span><span class="p">(</span><span class="n">isp</span><span class="p">,</span> <span class="n">rxn</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns the net nu of species isp for the reaction rxn</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    isp : int</span>
+<span class="sd">        Species index</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        Reaction</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    nu : int</span>
+<span class="sd">        Overall stoichiometric coefficient of species ``isp`` in reaction ``rxn``</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">isp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span> <span class="ow">and</span> <span class="n">isp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">reac</span><span class="p">:</span>
         <span class="n">nu</span> <span class="o">=</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">prod_nu</span><span class="p">[</span><span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">isp</span><span class="p">)]</span> <span class="o">-</span>
@@ -145,8 +178,8 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    list of float</span>
-<span class="sd">        Floats separated by `sep` in `string`.</span>
+<span class="sd">    list of `float`</span>
+<span class="sd">        Floats separated by ``sep`` in ``string``.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -167,8 +200,8 @@
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
-<span class="sd">    list of str</span>
-<span class="sd">        List of strings of length `length` from `seq`.</span>
+<span class="sd">    list of `str`</span>
+<span class="sd">        List of strings of length ``length`` from ``seq``.</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="p">[</span><span class="n">seq</span><span class="p">[</span><span class="n">i</span><span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">length</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">),</span> <span class="n">length</span><span class="p">)]</span></div>
@@ -210,8 +243,14 @@
 <span class="sd">    index : int</span>
 <span class="sd">        The index to format</span>
 <span class="sd">    twod : int, optional</span>
-<span class="sd">        If not None and the lang is fortan or matlab this will be formatted</span>
+<span class="sd">        If not ``None`` and the lang is &#39;fortan&#39; or &#39;matlab&#39; this will be formatted</span>
 <span class="sd">        as a second index in the array.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    name : str</span>
+<span class="sd">        String with indexed array.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">index</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
         <span class="c1">#a dummy call to see if it&#39;s in shared memory</span>
@@ -232,13 +271,14 @@
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
 <span class="sd">    lang : str</span>
-<span class="sd">        One of the supported languages</span>
+<span class="sd">        One of the supported languages, {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">    index : int</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    str</span>
 <span class="sd">        The string corresponding to the correct index to be formatted into the code</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">retval</span> <span class="o">=</span> <span class="bp">None</span>
@@ -250,9 +290,21 @@
 
 <div class="viewcode-block" id="reassign_species_lists"><a class="viewcode-back" href="../../src/pyjac.utils.html#pyjac.utils.reassign_species_lists">[docs]</a><span class="k">def</span> <span class="nf">reassign_species_lists</span><span class="p">(</span><span class="n">reacs</span><span class="p">,</span> <span class="n">specs</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Given a list of ReacInfo, and SpecInfo&#39;s, this method will update the</span>
-<span class="sd">    ReacInfo&#39;s reactants / products / third body list to integers</span>
+<span class="sd">    Given a list of `ReacInfo`, and `SpecInfo`, this method will update the</span>
+<span class="sd">    `ReacInfo` reactants / products / third body list to integers</span>
 <span class="sd">    representing the species&#39; index in the list.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
+<span class="sd">        List of reactions to be updated.</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        List of species</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">species_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">sp</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)}</span>
@@ -267,8 +319,18 @@
 
 
 <div class="viewcode-block" id="is_integer"><a class="viewcode-back" href="../../src/pyjac.utils.html#pyjac.utils.is_integer">[docs]</a><span class="k">def</span> <span class="nf">is_integer</span><span class="p">(</span><span class="n">val</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;Returns whether a value is an integer regardless of whether</span>
-<span class="sd">    it is a float or an int</span>
+    <span class="sd">&quot;&quot;&quot;Returns `True` if argument is an integer or whole number.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    val : int, float</span>
+<span class="sd">        Value to be checked.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool</span>
+<span class="sd">        ``True`` if ``val`` is `int` or whole number (if `float`).</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">val</span><span class="o">.</span><span class="n">is_integer</span><span class="p">()</span>
@@ -283,6 +345,19 @@
 
 
 <div class="viewcode-block" id="get_parser"><a class="viewcode-back" href="../../src/pyjac.utils.html#pyjac.utils.get_parser">[docs]</a><span class="k">def</span> <span class="nf">get_parser</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    args : `argparse.Namespace`</span>
+<span class="sd">        Command line arguments for running pyJac.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="kn">import</span> <span class="nn">multiprocessing</span>
     <span class="c1"># command line arguments</span>
     <span class="n">parser</span> <span class="o">=</span> <span class="n">ArgumentParser</span><span class="p">(</span><span class="n">description</span><span class="o">=</span><span class="s1">&#39;pyJac: Generates source code &#39;</span>

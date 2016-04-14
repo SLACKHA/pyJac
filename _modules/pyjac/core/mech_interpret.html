@@ -39,7 +39,8 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.core.mech_interpret</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Chemkin-format mechanism interpreter module.</span>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;Chemkin-format mechanism interpreter module.</span>
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Python 2 compatibility</span>
@@ -66,15 +67,14 @@
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="n">CANTERA_FLAG</span> <span class="o">=</span> <span class="bp">False</span>
 
-<span class="c1"># Supported units list for pre-exponential factor</span>
 <span class="n">pre_units</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;moles&#39;</span><span class="p">,</span> <span class="s1">&#39;molecules&#39;</span><span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;list(`str`): Supported units list for pre-exponential factor&quot;&quot;&quot;</span>
 
-<span class="c1"># Supported units list for activation energy</span>
 <span class="n">act_energy_units</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;kelvins&#39;</span><span class="p">,</span> <span class="s1">&#39;evolts&#39;</span><span class="p">,</span> <span class="s1">&#39;cal/mole&#39;</span><span class="p">,</span> <span class="s1">&#39;joules/kmole&#39;</span><span class="p">,</span>
                     <span class="s1">&#39;kcal/mole&#39;</span><span class="p">,</span> <span class="s1">&#39;joules/mole&#39;</span><span class="p">,</span> <span class="s1">&#39;kjoules/mole&#39;</span>
                     <span class="p">]</span>
+<span class="sd">&quot;&quot;&quot;list(`str`): Supported units list for activation energy&quot;&quot;&quot;</span>
 
-<span class="c1"># Activation energy conversion factor</span>
 <span class="n">act_energy_fact</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">({</span><span class="s1">&#39;kelvins&#39;</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">,</span>
                         <span class="s1">&#39;evolts&#39;</span><span class="p">:</span> <span class="mf">11595.</span><span class="p">,</span>
                         <span class="s1">&#39;cal/mole&#39;</span><span class="p">:</span> <span class="mf">4.184</span> <span class="o">/</span> <span class="n">chem</span><span class="o">.</span><span class="n">RU_JOUL</span><span class="p">,</span>
@@ -83,6 +83,7 @@
                         <span class="s1">&#39;kjoules/mole&#39;</span><span class="p">:</span> <span class="mf">1000.0</span> <span class="o">/</span> <span class="n">chem</span><span class="o">.</span><span class="n">RU_JOUL</span><span class="p">,</span>
                         <span class="s1">&#39;joules/kmole&#39;</span><span class="p">:</span> <span class="mf">1.</span> <span class="o">/</span> <span class="p">(</span><span class="n">chem</span><span class="o">.</span><span class="n">RU_JOUL</span> <span class="o">*</span> <span class="mf">1000.</span><span class="p">)</span>
                         <span class="p">})</span>
+<span class="sd">&quot;&quot;&quot;dict: Activation energy conversion factor&quot;&quot;&quot;</span>
 
 <span class="c1"># get local element atomic weight dict</span>
 <span class="n">elem_wt</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">get_elem_wt</span><span class="p">()</span>
@@ -102,9 +103,9 @@
 <span class="sd">    -------</span>
 <span class="sd">    elems : list of str</span>
 <span class="sd">        List of elements in mechanism.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in mechanism.</span>
-<span class="sd">    reacs : list of ReacInfo</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in mechanism.</span>
 <span class="sd">    units : str</span>
 <span class="sd">        Units of reactions&#39; Arrhenius coefficients</span>
@@ -765,7 +766,7 @@
 <span class="sd">        Name of thermo database file.</span>
 <span class="sd">    elems : list of str</span>
 <span class="sd">        List of element names in mechanism.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in mechanism.</span>
 
 <span class="sd">    Returns</span>
@@ -910,16 +911,16 @@
 <span class="sd">    ----------</span>
 <span class="sd">    filename : str</span>
 <span class="sd">        Reaction mechanism filename (e.g. &#39;mech.cti&#39;). Optional.</span>
-<span class="sd">    gas : Cantera Solution object</span>
+<span class="sd">    gas : `cantera.Solution` object</span>
 <span class="sd">        Existing Cantera Solution object to be used. Optional.</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
 <span class="sd">    elems : list of str</span>
 <span class="sd">        List of elements in mechanism.</span>
-<span class="sd">    specs : list of SpecInfo</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
 <span class="sd">        List of species in mechanism.</span>
-<span class="sd">    reacs : list of ReacInfo</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in mechanism.</span>
 <span class="sd">    units : str</span>
 <span class="sd">        Units of reactions&#39; Arrhenius coefficients</span>

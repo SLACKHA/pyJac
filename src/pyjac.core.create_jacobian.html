@@ -138,7 +138,29 @@
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_troe_dt">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_troe_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>beta_0minf</em>, <em>E_0minf</em>, <em>k0kinf</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_troe_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_troe_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Writes section of line for temperature partial derivative of Troe falloff.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Programming language, {&#8216;c&#8217;, &#8216;cuda&#8217;}</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction of interest; pressure dependence expressed with Troe falloff</li>
+<li><strong>beta_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+<li><strong>E_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+<li><strong>k0kinf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>jline</strong> &#8211; Line fragment with Troe temperature derivative</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dcp_dt">
@@ -186,7 +208,38 @@ elementary reaction.</p>
 <dt id="pyjac.core.create_jacobian.write_sub_intro">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sub_intro</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>number</em>, <em>rate_list</em>, <em>this_rev</em>, <em>this_pdep</em>, <em>have_pres_mod_temp</em>, <em>batch_has_m</em>, <em>this_thd</em>, <em>this_troe</em>, <em>this_sri</em>, <em>this_cheb</em>, <em>cheb_dim</em>, <em>this_plog</em>, <em>no_shared</em>, <em>has_nsp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sub_intro"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sub_intro" title="Permalink to this definition">¶</a></dt>
 <dd><p>Writes the header and definitions for of any of the various sub-functions</p>
-<p>Returns the opened file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
+<li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Jacobian file number</li>
+<li><strong>rate_list</strong> &#8211; </li>
+<li><strong>this_rev</strong> &#8211; </li>
+<li><strong>this_pdep</strong> &#8211; </li>
+<li><strong>have_pres_mod_temp</strong> &#8211; </li>
+<li><strong>batch_has_m</strong> &#8211; </li>
+<li><strong>this_thd</strong> &#8211; </li>
+<li><strong>this_troe</strong> &#8211; </li>
+<li><strong>this_sri</strong> &#8211; </li>
+<li><strong>this_cheb</strong> &#8211; </li>
+<li><strong>cheb_dim</strong> &#8211; </li>
+<li><strong>this_plog</strong> &#8211; </li>
+<li><strong>no_shared</strong> &#8211; </li>
+<li><strong>has_nsp</strong> &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>file</strong> &#8211; Opened Jacobian file</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">file object</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -204,11 +257,11 @@ elementary reaction.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
-<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
+<li><strong>lang</strong> (<em>str {'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
 <li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in the mechanism.</li>
 <li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in the mechanism.</li>
 <li><strong>seen_sp</strong> (<em>list of bool</em>) &#8211; List of booleans, False if species i has an (identically) zero species rate</li>
-<li><strong>smm</strong> (<em>shared_memory_manager, optional</em>) &#8211; If not None, use this to manage shared memory optimization</li>
+<li><strong>smm</strong> (<em>shared_memory_manager, optional</em>) &#8211; If not <code class="docutils literal"><span class="pre">None</span></code>, use this to manage shared memory optimization</li>
 </ul>
 </td>
 </tr>
@@ -235,7 +288,7 @@ Jacobian with a column &#8216;j&#8217; of another matrix.</p>
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
 <li><strong>inidicies</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of indicies where the Jacobian is non-zero</li>
-<li><strong>nvars</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; How many variables in the Jacobian matrix</li>
+<li><strong>nvars</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of variables in the Jacobian matrix</li>
 </ul>
 </td>
 </tr>
@@ -267,20 +320,20 @@ or nothing if info in mechanism file.</li>
 <li><strong>optimize_cache</strong> (<em>bool, optional</em>) &#8211; If true, use the greedy optimizer to attempt to
 improve cache hit rates</li>
 <li><strong>initial_state</strong> (<em>str, optional</em>) &#8211; A comma separated list of the initial conditions to use in form
-T,P,X (e.g. 800,1,H2=1.0,O2=0.5). Temperature in K, P in atm</li>
+T,P,X (e.g. &#8216;800,1,H2=1.0,O2=0.5&#8217;). Temperature in K, P in atm</li>
 <li><strong>num_blocks</strong> (<em>int, optional</em>) &#8211; The target number of blocks / sm to achieve for cuda</li>
 <li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The target number of threads / block to achieve for cuda</li>
-<li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If true, do not use the shared_memory_manager
+<li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use the shared_memory_manager
 to attempt to optimize for CUDA</li>
-<li><strong>L1_preferred</strong> (<em>bool, optional</em>) &#8211; If true, prefer a larger L1 cache
+<li><strong>L1_preferred</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, prefer a larger L1 cache
 and a smaller shared memory size for CUDA</li>
 <li><strong>multi_thread</strong> (<em>int, optional</em>) &#8211; The number of threads to use during optimization</li>
-<li><strong>force_optimize</strong> (<em>bool, optional</em>) &#8211; If true, redo the cache optimization even if the same mechanism</li>
+<li><strong>force_optimize</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, redo the cache optimization even if the same mechanism</li>
 <li><strong>build_path</strong> (<em>str, optional</em>) &#8211; The output directory for the jacobian files</li>
 <li><strong>last_spec</strong> (<em>str, optional</em>) &#8211; If specified, the species to assign to the last index.
 Typically should be N2, Ar, He or another inert bath gas</li>
-<li><strong>skip_jac</strong> (<em>bool, optional</em>) &#8211; If True, only the reaction rate subroutines will be generated</li>
-<li><strong>auto_diff</strong> (<em>bool, optional</em>) &#8211; If True, generate files for use with the Adept autodifferention library.</li>
+<li><strong>skip_jac</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, only the reaction rate subroutines will be generated</li>
+<li><strong>auto_diff</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate files for use with the Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>

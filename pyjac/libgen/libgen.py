@@ -10,10 +10,12 @@ from .. import utils
 def lib_ext(shared):
     return '.a' if not shared else '.so'
 
+
 cmd_compile = dict(c='gcc',
                    icc='icc',
                    cuda='nvcc'
                    )
+
 
 def cmd_lib(lang, shared):
     if lang == 'c':
@@ -23,10 +25,12 @@ def cmd_lib(lang, shared):
     elif lang == 'icc':
         return ['ar', 'rcs'] if not shared else ['icc', '-shared']
 
-includes = dict(c=[],
-                icc=[],
+
+includes = dict(c=[], icc=[],
                 cuda=['/usr/local/cuda/include/',
-                   '/usr/local/cuda/samples/common/inc/'])
+                      '/usr/local/cuda/samples/common/inc/'
+                      ]
+                )
 
 flags = dict(c=['-std=c99', '-O3', '-mtune=native',
                 '-fopenmp'],
@@ -51,8 +55,10 @@ def which(file):
 
     return None
 
+
 def getf(x):
     return os.path.basename(x)
+
 
 def compiler(fstruct):
     args = [cmd_compile[fstruct.build_lang]]
@@ -65,10 +71,12 @@ def compiler(fstruct):
     #always use fPIC in case we're building wrapper
     args.extend(shared_flags[fstruct.build_lang])
     args.extend(fstruct.args)
-    include = ['-I{}'.format(d) for d in fstruct.i_dirs + includes[fstruct.build_lang]]
+    include = ['-I{}'.format(d) for d in fstruct.i_dirs +
+               includes[fstruct.build_lang]
+               ]
     args.extend(include)
     args.extend([
-        '-{}c'.format('d' if fstruct.lang == 'cuda' else ''), 
+        '-{}c'.format('d' if fstruct.lang == 'cuda' else ''),
                     os.path.join(fstruct.source_dir, fstruct.filename +
                     utils.file_ext[fstruct.build_lang]),
         '-o', os.path.join(fstruct.obj_dir, getf(fstruct.filename) + '.o')
@@ -93,8 +101,11 @@ def get_cuda_path():
 
     sixtyfourbit = platform.architecture()[0] == '64bit'
     cuda_path = os.path.dirname(os.path.dirname(cuda_path))
-    cuda_path = os.path.join(cuda_path, 'lib{}'.format('64' if sixtyfourbit else ''))
+    cuda_path = os.path.join(cuda_path,
+                             'lib{}'.format('64' if sixtyfourbit else '')
+                             )
     return cuda_path
+
 
 def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
     command = cmd_lib(lang, shared)
@@ -143,6 +154,7 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
     return libname
 
+
 class file_struct(object):
     def __init__(self, lang, build_lang, filename, i_dirs, args, source_dir, obj_dir, shared):
         self.lang = lang
@@ -154,6 +166,7 @@ class file_struct(object):
         self.obj_dir = obj_dir
         self.shared = shared
         self.auto_diff=False
+
 
 def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
     i_dirs = [source_dir]
@@ -191,6 +204,7 @@ def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
         files += ['gpu_memory']
 
     return i_dirs, files
+
 
 def generate_library(lang, source_dir, obj_dir=None,
                         out_dir=None, shared=None,

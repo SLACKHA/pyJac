@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Module containing utility functions.
 """
 
@@ -7,48 +8,68 @@ import errno
 from math import log10, floor
 from argparse import ArgumentParser
 
-# Local imports
+__all__ = ['line_start', 'comment', 'langs', 'file_ext', 'restrict',
+           'header_ext', 'line_end', 'exp_10_fun', 'array_chars',
+           'get_species_mappings', 'get_nu', 'read_str_num', 'split_str',
+           'create_dir', 'get_array', 'get_index', 'reassign_species_lists',
+           'is_integer', 'get_parser'
+           ]
 
 line_start = '  '
 comment = dict(c='//', cuda='//',
-                fortran='!', matlab='%')
+               fortran='!', matlab='%'
+               )
+"""dict: comment characters for each language"""
 
-# list of supported languages
 langs = ['c', 'cuda', 'fortran', 'matlab']
+"""list(`str`): list of supported languages"""
 
-# source code file extensions based on language
-file_ext = dict(c='.c', cuda='.cu',
-                fortran='.f90', matlab='.m'
-                )
+file_ext = dict(c='.c', cuda='.cu', fortran='.f90', matlab='.m')
+"""dict: source code file extensions based on language"""
 
 restrict = {'c' : '__restrict__',
             'cuda' : '__restrict__'}
+"""dict: language-dependent keyword for restrict"""
 
-# header extensions based on language
 header_ext = dict(c='.h', cuda='.cuh')
+"""dict: header extensions based on language"""
 
-# line endings dependent on language
 line_end = dict(c=';\n', cuda=';\n',
                 fortran='\n', matlab=';\n'
                 )
+"""dict: line endings dependent on language"""
 
-# exp10 functions for various languages
 exp_10_fun = dict(c="pow(10.0, ", cuda='exp10(',
                   fortran='exp(log(10) * ', matlab='exp(log(10.0) * '
                   )
+"""dict: exp10 functions for various languages"""
 
-# the characters to format an index into an array per language
 array_chars = dict(c="[{}]", cuda="[INDEX({})]",
                    fortran="({})", matlab="({})"
                    )
+"""dict: the characters to format an index into an array per language"""
 
 # if false, zero values will be assumed to have been set previously (by memset etc.)
 # and can be skipped, to increase efficiency
 
 def get_species_mappings(num_specs, last_species):
     """
-    Consolidate the forward/backwards species mapping
-    in one place.
+    Maps species indices around species moved to last position.
+
+    Parameters
+    ----------
+    num_specs : int
+        Number of species.
+    last_species : int
+        Index of species being moved to end of system.
+
+    Returns
+    -------
+    fwd_species_map : list of `int`
+        List of original indices in new order
+    back_species_map : list of `int`
+        List of new indicies in original order
+
     """
 
     fwd_species_map = range(num_specs)
@@ -70,9 +91,21 @@ def get_species_mappings(num_specs, last_species):
     return fwd_species_map, back_species_map
 
 
-
 def get_nu(isp, rxn):
     """Returns the net nu of species isp for the reaction rxn
+
+    Parameters
+    ----------
+    isp : int
+        Species index
+    rxn : `ReacInfo`
+        Reaction
+
+    Returns
+    -------
+    nu : int
+        Overall stoichiometric coefficient of species ``isp`` in reaction ``rxn``
+
     """
     if isp in rxn.prod and isp in rxn.reac:
         nu = (rxn.prod_nu[rxn.prod.index(isp)] -
@@ -104,8 +137,8 @@ def read_str_num(string, sep=None):
 
     Returns
     -------
-    list of float
-        Floats separated by `sep` in `string`.
+    list of `float`
+        Floats separated by ``sep`` in ``string``.
 
     """
 
@@ -126,8 +159,8 @@ def split_str(seq, length):
 
     Returns
     -------
-    list of str
-        List of strings of length `length` from `seq`.
+    list of `str`
+        List of strings of length ``length`` from ``seq``.
 
     """
     return [seq[i: i + length] for i in range(0, len(seq), length)]
@@ -169,8 +202,14 @@ def get_array(lang, name, index, twod=None):
     index : int
         The index to format
     twod : int, optional
-        If not None and the lang is fortan or matlab this will be formatted
+        If not ``None`` and the lang is 'fortan' or 'matlab' this will be formatted
         as a second index in the array.
+
+    Returns
+    -------
+    name : str
+        String with indexed array.
+
     """
     if index is None:
         #a dummy call to see if it's in shared memory
@@ -191,13 +230,14 @@ def get_index(lang, index):
     Parameters
     ----------
     lang : str
-        One of the supported languages
+        One of the supported languages, {'c', 'cuda', 'fortran', 'matlab'}
     index : int
 
     Returns
     -------
     str
         The string corresponding to the correct index to be formatted into the code
+
     """
 
     retval = None
@@ -209,9 +249,21 @@ def get_index(lang, index):
 
 def reassign_species_lists(reacs, specs):
     """
-    Given a list of ReacInfo, and SpecInfo's, this method will update the
-    ReacInfo's reactants / products / third body list to integers
+    Given a list of `ReacInfo`, and `SpecInfo`, this method will update the
+    `ReacInfo` reactants / products / third body list to integers
     representing the species' index in the list.
+
+    Parameters
+    ----------
+    reacs : list of `ReacInfo`
+        List of reactions to be updated.
+    specs : list of `SpecInfo`
+        List of species
+
+    Returns
+    -------
+    None
+
     """
 
     species_map = {sp.name: i for i, sp in enumerate(specs)}
@@ -226,8 +278,18 @@ def reassign_species_lists(reacs, specs):
 
 
 def is_integer(val):
-    """Returns whether a value is an integer regardless of whether
-    it is a float or an int
+    """Returns `True` if argument is an integer or whole number.
+
+    Parameters
+    ----------
+    val : int, float
+        Value to be checked.
+
+    Returns
+    -------
+    bool
+        ``True`` if ``val`` is `int` or whole number (if `float`).
+
     """
     try:
         return val.is_integer()
@@ -242,6 +304,19 @@ def is_integer(val):
 
 
 def get_parser():
+    """
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    args : `argparse.Namespace`
+        Command line arguments for running pyJac.
+
+    """
+
     import multiprocessing
     # command line arguments
     parser = ArgumentParser(description='pyJac: Generates source code '

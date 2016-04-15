@@ -1712,7 +1712,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
     if this_troe:
         line = ''.join([utils.line_start +
                        'double {} = 0.0{}'.format(x, utils.line_end[lang])
-                       for x in 'Fcent', 'A', 'B', 'lnF_AB']
+                       for x in ['Fcent', 'A', 'B', 'lnF_AB']]
                        )
         file.write(line)
 

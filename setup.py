@@ -75,7 +75,8 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     # install_requires=['peppercorn'],
     install_requires=['numpy',
-                      'bitarray'],
+                      'bitarray',
+                      'optionloop'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

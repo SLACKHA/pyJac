@@ -190,14 +190,14 @@ def optimize_cache(specs, reacs, multi_thread,
                      max_time=100*60 #100 min
                      ):
     """
-    Utilizes the Numberjack package to optimize species
-    and reaction orders in the mechanism to attempt to improve cache hit rates.
+    A package that attempts to optimize species and reaction orders in the mechanism 
+    to improve cache hit rates.
 
     Parameters
     ----------
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in the mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in the mechanism.
     multi_thread : int
         The number of threads to use during optimization
@@ -207,14 +207,26 @@ def optimize_cache(specs, reacs, multi_thread,
         The path to the build directory
     last_spec : int
         The index of the species that should be placed last
+    consider_thd : bool
+        If true, consider third body species in the reactions
+    improve_cutoff : int
+        The number of iterations without improvement before return
+    rand_init_tries : int
+        The number of random initializations to try
+    lookback_max : int
+        The width of lookahead/lookforward (at maximum)
+    rand_restarts_max : int
+        The number of restarts to try within the iteration
+    max_time : int
+        The maximum time duration of each optimziation step
 
     Returns
     _______
 
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         The reordered list of species in the mechanism
 
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         the reordered list of reacs in the mechanism
 
     fwd_spec_mapping : list of int

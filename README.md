@@ -6,12 +6,7 @@ This utility creates source code to calculate the Jacobian matrix analytically f
 Usage
 -----
 
-pyJac can be run either as a module or an executable. To run as an executable, from the command line change to the proper directory, change the file mode to executable, and run:
-
-    chmod +x pyJac.py
-    ./pyJac.py [options]
-
-To run it as a module, change to the appropriate directory and run:
+pyJac can be run as a python module:
 
     python -m pyjac [options]
 

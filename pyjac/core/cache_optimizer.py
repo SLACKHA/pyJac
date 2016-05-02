@@ -207,6 +207,18 @@ def optimize_cache(specs, reacs, multi_thread,
         The path to the build directory
     last_spec : int
         The index of the species that should be placed last
+    consider_thd : bool
+        If true, consider third body species in the reactions
+    improve_cutoff : int
+        The number of iterations without improvement before return
+    rand_init_tries : int
+        The number of random initializations to try
+    lookback_max : int
+        The width of lookahead/lookforward (at maximum)
+    rand_restarts_max : int
+        The number of restarts to try within the iteration
+    max_time : int
+        The maximum time duration of each optimziation step
 
     Returns
     _______
@@ -297,18 +309,18 @@ def optimize_cache(specs, reacs, multi_thread,
     result_list = []
     if rand_init_tries:
         for i in range(rand_init_tries):
-            if i == 0:
+            if i % 100 == 0:
                 mapping_list = fwd_rxn_mapping[:]
             else:
                 mapping_list = np.random.permutation(nr).tolist()
-            lookback_val = np.random.randint(1, high=lookback_max+1)
-            improve_cutoff_val = np.random.randint(improve_cutoff*0.5, high=improve_cutoff*2.)
-            rand_restarts_val = np.random.randint(1, high=rand_restarts_max+1)
             result_list.append(
                 pool.apply_async(optimizer_loop,
                                  (mapping_list, copy_mapping(reac_mapping),
-                                  lookback_val, improve_cutoff_val, rand_restarts_val)))
-
+                                  lookback_list[i], improve_cutoff_list[i],
+                                  rand_restarts_list[i]
+                                  )
+                                 )
+                )
 
     time_start = datetime.datetime.now()
     complete = False
@@ -337,18 +349,19 @@ def optimize_cache(specs, reacs, multi_thread,
     fwd_spec_mapping = [i for i in range(nsp) if i != last_spec]
     if rand_init_tries:
         for i in range(rand_init_tries):
-            if i == 0:
+            if i % 100 == 0:
                 mapping_list = fwd_spec_mapping[:]
             else:
                 mapping_list = np.random.permutation(nsp).tolist()
                 mapping_list = [x for x in mapping_list if x != last_spec]
-            lookback_val = np.random.randint(1, high=lookback_max+1)
-            improve_cutoff_val = np.random.randint(improve_cutoff*0.5, high=improve_cutoff*2.)
-            rand_restarts_val = np.random.randint(1, high=rand_restarts_max+1)
             result_list.append(
                 pool.apply_async(optimizer_loop,
-                                 (mapping_list, copy_mapping(spec_mapping),
-                                  lookback_val, improve_cutoff_val, rand_restarts_val)))
+                                 (mapping_list, copy_mapping(reac_mapping),
+                                  lookback_list[i], improve_cutoff_list[i],
+                                  rand_restarts_list[i]
+                                  )
+                                 )
+                )
 
     time_start = datetime.datetime.now()
     complete = False

@@ -35,7 +35,7 @@ except ImportError:
 # Local imports
 from .. import utils
 from ..core.create_jacobian import create_jacobian
-from .optionLoop.optionloop import optionloop
+from optionloop import optionloop
 from ..libgen import generate_library, libs, compiler, file_struct, get_cuda_path, flags
 
 #cuda only works for static libraries

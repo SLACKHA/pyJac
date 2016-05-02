@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*-
+"""Module for partially stirred reactor simulations.
+"""
+
 # Python 2 compatibility
 from __future__ import division
 from __future__ import print_function
@@ -37,7 +41,24 @@ except ImportError:
     parallel = False
 
 class Stream(object):
+    """Class for inlet flow stream into reactor.
+    """
+
     def __init__(self, gas, flow):
+        """Initializes stream object.
+
+        Parameters
+        ----------
+        gas : `cantera.Solution`
+            Constant thermochemical state of this stream.
+        flow : float
+            Flow rate of this stream.
+
+        Returns
+        -------
+        None
+
+        """
         self.comp = np.hstack((gas.enthalpy_mass, gas.Y))
         self.flow = flow
 
@@ -45,17 +66,54 @@ class Stream(object):
         self.xflow = 0.0
 
     def __call__(self):
+        """Returns stream composition (enthalpy and species mass fractions).
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of stream (enthalpy + mass fractions).
+
+        """
         return self.comp
 
 
 class Particle(object):
+    """Class for particle in reactor.
+    """
+
     def __init__(self, gas):
+        """Initialize particle object with thermochemical state.
+
+        Parameters
+        ----------
+        gas : `cantera.Solution`
+            Initial thermochemical state of particle
+
+        Returns
+        -------
+        None
+
+        """
+
         self.gas = gas
         self.reac = ct.IdealGasConstPressureReactor(self.gas)
         self.netw = ct.ReactorNet([self.reac])
 
     def __call__(self, comp=None):
         """Return or set composition.
+        Parameters
+        ----------
+        comp : Optional[cantera.Solution]
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
         """
         if comp is not None:
             if isinstance(comp, Particle):
@@ -73,6 +131,19 @@ class Particle(object):
             return np.hstack((self.gas.enthalpy_mass, self.gas.Y))
 
     def __add__(self, other):
+        """Add values to state of particle.
+
+        Parameters
+        ----------
+        other : `Particle`, `numpy.array`, `int`, `float`
+            Thermochemical state (enthalpy + mass fractions) to add to current state.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, Particle):
             h = self.gas.enthalpy_mass + other.gas.enthalpy_mass
             Y = self.gas.Y + other.gas.Y
@@ -89,6 +160,19 @@ class Particle(object):
             return NotImplemented
 
     def __radd__(self, other):
+        """Add values to state of particle.
+
+        Parameters
+        ----------
+        other : `Particle`, `numpy.array`, `int`, `float`
+            Thermochemical state (enthalpy + mass fractions) to add to current state.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, Particle):
             h = self.gas.enthalpy_mass + other.gas.enthalpy_mass
             Y = self.gas.Y + other.gas.Y
@@ -105,6 +189,19 @@ class Particle(object):
             return NotImplemented
 
     def __sub__(self, other):
+        """Subtract values from state of particle.
+
+        Parameters
+        ----------
+        other : `Particle`, `numpy.array`, `int`, `float`
+            Thermochemical state (enthalpy + mass fractions) to subtract from current state.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, Particle):
             h = self.gas.enthalpy_mass - other.gas.enthalpy_mass
             Y = self.gas.Y - other.gas.Y
@@ -121,6 +218,19 @@ class Particle(object):
             return NotImplemented
 
     def __rsub__(self, other):
+        """Subtract state of particle from input state.
+
+        Parameters
+        ----------
+        other : `Particle`, `numpy.array`, `int`, `float`
+            Thermochemical state from which to subract Particle state.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, Particle):
             h = other.gas.enthalpy_mass - self.gas.enthalpy_mass
             Y = other.gas.Y - self.gas.Y
@@ -137,18 +247,57 @@ class Particle(object):
             return NotImplemented
 
     def __mul__(self, other):
+        """Multiply state of particle by value.
+
+        Parameters
+        ----------
+        other : `int`, `float`
+            Value to multiply `Particle` state by.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, (int, float)):
             return (np.hstack((self.gas.enthalpy_mass, self.gas.Y)) * other)
         else:
             return NotImplemented
 
     def __rmul__(self, other):
+        """Multiply state of particle by value.
+
+        Parameters
+        ----------
+        other : `int`, `float`
+            Value to multiply `Particle` state by.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, (int, float)):
             return (np.hstack((self.gas.enthalpy_mass, self.gas.Y)) * other)
         else:
             return NotImplemented
 
     def __iadd__(self, other):
+        """Add values to state of particle.
+
+        Parameters
+        ----------
+        other : `Particle`, `numpy.array`, `int`, `float`
+            Thermochemical state (enthalpy + mass fractions) to add to current state.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, Particle):
             h = self.gas.enthalpy_mass + other.gas.enthalpy_mass
             Y = self.gas.Y + other.gas.Y
@@ -166,6 +315,19 @@ class Particle(object):
         return self
 
     def __isub__(self, other):
+        """Subtract values from state of particle.
+
+        Parameters
+        ----------
+        other : `Particle`, `numpy.array`, `int`, `float`
+            Thermochemical state (enthalpy + mass fractions) to subtract from current state.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, Particle):
             h = self.gas.enthalpy_mass - other.gas.enthalpy_mass
             Y = self.gas.Y - other.gas.Y
@@ -183,6 +345,19 @@ class Particle(object):
         return self
 
     def __imul__(self, other):
+        """Multiply state of particle by value.
+
+        Parameters
+        ----------
+        other : `int`, `float`
+            Value to multiply `Particle` state by.
+
+        Returns
+        -------
+        comp : numpy.array
+            Thermochemical composition of particle (enthalpy + mass fractions).
+
+        """
         if isinstance(other, (int, float)):
             h = self.gas.enthalpy_mass * other
             Y = self.gas.Y * other
@@ -195,6 +370,16 @@ class Particle(object):
 
     def react(self, dt):
         """Perform reaction timestep by advancing network.
+
+        Parameters
+        ----------
+        dt : float
+            Reaction timestep [seconds]
+
+        Returns
+        -------
+        None
+
         """
         self.netw.advance(self.netw.time + dt)
 
@@ -207,18 +392,26 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     the mixture, return a string containing the mole fractions of the
     species, suitable for setting the state of the input ThermoPhase.
 
-    :param gas:
+    Parameters
+    ----------
+    gas : `cantera.ThermoPhase`
         Cantera ThermoPhase object containing the desired species.
-    :param eq_ratio:
+    eq_ratio : float
         Equivalence ratio
-    :param fuel:
-        Dictionary of molecules in the fuel mixture and the fraction of
-        each molecule in the fuel mixture
-    :param oxidizer:
-        Dictionary of molecules in the oxidizer mixture and the
+    fuel : dict
+        Dictionary of molecules in the fuel mixture and the fraction of \
+        each molecule in the fuel mixture.
+    oxidizer : dict
+        Dictionary of molecules in the oxidizer mixture and the \
         fraction of each molecule in the oxidizer mixture.
-    :param complete_products:
+    complete_products : list of `str`
         List of species in the products of complete combustion.
+
+    Returns
+    -------
+    reactants : str
+        String with reactants and mole fractions (e.g., ``'H2:2.0,O2:1.0'``).
+
     """
     reactants = ''
     cprod_elems = {}
@@ -329,7 +522,20 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
 
 
 def pairwise(iterable):
-    """s -> (s0,s1), (s2,s3), (s4, s5), ...
+    """Takes list of objects and converts into list of pairs.
+
+    s -> (s0,s1), (s2,s3), (s4, s5), ...
+
+    Parameters
+    ----------
+    iterable : list
+        List of objects.
+
+    Returns
+    -------
+    zipped : zip
+        Zip with pairs of objects from `iterable`.
+
     """
     a = iter(iterable)
     return zip(a, a)
@@ -338,12 +544,19 @@ def pairwise(iterable):
 def mix_substep(particles, dt, tau_mix):
     """Pairwise mixing step.
 
-    :param particles:
-        List of Particle objects.
-    :param dt:
+    Parameters
+    ----------
+    particles : list of `Particle`
+        List of `Particle` objects.
+    dt : float
         Time step [s] to increment particles.
-    :param tau_mix:
+    tau_mix : float
         Mixing timescale [s].
+
+    Returns
+    -------
+    None
+
     """
 
     decay = 0.5 * (1.0 - np.exp(-2.0 * dt / tau_mix))
@@ -360,7 +573,18 @@ def mix_substep(particles, dt, tau_mix):
 
 
 def reaction_worker(part_tup):
-    """
+    """Worker for performing reaction substep given initial state.
+
+    Parameters
+    ----------
+    part_tup : tuple
+        Tuple with mechanism file, temperature, pressure, mass fractions, and time step.
+
+    Returns
+    -------
+    p : `numpy.array`
+        Thermochemical composition of particle following reaction.
+
     """
     mech, T, P, Y, dt = part_tup
     gas = ct.Solution(mech)
@@ -373,10 +597,19 @@ def reaction_worker(part_tup):
 def reaction_substep(particles, dt, mech):
     """Advance each of the particles in time through reactions.
 
-    :param particles:
-        List of Particle objects.
-    :param dt:
+    Parameters
+    ----------
+    particles : list of `Particle`
+        List of Particle objects to be reacted.
+    dt : float
         Time step [s] to increment particles.
+    mech : str
+        Mechanism filename.
+
+    Returns
+    -------
+    None
+
     """
     if not parallel:
         for p in particles:
@@ -402,12 +635,19 @@ def reaction_substep(particles, dt, mech):
 def select_pairs(particles, num_pairs, num_skip=0):
     """Randomly select pair(s) of particles and move to end of list.
 
-    :param particles:
-        List of Particle objects.
-    :param num_pairs:
+    Parameters
+    ----------
+    particles : list of `Particle`
+        List of `Particle` objects.
+    num_pairs : int
         Number of pairs to be selected and moved.
-    :param num_skip:
+    num_skip : Optional[int]
         Number of pairs at end of list to be skipped. Optional, default 0.
+
+    Returns
+    -------
+    None
+
     """
 
     for i_pair in range(num_pairs):
@@ -434,8 +674,16 @@ def select_pairs(particles, num_pairs, num_skip=0):
 def inflow(streams):
     """Determine index of stream for next inflowing particle.
 
-    :param streams:
+    Parameters
+    ----------
+    streams : list of `Stream`
         List of Stream objects for inlet streams.
+
+    Returns
+    -------
+    i_inflow : int
+        Index of stream for next inflowing particle.
+
     """
 
     # Find stream with largest running flow rate
@@ -463,14 +711,21 @@ def inflow(streams):
 def save_data(idx, time, particles, data):
     """Save temperature and species mass fraction from all particles to array.
 
-    :param idx:
+    Parameters
+    ----------
+    idx : int
         Index of timestep.
-    :param time:
+    time : float
         Current time [s].
-    :param particles:
-        List of Particle objects.
-    :param data:
+    particles : list of `Particle`
+        List of `Particle` objects.
+    data : `numpy.ndarray`
         ndarray of particle data for all timesteps.
+
+    Returns
+    -------
+    None
+
     """
     for i, p in enumerate(particles):
         data[idx, i, 0] = time
@@ -490,35 +745,43 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
                    ):
     """Perform partially stirred reactor (PaSR) simulation.
 
-    :param mech:
+    Parameters
+    ----------
+    mech : str
         Mechanism filename (in Cantera format).
-    :param case:
-        'Premixed' or 'Non-premixed'.
-    :param init_temp:
+    case : {'Premixed','Non-premixed'}
+        Case of PaSR simulation; {'Premixed', 'Non-premixed'}.
+    init_temp : float
         Initial temperature [K].
-    :param pres:
+    pres : float
         Pressure [atm].
-    :param eq_ratio:
+    eq_ratio : float
         Equivalence ratio.
-    :param fuel:
-        Dictionary of molecules in the fuel mixture and the fraction of
+    fuel : dict
+        Dictionary of molecules in the fuel mixture and the fraction of \
         each molecule in the fuel mixture.
-    :param oxidizer:
-        Dictionary of molecules in the oxidizer mixture and the
+    oxidizer : dict
+        Dictionary of molecules in the oxidizer mixture and the \
         fraction of each molecule in the oxidizer mixture.
-    :param complete_products:
-        List of species in the products of complete combustion.
-        Optional, default [CO2, H2O, N2].
-    :param num_part:
+    complete_products : Optional[list]
+        List of species in the products of complete combustion. \
+        Optional, default ['CO2', 'H2O', 'N2'].
+    num_part : Optional[int]
         Number of particles. Optional, default 100.
-    :param tau_res:
+    tau_res : Optional[float]
         Residence time [s]. Optional, default 10 [ms].
-    :param tau_mix:
+    tau_mix : Optional[float]
         Mixing timescale [s]. Optional, default 1 [ms].
-    :param tau_pair:
+    tau_pair : Optional[float]
         Pairing timescale [s]. Optional, default 1 [ms].
-    :param num_res:
+    num_res : Optional[int]
         Numer of residence times to simulate. Optional, default 5.
+
+    Returns
+    -------
+    particle_data : numpy.array
+        numpy.array with full particle data.
+
     """
 
     # Time step control
@@ -684,8 +947,16 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 def parse_input_file(input_file):
     """Parse input file for PaSR operating parameters.
 
-    :param input_file:
+    Parameters
+    ----------
+    input_file : str
         Filename with YAML-format input file.
+
+    Returns
+    -------
+    pars : dict
+        Dictionary with input parameters extracted from YAML file.
+
     """
 
     with open(input_file, 'r') as f:

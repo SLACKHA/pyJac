@@ -3025,10 +3025,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
         Thermodynamic database filename (e.g. 'therm.dat')
         or nothing if info in mechanism file.
     gas : cantera.Solution, optional
-        The mechanism to generate the Jacobian for.  This or mech_name must be specified
+        The mechanism to generate the Jacobian for.  This or ``mech_name`` must be specified
     optimize_cache : bool, optional
-        If true, use the greedy optimizer to attempt to
-        improve cache hit rates
+        If ``True``, use the greedy optimizer to attempt to improve cache hit rates
     initial_state : str, optional
         A comma separated list of the initial conditions to use in form
         T,P,X (e.g. '800,1,H2=1.0,O2=0.5'). Temperature in K, P in atm
@@ -3040,8 +3039,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
         If ``True``, do not use the shared_memory_manager
         to attempt to optimize for CUDA
     L1_preferred : bool, optional
-        If ``True``, prefer a larger L1 cache
-        and a smaller shared memory size for CUDA
+        If ``True``, prefer a larger L1 cache and a smaller shared memory size for CUDA
     multi_thread : int, optional
         The number of threads to use during optimization
     force_optimize : bool, optional
@@ -3209,7 +3207,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
 
     # write species rates subroutine
     seen_sp = rate.write_spec_rates(build_path, lang, specs, reacs,
-                    fwd_spec_mapping, fwd_rxn_mapping, smm, auto_diff)
+                                    fwd_spec_mapping, fwd_rxn_mapping,
+                                    smm, auto_diff
+                                    )
 
     # write chem_utils subroutines
     rate.write_chem_utils(build_path, lang, specs, auto_diff)

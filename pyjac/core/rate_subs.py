@@ -271,7 +271,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
         The index of the reaction in the original mechanism
     smm : `shared_memory_manager`, optional
         If not ``None`` (default), `shared_memory_manager` for CUDA optimizations
-    auto_diff : bool, optional
+    auto_diff : Optional[bool]
         If ``True``, generate files for Adept autodifferention library.
 
     Returns

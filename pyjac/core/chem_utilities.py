@@ -149,6 +149,7 @@ class ReacInfo(CommonEqualityMixin):
     constant.
     Only one of [`low`,`high`] can be defined.
     If `troe` and `sri` are both False, then the Lindemann is assumed.
+
     """
 
     def __init__(self, rev, reactants, reac_nu, products, prod_nu, A, b, E):
@@ -230,6 +231,7 @@ class SpecInfo(CommonEqualityMixin):
     Trange : list of float
         Temperatures defining ranges of thermodynamic polynomial fits
         (low, middle, high), default ([300, 1000, 5000]).
+
     """
 
     def __init__(self, name):
@@ -261,6 +263,7 @@ def calc_spec_smh(T, specs):
     -------
     spec_smh : list of float
         List of species' standard-state entropies minus enthalpies.
+
     """
 
     spec_smh = []

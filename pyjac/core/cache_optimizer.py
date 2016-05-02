@@ -1,6 +1,4 @@
-""" Cache Optimizer
-
-    Reorders loads of rate and species subs to optimize cache hits, etc.
+""" Reorders loads of rate and species subs to optimize cache hits, etc.
 """
 
 # Python 2 compatibility
@@ -75,7 +73,10 @@ def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
 def optimizer_loop_star(args):
     return optimizer_loop(*args)
 
-def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tries):
+
+def optimizer_loop(starting_order, mapping, lookback,
+                   improve_cutoff, random_tries
+                   ):
     nvar = len(starting_order)
     order = starting_order[:]
 
@@ -92,7 +93,7 @@ def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tri
             #range value does, this represents a potential load
             count -= (~val_mapping & mapping[order[j]]).count()
 
-            #scale this by the 
+            #scale this by the
             score += count / float(abs(i - j))
 
         return score
@@ -136,7 +137,7 @@ def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tri
                     mininds += [i]
 
             moves = []
-            for min_ind in mininds: 
+            for min_ind in mininds:
                 maxcount = None
                 maxind = None
                 #we now have the 'worst' location selected
@@ -181,23 +182,22 @@ def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tri
     return global_max, global_max_order
 
 def optimize_cache(specs, reacs, multi_thread,
-                    force_optimize, build_path,
-                     last_spec, consider_thd=False,
-                     improve_cutoff=20,
-                     rand_init_tries=10000,
-                     lookback_max=2,
-                     rand_restarts_max=5,
-                     max_time=100*60 #100 min
-                     ):
+                   force_optimize, build_path,
+                   last_spec, consider_thd=False,
+                   improve_cutoff=20,
+                   rand_init_tries=10000,
+                   lookback_max=2,
+                   rand_restarts_max=5,
+                   max_time=100*60 #100 min
+                   ):
     """
-    Utilizes the Numberjack package to optimize species
-    and reaction orders in the mechanism to attempt to improve cache hit rates.
+    Optimize species and reaction orders to improve cache hit rates.
 
     Parameters
     ----------
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         List of species in the mechanism.
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         List of reactions in the mechanism.
     multi_thread : int
         The number of threads to use during optimization
@@ -210,24 +210,19 @@ def optimize_cache(specs, reacs, multi_thread,
 
     Returns
     _______
-
-    specs : list of SpecInfo
+    specs : list of `SpecInfo`
         The reordered list of species in the mechanism
-
-    reacs : list of ReacInfo
+    reacs : list of `ReacInfo`
         the reordered list of reacs in the mechanism
-
     fwd_spec_mapping : list of int
         A mapping of the original mechanism to the new species order
-
     fwd_rxn_mapping : list of int
         A mapping of the original mechanism to the new reaction order
-
     reverse_spec_mapping : list of int
         A mapping of the new species order to the original mechanism
-
     reverse_rxn_mapping : list of int
         A mapping of the new reaction order to the original mechanism
+
     """
 
     print('Beginning Cache-optimization process...')
@@ -311,7 +306,7 @@ def optimize_cache(specs, reacs, multi_thread,
             rand_restarts_val = np.random.randint(1, high=rand_restarts_max+1)
             result_list.append(
                 pool.apply_async(optimizer_loop,
-                                 (mapping_list, copy_mapping(reac_mapping), 
+                                 (mapping_list, copy_mapping(reac_mapping),
                                   lookback_val, improve_cutoff_val, rand_restarts_val)))
 
 
@@ -352,9 +347,9 @@ def optimize_cache(specs, reacs, multi_thread,
             rand_restarts_val = np.random.randint(1, high=rand_restarts_max+1)
             result_list.append(
                 pool.apply_async(optimizer_loop,
-                                 (mapping_list, copy_mapping(spec_mapping), 
+                                 (mapping_list, copy_mapping(spec_mapping),
                                   lookback_val, improve_cutoff_val, rand_restarts_val)))
-   
+
     time_start = datetime.datetime.now()
     complete = False
     while datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time) \
@@ -383,7 +378,7 @@ def optimize_cache(specs, reacs, multi_thread,
 
     specs = [specs[i] for i in fwd_spec_mapping]
     reacs = [reacs[i] for i in fwd_rxn_mapping]
-    
+
     # save to avoid reoptimization if possible
     with open(os.path.join(build_path, 'optimized.pickle'), 'wb') as file:
         pickle.dump(specs, file)

@@ -95,16 +95,20 @@ def write_launch_bounds(builddir, blocks_per_sm=8, num_threads=64,
     Returns
     -------
     None
-    
+
     """
-    shared_per_block = int(floor(get_shared_size(L1_PREFERRED) / blocks_per_sm)) if not no_shared else 0
+    shared_per_block = (int(floor(get_shared_size(L1_PREFERRED) / blocks_per_sm))
+                        if not no_shared
+                        else 0
+                        )
     with open(os.path.join(builddir, 'launch_bounds.cuh'), "w") as file:
         file.write('#ifndef LAUNCH_BOUNDS_CUH\n'
                    '#define LAUNCH_BOUNDS_CUH\n'
                    '#define TARGET_BLOCK_SIZE ({})\n'.format(num_threads) +
                    '#define TARGET_BLOCKS ({})\n'.format(blocks_per_sm) +
                    ('' if no_shared else '//shared memory active\n') +
-                   '#define SHARED_SIZE ({} * sizeof(double))\n'.format(shared_per_block) +
+                   '#define SHARED_SIZE ({}'.format(shared_per_block) +
+                   ' * sizeof(double))\n' +
                    ('//Large L1 cache active\n#define PREFERL1\n'
                     if L1_PREFERRED else '//Large shared memory active\n'
                     ) + '#endif\n'

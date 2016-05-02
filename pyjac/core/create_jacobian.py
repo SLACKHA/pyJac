@@ -110,7 +110,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
 
 
 def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
-    """Writes evaluation of the (non-pressure dependent part) of the 
+    """Writes evaluation of the (non-pressure dependent part) of the
     reaction rate R that is independent of species
 
     Parameters
@@ -317,7 +317,7 @@ def write_rates(file, lang, rxn):
 def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
                         rind, rev_reacs, get_array
                         ):
-    """Returns string for evaluation of the (non-pressure dependent part) of the 
+    """Returns string for evaluation of the (non-pressure dependent part) of the
     reaction rate R with respect to a species ``j``
 
     Parameters

@@ -7,13 +7,13 @@ Parameters
 ----------
 
 Jacob_Unroll : int
-	The number of reactions to attempt to place in each Jacobian reaction update subfile
+	Limit for number of reactions in each Jacobian reaction update subfile
 Jacob_Spec_Unroll : int
-	The number of species to attempt to place in each Jacobian species update subfile
+	The number of species to place in each Jacobian species update subfile
 Max_Lines : int
-	The number of lines to attempt to limit each Jacobian reaction update subfile to
+	Limit for number of lines of each Jacobian reaction update subfile
 Max_Spec_Lines : int
-	The number of lines to attempt to limit each Jacobian species update subfile to
+	Limit for number of lines of each Jacobian species update subfile
 """
 
 Jacob_Unroll = 40

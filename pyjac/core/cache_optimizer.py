@@ -56,13 +56,17 @@ def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
     arr = np.zeros((nr, nsp + 1, 3))
     arr.fill(1)
 
-    name_map = {specs[fwd_spec_mapping[i]].name: i for i, sp in enumerate(fwd_spec_mapping)}
+    name_map = {specs[fwd_spec_mapping[i]].name:
+                i for i, sp in enumerate(fwd_spec_mapping)
+                }
     #print(name_map)
     for i, rind in enumerate(fwd_rxn_mapping):
         rxn = reacs[rind]
         plot = set(rxn.reac + rxn.prod)
         if consider_thd:
-            plot = plot.union(set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp]))
+            plot = plot.union(set([x[0] for x in rxn.thd_body_eff] +
+                              [rxn.pdep_sp])
+                              )
         plot = [name_map[sp] for sp in plot if sp]
         for sp in plot:
             arr[i, sp] = [0, 0, 0]
@@ -116,7 +120,9 @@ def optimizer_loop(starting_order, mapping, lookback,
     nvar = len(order)
     order += zero_vals
 
-    nvar = next((i for i, val in enumerate(order) if mapping[val].count() == 0), nvar)
+    nvar = next((i for i, val in enumerate(order)
+                if mapping[val].count() == 0), nvar
+                )
 
     starting_score = __global_score()
     global_max = starting_score
@@ -255,16 +261,22 @@ def optimize_cache(specs, reacs, multi_thread,
                         all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
                         len(reacs) == len(old_reacs)
             if reverse_spec_mapping[last_spec] != len(specs) - 1:
-                print('Different last species detected, old species was {} and new species is {}'.format(
-                    specs[fwd_spec_mapping[-1]].name, specs[last_spec].name))
+                print('Different last species detected, '
+                      'old species was {} and new species is {}'.format(
+                      specs[fwd_spec_mapping[-1]].name, specs[last_spec].name)
+                      )
                 print('Forcing reoptimization...')
                 same_mech = False
 
         except Exception, e:
-            print('Old optimization file not found, or does not match current mechanism... forcing optimization')
+            print('Old optimization file not found, or does not match '
+                  'current mechanism... forcing optimization'
+                  )
             same_mech = False
         if same_mech:
-            print('Old optimization file matching current mechanism found... returning previous optimization')
+            print('Old optimization file matching current mechanism found...'
+                  ' returning previous optimization'
+                  )
             # we have to do the spec_rate_order each time
             return old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping, \
                     reverse_spec_mapping, reverse_rxn_mapping
@@ -301,9 +313,16 @@ def optimize_cache(specs, reacs, multi_thread,
     mapping_list = []
     pool = multiprocessing.Pool(multi_thread if multi_thread else 1)
 
-    lookback_list = np.random.randint(1, high=lookback_max+1, size=rand_init_tries+1)
-    rand_restarts_list = np.random.randint(1, high=rand_restarts_max+1, size=rand_init_tries+1)
-    improve_cutoff_list = np.random.randint(improve_cutoff*0.5, high=improve_cutoff*1.5, size=rand_init_tries+1)
+    lookback_list = np.random.randint(1, high=lookback_max + 1,
+                                      size=rand_init_tries + 1
+                                      )
+    rand_restarts_list = np.random.randint(1, high=rand_restarts_max + 1,
+                                           size=rand_init_tries + 1
+                                           )
+    improve_cutoff_list = np.random.randint(improve_cutoff * 0.5,
+                                            high=improve_cutoff * 1.5,
+                                            size=rand_init_tries + 1
+                                            )
 
     fwd_rxn_mapping = [x for x in range(nr)]
     result_list = []
@@ -324,13 +343,16 @@ def optimize_cache(specs, reacs, multi_thread,
 
     time_start = datetime.datetime.now()
     complete = False
-    while datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time) \
-            and not complete:
-            time.sleep(30)
-            complete = sum(x.ready() for x in result_list)
-            print('Reaction Optimization {}% complete...'.format(
-                100. * complete / float(len(result_list))))
-            complete = complete == len(result_list)
+    while (datetime.datetime.now() - time_start <
+           datetime.timedelta(seconds=max_time)
+           and not complete
+           ):
+        time.sleep(30)
+        complete = sum(x.ready() for x in result_list)
+        print('Reaction Optimization {}% complete...'.format(
+              100. * complete / float(len(result_list)))
+              )
+        complete = complete == len(result_list)
 
     if not complete:
         try:
@@ -365,13 +387,16 @@ def optimize_cache(specs, reacs, multi_thread,
 
     time_start = datetime.datetime.now()
     complete = False
-    while datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time) \
-            and not complete:
-            time.sleep(30)
-            complete = sum(x.ready() for x in result_list)
-            print('Species Optimization {}% complete...'.format(
-                100. * complete / float(len(result_list))))
-            complete = complete == len(result_list)
+    while (datetime.datetime.now() - time_start <
+           datetime.timedelta(seconds=max_time)
+           and not complete)
+           :
+        time.sleep(30)
+        complete = sum(x.ready() for x in result_list)
+        print('Species Optimization {}% complete...'.format(
+              100. * complete / float(len(result_list)))
+              )
+        complete = complete == len(result_list)
 
     if not complete:
         try:
@@ -382,10 +407,17 @@ def optimize_cache(specs, reacs, multi_thread,
             pass
 
     result_list = [r.get() for r in result_list if r.ready()]
-    fwd_spec_mapping = result_list[np.argmax([x[0] for x in result_list])][1][:] + [last_spec]
+    fwd_spec_mapping = (result_list[
+                        np.argmax([x[0] for x in result_list])
+                        ][1][:] + [last_spec]
+                        )
 
-    reverse_spec_mapping = [fwd_spec_mapping.index(i) for i in range(len(fwd_spec_mapping))]
-    reverse_rxn_mapping = [fwd_rxn_mapping.index(i) for i in range(len(fwd_rxn_mapping))]
+    reverse_spec_mapping = [fwd_spec_mapping.index(i)
+                            for i in range(len(fwd_spec_mapping))
+                            ]
+    reverse_rxn_mapping = [fwd_rxn_mapping.index(i)
+                           for i in range(len(fwd_rxn_mapping))
+                           ]
 
     plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping)
 

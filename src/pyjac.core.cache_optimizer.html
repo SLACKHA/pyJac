@@ -39,7 +39,6 @@
             
   <div class="section" id="module-pyjac.core.cache_optimizer">
 <span id="pyjac-core-cache-optimizer-module"></span><h1>pyjac.core.cache_optimizer module<a class="headerlink" href="#module-pyjac.core.cache_optimizer" title="Permalink to this headline">¶</a></h1>
-<p>Cache Optimizer</p>
 <p>Reorders loads of rate and species subs to optimize cache hits, etc.</p>
 <dl class="function">
 <dt id="pyjac.core.cache_optimizer.plot">
@@ -59,25 +58,30 @@
 <dl class="function">
 <dt id="pyjac.core.cache_optimizer.optimize_cache">
 <code class="descclassname">pyjac.core.cache_optimizer.</code><code class="descname">optimize_cache</code><span class="sig-paren">(</span><em>specs</em>, <em>reacs</em>, <em>multi_thread</em>, <em>force_optimize</em>, <em>build_path</em>, <em>last_spec</em>, <em>consider_thd=False</em>, <em>improve_cutoff=20</em>, <em>rand_init_tries=10000</em>, <em>lookback_max=2</em>, <em>rand_restarts_max=5</em>, <em>max_time=6000</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/cache_optimizer.html#optimize_cache"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.cache_optimizer.optimize_cache" title="Permalink to this definition">¶</a></dt>
-<dd><p>Utilizes the Numberjack package to optimize species
-and reaction orders in the mechanism to attempt to improve cache hit rates.</p>
+<dd><p>Optimize species and reaction orders to improve cache hit rates.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in the mechanism.</li>
-<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in the mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in the mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of reactions in the mechanism.</li>
 <li><strong>multi_thread</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The number of threads to use during optimization</li>
 <li><strong>force_optimize</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, reoptimize even if past data is available</li>
 <li><strong>build_path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The path to the build directory</li>
 <li><strong>last_spec</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the species that should be placed last</li>
+<li><strong>consider_thd</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, consider third body species in the reactions</li>
+<li><strong>improve_cutoff</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The number of iterations without improvement before return</li>
+<li><strong>rand_init_tries</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The number of random initializations to try</li>
+<li><strong>lookback_max</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The width of lookahead/lookforward (at maximum)</li>
+<li><strong>rand_restarts_max</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The number of restarts to try within the iteration</li>
+<li><strong>max_time</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The maximum time duration of each optimziation step</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; The reordered list of species in the mechanism</li>
-<li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; the reordered list of reacs in the mechanism</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The reordered list of species in the mechanism</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; the reordered list of reacs in the mechanism</li>
 <li><strong>fwd_spec_mapping</strong> (<em>list of int</em>) &#8211; A mapping of the original mechanism to the new species order</li>
 <li><strong>fwd_rxn_mapping</strong> (<em>list of int</em>) &#8211; A mapping of the original mechanism to the new reaction order</li>
 <li><strong>reverse_spec_mapping</strong> (<em>list of int</em>) &#8211; A mapping of the new species order to the original mechanism</li>

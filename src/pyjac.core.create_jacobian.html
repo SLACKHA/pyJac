@@ -42,42 +42,162 @@
 <p>Creates source code for calculating analytical Jacobian matrix.</p>
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.calculate_shared_memory">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">calculate_shared_memory</code><span class="sig-paren">(</span><em>rind</em>, <em>rxn</em>, <em>specs</em>, <em>reacs</em>, <em>rev_reacs</em>, <em>pdep_reacs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#calculate_shared_memory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.calculate_shared_memory" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">calculate_shared_memory</code><span class="sig-paren">(</span><em>rxn_ind</em>, <em>rxn</em>, <em>specs</em>, <em>reacs</em>, <em>rev_reacs</em>, <em>pdep_reacs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#calculate_shared_memory"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.calculate_shared_memory" title="Permalink to this definition">¶</a></dt>
+<dd><p>Estimates usage of the various variables for a given reaction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>variable_list</em></li>
+<li><em>usages</em></li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dr_dy">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dr_dy</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rev_reacs</em>, <em>rxn</em>, <em>rind</em>, <em>pind</em>, <em>nspec</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dr_dy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dr_dy" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dr_dy</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rev_reacs</em>, <em>rxn</em>, <em>rxn_ind</em>, <em>pres_rxn_ind</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dr_dy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dr_dy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes evaluation of the (non-pressure dependent part) of the
+reaction rate R that is independent of species</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The list of reverisble reactions</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the mechanism</li>
+<li><strong>pres_rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the pressure dependent reactions</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_rates">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_rates</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write evaluation of the forward/reverse rate constant</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dr_dy_species">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dr_dy_species</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>pind</em>, <em>j_sp</em>, <em>sp_j</em>, <em>rind</em>, <em>rev_reacs</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dr_dy_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dr_dy_species" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dr_dy_species</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>pres_rxn_ind</em>, <em>j_sp</em>, <em>sp_j</em>, <em>rxn_ind</em>, <em>rev_reacs</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dr_dy_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dr_dy_species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns string for evaluation of the (non-pressure dependent part) of the
+reaction rate R with respect to a species <code class="docutils literal"><span class="pre">j</span></code></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>pres_rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the pressure dependent reactions</li>
+<li><strong>j_sp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The species index</li>
+<li><strong>sp_j</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species to consider</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the mechanism</li>
+<li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The list of reverisble reactions</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>jline</strong> &#8211; Jacobian evaluation line with non-pressure-dependent part of         species derivative added.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_kc">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_kc</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_kc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_kc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write evaluation of the reaction rate equilibrium constant</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.get_infs">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_infs</code><span class="sig-paren">(</span><em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_infs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_infs" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the reaction rate parameters for a pressure-dependent reaction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>beta_0minf</strong> (<em>float</em>) &#8211; Arrhenius temperature exponent</li>
+<li><strong>E_0minf</strong> (<em>float</em>) &#8211; Arrhenius activation energy</li>
+<li><strong>k0kinf</strong> (<em>float</em>) &#8211; Arrhenius temperature exponent</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dt_comment">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_comment" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn_ind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_comment" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dy_comment">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_comment" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn_ind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_comment" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="function">
@@ -86,54 +206,196 @@
 <dd></dd></dl>
 
 <dl class="function">
-<dt id="pyjac.core.create_jacobian.write_dt_t_comment">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_t_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>sp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_t_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_t_comment" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.create_jacobian.write_dt_y_comment">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_y_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>sp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_y_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_y_comment" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
 <dt id="pyjac.core.create_jacobian.get_rxn_params_dt">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_rxn_params_dt</code><span class="sig-paren">(</span><em>rxn</em>, <em>rev=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_rxn_params_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_rxn_params_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write evaluation of the forward/reverse reaction rate constant for a reaction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>rev</strong> (<em>bool, optional</em>) &#8211; If true, get the reverse constant rate constant derivative</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_db_dt_def">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_db_dt_def</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>rev_reacs</em>, <em>dBdT_flag</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_db_dt_def"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_db_dt_def" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write definition of dB/dT terms for each species</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactions in the mechanism</li>
+<li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reversible reactions in the mechanism</li>
+<li><strong>dBdT_flag</strong> (<em>list of bool</em>) &#8211; Upon completion of this method this list contains <code class="docutils literal"><span class="pre">True</span></code> for in the index of
+all species with non-zero dB/dT entries</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.get_db_dt">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_db_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_db_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_db_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write evaluation of dB/dT term</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactio to consider</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_pr">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_pr</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>pdep_reacs</em>, <em>rxn</em>, <em>get_array</em>, <em>last_conc_temp=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_pr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_pr" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write the evaluation of the reduced pressure</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactions in the mechanism</li>
+<li><strong>pdep_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The pressure dependent reactions (not including PLOG/Chebyshev)         reactions in the mechanism</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactio to consider</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+<li><strong>last_conc_temp</strong> (<em>list of tuples</em>) &#8211; If specified, the non-unity third body efficiencies and corresponding species for the last
+pressure dependent reaction</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>conc_temp_log</strong> &#8211; List with (species index, efficiency) for third-body efficiencies.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of (int, float)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_troe">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_troe</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_troe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_troe" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write the evaluation of the Troe falloff terms</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_sri">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sri</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sri"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sri" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write the valuation of the SRI exponent</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The programming language</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.get_pdep_dt">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_pdep_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>rev_reacs</em>, <em>rind</em>, <em>pind</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_pdep_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_pdep_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_pdep_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>rev_reacs</em>, <em>rxn_ind</em>, <em>pres_rxn_ind</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_pdep_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_pdep_dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write contribution from temperature derivative of reaction rate for
+a pressure dependent reaction</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The list of reverisble reactions</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the reaction list</li>
+<li><strong>pres_rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the pressure dependent reaction list</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_sri_dt">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sri_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>rxn</em>, <em>beta_0minf</em>, <em>E_0minf</em>, <em>k0kinf</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sri_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sri_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Writes section of line for temperature partial derivative of Troe falloff.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Programming language, {&#8216;c&#8217;, &#8216;cuda&#8217;}</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction of interest; pressure dependence expressed with SRI falloff</li>
+<li><strong>beta_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+<li><strong>E_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+<li><strong>k0kinf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>jline</strong> &#8211; Line fragment with SRI temperature derivative</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_troe_dt">
@@ -165,49 +427,157 @@
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dcp_dt">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dcp_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dcp_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dcp_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Write derivative of cp w.r.t. temperature for each species</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.get_elementary_rxn_dt">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_elementary_rxn_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>rind</em>, <em>rev_idx</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_elementary_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_elementary_rxn_dt" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_elementary_rxn_dt</code><span class="sig-paren">(</span><em>lang</em>, <em>specs</em>, <em>rxn</em>, <em>rxn_ind</em>, <em>rev_idx</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_elementary_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_elementary_rxn_dt" title="Permalink to this definition">¶</a></dt>
 <dd><p>Write contribution from temperature derivative of reaction rate for
 elementary reaction.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The programming language</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The reaction index</li>
+<li><strong>rev_idx</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the reverse reaction list (if applicable)</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or <a class="reference internal" href="pyjac.utils.html#pyjac.utils.get_array" title="pyjac.utils.get_array"><code class="xref any py py-func docutils literal"><span class="pre">utils.get_array</span></code></a>) as required</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>jline</strong> &#8211; Jacobian entry substring with temperature derivative contribution.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_cheb_ut">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_cheb_ut</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_cheb_ut"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_cheb_ut" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Computes the derivative of the chebyshev polynomial recursively w.r.t T</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_cheb_rxn_dt">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_cheb_rxn_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>jline</em>, <em>rxn</em>, <em>rind</em>, <em>rev_idx</em>, <em>specs</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_cheb_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_cheb_rxn_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_cheb_rxn_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>jline</em>, <em>rxn</em>, <em>rxn_ind</em>, <em>rev_idx</em>, <em>specs</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_cheb_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_cheb_rxn_dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes the code for the temperature derivative of Chebyshev reactions</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>jline</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The current jacobian line (containing the non-Chebyshev part of the derivative)</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The reaction index</li>
+<li><strong>rev_idx</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the reverse reaction list (if applicable)</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_plog_rxn_dt">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_plog_rxn_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>jline</em>, <em>specs</em>, <em>rxn</em>, <em>rind</em>, <em>rev_idx</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_plog_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_plog_rxn_dt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.create_jacobian.write_dt_y">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_y</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>sp</em>, <em>isp</em>, <em>num_s</em>, <em>touched</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_y"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_y" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.create_jacobian.write_dt_y_division">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_y_division</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>num_s</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_y_division"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_y_division" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_plog_rxn_dt</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>jline</em>, <em>specs</em>, <em>rxn</em>, <em>rxn_ind</em>, <em>rev_idx</em>, <em>get_array</em>, <em>do_unroll</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_plog_rxn_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_plog_rxn_dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes the code for the temperature derivative of PLog reactions</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>jline</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The current jacobian line (containing the non-PLog part of the derivative)</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The reaction index</li>
+<li><strong>rev_idx</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index of the reaction in the reverse reaction list (if applicable)</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dt_completion">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_completion</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>specs</em>, <em>J_nplusone_touched</em>, <em>get_array</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_completion"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_completion" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Finishes calculation of d(partial T / partial t)/dT</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open file object to write to</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in this mechanism</li>
+<li><strong>J_nplusone_touched</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, the last species has a non-zero contribution to d(partial T / partial t)</li>
+<li><strong>get_array</strong> (<em>function</em>) &#8211; The SMM binded get_array function (or utils.get_array) as required</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_sub_intro">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sub_intro</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>number</em>, <em>rate_list</em>, <em>this_rev</em>, <em>this_pdep</em>, <em>have_pres_mod_temp</em>, <em>batch_has_m</em>, <em>this_thd</em>, <em>this_troe</em>, <em>this_sri</em>, <em>this_cheb</em>, <em>cheb_dim</em>, <em>this_plog</em>, <em>no_shared</em>, <em>has_nsp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sub_intro"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sub_intro" title="Permalink to this definition">¶</a></dt>
-<dd><p>Writes the header and definitions for of any of the various sub-functions</p>
+<dd><p>Writes the header and definitions for the various Jacobian reaction update subfiles</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -215,20 +585,20 @@ elementary reaction.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; Programming language</li>
-<li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Jacobian file number</li>
-<li><strong>rate_list</strong> &#8211; </li>
-<li><strong>this_rev</strong> &#8211; </li>
-<li><strong>this_pdep</strong> &#8211; </li>
-<li><strong>have_pres_mod_temp</strong> &#8211; </li>
-<li><strong>batch_has_m</strong> &#8211; </li>
-<li><strong>this_thd</strong> &#8211; </li>
-<li><strong>this_troe</strong> &#8211; </li>
-<li><strong>this_sri</strong> &#8211; </li>
-<li><strong>this_cheb</strong> &#8211; </li>
-<li><strong>cheb_dim</strong> &#8211; </li>
-<li><strong>this_plog</strong> &#8211; </li>
-<li><strong>no_shared</strong> &#8211; </li>
-<li><strong>has_nsp</strong> &#8211; </li>
+<li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Jacobian subfile number</li>
+<li><strong>rate_list</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The required reaction/species rate strings needed for the intro</li>
+<li><strong>this_rev</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a reversible reaction</li>
+<li><strong>this_pdep</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a pressure dependent (not counting PLog/Cheb) reaction</li>
+<li><strong>have_pres_mod_temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch requires definition of pres_mod_temp</li>
+<li><strong>batch_has_m</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch requires the overall concentration &#8216;m&#8217;</li>
+<li><strong>this_thd</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch has a third body reaction</li>
+<li><strong>this_troe</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a Troe reaction</li>
+<li><strong>this_sri</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains an SRI reaction</li>
+<li><strong>this_cheb</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a Chebyshev reaction</li>
+<li><strong>cheb_dim</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; If this_cheb is true, this is the largest chebyshev dimension required</li>
+<li><strong>this_plog</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a PLOG reaction</li>
+<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, do not use CUDA shared memory</li>
+<li><strong>has_nsp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, at least one reaction has a non-zero contribution from the last species</li>
 </ul>
 </td>
 </tr>
@@ -245,7 +615,22 @@ elementary reaction.</p>
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dy_intros">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_intros</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>number</em>, <em>have_jnplus_jplus</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_intros"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_intros" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Writes the header and definitions for the various Jacobian species update subfiles</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The path to place the file in</li>
+<li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; The programming language</li>
+<li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The jacobian subfile index</li>
+<li><strong>have_jnplus_jplus</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, the last species has non-zero contributions to the Jacobian</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_jacobian">
@@ -316,17 +701,15 @@ Jacobian with a column &#8216;j&#8217; of another matrix.</p>
 This or gas must be specified</li>
 <li><strong>therm_name</strong> (<em>str, optional</em>) &#8211; Thermodynamic database filename (e.g. &#8216;therm.dat&#8217;)
 or nothing if info in mechanism file.</li>
-<li><strong>gas</strong> (<em>cantera.Solution, optional</em>) &#8211; The mechanism to generate the Jacobian for.  This or mech_name must be specified</li>
-<li><strong>optimize_cache</strong> (<em>bool, optional</em>) &#8211; If true, use the greedy optimizer to attempt to
-improve cache hit rates</li>
+<li><strong>gas</strong> (<em>cantera.Solution, optional</em>) &#8211; The mechanism to generate the Jacobian for.  This or <code class="docutils literal"><span class="pre">mech_name</span></code> must be specified</li>
+<li><strong>optimize_cache</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, use the greedy optimizer to attempt to improve cache hit rates</li>
 <li><strong>initial_state</strong> (<em>str, optional</em>) &#8211; A comma separated list of the initial conditions to use in form
 T,P,X (e.g. &#8216;800,1,H2=1.0,O2=0.5&#8217;). Temperature in K, P in atm</li>
 <li><strong>num_blocks</strong> (<em>int, optional</em>) &#8211; The target number of blocks / sm to achieve for cuda</li>
 <li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The target number of threads / block to achieve for cuda</li>
 <li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use the shared_memory_manager
 to attempt to optimize for CUDA</li>
-<li><strong>L1_preferred</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, prefer a larger L1 cache
-and a smaller shared memory size for CUDA</li>
+<li><strong>L1_preferred</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, prefer a larger L1 cache and a smaller shared memory size for CUDA</li>
 <li><strong>multi_thread</strong> (<em>int, optional</em>) &#8211; The number of threads to use during optimization</li>
 <li><strong>force_optimize</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, redo the cache optimization even if the same mechanism</li>
 <li><strong>build_path</strong> (<em>str, optional</em>) &#8211; The output directory for the jacobian files</li>

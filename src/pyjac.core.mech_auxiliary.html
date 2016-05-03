@@ -42,8 +42,37 @@
 <p>Writes mechanism header and output testing files</p>
 <dl class="function">
 <dt id="pyjac.core.mech_auxiliary.write_mechanism_initializers">
-<code class="descclassname">pyjac.core.mech_auxiliary.</code><code class="descname">write_mechanism_initializers</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>initial_conditions=''</em>, <em>old_spec_order=None</em>, <em>old_rxn_order=None</em>, <em>cache_optimized=False</em>, <em>last_spec=None</em>, <em>autodiff=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/mech_auxiliary.html#write_mechanism_initializers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.mech_auxiliary.write_mechanism_initializers" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.core.mech_auxiliary.</code><code class="descname">write_mechanism_initializers</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>specs</em>, <em>reacs</em>, <em>initial_conditions=''</em>, <em>old_spec_order=None</em>, <em>old_rxn_order=None</em>, <em>cache_optimized=False</em>, <em>last_spec=None</em>, <em>auto_diff=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/mech_auxiliary.html#write_mechanism_initializers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.mech_auxiliary.write_mechanism_initializers" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes mechanism-specific files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path where files are being written.</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Language type.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in the mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of reactions in the mechanism.</li>
+<li><strong>initial_conditions</strong> (<em>Optional[str]</em>) &#8211; A comma separated list of the initial conditions to use in form
+T,P,X (e.g. &#8216;800,1,H2=1.0,O2=0.5&#8217;). Temperature in K, P in atm.</li>
+<li><strong>old_spec_order</strong> (<em>Optional[list of int]</em>) &#8211; A mapping of the new species order to the original mechanism</li>
+<li><strong>old_rxn_order</strong> (<em>Optional[list of int]</em>) &#8211; A mapping of the new reaction order to the original mechanism</li>
+<li><strong>cache_optimized</strong> (<em>Optional[bool]</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, use the greedy optimizer to attempt to improve cache hit rates</li>
+<li><strong>last_spec</strong> (<em>Optional[str]</em>) &#8211; If specified, the species to assign to the last index.
+Typically should be N2, Ar, He or another inert bath gas</li>
+<li><strong>auto_diff</strong> (<em>Optional[bool]</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate files for Adept auto_differention library.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.mech_auxiliary.write_header">
@@ -53,11 +82,16 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>path</strong> &#8211; Path where files are being written.</li>
-<li><strong>lang</strong> &#8211; {&#8216;c&#8217;, &#8216;cuda&#8217;, &#8216;fortran&#8217;, &#8216;matlab&#8217;}
-Language type.</li>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path where files are being written.</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Language type.</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
 </td>
 </tr>
 </tbody>

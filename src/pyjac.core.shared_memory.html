@@ -44,20 +44,38 @@
 <dt id="pyjac.core.shared_memory.variable">
 <em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">variable</code><span class="sig-paren">(</span><em>base</em>, <em>index</em>, <em>lang='cuda'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Class that represents an array/index pair.  Used for in the internal dicitonary of the
+<a class="reference internal" href="#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> for identification and tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> usage for eviction</p>
+<p>Creates a <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> with given base and index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>base</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The name of the array</li>
+<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index in the array</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 <dl class="method">
 <dt id="pyjac.core.shared_memory.variable.reset">
 <code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable.reset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Reset the usage count of this <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a></p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.variable.update">
 <code class="descname">update</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable.update" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Increment the usage count of this <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a></p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.variable.to_string">
 <code class="descname">to_string</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable.to_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable.to_string" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Converts this <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> to a string representation</p>
+</dd></dl>
 
 </dd></dl>
 
@@ -65,62 +83,167 @@
 <dt id="pyjac.core.shared_memory.shared_memory_manager">
 <em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">shared_memory_manager</code><span class="sig-paren">(</span><em>blocks_per_sm=8</em>, <em>num_threads=64</em>, <em>L1_PREFERRED=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Creates a shared memory manager</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>blocks_per_sm</strong> (<em>int, optional</em>) &#8211; The number of blocks / streaming multiprocessor to target</li>
+<li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The number of threads / block expected in kernel launches</li>
+<li><strong>L1_PREFERRED</strong> (<em>bool, optional</em>) &#8211; Whether or not to prefer a larger L1 cache over more shared memory (recommended)</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>For ease, a single SMM is used in the entire program.
+Thus this class has methods for setting the state/behaviour (e.g. reset, and set_on_eviction)</p>
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.force_eviction">
 <code class="descname">force_eviction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.force_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.force_eviction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Forces eviction of the manager&#8217;s internal dictionary</p>
+<p class="rubric">Notes</p>
+<p>The internal dictionary will be reset, and (if supplied) the
+on_eviction function will be called on each evicted entry</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap">
 <code class="descname">evict_longest_gap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.evict_longest_gap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap" title="Permalink to this definition">¶</a></dt>
-<dd><p>evicts the entry that has gone the longest without use</p>
+<dd><p>Evicts the entry in the internal dictionary
+that has gone the longest without use</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.evict">
 <code class="descname">evict</code><span class="sig-paren">(</span><em>shared_index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.evict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.evict" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Removes the entry at shared_index from the internal dictionary</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shared_index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The key to remove from the internal dictionary</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>If set, on_eviction will be called</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.add_to_dictionary">
 <code class="descname">add_to_dictionary</code><span class="sig-paren">(</span><em>val</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.add_to_dictionary"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.add_to_dictionary" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Adds the value to the next available dictionary location</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>val</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; The value to add to the dictionary</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.set_on_eviction">
 <code class="descname">set_on_eviction</code><span class="sig-paren">(</span><em>func</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.set_on_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.set_on_eviction" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><dl class="docutils">
+<dt>Sets a callback function that is called upon eviction of a variable from the</dt>
+<dd>internal dictionary</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<a class="reference external" href="https://docs.python.org/glossary.html#term-function" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">function</span></code></a>) &#8211; Function that takes one arguement (the evicted variable)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.reset">
 <code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.reset" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Resets the SMM for use by other methods/callers</p>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.write_init">
 <code class="descname">write_init</code><span class="sig-paren">(</span><em>file</em>, <em>indent=4</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.write_init"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.write_init" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Convenience method to define shared memory for CUDA</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open <code class="xref any docutils literal"><span class="pre">File</span></code> object to write to</li>
+<li><strong>indent</strong> (<em>int, optional</em>) &#8211; The number of spaces to use in the indent</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.load_into_shared">
 <code class="descname">load_into_shared</code><span class="sig-paren">(</span><em>file</em>, <em>variables</em>, <em>estimated_usage=None</em>, <em>indent=2</em>, <em>load=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.load_into_shared"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.load_into_shared" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>The main SMM method, loads/evicts variables based upon estimated usage and stagnancy</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open <code class="xref any docutils literal"><span class="pre">File</span></code> object to write to</li>
+<li><strong>variables</strong> (list of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; List of variables to consider loading</li>
+<li><strong>estimated_usage</strong> (<em>list of float, optional</em>) &#8211; If specified, these will be used to prioritize variable additon</li>
+<li><strong>indent</strong> (<em>int, optional</em>) &#8211; The number of spaces to use in the indentation</li>
+<li><strong>load</strong> (<em>bool, optional</em>) &#8211; If true (default), a load into the internal dictionary will be written to the file.
+If false, this will must be handled by the calling routine</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.mark_for_eviction">
 <code class="descname">mark_for_eviction</code><span class="sig-paren">(</span><em>variables</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.mark_for_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.mark_for_eviction" title="Permalink to this definition">¶</a></dt>
-<dd><p>Like the eviction method, but only evicts if not used in the next load</p>
+<dd><p>Marks variables for possible eviction upon next load_into_shared call</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>variables</strong> (list of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; List of variables to consider for eviction</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.get_index">
 <code class="descname">get_index</code><span class="sig-paren">(</span><em>var</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.get_index"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.get_index" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Checks to see if a variable is in the internal dictionary.
+If so returns internal index and variable</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>var</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; The variable to check</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.get_array">
 <code class="descname">get_array</code><span class="sig-paren">(</span><em>lang</em>, <em>thevar</em>, <em>index</em>, <em>twod=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.get_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.get_array" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>A substitute for utils.get_array. If the variable is in our internal dictionary
+returns shared memory address, otherwise calles utils.get_array</p>
+</dd></dl>
 
 </dd></dl>
 

@@ -39,19 +39,29 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.core.CUDAParams</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Module containing parameters that control CUDA code generation</span>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module containing parameters that control CUDA code generation</span>
+
+
+<span class="sd">Parameters</span>
+<span class="sd">----------</span>
+
+<span class="sd">Jacob_Unroll : int</span>
+<span class="sd">  The number of reactions to attempt to place in each Jacobian reaction update subfile</span>
+<span class="sd">Jacob_Spec_Unroll : int</span>
+<span class="sd">  The number of species to attempt to place in each Jacobian species update subfile</span>
+<span class="sd">Rates_Unroll : int</span>
+<span class="sd">  The number of reactions to limit each reaction rate subfile to</span>
+<span class="sd">Max_Lines : int</span>
+<span class="sd">  The number of lines to attempt to limit each Jacobian reaction update subfile to</span>
+<span class="sd">Max_Spec_Lines : int</span>
+<span class="sd">  The number of lines to attempt to limit each Jacobian species update subfile to</span>
+
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">floor</span>
-
-
-<div class="viewcode-block" id="JacRatesCacheStrat"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.JacRatesCacheStrat">[docs]</a><span class="k">class</span> <span class="nc">JacRatesCacheStrat</span><span class="p">:</span>
-    <span class="n">Include</span><span class="p">,</span> <span class="n">Exclude</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span></div>
-
-<span class="n">JacRateStrat</span> <span class="o">=</span> <span class="n">JacRatesCacheStrat</span><span class="o">.</span><span class="n">Include</span>
-<span class="n">ResetOnJacUnroll</span> <span class="o">=</span> <span class="bp">True</span>
 
 <span class="n">Jacob_Unroll</span> <span class="o">=</span> <span class="mi">40</span>
 <span class="n">Jacob_Spec_Unroll</span> <span class="o">=</span> <span class="mi">40</span>
@@ -61,6 +71,14 @@
 
 
 <div class="viewcode-block" id="get_L1_size"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.get_L1_size">[docs]</a><span class="k">def</span> <span class="nf">get_L1_size</span><span class="p">(</span><span class="n">L1_Preferred</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the size (in number of doubles) of the L1 cache for sm_20</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    L1_Preferred : bool</span>
+<span class="sd">        If true, prefer a larger L1 cache over more shared memory (recommended)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">L1_Preferred</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">49152</span> <span class="o">/</span> <span class="mi">8</span>  <span class="c1"># doubles</span>
     <span class="k">else</span><span class="p">:</span>
@@ -68,6 +86,14 @@
 
 
 <div class="viewcode-block" id="get_shared_size"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.get_shared_size">[docs]</a><span class="k">def</span> <span class="nf">get_shared_size</span><span class="p">(</span><span class="n">L1_Preferred</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the size (in number of doubles) of shared memory for sm_20</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    L1_Preferred : bool</span>
+<span class="sd">        If true, prefer a larger L1 cache over more shared memory (recommended)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">L1_Preferred</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">49152</span> <span class="o">/</span> <span class="mi">8</span>  <span class="c1"># doubles</span>
     <span class="k">else</span><span class="p">:</span>
@@ -75,20 +101,59 @@
 
 
 <div class="viewcode-block" id="get_register_count"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.get_register_count">[docs]</a><span class="k">def</span> <span class="nf">get_register_count</span><span class="p">(</span><span class="n">num_blocks</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the number of registers available per block for sm_20</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    num_blocks : int</span>
+<span class="sd">        The number of blocks to target per kernel launch</span>
+<span class="sd">    num_threads : int</span>
+<span class="sd">        The number of threads to target per kernel launch</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="nb">min</span><span class="p">((</span><span class="mi">32768</span> <span class="o">/</span> <span class="n">num_blocks</span><span class="p">)</span> <span class="o">/</span> <span class="n">num_threads</span><span class="p">,</span> <span class="mi">63</span><span class="p">),</span> <span class="mi">1</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="write_launch_bounds"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.write_launch_bounds">[docs]</a><span class="k">def</span> <span class="nf">write_launch_bounds</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="n">blocks_per_sm</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">L1_PREFERRED</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
-    <span class="n">shared_per_block</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">floor</span><span class="p">(</span><span class="n">get_shared_size</span><span class="p">(</span><span class="n">L1_PREFERRED</span><span class="p">)</span> <span class="o">/</span> <span class="n">blocks_per_sm</span><span class="p">))</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">no_shared</span> <span class="k">else</span> <span class="mi">0</span>
+<div class="viewcode-block" id="write_launch_bounds"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.write_launch_bounds">[docs]</a><span class="k">def</span> <span class="nf">write_launch_bounds</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="n">blocks_per_sm</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
+                        <span class="n">L1_PREFERRED</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="bp">False</span>
+                        <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Creates the launch_bounds.cuh file that may be included by CUDA solvers</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    builddir : str</span>
+<span class="sd">        The directory to place the source file in</span>
+<span class="sd">    blocks_per_sm : int, optional</span>
+<span class="sd">        The number of blocks to target per kernel launch</span>
+<span class="sd">    num_threads : int, optional</span>
+<span class="sd">        The number of threads per block in the per kernel launch</span>
+<span class="sd">    L1_PREFERRED : bool, optional</span>
+<span class="sd">        If true, prefer a larger L1 cache over more shared memory (recommended)</span>
+<span class="sd">    no_shared : bool, optional</span>
+<span class="sd">        If false, turn off shared memory</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">shared_per_block</span> <span class="o">=</span> <span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">floor</span><span class="p">(</span><span class="n">get_shared_size</span><span class="p">(</span><span class="n">L1_PREFERRED</span><span class="p">)</span> <span class="o">/</span> <span class="n">blocks_per_sm</span><span class="p">))</span>
+                        <span class="k">if</span> <span class="ow">not</span> <span class="n">no_shared</span>
+                        <span class="k">else</span> <span class="mi">0</span>
+                        <span class="p">)</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="s1">&#39;launch_bounds.cuh&#39;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef LAUNCH_BOUNDS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;#define LAUNCH_BOUNDS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;#define TARGET_BLOCK_SIZE ({})</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span> <span class="o">+</span>
                    <span class="s1">&#39;#define TARGET_BLOCKS ({})</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blocks_per_sm</span><span class="p">)</span> <span class="o">+</span>
                    <span class="p">(</span><span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="n">no_shared</span> <span class="k">else</span> <span class="s1">&#39;//shared memory active</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span>
-                   <span class="s1">&#39;#define SHARED_SIZE ({} * sizeof(double))</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shared_per_block</span><span class="p">)</span> <span class="o">+</span>
-                   <span class="p">(</span><span class="s1">&#39;//Large L1 cache active</span><span class="se">\n</span><span class="s1">#define PREFERL1</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="k">if</span> <span class="n">L1_PREFERRED</span> <span class="k">else</span> <span class="s1">&#39;//Large shared memory active</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span>
-                   <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                   <span class="s1">&#39;#define SHARED_SIZE ({}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shared_per_block</span><span class="p">)</span> <span class="o">+</span>
+                   <span class="s1">&#39; * sizeof(double))</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+                   <span class="p">(</span><span class="s1">&#39;//Large L1 cache active</span><span class="se">\n</span><span class="s1">#define PREFERL1</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="k">if</span> <span class="n">L1_PREFERRED</span> <span class="k">else</span> <span class="s1">&#39;//Large shared memory active</span><span class="se">\n</span><span class="s1">&#39;</span>
+                    <span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="p">)</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="s1">&#39;regcount&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">get_register_count</span><span class="p">(</span><span class="n">blocks_per_sm</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">)))</span></div>
 </pre></div>

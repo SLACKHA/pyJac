@@ -39,7 +39,11 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.functional_tester.partially_stirred_reactor</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Python 2 compatibility</span>
+<span></span><span class="c1"># -*- coding: utf-8 -*-</span>
+<span class="sd">&quot;&quot;&quot;Module for partially stirred reactor simulations.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Python 2 compatibility</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
@@ -78,7 +82,24 @@
     <span class="n">parallel</span> <span class="o">=</span> <span class="bp">False</span>
 
 <div class="viewcode-block" id="Stream"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.Stream">[docs]</a><span class="k">class</span> <span class="nc">Stream</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for inlet flow stream into reactor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">flow</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initializes stream object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            Constant thermochemical state of this stream.</span>
+<span class="sd">        flow : float</span>
+<span class="sd">            Flow rate of this stream.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">comp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">flow</span> <span class="o">=</span> <span class="n">flow</span>
 
@@ -86,17 +107,54 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">xflow</span> <span class="o">=</span> <span class="mf">0.0</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Returns stream composition (enthalpy and species mass fractions).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of stream (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">comp</span></div>
 
 
 <div class="viewcode-block" id="Particle"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.Particle">[docs]</a><span class="k">class</span> <span class="nc">Particle</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for particle in reactor.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize particle object with thermochemical state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            Initial thermochemical state of particle</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">gas</span> <span class="o">=</span> <span class="n">gas</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">reac</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">IdealGasConstPressureReactor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">netw</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">ReactorNet</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">reac</span><span class="p">])</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">comp</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Return or set composition.</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        comp : Optional[cantera.Solution]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">comp</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">comp</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
@@ -114,6 +172,19 @@
             <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span>
 
     <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add values to state of particle.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Particle`, `numpy.array`, `int`, `float`</span>
+<span class="sd">            Thermochemical state (enthalpy + mass fractions) to add to current state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
@@ -130,6 +201,19 @@
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="k">def</span> <span class="nf">__radd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add values to state of particle.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Particle`, `numpy.array`, `int`, `float`</span>
+<span class="sd">            Thermochemical state (enthalpy + mass fractions) to add to current state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
@@ -146,6 +230,19 @@
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="k">def</span> <span class="nf">__sub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Subtract values from state of particle.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Particle`, `numpy.array`, `int`, `float`</span>
+<span class="sd">            Thermochemical state (enthalpy + mass fractions) to subtract from current state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
@@ -162,6 +259,19 @@
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="k">def</span> <span class="nf">__rsub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Subtract state of particle from input state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Particle`, `numpy.array`, `int`, `float`</span>
+<span class="sd">            Thermochemical state from which to subract Particle state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
@@ -178,18 +288,57 @@
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="k">def</span> <span class="nf">__mul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Multiply state of particle by value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `int`, `float`</span>
+<span class="sd">            Value to multiply `Particle` state by.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span> <span class="o">*</span> <span class="n">other</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="k">def</span> <span class="nf">__rmul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Multiply state of particle by value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `int`, `float`</span>
+<span class="sd">            Value to multiply `Particle` state by.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
             <span class="k">return</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">))</span> <span class="o">*</span> <span class="n">other</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">NotImplemented</span>
 
     <span class="k">def</span> <span class="nf">__iadd__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Add values to state of particle.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Particle`, `numpy.array`, `int`, `float`</span>
+<span class="sd">            Thermochemical state (enthalpy + mass fractions) to add to current state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">+</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
@@ -207,6 +356,19 @@
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span> <span class="nf">__isub__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Subtract values from state of particle.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `Particle`, `numpy.array`, `int`, `float`</span>
+<span class="sd">            Thermochemical state (enthalpy + mass fractions) to subtract from current state.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">Particle</span><span class="p">):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">-</span> <span class="n">other</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span>
@@ -224,6 +386,19 @@
         <span class="k">return</span> <span class="bp">self</span>
 
     <span class="k">def</span> <span class="nf">__imul__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Multiply state of particle by value.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        other : `int`, `float`</span>
+<span class="sd">            Value to multiply `Particle` state by.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        comp : numpy.array</span>
+<span class="sd">            Thermochemical composition of particle (enthalpy + mass fractions).</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="p">(</span><span class="nb">int</span><span class="p">,</span> <span class="nb">float</span><span class="p">)):</span>
             <span class="n">h</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">enthalpy_mass</span> <span class="o">*</span> <span class="n">other</span>
             <span class="n">Y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">Y</span> <span class="o">*</span> <span class="n">other</span>
@@ -236,6 +411,16 @@
 
 <div class="viewcode-block" id="Particle.react"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.Particle.react">[docs]</a>    <span class="k">def</span> <span class="nf">react</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dt</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Perform reaction timestep by advancing network.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dt : float</span>
+<span class="sd">            Reaction timestep [seconds]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">advance</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">netw</span><span class="o">.</span><span class="n">time</span> <span class="o">+</span> <span class="n">dt</span><span class="p">)</span></div></div>
 
@@ -248,18 +433,26 @@
 <span class="sd">    the mixture, return a string containing the mole fractions of the</span>
 <span class="sd">    species, suitable for setting the state of the input ThermoPhase.</span>
 
-<span class="sd">    :param gas:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    gas : `cantera.ThermoPhase`</span>
 <span class="sd">        Cantera ThermoPhase object containing the desired species.</span>
-<span class="sd">    :param eq_ratio:</span>
+<span class="sd">    eq_ratio : float</span>
 <span class="sd">        Equivalence ratio</span>
-<span class="sd">    :param fuel:</span>
-<span class="sd">        Dictionary of molecules in the fuel mixture and the fraction of</span>
-<span class="sd">        each molecule in the fuel mixture</span>
-<span class="sd">    :param oxidizer:</span>
-<span class="sd">        Dictionary of molecules in the oxidizer mixture and the</span>
+<span class="sd">    fuel : dict</span>
+<span class="sd">        Dictionary of molecules in the fuel mixture and the fraction of \</span>
+<span class="sd">        each molecule in the fuel mixture.</span>
+<span class="sd">    oxidizer : dict</span>
+<span class="sd">        Dictionary of molecules in the oxidizer mixture and the \</span>
 <span class="sd">        fraction of each molecule in the oxidizer mixture.</span>
-<span class="sd">    :param complete_products:</span>
+<span class="sd">    complete_products : list of `str`</span>
 <span class="sd">        List of species in the products of complete combustion.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    reactants : str</span>
+<span class="sd">        String with reactants and mole fractions (e.g., ``&#39;H2:2.0,O2:1.0&#39;``).</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">reactants</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">cprod_elems</span> <span class="o">=</span> <span class="p">{}</span>
@@ -370,7 +563,20 @@
 
 
 <div class="viewcode-block" id="pairwise"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.pairwise">[docs]</a><span class="k">def</span> <span class="nf">pairwise</span><span class="p">(</span><span class="n">iterable</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;s -&gt; (s0,s1), (s2,s3), (s4, s5), ...</span>
+    <span class="sd">&quot;&quot;&quot;Takes list of objects and converts into list of pairs.</span>
+
+<span class="sd">    s -&gt; (s0,s1), (s2,s3), (s4, s5), ...</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    iterable : list</span>
+<span class="sd">        List of objects.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    zipped : zip</span>
+<span class="sd">        Zip with pairs of objects from `iterable`.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">a</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
     <span class="k">return</span> <span class="nb">zip</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">a</span><span class="p">)</span></div>
@@ -379,12 +585,19 @@
 <div class="viewcode-block" id="mix_substep"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.mix_substep">[docs]</a><span class="k">def</span> <span class="nf">mix_substep</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">tau_mix</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Pairwise mixing step.</span>
 
-<span class="sd">    :param particles:</span>
-<span class="sd">        List of Particle objects.</span>
-<span class="sd">    :param dt:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : list of `Particle`</span>
+<span class="sd">        List of `Particle` objects.</span>
+<span class="sd">    dt : float</span>
 <span class="sd">        Time step [s] to increment particles.</span>
-<span class="sd">    :param tau_mix:</span>
+<span class="sd">    tau_mix : float</span>
 <span class="sd">        Mixing timescale [s].</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">decay</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">dt</span> <span class="o">/</span> <span class="n">tau_mix</span><span class="p">))</span>
@@ -401,7 +614,18 @@
 
 
 <div class="viewcode-block" id="reaction_worker"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.reaction_worker">[docs]</a><span class="k">def</span> <span class="nf">reaction_worker</span><span class="p">(</span><span class="n">part_tup</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Worker for performing reaction substep given initial state.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    part_tup : tuple</span>
+<span class="sd">        Tuple with mechanism file, temperature, pressure, mass fractions, and time step.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    p : `numpy.array`</span>
+<span class="sd">        Thermochemical composition of particle following reaction.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">mech</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">dt</span> <span class="o">=</span> <span class="n">part_tup</span>
     <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">mech</span><span class="p">)</span>
@@ -414,10 +638,19 @@
 <div class="viewcode-block" id="reaction_substep"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.reaction_substep">[docs]</a><span class="k">def</span> <span class="nf">reaction_substep</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">dt</span><span class="p">,</span> <span class="n">mech</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Advance each of the particles in time through reactions.</span>
 
-<span class="sd">    :param particles:</span>
-<span class="sd">        List of Particle objects.</span>
-<span class="sd">    :param dt:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : list of `Particle`</span>
+<span class="sd">        List of Particle objects to be reacted.</span>
+<span class="sd">    dt : float</span>
 <span class="sd">        Time step [s] to increment particles.</span>
+<span class="sd">    mech : str</span>
+<span class="sd">        Mechanism filename.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">parallel</span><span class="p">:</span>
         <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">particles</span><span class="p">:</span>
@@ -443,12 +676,19 @@
 <div class="viewcode-block" id="select_pairs"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.select_pairs">[docs]</a><span class="k">def</span> <span class="nf">select_pairs</span><span class="p">(</span><span class="n">particles</span><span class="p">,</span> <span class="n">num_pairs</span><span class="p">,</span> <span class="n">num_skip</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Randomly select pair(s) of particles and move to end of list.</span>
 
-<span class="sd">    :param particles:</span>
-<span class="sd">        List of Particle objects.</span>
-<span class="sd">    :param num_pairs:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    particles : list of `Particle`</span>
+<span class="sd">        List of `Particle` objects.</span>
+<span class="sd">    num_pairs : int</span>
 <span class="sd">        Number of pairs to be selected and moved.</span>
-<span class="sd">    :param num_skip:</span>
+<span class="sd">    num_skip : Optional[int]</span>
 <span class="sd">        Number of pairs at end of list to be skipped. Optional, default 0.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">for</span> <span class="n">i_pair</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_pairs</span><span class="p">):</span>
@@ -475,8 +715,16 @@
 <div class="viewcode-block" id="inflow"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.inflow">[docs]</a><span class="k">def</span> <span class="nf">inflow</span><span class="p">(</span><span class="n">streams</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Determine index of stream for next inflowing particle.</span>
 
-<span class="sd">    :param streams:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    streams : list of `Stream`</span>
 <span class="sd">        List of Stream objects for inlet streams.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    i_inflow : int</span>
+<span class="sd">        Index of stream for next inflowing particle.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Find stream with largest running flow rate</span>
@@ -504,14 +752,21 @@
 <div class="viewcode-block" id="save_data"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.save_data">[docs]</a><span class="k">def</span> <span class="nf">save_data</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">time</span><span class="p">,</span> <span class="n">particles</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Save temperature and species mass fraction from all particles to array.</span>
 
-<span class="sd">    :param idx:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    idx : int</span>
 <span class="sd">        Index of timestep.</span>
-<span class="sd">    :param time:</span>
+<span class="sd">    time : float</span>
 <span class="sd">        Current time [s].</span>
-<span class="sd">    :param particles:</span>
-<span class="sd">        List of Particle objects.</span>
-<span class="sd">    :param data:</span>
+<span class="sd">    particles : list of `Particle`</span>
+<span class="sd">        List of `Particle` objects.</span>
+<span class="sd">    data : `numpy.ndarray`</span>
 <span class="sd">        ndarray of particle data for all timesteps.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">particles</span><span class="p">):</span>
         <span class="n">data</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">time</span>
@@ -531,35 +786,43 @@
                    <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Perform partially stirred reactor (PaSR) simulation.</span>
 
-<span class="sd">    :param mech:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mech : str</span>
 <span class="sd">        Mechanism filename (in Cantera format).</span>
-<span class="sd">    :param case:</span>
-<span class="sd">        &#39;Premixed&#39; or &#39;Non-premixed&#39;.</span>
-<span class="sd">    :param init_temp:</span>
+<span class="sd">    case : {&#39;Premixed&#39;,&#39;Non-premixed&#39;}</span>
+<span class="sd">        Case of PaSR simulation; {&#39;Premixed&#39;, &#39;Non-premixed&#39;}.</span>
+<span class="sd">    init_temp : float</span>
 <span class="sd">        Initial temperature [K].</span>
-<span class="sd">    :param pres:</span>
+<span class="sd">    pres : float</span>
 <span class="sd">        Pressure [atm].</span>
-<span class="sd">    :param eq_ratio:</span>
+<span class="sd">    eq_ratio : float</span>
 <span class="sd">        Equivalence ratio.</span>
-<span class="sd">    :param fuel:</span>
-<span class="sd">        Dictionary of molecules in the fuel mixture and the fraction of</span>
+<span class="sd">    fuel : dict</span>
+<span class="sd">        Dictionary of molecules in the fuel mixture and the fraction of \</span>
 <span class="sd">        each molecule in the fuel mixture.</span>
-<span class="sd">    :param oxidizer:</span>
-<span class="sd">        Dictionary of molecules in the oxidizer mixture and the</span>
+<span class="sd">    oxidizer : dict</span>
+<span class="sd">        Dictionary of molecules in the oxidizer mixture and the \</span>
 <span class="sd">        fraction of each molecule in the oxidizer mixture.</span>
-<span class="sd">    :param complete_products:</span>
-<span class="sd">        List of species in the products of complete combustion.</span>
-<span class="sd">        Optional, default [CO2, H2O, N2].</span>
-<span class="sd">    :param num_part:</span>
+<span class="sd">    complete_products : Optional[list]</span>
+<span class="sd">        List of species in the products of complete combustion. \</span>
+<span class="sd">        Optional, default [&#39;CO2&#39;, &#39;H2O&#39;, &#39;N2&#39;].</span>
+<span class="sd">    num_part : Optional[int]</span>
 <span class="sd">        Number of particles. Optional, default 100.</span>
-<span class="sd">    :param tau_res:</span>
+<span class="sd">    tau_res : Optional[float]</span>
 <span class="sd">        Residence time [s]. Optional, default 10 [ms].</span>
-<span class="sd">    :param tau_mix:</span>
+<span class="sd">    tau_mix : Optional[float]</span>
 <span class="sd">        Mixing timescale [s]. Optional, default 1 [ms].</span>
-<span class="sd">    :param tau_pair:</span>
+<span class="sd">    tau_pair : Optional[float]</span>
 <span class="sd">        Pairing timescale [s]. Optional, default 1 [ms].</span>
-<span class="sd">    :param num_res:</span>
+<span class="sd">    num_res : Optional[int]</span>
 <span class="sd">        Numer of residence times to simulate. Optional, default 5.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    particle_data : numpy.array</span>
+<span class="sd">        numpy.array with full particle data.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="c1"># Time step control</span>
@@ -725,8 +988,16 @@
 <div class="viewcode-block" id="parse_input_file"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.partially_stirred_reactor.html#pyjac.functional_tester.partially_stirred_reactor.parse_input_file">[docs]</a><span class="k">def</span> <span class="nf">parse_input_file</span><span class="p">(</span><span class="n">input_file</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Parse input file for PaSR operating parameters.</span>
 
-<span class="sd">    :param input_file:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input_file : str</span>
 <span class="sd">        Filename with YAML-format input file.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    pars : dict</span>
+<span class="sd">        Dictionary with input parameters extracted from YAML file.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">input_file</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>

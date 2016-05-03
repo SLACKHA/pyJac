@@ -39,7 +39,8 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.core.mech_auxiliary</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Writes mechanism header and output testing files&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot;Writes mechanism header and output testing files</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Python 2 compatibility</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
@@ -57,13 +58,45 @@
 <div class="viewcode-block" id="write_mechanism_initializers"><a class="viewcode-back" href="../../../src/pyjac.core.mech_auxiliary.html#pyjac.core.mech_auxiliary.write_mechanism_initializers">[docs]</a><span class="k">def</span> <span class="nf">write_mechanism_initializers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">initial_conditions</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
                                  <span class="n">old_spec_order</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">old_rxn_order</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
                                  <span class="n">cache_optimized</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                                 <span class="n">autodiff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+                                 <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Writes mechanism-specific files.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        Path where files are being written.</span>
+<span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
+<span class="sd">        Language type.</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        List of species in the mechanism.</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
+<span class="sd">        List of reactions in the mechanism.</span>
+<span class="sd">    initial_conditions : Optional[str]</span>
+<span class="sd">        A comma separated list of the initial conditions to use in form</span>
+<span class="sd">        T,P,X (e.g. &#39;800,1,H2=1.0,O2=0.5&#39;). Temperature in K, P in atm.</span>
+<span class="sd">    old_spec_order : Optional[list of int]</span>
+<span class="sd">        A mapping of the new species order to the original mechanism</span>
+<span class="sd">    old_rxn_order : Optional[list of int]</span>
+<span class="sd">        A mapping of the new reaction order to the original mechanism</span>
+<span class="sd">    cache_optimized : Optional[bool]</span>
+<span class="sd">        If ``True``, use the greedy optimizer to attempt to improve cache hit rates</span>
+<span class="sd">    last_spec : Optional[str]</span>
+<span class="sd">        If specified, the species to assign to the last index.</span>
+<span class="sd">        Typically should be N2, Ar, He or another inert bath gas</span>
+<span class="sd">    auto_diff : Optional[bool]</span>
+<span class="sd">        If ``True``, generate files for Adept auto_differention library.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;matlab&#39;</span><span class="p">,</span> <span class="s1">&#39;fortran&#39;</span><span class="p">]:</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>
 
-    <span class="k">if</span> <span class="n">autodiff</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">auto_diff</span><span class="p">:</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;ad_jac.c&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-            <span class="c1">#need to write the autodiff jacobian</span>
+            <span class="c1">#need to write the auto_diff jacobian</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;&quot;&quot;</span>
 <span class="s2">#include &lt;vector&gt;</span>
 <span class="s2">#include &quot;adept.h&quot;</span>
@@ -102,8 +135,9 @@
                   <span class="s1">&#39;jac&#39;</span> <span class="p">:</span> <span class="s1">&#39;NSP * NSP&#39;</span><span class="p">,</span>
                   <span class="s1">&#39;var&#39;</span> <span class="p">:</span> <span class="s1">&#39;1&#39;</span>
                   <span class="p">}</span>
-    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">in</span> <span class="n">reac</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">reac</span><span class="o">.</span><span class="n">prod</span> <span class="ow">and</span>
-            <span class="n">utils</span><span class="o">.</span><span class="n">get_nu</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">reac</span><span class="p">)</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="p">):</span>
+    <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">in</span> <span class="n">reac</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">reac</span><span class="o">.</span><span class="n">prod</span> <span class="ow">and</span>
+           <span class="n">utils</span><span class="o">.</span><span class="n">get_nu</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">reac</span><span class="p">)</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span>
+           <span class="p">):</span>
         <span class="n">gpu_memory</span><span class="p">[</span><span class="s1">&#39;J_nplusjplus&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;NSP&#39;</span>
     <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">r</span><span class="o">.</span><span class="n">thd_body</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">):</span>
         <span class="n">gpu_memory</span><span class="p">[</span><span class="s1">&#39;pres_mod&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;PRES_MOD_RATES&#39;</span>
@@ -114,7 +148,8 @@
     <span class="c1"># the mechanism header defines a number of useful preprocessor defines, as</span>
     <span class="c1"># well as defining method stubs for setting initial conditions</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;mechanism{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])),</span>
-              <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+              <span class="s1">&#39;w&#39;</span>
+              <span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
 
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef MECHANISM_{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span> <span class="o">+</span>
                    <span class="s1">&#39;#define MECHANISM_{}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">][</span><span class="mi">1</span><span class="p">:])</span>
@@ -140,10 +175,12 @@
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//last_spec {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last_spec</span><span class="p">))</span>
 
         <span class="c1"># convience: write species indexes</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;/* Species Indexes</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;{}  {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
-                             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)))</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;*/</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;/* Species Indexes</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;{}  {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span>
+                             <span class="p">)</span> <span class="o">+</span> 
+                   <span class="s1">&#39;*/</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+                   <span class="p">)</span>
 
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Number of species</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;#define NSP {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">))</span> <span class="o">+</span>
@@ -157,12 +194,14 @@
                    <span class="nb">len</span><span class="p">([</span><span class="n">reac</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">rev</span><span class="p">]))</span>
                    <span class="p">)</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Number of reactions with pressure modified rates</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#define PRES_MOD_RATES {}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s1">&#39;#define PRES_MOD_RATES {}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
             <span class="nb">len</span><span class="p">([</span><span class="n">reac</span> <span class="k">for</span> <span class="n">reac</span> <span class="ow">in</span> <span class="n">reacs</span> <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">reac</span><span class="o">.</span><span class="n">thd_body</span><span class="p">]))</span>
             <span class="p">)</span>
 
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-            <span class="s1">&#39;//Must be implemented by user on a per mechanism basis in mechanism{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
+            <span class="s1">&#39;//Must be implemented by user on a per &#39;</span>
+            <span class="s1">&#39;mechanism basis in mechanism{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
             <span class="s1">&#39;void set_same_initial_conditions(int, double**, double**);</span><span class="se">\n\n</span><span class="s1">&#39;</span>
             <span class="p">)</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#if defined (RATES_TEST) || defined (PROFILER)</span><span class="se">\n</span><span class="s1">&#39;</span>
@@ -181,10 +220,11 @@
 
     <span class="c1"># now the mechanism file</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;mechanism&#39;</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &quot;mass_mole{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-          <span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
-        <span class="s1">&#39;#include &lt;stdio.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-        <span class="s1">&#39;#include &quot;mechanism{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]))</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+            <span class="s1">&#39;#include &quot;mass_mole{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span> <span class="o">+</span>
+            <span class="s1">&#39;#include &lt;stdio.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;#include &quot;mechanism{}&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+            <span class="p">)</span>
         <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &quot;gpu_memory.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
@@ -192,7 +232,8 @@
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    void apply_mask(double* y_specs) {</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cache_optimized</span> <span class="ow">or</span> <span class="n">last_spec</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        double temp [NSP];</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                       <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">old_spec_order</span><span class="p">):</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -201,20 +242,23 @@
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    void apply_reverse_mask(double* y_specs) {</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">cache_optimized</span> <span class="ow">or</span> <span class="n">last_spec</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        double temp [NSP];</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                       <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
             <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reversed_specs</span><span class="p">):</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="n">needed_arr</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;var&#39;</span><span class="p">]</span>
         <span class="n">needed_arr</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;double** &#39;</span> <span class="o">+</span> <span class="n">a</span> <span class="o">+</span> <span class="s1">&#39;_host&#39;</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">needed_arr</span><span class="p">]</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void set_same_initial_conditions(int NUM, {}) </span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">needed_arr</span><span class="p">)))</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    double Xi [NSP] = {0.0};</span><span class="se">\n</span><span class="s1">&#39;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void set_same_initial_conditions(int NUM, &#39;</span>
+                   <span class="s1">&#39;{}) </span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">needed_arr</span><span class="p">))</span> <span class="o">+</span>
+                   <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
+                   <span class="s1">&#39;    double Xi [NSP] = {0.0};</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;    //set initial mole fractions here</span><span class="se">\n\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;    //Normalize mole fractions to sum to one</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;    double Xsum = 0.0;</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="p">)</span>
+
         <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">T0</span> <span class="o">=</span> <span class="mi">1600</span>
         <span class="n">P</span> <span class="o">=</span> <span class="mi">1</span>
@@ -222,42 +266,53 @@
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">conditions</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">initial_conditions</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="p">)]</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">conditions</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
-                    <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Initial conditions improperly specified, expecting form T,P,Species1=...,Species2=...&quot;</span><span class="p">)</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Initial conditions improperly specified, &#39;</span>
+                          <span class="s1">&#39;expecting form T,P,Species1=...,Species2=...&#39;</span>
+                          <span class="p">)</span>
                     <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Error in initial conditions list, not comma separated&quot;</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error in initial conditions list, not comma separated&#39;</span><span class="p">)</span>
                 <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">T0</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">conditions</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="n">P</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">conditions</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                 <span class="n">mole_list</span> <span class="o">=</span> <span class="n">conditions</span><span class="p">[</span><span class="mi">2</span><span class="p">:]</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Could not parse initial T or P as floats...&quot;</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Could not parse initial T or P as floats...&#39;</span><span class="p">)</span>
                 <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;=&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">]</span>
+                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;=&#39;</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">]</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Error in initial mole list, initial moles do not follow SPECIES_NAME=VALUE format&quot;</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error in initial mole list, initial moles do not &#39;</span>
+                      <span class="s1">&#39;follow SPECIES_NAME=VALUE format&#39;</span>
+                      <span class="p">)</span>
                 <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">(</span><span class="n">split</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span> <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">]</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Unknown (non-float) value found as initial mole number in list&quot;</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Unknown (non-float) value found &#39;</span>
+                      <span class="s1">&#39;as initial mole number in list&#39;</span>
+                      <span class="p">)</span>
                 <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">next</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">split</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span>
-                             <span class="n">mole_list</span><span class="p">]</span>
+                <span class="n">mole_list</span> <span class="o">=</span> <span class="p">[(</span><span class="nb">next</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span>
+                              <span class="k">if</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">split</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">split</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                              <span class="p">)</span> <span class="k">for</span> <span class="n">split</span> <span class="ow">in</span> <span class="n">mole_list</span>
+                             <span class="p">]</span>
             <span class="k">except</span><span class="p">:</span>
-                <span class="k">print</span><span class="p">(</span><span class="s2">&quot;Unknown species in initial mole list&quot;</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Unknown species in initial mole list&#39;</span><span class="p">)</span>
                 <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
         <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">mole_list</span><span class="p">:</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    Xi[{}] = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    Xi[{}] = {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>
+                       <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
+                       <span class="p">)</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
             <span class="s1">&#39;    for (int j = 0; j &lt; NSP; ++ j) {</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;        Xsum += Xi[j];</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;    if (Xsum == 0.0) {</span><span class="se">\n</span><span class="s1">&#39;</span>
-            <span class="s1">&#39;        printf(&quot;Use of the set initial conditions function requires user implementation!</span><span class="se">\\</span><span class="s1">n&quot;);</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;        printf(&quot;Use of the set initial conditions function &#39;</span>
+            <span class="s1">&#39;requires user implementation!</span><span class="se">\\</span><span class="s1">n&quot;);</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;        exit(-1);</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="s1">&#39;    for (int j = 0; j &lt; NSP; ++ j) {</span><span class="se">\n</span><span class="s1">&#39;</span>
@@ -311,99 +366,133 @@
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void initialize_gpu_memory(int, mechanism_memory**,&#39;</span>
                        <span class="s1">&#39; mechanism_memory**);</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;size_t required_mechanism_size();</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;void free_gpu_memory(mechanism_memory**, mechanism_memory**);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;void free_gpu_memory(mechanism_memory**, &#39;</span>
+                       <span class="s1">&#39;mechanism_memory**);</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                       <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
 
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;gpu_memory.cu&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
             <span class="n">init_template</span> <span class="o">=</span> <span class="s1">&#39;initialize_pointer(&amp;((*d_mem)-&gt;{}), {} * padded)&#39;</span>
             <span class="n">free_template</span> <span class="o">=</span> <span class="s1">&#39;cudaErrorCheck(cudaFree({}))&#39;</span>
             <span class="n">err_check</span> <span class="o">=</span> <span class="s1">&#39;  cudaErrorCheck( {} );</span><span class="se">\n</span><span class="s1">&#39;</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#include &quot;gpu_memory.cuh&quot;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
 
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;size_t required_mechanism_size() {</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;  //returns the total required size for the mechanism per thread</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;  size_t mech_size = 0;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">))</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  mech_size += {};</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">size</span><span class="p">))</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //y_device</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  mech_size += NSP;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //pres_device</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  mech_size += 1;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  return mech_size * sizeof(double);</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void initialize_gpu_memory(int padded, mechanism_memory** h_mem,&#39;</span>
-                       <span class="s1">&#39; mechanism_memory** d_mem)</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;  //init vectors</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  size_t mech_size = 0;</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  // Allocate storage for the device struct</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;cudaMalloc(d_mem, sizeof(mechanism_memory))&#39;</span><span class="p">))</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //allocate the device arrays on the host pointer</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">)</span> <span class="o">+</span>
+                           <span class="s1">&#39;  mech_size += {};</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
+                           <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //y_device</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  mech_size += NSP;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  //pres_device</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  mech_size += 1;</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;  return mech_size * sizeof(double);</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
+                       <span class="p">)</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                <span class="s1">&#39;void initialize_gpu_memory(int padded, mechanism_memory** h_mem,&#39;</span>
+                <span class="s1">&#39; mechanism_memory** d_mem)</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;  //init vectors</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="s1">&#39;  // Allocate storage for the device struct</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
+                <span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;cudaMalloc(d_mem, sizeof(mechanism_memory))&#39;</span><span class="p">)</span> <span class="o">+</span>
+                <span class="s1">&#39;  //allocate the device arrays on the host pointer</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="p">)</span>
 
             <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-                  <span class="s1">&#39;cudaMalloc(&amp;((*h_mem)-&gt;{}), {} * padded * sizeof(double))&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">size</span><span class="p">)))</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                    <span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="s1">&#39;cudaMalloc(&amp;((*h_mem)-&gt;{}), {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="o">+</span>
+                    <span class="s1">&#39; * padded * sizeof(double))&#39;</span><span class="p">)</span>
+                    <span class="p">)</span>
 
             <span class="n">zero_vals</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;spec_rates&#39;</span><span class="p">,</span> <span class="s1">&#39;dy&#39;</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">]</span>
             <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">zero_vals</span><span class="p">:</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;cudaErrorCheck( &#39;</span>
-                  <span class="s1">&#39;cudaMemset((*h_mem)-&gt;{}, 0, {} * padded * sizeof(double)) )&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gpu_memory</span><span class="p">[</span><span class="n">x</span><span class="p">])</span>
-                  <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
-
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;cudaErrorCheck( &#39;</span>
-              <span class="s1">&#39;cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), cudaMemcpyHostToDevice) )&#39;</span> <span class="o">+</span>
-              <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;zero out required values</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                    <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;cudaErrorCheck( &#39;</span>
+                    <span class="s1">&#39;cudaMemset((*h_mem)-&gt;{}, 0, {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">gpu_memory</span><span class="p">[</span><span class="n">x</span><span class="p">])</span> <span class="o">+</span>
+                    <span class="s1">&#39; * padded * sizeof(double)) )&#39;</span> <span class="o">+</span>
+                    <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
+                    <span class="p">)</span>
 
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
-                       <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
+                <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;cudaErrorCheck( &#39;</span>
+                <span class="s1">&#39;cudaMemcpy(*d_mem, *h_mem, sizeof(mechanism_memory), &#39;</span>
+                <span class="s1">&#39;cudaMemcpyHostToDevice) )&#39;</span> <span class="o">+</span>
+                <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span> <span class="o">+</span>
+                       <span class="s1">&#39;zero out required values</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="p">)</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void free_gpu_memory(mechanism_memory** h_mem, mechanism_memory** d_mem)</span><span class="se">\n</span><span class="s1">&#39;</span>
+
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;void free_gpu_memory(mechanism_memory** h_mem, &#39;</span>
+                       <span class="s1">&#39;mechanism_memory** d_mem)</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="p">)</span>
             <span class="k">for</span> <span class="n">array</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="p">:</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">free_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;(*h_mem)-&gt;{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">))</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">free_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;*d_mem&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span>
+                           <span class="n">free_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;(*h_mem)-&gt;{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">))</span> <span class="o">+</span>
+                           <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
+                           <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span>
+                       <span class="n">free_template</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;*d_mem&#39;</span><span class="p">)</span> <span class="o">+</span>
+                       <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
+                       <span class="p">)</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;gpu_macros.cuh&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef GPU_MACROS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#define GPU_MACROS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#include &lt;stdio.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#include &lt;cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#include &lt;cuda_runtime.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#include &lt;helper_cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#define GRID_DIM (blockDim.x * gridDim.x)</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;#define INDEX(i) (threadIdx.x + blockDim.x * blockIdx.x + (i) * GRID_DIM)</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+    <span class="s1">&#39;#ifndef GPU_MACROS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#define GPU_MACROS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#include &lt;stdio.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#include &lt;cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#include &lt;cuda_runtime.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#include &lt;helper_cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#define GRID_DIM (blockDim.x * gridDim.x)</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#define INDEX(i) (threadIdx.x + blockDim.x * blockIdx.x + (i) * GRID_DIM)</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="p">)</span>
 
-            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#define cudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;inline void gpuAssert(cudaError_t code, const char *file, int line, bool abort=true)</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;    if (code != cudaSuccess)</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;    {</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;        fprintf(stderr,&quot;GPUassert: </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> </span><span class="si">%d</span><span class="se">\\</span><span class="s1">n&quot;, cudaGetErrorString(code), file, line);</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;        if (abort) exit(code);</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
-                       <span class="p">)</span>
+            <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+    <span class="s1">&#39;#define cudaErrorCheck(ans) { gpuAssert((ans), __FILE__, __LINE__); }</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;inline void gpuAssert(cudaError_t code, const char *file, &#39;</span>
+    <span class="s1">&#39;int line, bool abort=true)</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;{</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;    if (code != cudaSuccess)</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;    {</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;        fprintf(stderr,&quot;GPUassert: </span><span class="si">%s</span><span class="s1"> </span><span class="si">%s</span><span class="s1"> </span><span class="si">%d</span><span class="se">\\</span><span class="s1">n&quot;, &#39;</span>
+    <span class="s1">&#39;cudaGetErrorString(code), file, line);</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;        if (abort) exit(code);</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="p">)</span>
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="write_header"><a class="viewcode-back" href="../../../src/pyjac.core.mech_auxiliary.html#pyjac.core.mech_auxiliary.write_header">[docs]</a><span class="k">def</span> <span class="nf">write_header</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Writes minimal header file used by all other source files.</span>
 
-<span class="sd">    :param path:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
 <span class="sd">        Path where files are being written.</span>
-<span class="sd">    :param lang: {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
+<span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;, &#39;fortran&#39;, &#39;matlab&#39;}</span>
 <span class="sd">        Language type.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;matlab&#39;</span><span class="p">,</span> <span class="s1">&#39;fortran&#39;</span><span class="p">]:</span>
         <span class="k">raise</span> <span class="ne">NotImplementedError</span>

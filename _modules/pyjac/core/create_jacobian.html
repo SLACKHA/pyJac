@@ -64,8 +64,19 @@
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">shared_memory</span> <span class="k">as</span> <span class="n">shared</span>
 
 
-<div class="viewcode-block" id="calculate_shared_memory"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.calculate_shared_memory">[docs]</a><span class="k">def</span> <span class="nf">calculate_shared_memory</span><span class="p">(</span><span class="n">rind</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">pdep_reacs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="calculate_shared_memory"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.calculate_shared_memory">[docs]</a><span class="k">def</span> <span class="nf">calculate_shared_memory</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">pdep_reacs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Estimates usage of the various variables for a given reaction</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    variable_list :</span>
+
+<span class="sd">    usages :</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># need to figure out shared memory stuff</span>
     <span class="n">variable_list</span> <span class="o">=</span> <span class="p">[]</span>
@@ -78,14 +89,14 @@
     <span class="n">reac_usages</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac</span><span class="p">))]</span>
     <span class="n">prod_usages</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="p">))]</span>
     <span class="c1"># add variables</span>
-    <span class="n">variable_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shared</span><span class="o">.</span><span class="n">variable</span><span class="p">(</span><span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">))</span>
+    <span class="n">variable_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shared</span><span class="o">.</span><span class="n">variable</span><span class="p">(</span><span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
         <span class="n">variable_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shared</span><span class="o">.</span><span class="n">variable</span><span class="p">(</span><span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span>
-                             <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">))</span>
+                             <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">))</span>
                              <span class="p">)</span>
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body</span><span class="p">:</span>
         <span class="n">variable_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shared</span><span class="o">.</span><span class="n">variable</span><span class="p">(</span><span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span>
-                             <span class="n">pdep_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">))</span>
+                             <span class="n">pdep_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">))</span>
                              <span class="p">)</span>
     <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span> <span class="o">+</span> <span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="p">]):</span>
         <span class="n">variable_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shared</span><span class="o">.</span><span class="n">variable</span><span class="p">(</span><span class="s1">&#39;conc&#39;</span><span class="p">,</span> <span class="n">sp</span><span class="p">))</span>
@@ -149,8 +160,32 @@
     <span class="k">return</span> <span class="n">variable_list</span><span class="p">,</span> <span class="n">usages</span></div>
 
 
-<div class="viewcode-block" id="write_dr_dy"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dr_dy">[docs]</a><span class="k">def</span> <span class="nf">write_dr_dy</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span> <span class="n">pind</span><span class="p">,</span> <span class="n">nspec</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+<div class="viewcode-block" id="write_dr_dy"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dr_dy">[docs]</a><span class="k">def</span> <span class="nf">write_dr_dy</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Writes evaluation of the (non-pressure dependent part) of the</span>
+<span class="sd">    reaction rate R that is independent of species</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    rev_reacs : list of `ReacInfo`</span>
+<span class="sd">        The list of reverisble reactions</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    rxn_ind : int</span>
+<span class="sd">        The index of the reaction in the mechanism</span>
+<span class="sd">    pres_rxn_ind : int</span>
+<span class="sd">        The index of the reaction in the pressure dependent reactions</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># write the T_Pr and T_Fi terms if needed</span>
     <span class="k">if</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body</span><span class="p">)</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">thd_body_eff</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">pdep_sp</span><span class="p">):</span>
@@ -183,19 +218,19 @@
 
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;) * &#39;</span>
         <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
-            <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; - &#39;</span> <span class="o">+</span> \
-                     <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">))</span>
+                     <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">))</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">jline</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
 
     <span class="n">jline</span> <span class="o">=</span> <span class="s1">&#39;  j_temp = -mw_avg * rho_inv * &#39;</span>
     <span class="c1"># next, contribution from dR/dYj</span>
     <span class="c1"># namely the T_dy independent term</span>
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body</span><span class="p">:</span>
-        <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pind</span><span class="p">)</span>
+        <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">)</span>
         <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span>
@@ -216,14 +251,14 @@
     <span class="k">if</span> <span class="n">reac_nu</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">reac_nu</span> <span class="o">!=</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;{} * &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">reac_nu</span><span class="p">))</span>
-        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">prod_nu</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">prod_nu</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; - &#39;</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; - {} * &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">prod_nu</span><span class="p">))</span>
-        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">))</span>
+        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="p">):</span>
         <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; + pres_mod_temp&#39;</span>
@@ -272,8 +307,23 @@
 
 
 <div class="viewcode-block" id="write_rates"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_rates">[docs]</a><span class="k">def</span> <span class="nf">write_rates</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Write evaluation of the forward/reverse rate constant</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">cheb</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">plog</span><span class="p">):</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  kf = &#39;</span> <span class="o">+</span> <span class="n">rate</span><span class="o">.</span><span class="n">rxn_rate_const</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">A</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">b</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">E</span><span class="p">)</span> <span class="o">+</span>
                    <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
@@ -325,10 +375,40 @@
                    <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="write_dr_dy_species"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dr_dy_species">[docs]</a><span class="k">def</span> <span class="nf">write_dr_dy_species</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">pind</span><span class="p">,</span> <span class="n">j_sp</span><span class="p">,</span> <span class="n">sp_j</span><span class="p">,</span>
-                        <span class="n">rind</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">get_array</span>
+<div class="viewcode-block" id="write_dr_dy_species"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dr_dy_species">[docs]</a><span class="k">def</span> <span class="nf">write_dr_dy_species</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">,</span> <span class="n">j_sp</span><span class="p">,</span> <span class="n">sp_j</span><span class="p">,</span>
+                        <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">get_array</span>
                         <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Returns string for evaluation of the (non-pressure dependent part) of the</span>
+<span class="sd">    reaction rate R with respect to a species ``j``</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    pres_rxn_ind : int</span>
+<span class="sd">        The index of the reaction in the pressure dependent reactions</span>
+<span class="sd">    j_sp : int</span>
+<span class="sd">        The species index</span>
+<span class="sd">    sp_j : `SpecInfo`</span>
+<span class="sd">        The species to consider</span>
+<span class="sd">    rxn_ind : int</span>
+<span class="sd">        The index of the reaction in the mechanism</span>
+<span class="sd">    rev_reacs : list of `ReacInfo`</span>
+<span class="sd">        The list of reverisble reactions</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jline : str</span>
+<span class="sd">        Jacobian evaluation line with non-pressure-dependent part of \</span>
+<span class="sd">        species derivative added.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jline</span> <span class="o">=</span> <span class="s1">&#39;j_temp&#39;</span>
     <span class="n">last_spec</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
@@ -362,7 +442,7 @@
        <span class="p">((</span><span class="n">j_sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">reac</span> <span class="ow">or</span> <span class="n">last_spec</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">reac</span><span class="p">)</span>
         <span class="ow">or</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="ow">and</span> <span class="p">(</span><span class="n">j_sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span> <span class="ow">or</span> <span class="n">last_spec</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="p">))</span>
         <span class="p">):</span>
-        <span class="n">s_term</span> <span class="o">+=</span> <span class="s1">&#39; + &#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pind</span><span class="p">)</span>
+        <span class="n">s_term</span> <span class="o">+=</span> <span class="s1">&#39; + &#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">)</span>
         <span class="n">s_term</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span>
 
     <span class="k">def</span> <span class="nf">__get_s_term</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">j_sp</span><span class="p">,</span> <span class="n">reac</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
@@ -444,11 +524,28 @@
     <span class="k">if</span> <span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">pdep</span> <span class="ow">or</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body</span><span class="p">)</span> <span class="ow">and</span> <span class="n">s_term</span><span class="p">:</span>
         <span class="n">s_term</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
 
-    <span class="k">return</span> <span class="n">jline</span> <span class="o">+</span> <span class="n">s_term</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">jline</span> <span class="o">+</span> <span class="n">s_term</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="write_kc"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_kc">[docs]</a><span class="k">def</span> <span class="nf">write_kc</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Write evaluation of the reaction rate equilibrium constant</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">sum_nu</span> <span class="o">=</span> <span class="mi">0</span>
     <span class="n">coeffs</span> <span class="o">=</span> <span class="p">{}</span>
@@ -562,7 +659,20 @@
 
 
 <div class="viewcode-block" id="get_infs"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_infs">[docs]</a><span class="k">def</span> <span class="nf">get_infs</span><span class="p">(</span><span class="n">rxn</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Returns the reaction rate parameters for a pressure-dependent reaction</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    beta_0minf : float</span>
+<span class="sd">        Arrhenius temperature exponent</span>
+<span class="sd">    E_0minf : float</span>
+<span class="sd">        Arrhenius activation energy</span>
+<span class="sd">    k0kinf : float</span>
+<span class="sd">        Arrhenius temperature exponent</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">low</span><span class="p">:</span>
         <span class="c1"># unimolecular/recombination fall-off</span>
@@ -581,15 +691,15 @@
     <span class="k">return</span> <span class="n">beta_0minf</span><span class="p">,</span> <span class="n">E_0minf</span><span class="p">,</span> <span class="n">k0kinf</span></div>
 
 
-<div class="viewcode-block" id="write_dt_comment"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_comment">[docs]</a><span class="k">def</span> <span class="nf">write_dt_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rind</span><span class="p">):</span>
+<div class="viewcode-block" id="write_dt_comment"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_comment">[docs]</a><span class="k">def</span> <span class="nf">write_dt_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">):</span>
     <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-    <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;partial of rxn &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; wrt T&#39;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;partial of rxn &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; wrt T&#39;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="write_dy_comment"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dy_comment">[docs]</a><span class="k">def</span> <span class="nf">write_dy_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rind</span><span class="p">):</span>
+<div class="viewcode-block" id="write_dy_comment"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dy_comment">[docs]</a><span class="k">def</span> <span class="nf">write_dy_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">):</span>
     <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-    <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;partial of rxn &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; wrt species&#39;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;partial of rxn &#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; wrt species&#39;</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
 
 
@@ -601,18 +711,17 @@
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="write_dt_t_comment"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_t_comment">[docs]</a><span class="k">def</span> <span class="nf">write_dt_t_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">sp</span><span class="p">):</span>
-    <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-    <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;partial of dT wrt T for spec {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="write_dt_y_comment"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_y_comment">[docs]</a><span class="k">def</span> <span class="nf">write_dt_y_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">sp</span><span class="p">):</span>
-    <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-    <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;partial of T wrt Y_{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
-
 <div class="viewcode-block" id="get_rxn_params_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_rxn_params_dt">[docs]</a><span class="k">def</span> <span class="nf">get_rxn_params_dt</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">rev</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write evaluation of the forward/reverse reaction rate constant for a reaction</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    rev : bool, optional</span>
+<span class="sd">        If true, get the reverse constant rate constant derivative</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jline</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="k">if</span> <span class="n">rev</span><span class="p">:</span>
         <span class="k">if</span> <span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">rev_par</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mf">1.0e-90</span>
@@ -637,7 +746,26 @@
 <div class="viewcode-block" id="write_db_dt_def"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_db_dt_def">[docs]</a><span class="k">def</span> <span class="nf">write_db_dt_def</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span>
                     <span class="n">dBdT_flag</span><span class="p">,</span> <span class="n">do_unroll</span>
                     <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Write definition of dB/dT terms for each species</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
+<span class="sd">        The reactions in the mechanism</span>
+<span class="sd">    rev_reacs : list of `ReacInfo`</span>
+<span class="sd">        The reversible reactions in the mechanism</span>
+<span class="sd">    dBdT_flag : list of bool</span>
+<span class="sd">        Upon completion of this method this list contains ``True`` for in the index of</span>
+<span class="sd">        all species with non-zero dB/dT entries</span>
+<span class="sd">    do_unroll : bool</span>
+<span class="sd">        If true, Jacobian unrolling is turned on</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rev_reacs</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
@@ -716,7 +844,19 @@
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  end</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="get_db_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_db_dt">[docs]</a><span class="k">def</span> <span class="nf">get_db_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">do_unroll</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Write evaluation of dB/dT term</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reactio to consider</span>
+<span class="sd">    do_unroll : bool</span>
+<span class="sd">        If true, Jacobian unrolling is turned on</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jline</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">notfirst</span> <span class="o">=</span> <span class="bp">False</span>
@@ -786,7 +926,34 @@
 <div class="viewcode-block" id="write_pr"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_pr">[docs]</a><span class="k">def</span> <span class="nf">write_pr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">pdep_reacs</span><span class="p">,</span>
              <span class="n">rxn</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">last_conc_temp</span><span class="o">=</span><span class="bp">None</span>
              <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Write the evaluation of the reduced pressure</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    reacs : list of `ReacInfo`</span>
+<span class="sd">        The reactions in the mechanism</span>
+<span class="sd">    pdep_reacs : list of `ReacInfo`</span>
+<span class="sd">        The pressure dependent reactions (not including PLOG/Chebyshev) \</span>
+<span class="sd">        reactions in the mechanism</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reactio to consider</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+<span class="sd">    last_conc_temp : list of tuples</span>
+<span class="sd">        If specified, the non-unity third body efficiencies and corresponding species for the last</span>
+<span class="sd">        pressure dependent reaction</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    conc_temp_log : list of (int, float)</span>
+<span class="sd">        List with (species index, efficiency) for third-body efficiencies.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># print lines for necessary pressure-dependent variables</span>
     <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;conc_temp = &#39;</span>
@@ -870,6 +1037,18 @@
 
 
 <div class="viewcode-block" id="write_troe"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_troe">[docs]</a><span class="k">def</span> <span class="nf">write_troe</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write the evaluation of the Troe falloff terms</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">line</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;  Fcent = &#39;</span>
             <span class="s1">&#39;{:.16e} * &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">rxn</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span>
             <span class="s1">&#39;exp(T / {:.16e})&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="n">rxn</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>
@@ -902,15 +1081,53 @@
 
 
 <div class="viewcode-block" id="write_sri"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_sri">[docs]</a><span class="k">def</span> <span class="nf">write_sri</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write the valuation of the SRI exponent</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The programming language</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">line</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * &#39;</span>
             <span class="s1">&#39;log10(fmax(Pr, 1.0e-300)))&#39;</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
             <span class="p">)</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="get_pdep_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_pdep_dt">[docs]</a><span class="k">def</span> <span class="nf">get_pdep_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span> <span class="n">pind</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
+
+<div class="viewcode-block" id="get_pdep_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_pdep_dt">[docs]</a><span class="k">def</span> <span class="nf">get_pdep_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Write contribution from temperature derivative of reaction rate for</span>
+<span class="sd">    a pressure dependent reaction</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    rev_reacs : list of `ReacInfo`</span>
+<span class="sd">        The list of reverisble reactions</span>
+<span class="sd">    rxn_ind : int</span>
+<span class="sd">        The index of the reaction in the reaction list</span>
+<span class="sd">    pres_rxn_ind : int</span>
+<span class="sd">        The index of the reaction in the pressure dependent reaction list</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">beta_0minf</span><span class="p">,</span> <span class="n">E_0minf</span><span class="p">,</span> <span class="n">k0kinf</span> <span class="o">=</span> <span class="n">get_infs</span><span class="p">(</span><span class="n">rxn</span><span class="p">)</span>
     <span class="n">jline</span> <span class="o">=</span> <span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;j_temp = (&#39;</span> <span class="o">+</span>
-             <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pind</span><span class="p">)</span>
+             <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">)</span>
              <span class="p">)</span>
     <span class="c1"># high -&gt; chem-activated bimolecular rxn</span>
     <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * ((&#39;</span> <span class="o">+</span> <span class="p">(</span><span class="s1">&#39;-Pr * &#39;</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">high</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
@@ -930,20 +1147,40 @@
 
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
         <span class="c1"># forward and reverse reaction rates</span>
-        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
         <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; - &#39;</span> <span class="o">+</span> \
-                 <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">))</span>
+                 <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">))</span>
         <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="c1"># forward reaction rate only</span>
-        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
 
-    <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; + (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pind</span><span class="p">)</span>
+    <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; + (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">jline</span></div>
 
 
 <div class="viewcode-block" id="write_sri_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_sri_dt">[docs]</a><span class="k">def</span> <span class="nf">write_sri_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">beta_0minf</span><span class="p">,</span> <span class="n">E_0minf</span><span class="p">,</span> <span class="n">k0kinf</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Writes section of line for temperature partial derivative of Troe falloff.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        Programming language, {&#39;c&#39;, &#39;cuda&#39;}</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        Reaction of interest; pressure dependence expressed with SRI falloff</span>
+<span class="sd">    beta_0minf : float</span>
+
+<span class="sd">    E_0minf : float</span>
+
+<span class="sd">    k0kinf : float</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jline : str</span>
+<span class="sd">        Line fragment with SRI temperature derivative</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">jline</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39; + X * (((&#39;</span>
              <span class="s1">&#39;{:.16} / &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">sri_par</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">rxn</span><span class="o">.</span><span class="n">sri_par</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">+</span>
              <span class="s1">&#39;(T * T)) * exp(&#39;</span>
@@ -979,8 +1216,11 @@
 <span class="sd">    rxn : `ReacInfo`</span>
 <span class="sd">        Reaction of interest; pressure dependence expressed with Troe falloff</span>
 <span class="sd">    beta_0minf : float</span>
+
 <span class="sd">    E_0minf : float</span>
+
 <span class="sd">    k0kinf : float</span>
+
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1024,7 +1264,21 @@
 
 
 <div class="viewcode-block" id="write_dcp_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dcp_dt">[docs]</a><span class="k">def</span> <span class="nf">write_dcp_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
+    <span class="sd">&quot;&quot;&quot;Write derivative of cp w.r.t. temperature for each species</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">T_mid_buckets</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="c1"># put all of the same T_mids together</span>
@@ -1110,11 +1364,32 @@
         <span class="n">first</span> <span class="o">=</span> <span class="bp">False</span></div>
 
 
-<div class="viewcode-block" id="get_elementary_rxn_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_elementary_rxn_dt">[docs]</a><span class="k">def</span> <span class="nf">get_elementary_rxn_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span> <span class="n">rev_idx</span><span class="p">,</span>
+<div class="viewcode-block" id="get_elementary_rxn_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.get_elementary_rxn_dt">[docs]</a><span class="k">def</span> <span class="nf">get_elementary_rxn_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">rev_idx</span><span class="p">,</span>
                           <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                           <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Write contribution from temperature derivative of reaction rate for</span>
 <span class="sd">    elementary reaction.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The programming language</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    rxn_ind : int</span>
+<span class="sd">        The reaction index</span>
+<span class="sd">    rev_idx : int</span>
+<span class="sd">        The index of the reaction in the reverse reaction list (if applicable)</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or `utils.get_array`) as required</span>
+<span class="sd">    do_unroll : bool</span>
+<span class="sd">        If true, Jacobian unrolling is turned on</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    jline : str</span>
+<span class="sd">        Jacobian entry substring with temperature derivative contribution.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">jline</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
@@ -1124,7 +1399,7 @@
 
         <span class="k">if</span> <span class="n">dk_dt</span> <span class="ow">or</span> <span class="n">nu</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
             <span class="c1">#we actually need to do the dk/dt for both</span>
-            <span class="n">jline</span> <span class="o">=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline</span> <span class="o">=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span>
             <span class="k">if</span> <span class="n">dk_dt</span><span class="p">:</span>
                 <span class="n">jline</span> <span class="o">+=</span> <span class="n">dk_dt</span>
@@ -1161,7 +1436,7 @@
         <span class="n">dk_dt</span> <span class="o">=</span> <span class="n">get_rxn_params_dt</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">rev</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">dk_dt</span><span class="p">:</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span>
-            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
                 <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; - &#39;</span> <span class="o">+</span> \
                 <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_idx</span><span class="p">)</span>
@@ -1176,7 +1451,7 @@
         <span class="k">if</span> <span class="n">nu</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">jline</span><span class="p">:</span>
                 <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; + &#39;</span>
-            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">nu</span><span class="p">))</span>
 
         <span class="n">dbdt</span> <span class="o">=</span> <span class="n">get_db_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">do_unroll</span><span class="p">)</span>
@@ -1203,7 +1478,7 @@
         <span class="n">dk_dt</span> <span class="o">=</span> <span class="n">get_rxn_params_dt</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">rev</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
         <span class="n">nu</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac_nu</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">dk_dt</span> <span class="ow">or</span> <span class="n">nu</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
-            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span>
             <span class="n">jline</span> <span class="o">+=</span> <span class="n">dk_dt</span>
 
@@ -1225,6 +1500,21 @@
 
 <div class="viewcode-block" id="write_cheb_ut"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_cheb_ut">[docs]</a><span class="k">def</span> <span class="nf">write_cheb_ut</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Computes the derivative of the chebyshev polynomial recursively w.r.t T</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">line_list</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">line_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;cheb_temp_0 = 1&#39;</span><span class="p">)</span>
@@ -1284,10 +1574,33 @@
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">line_list</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="write_cheb_rxn_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_cheb_rxn_dt">[docs]</a><span class="k">def</span> <span class="nf">write_cheb_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span> <span class="n">rev_idx</span><span class="p">,</span>
+<div class="viewcode-block" id="write_cheb_rxn_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_cheb_rxn_dt">[docs]</a><span class="k">def</span> <span class="nf">write_cheb_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">rev_idx</span><span class="p">,</span>
                       <span class="n">specs</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                       <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Writes the code for the temperature derivative of Chebyshev reactions</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    jline : str</span>
+<span class="sd">        The current jacobian line (containing the non-Chebyshev part of the derivative)</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    rxn_ind : int</span>
+<span class="sd">        The reaction index</span>
+<span class="sd">    rev_idx : int</span>
+<span class="sd">        The index of the reaction in the reverse reaction list (if applicable)</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+<span class="sd">    do_unroll : bool</span>
+<span class="sd">        If true, Jacobian unrolling is turned on</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Chebyshev reaction</span>
     <span class="n">tlim_inv_sum</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rxn</span><span class="o">.</span><span class="n">cheb_tlim</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">rxn</span><span class="o">.</span><span class="n">cheb_tlim</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
@@ -1315,7 +1628,7 @@
 
     <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;kf * ({:.16e} / T)&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">-</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span> <span class="o">/</span> <span class="n">tlim_inv_sub</span><span class="p">)</span>
 
-    <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+    <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
         <span class="c1"># reverse reaction rate also</span>
@@ -1324,7 +1637,7 @@
     <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
     <span class="n">nu</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac_nu</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">nu</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
-        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; + &#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+        <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; + &#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
         <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; * {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="nb">float</span><span class="p">(</span><span class="n">nu</span><span class="p">))</span>
 
     <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
@@ -1340,10 +1653,33 @@
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">jline</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span></div>
 
 
-<div class="viewcode-block" id="write_plog_rxn_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_plog_rxn_dt">[docs]</a><span class="k">def</span> <span class="nf">write_plog_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
+<div class="viewcode-block" id="write_plog_rxn_dt"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_plog_rxn_dt">[docs]</a><span class="k">def</span> <span class="nf">write_plog_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
                       <span class="n">rev_idx</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                       <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Writes the code for the temperature derivative of PLog reactions</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+
+<span class="sd">    file : `File`</span>
+<span class="sd">        The open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    jline : str</span>
+<span class="sd">        The current jacobian line (containing the non-PLog part of the derivative)</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in the mechanism</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        The reaction to consider</span>
+<span class="sd">    rxn_ind : int</span>
+<span class="sd">        The reaction index</span>
+<span class="sd">    rev_idx : int</span>
+<span class="sd">        The index of the reaction in the reverse reaction list (if applicable)</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+<span class="sd">    do_unroll : bool</span>
+<span class="sd">        If true, Jacobian unrolling is turned on</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Plog reactions have conditional contribution,</span>
     <span class="c1"># depends on pressure range</span>
@@ -1359,7 +1695,7 @@
                           <span class="n">A_p1</span><span class="p">,</span> <span class="n">b_p1</span><span class="p">,</span> <span class="n">E_p1</span>
                           <span class="p">)</span>
 
-    <span class="n">dkdt</span> <span class="o">=</span> <span class="n">get_elementary_rxn_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn_p</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
+    <span class="n">dkdt</span> <span class="o">=</span> <span class="n">get_elementary_rxn_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn_p</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
                                  <span class="n">rev_idx</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                                  <span class="p">)</span>
     <span class="n">have_prev</span> <span class="o">=</span> <span class="bp">False</span>
@@ -1401,7 +1737,7 @@
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">jline_p</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
 
-            <span class="n">jline_p</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">jline_p</span> <span class="o">+=</span> <span class="s1">&#39; * (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
                 <span class="c1"># reverse reaction rate also</span>
                 <span class="n">jline_p</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39; - &#39;</span> <span class="o">+</span>
@@ -1412,7 +1748,7 @@
         <span class="n">nu</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac_nu</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">nu</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
             <span class="k">if</span> <span class="n">jline_p</span><span class="p">:</span> <span class="n">jline_p</span> <span class="o">+=</span> <span class="s1">&#39; + &#39;</span>
-            <span class="n">jline_p</span> <span class="o">+=</span> <span class="p">(</span><span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span> <span class="o">+</span>
+            <span class="n">jline_p</span> <span class="o">+=</span> <span class="p">(</span><span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span> <span class="o">+</span>
                         <span class="s1">&#39; * {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="n">nu</span><span class="p">)</span>
                         <span class="p">)</span>
 
@@ -1463,7 +1799,7 @@
                           <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod_nu</span><span class="p">,</span>
                           <span class="n">A_pn</span><span class="p">,</span> <span class="n">b_pn</span><span class="p">,</span> <span class="n">E_pn</span>
                           <span class="p">)</span>
-    <span class="n">dkdt</span> <span class="o">=</span> <span class="n">get_elementary_rxn_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn_p</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
+    <span class="n">dkdt</span> <span class="o">=</span> <span class="n">get_elementary_rxn_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn_p</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
                                  <span class="n">rev_idx</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                                  <span class="p">)</span>
     <span class="k">if</span> <span class="n">dkdt</span><span class="p">:</span>
@@ -1483,71 +1819,23 @@
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="write_dt_y"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_y">[docs]</a><span class="k">def</span> <span class="nf">write_dt_y</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">sp</span><span class="p">,</span> <span class="n">isp</span><span class="p">,</span> <span class="n">num_s</span><span class="p">,</span>
-               <span class="n">touched</span><span class="p">,</span> <span class="n">get_array</span>
-               <span class="p">):</span>
-    <span class="k">for</span> <span class="n">k_sp</span><span class="p">,</span> <span class="n">sp_k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span>
-        <span class="n">lin_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_s</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;cuda&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="n">lin_index</span><span class="p">)</span>
-        <span class="k">elif</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fortran&#39;</span><span class="p">,</span> <span class="s1">&#39;matlab&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">twod</span><span class="o">=</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fortran&#39;</span><span class="p">,</span> <span class="s1">&#39;matlab&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39; = &#39;</span> <span class="o">+</span> <span class="p">(</span><span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">twod</span><span class="o">=</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span>
-                     <span class="s1">&#39; +&#39;</span> <span class="k">if</span> <span class="n">touched</span><span class="p">[</span><span class="n">lin_index</span><span class="p">]</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; -(&#39;</span>
-                     <span class="p">)</span>
-        <span class="k">else</span><span class="p">:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39; {}= -(&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;+&#39;</span> <span class="k">if</span> <span class="n">touched</span><span class="p">[</span><span class="n">lin_index</span><span class="p">]</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
-        <span class="n">touched</span><span class="p">[</span><span class="n">lin_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
-
-        <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;cuda&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="n">isp</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; * (&#39;</span>
-                     <span class="s1">&#39;&#39;</span> <span class="o">+</span>
-                     <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="n">isp</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">num_s</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span> <span class="o">+</span>
-                     <span class="s1">&#39; * cp_avg * rho&#39;</span> <span class="o">+</span>
-                     <span class="s1">&#39; - (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;cp&#39;</span><span class="p">,</span> <span class="n">k_sp</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; * &#39;</span> <span class="o">+</span>
-                     <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;spec_rates&#39;</span><span class="p">,</span> <span class="n">isp</span><span class="p">)</span> <span class="o">+</span>
-                     <span class="s1">&#39; * {:.8e}))&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">mw</span><span class="p">)</span>
-                     <span class="p">)</span>
-        <span class="k">elif</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fortran&#39;</span><span class="p">,</span> <span class="s1">&#39;matlab&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;h&#39;</span><span class="p">,</span> <span class="n">isp</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; * (&#39;</span>
-                     <span class="s1">&#39;&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="n">isp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">twod</span><span class="o">=</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span>
-                     <span class="s1">&#39; * cp_avg * rho&#39;</span> <span class="o">+</span>
-                     <span class="s1">&#39; - (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;cp&#39;</span><span class="p">,</span> <span class="n">k_sp</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; * &#39;</span> <span class="o">+</span>
-                     <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;spec_rates&#39;</span><span class="p">,</span> <span class="n">isp</span><span class="p">)</span> <span class="o">+</span>
-                     <span class="s1">&#39; * {:.8e}))&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sp</span><span class="o">.</span><span class="n">mw</span><span class="p">)</span>
-                     <span class="p">)</span>
-        <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
-
-
-<div class="viewcode-block" id="write_dt_y_division"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_y_division">[docs]</a><span class="k">def</span> <span class="nf">write_dt_y_division</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">num_s</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-    <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;Complete dT/dy calculations</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
-    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
-    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="s1">&#39;j_temp = 1.0 / (rho * cp_avg * cp_avg)&#39;</span> <span class="o">+</span>
-               <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-               <span class="p">)</span>
-    <span class="k">for</span> <span class="n">k_sp</span><span class="p">,</span> <span class="n">sp_k</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-        <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span>
-        <span class="n">lin_index</span> <span class="o">=</span> <span class="p">(</span><span class="n">num_s</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;cuda&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="n">lin_index</span><span class="p">)</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39; *= (j_temp)&#39;</span>
-        <span class="k">elif</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;fortran&#39;</span><span class="p">,</span> <span class="s1">&#39;matlab&#39;</span><span class="p">]:</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">twod</span><span class="o">=</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;= &#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;jac&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">twod</span><span class="o">=</span><span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-            <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39; * (j_temp)&#39;</span>
-
-        <span class="n">line</span> <span class="o">+=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
-    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span></div>
-
-
 <div class="viewcode-block" id="write_dt_completion"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dt_completion">[docs]</a><span class="k">def</span> <span class="nf">write_dt_completion</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">J_nplusone_touched</span><span class="p">,</span> <span class="n">get_array</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Finishes calculation of d(\partial T / \partial t)/dT</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : `File`</span>
+<span class="sd">        Open file object to write to</span>
+<span class="sd">    lang : str</span>
+<span class="sd">        The Programming language</span>
+<span class="sd">    specs : list of `SpecInfo`</span>
+<span class="sd">        The species in this mechanism</span>
+<span class="sd">    J_nplusone_touched : bool</span>
+<span class="sd">        If true, the last species has a non-zero contribution to d(\partial T / \partial t)</span>
+<span class="sd">    get_array : function</span>
+<span class="sd">        The SMM binded get_array function (or utils.get_array) as required</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
     <span class="n">line</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">comment</span><span class="p">[</span><span class="n">lang</span><span class="p">]</span>
     <span class="n">line</span> <span class="o">+=</span> <span class="p">(</span><span class="s1">&#39;Complete dT wrt T calculations</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
@@ -1592,7 +1880,7 @@
                     <span class="n">this_cheb</span><span class="p">,</span> <span class="n">cheb_dim</span><span class="p">,</span> <span class="n">this_plog</span><span class="p">,</span> <span class="n">no_shared</span><span class="p">,</span> <span class="n">has_nsp</span>
                     <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Writes the header and definitions for of any of the various sub-functions</span>
+<span class="sd">    Writes the header and definitions for the various Jacobian reaction update subfiles</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -1601,20 +1889,33 @@
 <span class="sd">    lang : str {&#39;c&#39;, &#39;cuda&#39;}</span>
 <span class="sd">        Programming language</span>
 <span class="sd">    number : int</span>
-<span class="sd">        Jacobian file number</span>
-<span class="sd">    rate_list :</span>
-<span class="sd">    this_rev :</span>
-<span class="sd">    this_pdep :</span>
-<span class="sd">    have_pres_mod_temp :</span>
-<span class="sd">    batch_has_m :</span>
-<span class="sd">    this_thd :</span>
-<span class="sd">    this_troe :</span>
-<span class="sd">    this_sri :</span>
-<span class="sd">    this_cheb :</span>
-<span class="sd">    cheb_dim :</span>
-<span class="sd">    this_plog :</span>
-<span class="sd">    no_shared :</span>
-<span class="sd">    has_nsp :</span>
+<span class="sd">        Jacobian subfile number</span>
+<span class="sd">    rate_list : str</span>
+<span class="sd">        The required reaction/species rate strings needed for the intro</span>
+<span class="sd">    this_rev : bool</span>
+<span class="sd">        If true, this batch contains a reversible reaction</span>
+<span class="sd">    this_pdep : bool</span>
+<span class="sd">        If true, this batch contains a pressure dependent (not counting PLog/Cheb) reaction</span>
+<span class="sd">    have_pres_mod_temp : bool</span>
+<span class="sd">        If true, this batch requires definition of pres_mod_temp</span>
+<span class="sd">    batch_has_m : bool</span>
+<span class="sd">        If true, this batch requires the overall concentration &#39;m&#39;</span>
+<span class="sd">    this_thd : bool</span>
+<span class="sd">        If true, this batch has a third body reaction</span>
+<span class="sd">    this_troe : bool</span>
+<span class="sd">        If true, this batch contains a Troe reaction</span>
+<span class="sd">    this_sri : bool</span>
+<span class="sd">        If true, this batch contains an SRI reaction</span>
+<span class="sd">    this_cheb : bool</span>
+<span class="sd">        If true, this batch contains a Chebyshev reaction</span>
+<span class="sd">    cheb_dim : int</span>
+<span class="sd">        If this_cheb is true, this is the largest chebyshev dimension required</span>
+<span class="sd">    this_plog : bool</span>
+<span class="sd">        If true, this batch contains a PLOG reaction</span>
+<span class="sd">    no_shared : bool</span>
+<span class="sd">        If true, do not use CUDA shared memory</span>
+<span class="sd">    has_nsp : bool</span>
+<span class="sd">        If true, at least one reaction has a non-zero contribution from the last species</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -1753,7 +2054,7 @@
     <span class="k">if</span> <span class="n">this_troe</span><span class="p">:</span>
         <span class="n">line</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span>
                        <span class="s1">&#39;double {} = 0.0{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
-                       <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="s1">&#39;Fcent&#39;</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;lnF_AB&#39;</span><span class="p">]</span>
+                       <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;Fcent&#39;</span><span class="p">,</span> <span class="s1">&#39;A&#39;</span><span class="p">,</span> <span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="s1">&#39;lnF_AB&#39;</span><span class="p">]]</span>
                        <span class="p">)</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
 
@@ -1783,6 +2084,20 @@
 
 
 <div class="viewcode-block" id="write_dy_intros"><a class="viewcode-back" href="../../../src/pyjac.core.create_jacobian.html#pyjac.core.create_jacobian.write_dy_intros">[docs]</a><span class="k">def</span> <span class="nf">write_dy_intros</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">number</span><span class="p">,</span> <span class="n">have_jnplus_jplus</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Writes the header and definitions for the various Jacobian species update subfiles</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path : str</span>
+<span class="sd">        The path to place the file in</span>
+<span class="sd">    lang : str {&#39;c&#39;, &#39;cuda&#39;}</span>
+<span class="sd">        The programming language</span>
+<span class="sd">    number : int</span>
+<span class="sd">        The jacobian subfile index</span>
+<span class="sd">    have_jnplus_jplus : bool</span>
+<span class="sd">        If true, the last species has non-zero contributions to the Jacobian</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;jacob_&#39;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">number</span><span class="p">)</span> <span class="o">+</span>
               <span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]),</span> <span class="s1">&#39;w&#39;</span>
               <span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
@@ -2289,15 +2604,15 @@
 
         <span class="n">jac_count</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">next_fn_index</span> <span class="o">=</span> <span class="mi">0</span>
-        <span class="k">for</span> <span class="n">rind</span><span class="p">,</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reacs</span><span class="p">):</span>
-            <span class="k">if</span> <span class="n">do_unroll</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rind</span> <span class="o">==</span> <span class="n">next_fn_index</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reacs</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">do_unroll</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rxn_ind</span> <span class="o">==</span> <span class="n">next_fn_index</span><span class="p">):</span>
                 <span class="c1"># clear conc temp</span>
                 <span class="n">last_conc_temp</span> <span class="o">=</span> <span class="bp">None</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">retry</span><span class="p">:</span>
                     <span class="n">file_store</span> <span class="o">=</span> <span class="nb">file</span>
                 <span class="n">retry</span> <span class="o">=</span> <span class="bp">False</span>
                 <span class="c1"># get next index</span>
-                <span class="n">next_fn_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">rind</span> <span class="o">+</span> <span class="n">unroll_len</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">))</span>
+                <span class="n">next_fn_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">rxn_ind</span> <span class="o">+</span> <span class="n">unroll_len</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">))</span>
                 <span class="c1"># get flags</span>
                 <span class="n">rev</span> <span class="o">=</span> <span class="bp">False</span>
                 <span class="n">pdep</span> <span class="o">=</span> <span class="bp">False</span>
@@ -2310,7 +2625,7 @@
                 <span class="n">has_jnplus_one</span> <span class="o">=</span> <span class="bp">False</span>
                 <span class="n">batch_has_m</span> <span class="o">=</span> <span class="bp">False</span>
                 <span class="n">have_pres_mod_temp</span> <span class="o">=</span> <span class="bp">False</span>
-                <span class="k">for</span> <span class="n">ind_next</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rind</span><span class="p">,</span> <span class="n">next_fn_index</span><span class="p">):</span>
+                <span class="k">for</span> <span class="n">ind_next</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">,</span> <span class="n">next_fn_index</span><span class="p">):</span>
                     <span class="k">if</span> <span class="n">reacs</span><span class="p">[</span><span class="n">ind_next</span><span class="p">]</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
                         <span class="n">rev</span> <span class="o">=</span> <span class="bp">True</span>
                     <span class="k">if</span> <span class="n">reacs</span><span class="p">[</span><span class="n">ind_next</span><span class="p">]</span><span class="o">.</span><span class="n">pdep</span><span class="p">:</span>
@@ -2350,7 +2665,7 @@
                                        <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="ow">and</span> <span class="n">smm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-                <span class="n">variable_list</span><span class="p">,</span> <span class="n">usages</span> <span class="o">=</span> <span class="n">calculate_shared_memory</span><span class="p">(</span><span class="n">rind</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span>
+                <span class="n">variable_list</span><span class="p">,</span> <span class="n">usages</span> <span class="o">=</span> <span class="n">calculate_shared_memory</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span>
                                                                 <span class="n">reacs</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span>
                                                                 <span class="n">pdep_reacs</span>
                                                                 <span class="p">)</span>
@@ -2361,13 +2676,13 @@
             <span class="c1"># with respect to temperature</span>
             <span class="c1">######################################</span>
 
-            <span class="n">write_dt_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">write_dt_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
 
             <span class="c1"># first we need any pres mod terms</span>
             <span class="n">jline</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-            <span class="n">pind</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">pres_rxn_ind</span> <span class="o">=</span> <span class="bp">None</span>
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">pdep</span><span class="p">:</span>
-                <span class="n">pind</span> <span class="o">=</span> <span class="n">pdep_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span>
+                <span class="n">pres_rxn_ind</span> <span class="o">=</span> <span class="n">pdep_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span>
                 <span class="n">last_conc_temp</span> <span class="o">=</span> <span class="n">write_pr</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">pdep_reacs</span><span class="p">,</span>
                                           <span class="n">rxn</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">last_conc_temp</span>
                                           <span class="p">)</span>
@@ -2378,29 +2693,29 @@
                 <span class="k">elif</span> <span class="n">rxn</span><span class="o">.</span><span class="n">sri</span><span class="p">:</span>
                     <span class="n">write_sri</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">)</span>
 
-                <span class="n">jline</span> <span class="o">=</span> <span class="n">get_pdep_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span> <span class="n">pind</span><span class="p">,</span> <span class="n">get_array</span><span class="p">)</span>
+                <span class="n">jline</span> <span class="o">=</span> <span class="n">get_pdep_dt</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">,</span> <span class="n">get_array</span><span class="p">)</span>
 
             <span class="k">elif</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body</span><span class="p">:</span>
                 <span class="c1"># third body reaction</span>
-                <span class="n">pind</span> <span class="o">=</span> <span class="n">pdep_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span>
+                <span class="n">pres_rxn_ind</span> <span class="o">=</span> <span class="n">pdep_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span>
 
                 <span class="n">jline</span> <span class="o">=</span> <span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">line_start</span> <span class="o">+</span>
                          <span class="s1">&#39;j_temp = ((-&#39;</span> <span class="o">+</span>
-                         <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pind</span><span class="p">)</span> <span class="o">+</span>
+                         <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">)</span> <span class="o">+</span>
                          <span class="s1">&#39; * &#39;</span>
                          <span class="p">)</span>
 
                 <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span><span class="p">:</span>
                     <span class="c1"># forward and reverse reaction rates</span>
-                    <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+                    <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;(&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
                     <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; - &#39;</span> <span class="o">+</span> \
-                        <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">))</span>
+                        <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;rev_rates&#39;</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">))</span>
                     <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="c1"># forward reaction rate only</span>
-                    <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+                    <span class="n">jline</span> <span class="o">+=</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;fwd_rates&#39;</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
 
-                <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; / T) + (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pind</span><span class="p">)</span>
+                <span class="n">jline</span> <span class="o">+=</span> <span class="s1">&#39; / T) + (&#39;</span> <span class="o">+</span> <span class="n">get_array</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;pres_mod&#39;</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;cuda&#39;</span><span class="p">,</span> <span class="s1">&#39;matlab&#39;</span><span class="p">]:</span>
@@ -2412,21 +2727,21 @@
 
             <span class="n">doT</span> <span class="o">=</span> <span class="bp">True</span>
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">plog</span><span class="p">:</span>
-                <span class="n">write_plog_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
-                                  <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="n">write_plog_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
+                                  <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
                                   <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                                   <span class="p">)</span>
 
             <span class="k">elif</span> <span class="n">rxn</span><span class="o">.</span><span class="n">cheb</span><span class="p">:</span>
-                <span class="n">write_cheb_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
-                                  <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
+                <span class="n">write_cheb_rxn_dt</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">jline</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
+                                  <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
                                   <span class="n">specs</span><span class="p">,</span> <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                                   <span class="p">)</span>
 
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">dkdt</span> <span class="o">=</span> <span class="n">get_elementary_rxn_dt</span><span class="p">(</span>
-                    <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
-                    <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rind</span><span class="p">)</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
+                    <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
+                    <span class="n">rev_reacs</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">rxn_ind</span><span class="p">)</span> <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="k">else</span> <span class="bp">None</span><span class="p">,</span>
                     <span class="n">get_array</span><span class="p">,</span> <span class="n">do_unroll</span>
                     <span class="p">)</span>
                 <span class="k">if</span> <span class="n">dkdt</span><span class="p">:</span>
@@ -2483,15 +2798,15 @@
             <span class="c1">######################################</span>
             <span class="c1"># with respect to species</span>
             <span class="c1">######################################</span>
-            <span class="n">write_dy_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rind</span><span class="p">)</span>
+            <span class="n">write_dy_comment</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">)</span>
 
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">rxn</span><span class="o">.</span><span class="n">rev_par</span><span class="p">:</span>
                 <span class="c1"># need to find Kc</span>
                 <span class="n">write_kc</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">)</span>
 
             <span class="c1"># need to write the dr/dy parts (independent of any species)</span>
-            <span class="n">write_dr_dy</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
-                        <span class="n">pind</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">),</span> <span class="n">get_array</span>
+            <span class="n">write_dr_dy</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
+                        <span class="n">pres_rxn_ind</span><span class="p">,</span> <span class="n">get_array</span>
                         <span class="p">)</span>
 
             <span class="c1"># write the forward / backwards rates:</span>
@@ -2499,8 +2814,8 @@
 
             <span class="c1"># now loop through each species</span>
             <span class="k">for</span> <span class="n">j_sp</span><span class="p">,</span> <span class="n">sp_j</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span>
-                <span class="n">dr_dyj</span> <span class="o">=</span> <span class="n">write_dr_dy_species</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">pind</span><span class="p">,</span>
-                                                        <span class="n">j_sp</span><span class="p">,</span> <span class="n">sp_j</span><span class="p">,</span> <span class="n">rind</span><span class="p">,</span>
+                <span class="n">dr_dyj</span> <span class="o">=</span> <span class="n">write_dr_dy_species</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">rxn</span><span class="p">,</span> <span class="n">pres_rxn_ind</span><span class="p">,</span>
+                                                        <span class="n">j_sp</span><span class="p">,</span> <span class="n">sp_j</span><span class="p">,</span> <span class="n">rxn_ind</span><span class="p">,</span>
                                                         <span class="n">rev_reacs</span><span class="p">,</span> <span class="n">get_array</span>
                                                         <span class="p">)</span>
                 <span class="k">for</span> <span class="n">k_sp</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="p">):</span>
@@ -2514,8 +2829,8 @@
                     <span class="n">jline</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_start</span>
                     <span class="k">if</span> <span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="n">num_s</span><span class="p">:</span>
                         <span class="n">lin_index</span> <span class="o">=</span> <span class="n">k_sp</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">num_s</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">j_sp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
-                        <span class="c1">#if not rind in thelist and lin_index == 30608:</span>
-                        <span class="c1">#    thelist.add(rind)</span>
+                        <span class="c1">#if not rxn_ind in thelist and lin_index == 30608:</span>
+                        <span class="c1">#    thelist.add(rxn_ind)</span>
                         <span class="c1"># sparse indexes</span>
                         <span class="k">if</span> <span class="n">lang</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;cuda&#39;</span><span class="p">]:</span>
                             <span class="n">jline</span> <span class="o">+=</span> <span class="p">(</span>
@@ -2577,7 +2892,7 @@
                 <span class="n">evictable</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">variable_list</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">x</span><span class="o">.</span><span class="n">base</span> <span class="o">==</span> <span class="s1">&#39;conc&#39;</span><span class="p">]</span>
                 <span class="n">smm</span><span class="o">.</span><span class="n">mark_for_eviction</span><span class="p">(</span><span class="n">evictable</span><span class="p">)</span>
 
-            <span class="k">if</span> <span class="n">do_unroll</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rind</span> <span class="o">==</span> <span class="n">next_fn_index</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">rind</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">do_unroll</span> <span class="ow">and</span> <span class="p">(</span><span class="n">rxn_ind</span> <span class="o">==</span> <span class="n">next_fn_index</span> <span class="o">-</span> <span class="mi">1</span> <span class="ow">or</span> <span class="n">rxn_ind</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
                 <span class="c1"># switch back</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;}</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
@@ -2610,7 +2925,7 @@
                     <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;, dot_prod&#39;</span>
                 <span class="n">line</span> <span class="o">+=</span> <span class="s1">&#39;)&#39;</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">line</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
-        <span class="n">success</span> <span class="o">=</span> <span class="n">rind</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+        <span class="n">success</span> <span class="o">=</span> <span class="n">rxn_ind</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
 
     <span class="c1">###################################</span>
     <span class="c1"># Partial derivatives of temperature (energy equation)</span>
@@ -2897,15 +3212,8 @@
     <span class="c1">######################################</span>
     <span class="c1"># Derivative with respect to species</span>
     <span class="c1">######################################</span>
-    <span class="c1"># write_dt_y_comment(file, lang, sp)</span>
-    <span class="c1"># write_dt_y(file, lang, specs, sp, isp, num_s, touched,</span>
-    <span class="c1">#            sparse_indicies, get_array</span>
-    <span class="c1">#            )</span>
-
     <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-    <span class="c1"># next need to divide everything out</span>
-    <span class="c1">#write_dt_y_division(file, lang, specs, num_s, get_array)</span>
 
     <span class="c1"># finish the dT entry</span>
     <span class="n">write_dt_completion</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">J_nplusone_touched</span><span class="p">,</span> <span class="n">get_array</span><span class="p">)</span>
@@ -3066,10 +3374,9 @@
 <span class="sd">        Thermodynamic database filename (e.g. &#39;therm.dat&#39;)</span>
 <span class="sd">        or nothing if info in mechanism file.</span>
 <span class="sd">    gas : cantera.Solution, optional</span>
-<span class="sd">        The mechanism to generate the Jacobian for.  This or mech_name must be specified</span>
+<span class="sd">        The mechanism to generate the Jacobian for.  This or ``mech_name`` must be specified</span>
 <span class="sd">    optimize_cache : bool, optional</span>
-<span class="sd">        If true, use the greedy optimizer to attempt to</span>
-<span class="sd">        improve cache hit rates</span>
+<span class="sd">        If ``True``, use the greedy optimizer to attempt to improve cache hit rates</span>
 <span class="sd">    initial_state : str, optional</span>
 <span class="sd">        A comma separated list of the initial conditions to use in form</span>
 <span class="sd">        T,P,X (e.g. &#39;800,1,H2=1.0,O2=0.5&#39;). Temperature in K, P in atm</span>
@@ -3081,8 +3388,7 @@
 <span class="sd">        If ``True``, do not use the shared_memory_manager</span>
 <span class="sd">        to attempt to optimize for CUDA</span>
 <span class="sd">    L1_preferred : bool, optional</span>
-<span class="sd">        If ``True``, prefer a larger L1 cache</span>
-<span class="sd">        and a smaller shared memory size for CUDA</span>
+<span class="sd">        If ``True``, prefer a larger L1 cache and a smaller shared memory size for CUDA</span>
 <span class="sd">    multi_thread : int, optional</span>
 <span class="sd">        The number of threads to use during optimization</span>
 <span class="sd">    force_optimize : bool, optional</span>
@@ -3250,7 +3556,9 @@
 
     <span class="c1"># write species rates subroutine</span>
     <span class="n">seen_sp</span> <span class="o">=</span> <span class="n">rate</span><span class="o">.</span><span class="n">write_spec_rates</span><span class="p">(</span><span class="n">build_path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span>
-                    <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span> <span class="n">smm</span><span class="p">,</span> <span class="n">auto_diff</span><span class="p">)</span>
+                                    <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span>
+                                    <span class="n">smm</span><span class="p">,</span> <span class="n">auto_diff</span>
+                                    <span class="p">)</span>
 
     <span class="c1"># write chem_utils subroutines</span>
     <span class="n">rate</span><span class="o">.</span><span class="n">write_chem_utils</span><span class="p">(</span><span class="n">build_path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">auto_diff</span><span class="p">)</span>

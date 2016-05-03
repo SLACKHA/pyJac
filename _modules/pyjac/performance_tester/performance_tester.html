@@ -73,19 +73,25 @@
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: Cantera must be installed.&#39;</span><span class="p">)</span>
     <span class="k">raise</span>
 
+<span class="k">try</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">optionloop</span> <span class="kn">import</span> <span class="n">optionloop</span>
+<span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: optionloop must be installed.&#39;</span><span class="p">)</span>
+    <span class="k">raise</span>
+
 <span class="c1"># Local imports</span>
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
 <span class="kn">from</span> <span class="nn">..core.create_jacobian</span> <span class="kn">import</span> <span class="n">create_jacobian</span>
-<span class="kn">from</span> <span class="nn">.optionLoop.optionloop</span> <span class="kn">import</span> <span class="n">optionloop</span>
 <span class="kn">from</span> <span class="nn">..libgen</span> <span class="kn">import</span> <span class="n">generate_library</span><span class="p">,</span> <span class="n">libs</span><span class="p">,</span> <span class="n">compiler</span><span class="p">,</span> <span class="n">file_struct</span><span class="p">,</span> <span class="n">get_cuda_path</span><span class="p">,</span> <span class="n">flags</span>
 
 <span class="c1">#cuda only works for static libraries</span>
-<span class="n">STATIC</span><span class="o">=</span><span class="bp">True</span>
+<span class="n">STATIC</span> <span class="o">=</span> <span class="bp">True</span>
 
 <div class="viewcode-block" id="is_pdep"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.is_pdep">[docs]</a><span class="k">def</span> <span class="nf">is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">):</span>
     <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ThreeBodyReaction</span><span class="p">)</span> <span class="ow">or</span>
     <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">or</span>
     <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">))</span></div>
+
 
 <div class="viewcode-block" id="check_step_file"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.check_step_file">[docs]</a><span class="k">def</span> <span class="nf">check_step_file</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">steplist</span><span class="p">):</span>
     <span class="c1">#checks file for existing data</span>
@@ -112,6 +118,7 @@
     <span class="k">except</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">runs</span></div>
 
+
 <div class="viewcode-block" id="check_file"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.check_file">[docs]</a><span class="k">def</span> <span class="nf">check_file</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
     <span class="c1">#checks file for existing data</span>
     <span class="c1">#and returns number of runs left to do</span>
@@ -133,8 +140,10 @@
     <span class="k">except</span><span class="p">:</span>
         <span class="k">return</span> <span class="mi">0</span></div>
 
+
 <div class="viewcode-block" id="getf"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.getf">[docs]</a><span class="k">def</span> <span class="nf">getf</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">x</span><span class="p">)</span></div>
+
 
 <div class="viewcode-block" id="cmd_link"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.cmd_link">[docs]</a><span class="k">def</span> <span class="nf">cmd_link</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">shared</span><span class="p">):</span>
     <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;icc&#39;</span><span class="p">:</span>
@@ -143,7 +152,6 @@
         <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;gcc&#39;</span><span class="p">]</span>
     <span class="k">elif</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
         <span class="k">return</span> <span class="p">[</span><span class="s1">&#39;nvcc&#39;</span><span class="p">]</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">shared</span> <span class="k">else</span> <span class="p">[</span><span class="s1">&#39;g++&#39;</span><span class="p">]</span></div>
-
 
 
 <div class="viewcode-block" id="linker"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.linker">[docs]</a><span class="k">def</span> <span class="nf">linker</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">temp_lang</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span> <span class="n">filelist</span><span class="p">,</span> <span class="n">lib</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>

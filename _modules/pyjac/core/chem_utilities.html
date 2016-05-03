@@ -190,6 +190,7 @@
 <span class="sd">    constant.</span>
 <span class="sd">    Only one of [`low`,`high`] can be defined.</span>
 <span class="sd">    If `troe` and `sri` are both False, then the Lindemann is assumed.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">rev</span><span class="p">,</span> <span class="n">reactants</span><span class="p">,</span> <span class="n">reac_nu</span><span class="p">,</span> <span class="n">products</span><span class="p">,</span> <span class="n">prod_nu</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">E</span><span class="p">):</span>
@@ -271,6 +272,7 @@
 <span class="sd">    Trange : list of float</span>
 <span class="sd">        Temperatures defining ranges of thermodynamic polynomial fits</span>
 <span class="sd">        (low, middle, high), default ([300, 1000, 5000]).</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">):</span>
@@ -302,6 +304,7 @@
 <span class="sd">    -------</span>
 <span class="sd">    spec_smh : list of float</span>
 <span class="sd">        List of species&#39; standard-state entropies minus enthalpies.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">spec_smh</span> <span class="o">=</span> <span class="p">[]</span>

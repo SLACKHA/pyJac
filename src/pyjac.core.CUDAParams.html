@@ -40,40 +40,113 @@
   <div class="section" id="module-pyjac.core.CUDAParams">
 <span id="pyjac-core-cudaparams-module"></span><h1>pyjac.core.CUDAParams module<a class="headerlink" href="#module-pyjac.core.CUDAParams" title="Permalink to this headline">¶</a></h1>
 <p>Module containing parameters that control CUDA code generation</p>
-<dl class="class">
-<dt id="pyjac.core.CUDAParams.JacRatesCacheStrat">
-<em class="property">class </em><code class="descclassname">pyjac.core.CUDAParams.</code><code class="descname">JacRatesCacheStrat</code><a class="reference internal" href="../_modules/pyjac/core/CUDAParams.html#JacRatesCacheStrat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.CUDAParams.JacRatesCacheStrat" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="attribute">
-<dt id="pyjac.core.CUDAParams.JacRatesCacheStrat.Exclude">
-<code class="descname">Exclude</code><em class="property"> = 1</em><a class="headerlink" href="#pyjac.core.CUDAParams.JacRatesCacheStrat.Exclude" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="attribute">
-<dt id="pyjac.core.CUDAParams.JacRatesCacheStrat.Include">
-<code class="descname">Include</code><em class="property"> = 0</em><a class="headerlink" href="#pyjac.core.CUDAParams.JacRatesCacheStrat.Include" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name" colspan="2">param Jacob_Unroll:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of reactions to attempt to place in each Jacobian reaction update subfile</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">type Jacob_Unroll:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">param Jacob_Spec_Unroll:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of species to attempt to place in each Jacobian species update subfile</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">type Jacob_Spec_Unroll:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">param Rates_Unroll:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of reactions to limit each reaction rate subfile to</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">type Rates_Unroll:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">param Max_Lines:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of lines to attempt to limit each Jacobian reaction update subfile to</td>
+</tr>
+<tr class="field-even field"><th class="field-name">type Max_Lines:</th><td class="field-body">int</td>
+</tr>
+<tr class="field-odd field"><th class="field-name" colspan="2">param Max_Spec_Lines:</th></tr>
+<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of lines to attempt to limit each Jacobian species update subfile to</td>
+</tr>
+<tr class="field-even field"><th class="field-name" colspan="2">type Max_Spec_Lines:</th></tr>
+<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
 <dl class="function">
 <dt id="pyjac.core.CUDAParams.get_L1_size">
 <code class="descclassname">pyjac.core.CUDAParams.</code><code class="descname">get_L1_size</code><span class="sig-paren">(</span><em>L1_Preferred</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/CUDAParams.html#get_L1_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.CUDAParams.get_L1_size" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the size (in number of doubles) of the L1 cache for sm_20</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>L1_Preferred</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, prefer a larger L1 cache over more shared memory (recommended)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.CUDAParams.get_shared_size">
 <code class="descclassname">pyjac.core.CUDAParams.</code><code class="descname">get_shared_size</code><span class="sig-paren">(</span><em>L1_Preferred</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/CUDAParams.html#get_shared_size"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.CUDAParams.get_shared_size" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the size (in number of doubles) of shared memory for sm_20</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>L1_Preferred</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, prefer a larger L1 cache over more shared memory (recommended)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.CUDAParams.get_register_count">
 <code class="descclassname">pyjac.core.CUDAParams.</code><code class="descname">get_register_count</code><span class="sig-paren">(</span><em>num_blocks</em>, <em>num_threads</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/CUDAParams.html#get_register_count"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.CUDAParams.get_register_count" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the number of registers available per block for sm_20</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>num_blocks</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The number of blocks to target per kernel launch</li>
+<li><strong>num_threads</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The number of threads to target per kernel launch</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.CUDAParams.write_launch_bounds">
 <code class="descclassname">pyjac.core.CUDAParams.</code><code class="descname">write_launch_bounds</code><span class="sig-paren">(</span><em>builddir</em>, <em>blocks_per_sm=8</em>, <em>num_threads=64</em>, <em>L1_PREFERRED=True</em>, <em>no_shared=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/CUDAParams.html#write_launch_bounds"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.CUDAParams.write_launch_bounds" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Creates the launch_bounds.cuh file that may be included by CUDA solvers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>builddir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory to place the source file in</li>
+<li><strong>blocks_per_sm</strong> (<em>int, optional</em>) &#8211; The number of blocks to target per kernel launch</li>
+<li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The number of threads per block in the per kernel launch</li>
+<li><strong>L1_PREFERRED</strong> (<em>bool, optional</em>) &#8211; If true, prefer a larger L1 cache over more shared memory (recommended)</li>
+<li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If false, turn off shared memory</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </div>
 

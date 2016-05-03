@@ -1442,8 +1442,8 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
                     temp += 1
                 usages.append(temp - rind - 1)
             first_smem_use = smm.load_into_shared(file, the_vars,
-                                             usages, load=False
-                                             )
+                                                  usages, load=False
+                                                  )
 
         # loop through species
         for spind in my_specs:
@@ -1455,7 +1455,8 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
                 continue
 
             file.write(utils.line_start + utils.comment[lang] +
-                'sp {}'.format(fwd_spec_mapping[spind]) + '\n')
+                       'sp {}'.format(fwd_spec_mapping[spind]) + '\n'
+                       )
 
             sign = '-' if nu < 0 else '+'
             line = __get_var(spind)

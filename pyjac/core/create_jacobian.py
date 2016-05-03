@@ -28,13 +28,25 @@ def calculate_shared_memory(rxn_ind, rxn, specs, reacs, rev_reacs, pdep_reacs):
 
     Parameters
     ----------
-
+    rxn_ind : into
+        Index of reaction of interest.
+    rxn : `ReacInfo`
+        Reaction of interest.
+    specs : list of `SpecInfo`
+        List of species.
+    reacs : list of `ReacInfo`
+        Full list of reactions.
+    rev_reacs : list of `ReacInfo`
+        List of reversible reactions.
+    pdep_reacs : list of `ReacInfo`
+        List of pressure-dependent reactions.
 
     Returns
     -------
     variable_list :
 
     usages :
+
 
     """
     # need to figure out shared memory stuff
@@ -125,7 +137,6 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rxn_ind, pres_rxn_ind, get_array):
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
     lang : str
@@ -342,7 +353,6 @@ def write_dr_dy_species(lang, specs, rxn, pres_rxn_ind, j_sp, sp_j,
 
     Parameters
     ----------
-
     lang : str
         The Programming language
     specs : list of `SpecInfo`
@@ -491,7 +501,6 @@ def write_kc(file, lang, specs, rxn):
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
     lang : str
@@ -540,7 +549,7 @@ def write_kc(file, lang, specs, rxn):
             coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i]
                                     for i in range(len(lo_array))
                                     ], \
-                                    [hi_array[i] + coeffs[sp.Trange[1]][1][i]
+                                   [hi_array[i] + coeffs[sp.Trange[1]][1][i]
                                     for i in range(len(hi_array))
                                     ]
 
@@ -622,15 +631,18 @@ def get_infs(rxn):
 
     Parameters
     ----------
+    rxn : `ReacInfo`
+        Reaction object for pressure-dependent reaction (falloff or
+        chemically activated bimolecular)
 
     Returns
     -------
     beta_0minf : float
-        Arrhenius temperature exponent
+        Low-pressure limit temperature exponent minus high-pressure value.
     E_0minf : float
-        Arrhenius activation energy
+        Low-pressure limit activation energy minus high-pressure value.
     k0kinf : float
-        Arrhenius temperature exponent
+        Low-pressure limit reaction coefficient divided by high-pressure value.
 
     """
     if rxn.low:
@@ -1173,13 +1185,13 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     lang : str
         Programming language, {'c', 'cuda'}
     rxn : `ReacInfo`
-        Reaction of interest; pressure dependence expressed with Troe falloff
+        Reaction of interest; pressure dependence expressed with Troe falloff.
     beta_0minf : float
-
+        Low-pressure limit temperature exponent minus high-pressure value.
     E_0minf : float
-
+        Low-pressure limit activation energy minus high-pressure value.
     k0kinf : float
-
+        Low-pressure limit reaction coefficient divided by high-pressure value.
 
     Returns
     -------
@@ -1839,7 +1851,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
                     this_cheb, cheb_dim, this_plog, no_shared, has_nsp
                     ):
     """
-    Writes the header and definitions for the various Jacobian reaction update subfiles
+    Writes the header and definitions for the Jacobian reaction update subfiles
 
     Parameters
     ----------
@@ -1852,33 +1864,33 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
     rate_list : str
         The required reaction/species rate strings needed for the intro
     this_rev : bool
-        If true, this batch contains a reversible reaction
+        If ``True``, batch contains a reversible reaction
     this_pdep : bool
-        If true, this batch contains a pressure dependent (not counting PLog/Cheb) reaction
+        If ``True``, batch contains pressure dependent (falloff/bimolecular) reaction
     have_pres_mod_temp : bool
-        If true, this batch requires definition of pres_mod_temp
+        If ``True``, batch requires definition of `pres_mod_temp`
     batch_has_m : bool
-        If true, this batch requires the overall concentration 'm'
+        If ``True``, batch requires the overall concentration 'm'
     this_thd : bool
-        If true, this batch has a third body reaction
+        If ``True``, batch has a third-body reaction
     this_troe : bool
-        If true, this batch contains a Troe reaction
+        If ``True``, batch contains a Troe reaction
     this_sri : bool
-        If true, this batch contains an SRI reaction
+        If ``True``, batch contains an SRI reaction
     this_cheb : bool
-        If true, this batch contains a Chebyshev reaction
+        If ``True``, batch contains a Chebyshev reaction
     cheb_dim : int
-        If this_cheb is true, this is the largest chebyshev dimension required
+        If `this_cheb` is ``True``, the largest Chebyshev dimension required
     this_plog : bool
-        If true, this batch contains a PLOG reaction
+        If ``True``, batch contains a PLOG reaction
     no_shared : bool
-        If true, do not use CUDA shared memory
+        If ``True``, do not use CUDA shared memory
     has_nsp : bool
-        If true, at least one reaction has a non-zero contribution from the last species
+        If ``True``, >=1 reaction has nonzero contribution from the last species
 
     Returns
     -------
-    file : file object
+    file : `File` object
         Opened Jacobian file
 
     """
@@ -1899,13 +1911,14 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
         if batch_has_m:
             line += ', const double'
         line += (', const double, const double' +
-                    ('' if not this_rev else ', const double * {0}') +
-                    ', const double, double * {0}' +
-                    (', double * {0}, double* {0}' if has_nsp else '') +
-                    (', double * {0}' if this_cheb and lang == 'cuda' else '') +
-                    ');\n'
-                    '\n'
-                    '#endif\n')
+                 ('' if not this_rev else ', const double * {0}') +
+                 ', const double, double * {0}' +
+                 (', double * {0}, double* {0}' if has_nsp else '') +
+                 (', double * {0}' if this_cheb and lang == 'cuda' else '') +
+                 ');\n'
+                 '\n'
+                 '#endif\n'
+                 )
         file.write(line.format(utils.restrict[lang]))
     file = open(os.path.join(path, 'jacob_' + str(number) +
                 utils.file_ext[lang]), 'w'
@@ -2055,7 +2068,13 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
     number : int
         The jacobian subfile index
     have_jnplus_jplus : bool
-        If true, the last species has non-zero contributions to the Jacobian
+        If ``True``, the last species has non-zero contributions to the Jacobian
+
+    Returns
+    -------
+    file : `File`
+        Jacobian file object
+
     """
     with open(os.path.join(path, 'jacob_' + str(number) +
               utils.header_ext[lang]), 'w'
@@ -2084,14 +2103,12 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
 
     line = '__device__ ' if lang == 'cuda' else ''
 
-    line += (
-        'void eval_jacob_{} '.format(number) +
-        '(const double mw_avg, const double rho, '
-        'const double cp_avg, const double* spec_rates, '
-        'const double* h, const double* cp, double* jac' +
-        (', double* J_nplusjplus' if have_jnplus_jplus else '') +
-        ') '
-        )
+    line += ('void eval_jacob_{} '.format(number) +
+             '(const double mw_avg, const double rho, '
+             'const double cp_avg, const double* spec_rates, '
+             'const double* h, const double* cp, double* jac' +
+             (', double* J_nplusjplus' if have_jnplus_jplus else '') + ') '
+             )
     line += '{\n'
     line += utils.line_start
     if lang == 'cuda':
@@ -2123,7 +2140,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     reacs : list of ReacInfo
         List of reactions in the mechanism.
     seen_sp : list of bool
-        List of booleans, False if species i has an (identically) zero species rate
+        List of `bool`; ``False`` if species has (identically) zero rate
     smm : shared_memory_manager, optional
         If not ``None``, use this to manage shared memory optimization
 
@@ -2197,9 +2214,10 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     if lang in ['c', 'cuda']:
         line += ('void eval_jacob (const double t, const double pres, '
                  'const double * {0} y, double * {0} jac{1}) {{\n\n'.format(
-                 utils.restrict[lang],
-                 ', const mechanism_memory * {} d_mem'.format(utils.restrict[lang])
-                if lang == 'cuda' else ''))
+                 utils.restrict[lang], ', const mechanism_memory * '
+                 '{} d_mem'.format(utils.restrict[lang])
+                 if lang == 'cuda' else '')
+                 )
     elif lang == 'fortran':
         line += 'subroutine eval_jacob (t, pres, y, jac)\n\n'
 
@@ -2258,8 +2276,11 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     if lang == 'c':
         file.write(utils.line_start + 'double conc[{}];\n'.format(num_s))
     elif lang == 'cuda':
-        file.write(utils.line_start + 'double * {} conc = d_mem->conc'.format(
-                    utils.restrict[lang]) + utils.line_end[lang])
+        file.write(utils.line_start +
+                   'double * {}'.format(utils.restrict[lang]) +
+                   ' conc = d_mem->conc' +
+                   utils.line_end[lang]
+                   )
     elif lang == 'matlab':
         file.write(utils.line_start + 'conc = zeros({},1);\n'.format(num_s)
                    )
@@ -2293,7 +2314,9 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                     utils.restrict[lang]) +
                 utils.line_end[lang])
         else:
-            file.write(utils.line_start + 'double fwd_rates[{}];\n'.format(num_r))
+            file.write(utils.line_start +
+                       'double fwd_rates[{}];\n'.format(num_r)
+                       )
         if num_rev == 0:
             file.write(utils.line_start + 'double* rev_rates = 0;\n')
         elif lang == 'cuda':
@@ -2306,8 +2329,10 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                        'double rev_rates[{}];\n'.format(num_rev)
                        )
         if cuda_cheb:
-            file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang])
-                   + utils.line_end[lang])
+            file.write('  double * {} dot_prod'.format(utils.restrict[lang]) +
+                       ' = d_mem->dot_prod' +
+                       utils.line_end[lang]
+                       )
 
         file.write(utils.line_start +
                    'eval_rxn_rates (T, pres, conc, fwd_rates, '
@@ -2417,7 +2442,6 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                      utils.line_end[lang]
                      )
             file.write(line)
-
 
     # log(T)
     line = utils.line_start
@@ -2593,8 +2617,13 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                             pdep_thd_eff = True
                         if reacs[ind_next].pdep_sp is None:
                             batch_has_m = True
-                    if ((reacs[ind_next].pdep or reacs[ind_next].thd_body) and
-                            (reacs[ind_next].thd_body_eff or reacs[ind_next].pdep_sp)):
+                    if ((reacs[ind_next].pdep or
+                        reacs[ind_next].thd_body
+                        ) and
+                        (reacs[ind_next].thd_body_eff or
+                         reacs[ind_next].pdep_sp
+                         )
+                        ):
                         have_pres_mod_temp = True
                     if reacs[ind_next].thd_body:
                         thd = True
@@ -2624,8 +2653,9 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                                        )
 
             if lang == 'cuda' and smm is not None:
-                variable_list, usages = calculate_shared_memory(rxn_ind, rxn, specs,
-                                                                reacs, rev_reacs,
+                variable_list, usages = calculate_shared_memory(rxn_ind, rxn,
+                                                                specs, reacs,
+                                                                rev_reacs,
                                                                 pdep_reacs
                                                                 )
                 smm.load_into_shared(file, variable_list, usages)

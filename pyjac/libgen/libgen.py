@@ -1,9 +1,13 @@
+"""Module used to create a shared/static library from pyJac files.
+"""
+
 import shutil
 import re
 import os
 import subprocess
 import sys
 import multiprocessing
+import platform
 
 from .. import utils
 
@@ -32,15 +36,15 @@ includes = dict(c=[], icc=[],
                       ]
                 )
 
-flags = dict(c=['-std=c99', '-O3', '-mtune=native',
-                '-fopenmp'],
+flags = dict(c=['-std=c99', '-O3', '-mtune=native', '-fopenmp'],
              icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
              cuda=['-O3', '-arch=sm_20']
              )
 
 shared_flags = dict(c=['-fPIC'],
                     icc=['-fPIC'],
-                    cuda=['-Xcompiler', '"-fPIC"'])
+                    cuda=['-Xcompiler', '"-fPIC"']
+                    )
 
 libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
             cuda=['-lcudart'],
@@ -61,6 +65,8 @@ def getf(x):
 
 
 def compiler(fstruct):
+    """
+    """
     args = [cmd_compile[fstruct.build_lang]]
     if fstruct.auto_diff:
         args = ['g++']
@@ -77,8 +83,9 @@ def compiler(fstruct):
     args.extend(include)
     args.extend([
         '-{}c'.format('d' if fstruct.lang == 'cuda' else ''),
-                    os.path.join(fstruct.source_dir, fstruct.filename +
-                    utils.file_ext[fstruct.build_lang]),
+        os.path.join(fstruct.source_dir, fstruct.filename +
+                     utils.file_ext[fstruct.build_lang]
+                     ),
         '-o', os.path.join(fstruct.obj_dir, getf(fstruct.filename) + '.o')
         ])
     args = [val for val in args if val.strip()]
@@ -87,13 +94,25 @@ def compiler(fstruct):
         subprocess.check_call(args)
     except subprocess.CalledProcessError:
         print('Error: compilation failed for ' + fstruct.filename +
-                utils.file_ext[fstruct.build_lang])
+              utils.file_ext[fstruct.build_lang]
+              )
         return -1
     return 0
 
-def get_cuda_path():
-    import platform
 
+def get_cuda_path():
+    """Returns location of CUDA (nvcc) on the system.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    cuda_path : str
+        Path where CUDA (nvcc) is found on the system.
+
+    """
     cuda_path = which('nvcc')
     if cuda_path is None:
         print('nvcc not found!')
@@ -108,6 +127,8 @@ def get_cuda_path():
 
 
 def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
+    """
+    """
     command = cmd_lib(lang, shared)
 
     if lang == 'cuda':
@@ -156,7 +177,9 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
 
 class file_struct(object):
-    def __init__(self, lang, build_lang, filename, i_dirs, args, source_dir, obj_dir, shared):
+    def __init__(self, lang, build_lang, filename, i_dirs, args,
+                 source_dir, obj_dir, shared
+                 ):
         self.lang = lang
         self.build_lang = build_lang
         self.filename = filename
@@ -169,16 +192,41 @@ class file_struct(object):
 
 
 def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
+    """
+
+    Parameters
+    ----------
+    source_dir : str
+        Path with source files
+    pmod : bool
+        ``True`` if pressure dependent reactions present in mechanism
+    lang : {'c', 'cuda'}
+        Programming language
+    FD : Optional[bool]
+        Optional; if ``True``, include finite difference
+    AD : Optional[bool]
+        Optional; if ``True``, include autodifferentiation
+
+    Returns
+    -------
+    i_dirs : list of `str`
+        List of include directories
+    files : list of `str`
+        List of files
+        
+    """
     i_dirs = [source_dir]
     if AD:
         files = ['ad_dydt', 'ad_rxn_rates', 'ad_spec_rates',
-                'ad_chem_utils', 'ad_jac']
+                'ad_chem_utils', 'ad_jac'
+                ]
         if pmod:
             files += ['ad_rxn_rates_pres_mod']
         return i_dirs, files
 
     files = ['chem_utils', 'dydt', 'spec_rates',
-         'rxn_rates', 'mechanism', 'mass_mole']
+             'rxn_rates', 'mechanism', 'mass_mole'
+             ]
     if pmod:
         files += ['rxn_rates_pres_mod']
 
@@ -192,10 +240,13 @@ def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
     flists += [('rates', 'rate_list_{}')]
     for flist in flists:
         try:
-            with open(os.path.join(source_dir, flist[0], flist[1].format(lang))) as file:
+            with open(os.path.join(source_dir,
+                      flist[0], flist[1].format(lang))
+                      ) as file:
                 vals = file.readline().strip().split(' ')
                 vals = [os.path.join(flist[0],
-                            f[:f.index(utils.file_ext[lang])]) for f in vals]
+                        f[:f.index(utils.file_ext[lang])]) for f in vals
+                        ]
                 files += vals
                 i_dirs.append(os.path.join(source_dir, flist[0]))
         except:
@@ -207,9 +258,31 @@ def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
 
 
 def generate_library(lang, source_dir, obj_dir=None,
-                        out_dir=None, shared=None,
-                        finite_difference=False, auto_diff=False):
+                     out_dir=None, shared=None,
+                     finite_difference=False, auto_diff=False
+                     ):
+    """Generate shared/static library for pyJac files.
 
+    Parameters
+    ----------
+    lang : {'c', 'cuda'}
+        Programming language
+    source_dir : str
+        Path of folder with pyJac files
+    obj_dir : Optional[str]
+        Optional; path of folder to store generated object files
+    shared : bool
+        If ``True``, generate shared library (vs. static)
+    finite_difference : Optional[bool]
+        If ``True``, include finite differences
+    auto_diff : bool
+        If ``True``, include autodifferentiation
+
+    Returns
+    -------
+    Location of generated library
+
+    """
     #check lang
     if lang not in flags.keys():
         print 'Cannot generate library for unknown language {}'.format(lang)
@@ -243,7 +316,9 @@ def generate_library(lang, source_dir, obj_dir=None,
 
     pmod = False
     #figure out whether there's pressure mod reactions or not
-    with open(os.path.join(source_dir, 'mechanism{}'.format(utils.header_ext[build_lang])), 'r') as file:
+    with open(os.path.join(source_dir,
+              'mechanism{}'.format(utils.header_ext[build_lang])), 'r'
+              ) as file:
         for line in file.readlines():
             line = line.strip()
             match = re.search(r'\s*#define PRES_MOD_RATES (\d+)', line)
@@ -252,12 +327,15 @@ def generate_library(lang, source_dir, obj_dir=None,
                 break
 
     #get file lists
-    i_dirs, files = get_file_list(source_dir, pmod, build_lang, FD=finite_difference, AD=auto_diff)
+    i_dirs, files = get_file_list(source_dir, pmod, build_lang,
+                                  FD=finite_difference, AD=auto_diff
+                                  )
 
     # Compile generated source code
     structs = [file_struct(lang, build_lang, f, i_dirs,
-                    (['-DFINITE_DIFF'] if finite_difference else []),
-                    source_dir, obj_dir, shared) for f in files]
+               (['-DFINITE_DIFF'] if finite_difference else []),
+               source_dir, obj_dir, shared) for f in files
+               ]
     for x in structs:
         x.auto_diff=auto_diff
 

@@ -32,19 +32,25 @@ except ImportError:
     print('Error: Cantera must be installed.')
     raise
 
+try:
+    from optionloop import optionloop
+except ImportError:
+    print('Error: optionloop must be installed.')
+    raise
+
 # Local imports
 from .. import utils
 from ..core.create_jacobian import create_jacobian
-from optionloop import optionloop
 from ..libgen import generate_library, libs, compiler, file_struct, get_cuda_path, flags
 
 #cuda only works for static libraries
-STATIC=True
+STATIC = True
 
 def is_pdep(rxn):
     return (isinstance(rxn, ct.ThreeBodyReaction) or
     isinstance(rxn, ct.FalloffReaction) or
     isinstance(rxn, ct.ChemicallyActivatedReaction))
+
 
 def check_step_file(filename, steplist):
     #checks file for existing data
@@ -71,6 +77,7 @@ def check_step_file(filename, steplist):
     except:
         return runs
 
+
 def check_file(filename):
     #checks file for existing data
     #and returns number of runs left to do
@@ -92,8 +99,10 @@ def check_file(filename):
     except:
         return 0
 
+
 def getf(x):
     return os.path.basename(x)
+
 
 def cmd_link(lang, shared):
     if lang == 'icc':
@@ -102,7 +111,6 @@ def cmd_link(lang, shared):
         return ['gcc']
     elif lang == 'cuda':
         return ['nvcc'] if not shared else ['g++']
-
 
 
 def linker(lang, temp_lang, test_dir, filelist, lib=None):

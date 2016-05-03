@@ -389,8 +389,8 @@ def optimize_cache(specs, reacs, multi_thread,
     complete = False
     while (datetime.datetime.now() - time_start <
            datetime.timedelta(seconds=max_time)
-           and not complete)
-           :
+           and not complete
+           ):
         time.sleep(30)
         complete = sum(x.ready() for x in result_list)
         print('Species Optimization {}% complete...'.format(

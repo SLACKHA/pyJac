@@ -23,9 +23,19 @@ from . import cache_optimizer as cache
 from . import shared_memory as shared
 
 
-def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
-    """
-    Estimates usage of the various variables for a given reaction
+def calculate_shared_memory(rxn_ind, rxn, specs, reacs, rev_reacs, pdep_reacs):
+    """Estimates usage of the various variables for a given reaction
+
+    Parameters
+    ----------
+
+
+    Returns
+    -------
+    variable_list :
+
+    usages :
+
     """
     # need to figure out shared memory stuff
     variable_list = []
@@ -38,14 +48,14 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     reac_usages = [0 for i in range(len(rxn.reac))]
     prod_usages = [0 for i in range(len(rxn.prod))]
     # add variables
-    variable_list.append(shared.variable('fwd_rates', rind))
+    variable_list.append(shared.variable('fwd_rates', rxn_ind))
     if rxn.rev:
         variable_list.append(shared.variable('rev_rates',
-                             rev_reacs.index(rind))
+                             rev_reacs.index(rxn_ind))
                              )
     if rxn.pdep or rxn.thd_body:
         variable_list.append(shared.variable('pres_mod',
-                             pdep_reacs.index(rind))
+                             pdep_reacs.index(rxn_ind))
                              )
     for sp in set(rxn.reac + rxn.prod + [x[0] for x in rxn.thd_body_eff]):
         variable_list.append(shared.variable('conc', sp))
@@ -109,7 +119,7 @@ def calculate_shared_memory(rind, rxn, specs, reacs, rev_reacs, pdep_reacs):
     return variable_list, usages
 
 
-def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
+def write_dr_dy(file, lang, rev_reacs, rxn, rxn_ind, pres_rxn_ind, get_array):
     """Writes evaluation of the (non-pressure dependent part) of the
     reaction rate R that is independent of species
 
@@ -124,12 +134,17 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
         The list of reverisble reactions
     rxn : `ReacInfo`
         The reaction to consider
-    rind : int
+    rxn_ind : int
         The index of the reaction in the mechanism
-    pind : int
+    pres_rxn_ind : int
         The index of the reaction in the pressure dependent reactions
     get_array : function
         The SMM binded get_array function (or utils.get_array) as required
+
+    Returns
+    -------
+    None
+
     """
     # write the T_Pr and T_Fi terms if needed
     if (rxn.pdep or rxn.thd_body) and (rxn.thd_body_eff or rxn.pdep_sp):
@@ -162,19 +177,19 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
 
             jline += ') * '
         if rxn.rev:
-            jline += '(' + get_array(lang, 'fwd_rates', rind)
+            jline += '(' + get_array(lang, 'fwd_rates', rxn_ind)
             jline += ' - ' + \
-                     get_array(lang, 'rev_rates', rev_reacs.index(rind))
+                     get_array(lang, 'rev_rates', rev_reacs.index(rxn_ind))
             jline += ')'
         else:
-            jline += get_array(lang, 'fwd_rates', rind)
+            jline += get_array(lang, 'fwd_rates', rxn_ind)
         file.write(jline + utils.line_end[lang])
 
     jline = '  j_temp = -mw_avg * rho_inv * '
     # next, contribution from dR/dYj
     # namely the T_dy independent term
     if rxn.pdep or rxn.thd_body:
-        jline += get_array(lang, 'pres_mod', pind)
+        jline += get_array(lang, 'pres_mod', pres_rxn_ind)
         jline += ' * ('
     else:
         jline += '('
@@ -195,14 +210,14 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rind, pind, get_array):
     if reac_nu != 0:
         if reac_nu != 1:
             jline += '{} * '.format(float(reac_nu))
-        jline += '' + get_array(lang, 'fwd_rates', rind)
+        jline += '' + get_array(lang, 'fwd_rates', rxn_ind)
 
     if prod_nu != 0:
         if prod_nu == 1:
             jline += ' - '
         else:
             jline += ' - {} * '.format(float(prod_nu))
-        jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rind))
+        jline += '' + get_array(lang, 'rev_rates', rev_reacs.index(rxn_ind))
 
     if rxn.pdep and (rxn.pdep_sp or rxn.thd_body_eff):
         jline += ' + pres_mod_temp'
@@ -261,6 +276,11 @@ def write_rates(file, lang, rxn):
         The Programming language
     rxn : `ReacInfo`
         The reaction to consider
+
+    Returns
+    -------
+    None
+
     """
 
     if not (rxn.cheb or rxn.plog):
@@ -314,8 +334,8 @@ def write_rates(file, lang, rxn):
                    )
 
 
-def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
-                        rind, rev_reacs, get_array
+def write_dr_dy_species(lang, specs, rxn, pres_rxn_ind, j_sp, sp_j,
+                        rxn_ind, rev_reacs, get_array
                         ):
     """Returns string for evaluation of the (non-pressure dependent part) of the
     reaction rate R with respect to a species ``j``
@@ -329,18 +349,25 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
         The species in the mechanism
     rxn : `ReacInfo`
         The reaction to consider
-    pind : int
+    pres_rxn_ind : int
         The index of the reaction in the pressure dependent reactions
     j_sp : int
         The species index
     sp_j : `SpecInfo`
         The species to consider
-    rind : int
+    rxn_ind : int
         The index of the reaction in the mechanism
     rev_reacs : list of `ReacInfo`
         The list of reverisble reactions
     get_array : function
         The SMM binded get_array function (or utils.get_array) as required
+
+    Returns
+    -------
+    jline : str
+        Jacobian evaluation line with non-pressure-dependent part of \
+        species derivative added.
+
     """
     jline = 'j_temp'
     last_spec = len(specs) - 1
@@ -374,7 +401,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
        ((j_sp in rxn.reac or last_spec in rxn.reac)
         or (rxn.rev and (j_sp in rxn.prod or last_spec in rxn.prod))
         ):
-        s_term += ' + ' + get_array(lang, 'pres_mod', pind)
+        s_term += ' + ' + get_array(lang, 'pres_mod', pres_rxn_ind)
         s_term += ' * ('
 
     def __get_s_term(rxn, j_sp, reac=True):
@@ -456,7 +483,7 @@ def write_dr_dy_species(lang, specs, rxn, pind, j_sp, sp_j,
     if (rxn.pdep or rxn.thd_body) and s_term:
         s_term += ')'
 
-    return jline + s_term
+    return (jline + s_term)
 
 
 def write_kc(file, lang, specs, rxn):
@@ -473,6 +500,11 @@ def write_kc(file, lang, specs, rxn):
         The species in the mechanism
     rxn : `ReacInfo`
         The reaction to consider
+
+    Returns
+    -------
+    None
+
     """
     sum_nu = 0
     coeffs = {}
@@ -587,6 +619,19 @@ def write_kc(file, lang, specs, rxn):
 
 def get_infs(rxn):
     """Returns the reaction rate parameters for a pressure-dependent reaction
+
+    Parameters
+    ----------
+
+    Returns
+    -------
+    beta_0minf : float
+        Arrhenius temperature exponent
+    E_0minf : float
+        Arrhenius activation energy
+    k0kinf : float
+        Arrhenius temperature exponent
+
     """
     if rxn.low:
         # unimolecular/recombination fall-off
@@ -605,15 +650,15 @@ def get_infs(rxn):
     return beta_0minf, E_0minf, k0kinf
 
 
-def write_dt_comment(file, lang, rind):
+def write_dt_comment(file, lang, rxn_ind):
     line = utils.line_start + utils.comment[lang]
-    line += ('partial of rxn ' + str(rind) + ' wrt T' + '\n')
+    line += ('partial of rxn ' + str(rxn_ind) + ' wrt T' + '\n')
     file.write(line)
 
 
-def write_dy_comment(file, lang, rind):
+def write_dy_comment(file, lang, rxn_ind):
     line = utils.line_start + utils.comment[lang]
-    line += ('partial of rxn ' + str(rind) + ' wrt species' + '\n')
+    line += ('partial of rxn ' + str(rxn_ind) + ' wrt species' + '\n')
     file.write(line)
 
 
@@ -844,7 +889,6 @@ def write_pr(file, lang, specs, reacs, pdep_reacs,
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
     lang : str
@@ -854,7 +898,8 @@ def write_pr(file, lang, specs, reacs, pdep_reacs,
     reacs : list of `ReacInfo`
         The reactions in the mechanism
     pdep_reacs : list of `ReacInfo`
-        The pressure dependent reactions (not including PLOG/Chebyshev) reactions in the mechanism
+        The pressure dependent reactions (not including PLOG/Chebyshev) \
+        reactions in the mechanism
     rxn : `ReacInfo`
         The reactio to consider
     get_array : function
@@ -862,6 +907,12 @@ def write_pr(file, lang, specs, reacs, pdep_reacs,
     last_conc_temp : list of tuples
         If specified, the non-unity third body efficiencies and corresponding species for the last
         pressure dependent reaction
+
+    Returns
+    -------
+    conc_temp_log : list of (int, float)
+        List with (species index, efficiency) for third-body efficiencies.
+
     """
     # print lines for necessary pressure-dependent variables
     line = utils.line_start + 'conc_temp = '
@@ -993,40 +1044,49 @@ def write_sri(file, lang):
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
     lang : str
-        The Programming language
+        The programming language
+
+    Returns
+    -------
+    None
+
     """
     line = ('  X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * '
             'log10(fmax(Pr, 1.0e-300)))' + utils.line_end[lang]
             )
     file.write(line)
 
-def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
+
+def get_pdep_dt(lang, rxn, rev_reacs, rxn_ind, pres_rxn_ind, get_array):
     """Write contribution from temperature derivative of reaction rate for
     a pressure dependent reaction
 
     Parameters
     ----------
-
     lang : str
         The Programming language
     rxn : `ReacInfo`
         The reaction to consider
     rev_reacs : list of `ReacInfo`
         The list of reverisble reactions
-    rind : int
+    rxn_ind : int
         The index of the reaction in the reaction list
-    pind : int
+    pres_rxn_ind : int
         The index of the reaction in the pressure dependent reaction list
     get_array : function
         The SMM binded get_array function (or utils.get_array) as required
+
+    Returns
+    -------
+    None
+
     """
     beta_0minf, E_0minf, k0kinf = get_infs(rxn)
     jline = (utils.line_start + 'j_temp = (' +
-             get_array(lang, 'pres_mod', pind)
+             get_array(lang, 'pres_mod', pres_rxn_ind)
              )
     # high -> chem-activated bimolecular rxn
     jline += ' * ((' + ('-Pr * ' if rxn.high else '')
@@ -1046,20 +1106,40 @@ def get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array):
 
     if rxn.rev:
         # forward and reverse reaction rates
-        jline += '(' + get_array(lang, 'fwd_rates', rind)
+        jline += '(' + get_array(lang, 'fwd_rates', rxn_ind)
         jline += ' - ' + \
-                 get_array(lang, 'rev_rates', rev_reacs.index(rind))
+                 get_array(lang, 'rev_rates', rev_reacs.index(rxn_ind))
         jline += ')'
     else:
         # forward reaction rate only
-        jline += '' + get_array(lang, 'fwd_rates', rind)
+        jline += '' + get_array(lang, 'fwd_rates', rxn_ind)
 
-    jline += ' + (' + get_array(lang, 'pres_mod', pind)
+    jline += ' + (' + get_array(lang, 'pres_mod', pres_rxn_ind)
 
     return jline
 
 
 def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
+    """Writes section of line for temperature partial derivative of Troe falloff.
+
+    Parameters
+    ----------
+    lang : str
+        Programming language, {'c', 'cuda'}
+    rxn : `ReacInfo`
+        Reaction of interest; pressure dependence expressed with SRI falloff
+    beta_0minf : float
+
+    E_0minf : float
+
+    k0kinf : float
+
+    Returns
+    -------
+    jline : str
+        Line fragment with SRI temperature derivative
+
+    """
     jline = (' + X * ((('
              '{:.16} / '.format(rxn.sri_par[0] * rxn.sri_par[1]) +
              '(T * T)) * exp('
@@ -1095,8 +1175,11 @@ def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     rxn : `ReacInfo`
         Reaction of interest; pressure dependence expressed with Troe falloff
     beta_0minf : float
+
     E_0minf : float
+
     k0kinf : float
+
 
     Returns
     -------
@@ -1144,13 +1227,17 @@ def write_dcp_dt(file, lang, specs):
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
     lang : str
         The Programming language
     specs : list of `SpecInfo`
         The species in the mechanism
+
+    Returns
+    -------
+    None
+
     """
     T_mid_buckets = {}
     # put all of the same T_mids together
@@ -1236,7 +1323,7 @@ def write_dcp_dt(file, lang, specs):
         first = False
 
 
-def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
+def get_elementary_rxn_dt(lang, specs, rxn, rxn_ind, rev_idx,
                           get_array, do_unroll
                           ):
     """Write contribution from temperature derivative of reaction rate for
@@ -1244,19 +1331,24 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
     Parameters
     ----------
-
     lang : str
-        The Programming language
+        The programming language
     rxn : `ReacInfo`
         The reaction to consider
-    rind : int
+    rxn_ind : int
         The reaction index
     rev_idx : int
         The index of the reaction in the reverse reaction list (if applicable)
     get_array : function
-        The SMM binded get_array function (or utils.get_array) as required
+        The SMM binded get_array function (or `utils.get_array`) as required
     do_unroll : bool
         If true, Jacobian unrolling is turned on
+
+    Returns
+    -------
+    jline : str
+        Jacobian entry substring with temperature derivative contribution.
+
     """
 
     jline = ''
@@ -1266,7 +1358,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
 
         if dk_dt or nu != 1.0:
             #we actually need to do the dk/dt for both
-            jline = get_array(lang, 'fwd_rates', rind)
+            jline = get_array(lang, 'fwd_rates', rxn_ind)
             jline += ' * ('
             if dk_dt:
                 jline += dk_dt
@@ -1303,7 +1395,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
         dk_dt = get_rxn_params_dt(rxn, rev=False)
         if dk_dt:
             jline += '('
-            jline += get_array(lang, 'fwd_rates', rind)
+            jline += get_array(lang, 'fwd_rates', rxn_ind)
             if rxn.rev:
                 jline += ' - ' + \
                 get_array(lang, 'rev_rates', rev_idx)
@@ -1318,7 +1410,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
         if nu != 1.0:
             if jline:
                 jline += ' + '
-            jline += get_array(lang, 'fwd_rates', rind)
+            jline += get_array(lang, 'fwd_rates', rxn_ind)
             jline += ' * {}'.format(1. - float(nu))
 
         dbdt = get_db_dt(lang, specs, rxn, do_unroll)
@@ -1345,7 +1437,7 @@ def get_elementary_rxn_dt(lang, specs, rxn, rind, rev_idx,
         dk_dt = get_rxn_params_dt(rxn, rev=False)
         nu = sum(rxn.reac_nu)
         if dk_dt or nu != 1.0:
-            jline += get_array(lang, 'fwd_rates', rind)
+            jline += get_array(lang, 'fwd_rates', rxn_ind)
             jline += ' * ('
             jline += dk_dt
 
@@ -1371,13 +1463,17 @@ def write_cheb_ut(file, lang, rxn):
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
     lang : str
         The Programming language
     rxn : `ReacInfo`
         The reaction to consider
+
+    Returns
+    -------
+    None
+
     """
     line_list = []
     line_list.append('cheb_temp_0 = 1')
@@ -1437,7 +1533,7 @@ def write_cheb_ut(file, lang, rxn):
     file.write(''.join(line_list))
 
 
-def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx,
+def write_cheb_rxn_dt(file, lang, jline, rxn, rxn_ind, rev_idx,
                       specs, get_array, do_unroll
                       ):
     """
@@ -1456,7 +1552,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx,
         The species in the mechanism
     rxn : `ReacInfo`
         The reaction to consider
-    rind : int
+    rxn_ind : int
         The reaction index
     rev_idx : int
         The index of the reaction in the reverse reaction list (if applicable)
@@ -1491,7 +1587,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx,
 
     jline += 'kf * ({:.16e} / T)'.format(-2.0 * math.log(10) / tlim_inv_sub)
 
-    jline += ' * (' + get_array(lang, 'fwd_rates', rind)
+    jline += ' * (' + get_array(lang, 'fwd_rates', rxn_ind)
 
     if rxn.rev:
         # reverse reaction rate also
@@ -1500,7 +1596,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx,
     jline += ')'
     nu = sum(rxn.reac_nu)
     if nu != 1.0:
-        jline += ' + ' + get_array(lang, 'fwd_rates', rind)
+        jline += ' + ' + get_array(lang, 'fwd_rates', rxn_ind)
         jline += ' * {}'.format(1. - float(nu))
 
     if rxn.rev:
@@ -1516,7 +1612,7 @@ def write_cheb_rxn_dt(file, lang, jline, rxn, rind, rev_idx,
     file.write(jline + utils.line_end[lang])
 
 
-def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
+def write_plog_rxn_dt(file, lang, jline, specs, rxn, rxn_ind,
                       rev_idx, get_array, do_unroll
                       ):
     """
@@ -1535,7 +1631,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
         The species in the mechanism
     rxn : `ReacInfo`
         The reaction to consider
-    rind : int
+    rxn_ind : int
         The reaction index
     rev_idx : int
         The index of the reaction in the reverse reaction list (if applicable)
@@ -1558,7 +1654,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                           A_p1, b_p1, E_p1
                           )
 
-    dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rind,
+    dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rxn_ind,
                                  rev_idx, get_array, do_unroll
                                  )
     have_prev = False
@@ -1600,7 +1696,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
             else:
                 jline_p += ')'
 
-            jline_p += ' * (' + get_array(lang, 'fwd_rates', rind)
+            jline_p += ' * (' + get_array(lang, 'fwd_rates', rxn_ind)
             if rxn.rev:
                 # reverse reaction rate also
                 jline_p += (' - ' +
@@ -1611,7 +1707,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
         nu = sum(rxn.reac_nu)
         if nu != 1.0:
             if jline_p: jline_p += ' + '
-            jline_p += (get_array(lang, 'fwd_rates', rind) +
+            jline_p += (get_array(lang, 'fwd_rates', rxn_ind) +
                         ' * {}'.format(1. - nu)
                         )
 
@@ -1662,7 +1758,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
                           rxn.prod, rxn.prod_nu,
                           A_pn, b_pn, E_pn
                           )
-    dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rind,
+    dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rxn_ind,
                                  rev_idx, get_array, do_unroll
                                  )
     if dkdt:
@@ -2467,15 +2563,15 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
 
         jac_count = 0
         next_fn_index = 0
-        for rind, rxn in enumerate(reacs):
-            if do_unroll and (rind == next_fn_index):
+        for rxn_ind, rxn in enumerate(reacs):
+            if do_unroll and (rxn_ind == next_fn_index):
                 # clear conc temp
                 last_conc_temp = None
                 if not retry:
                     file_store = file
                 retry = False
                 # get next index
-                next_fn_index = min(rind + unroll_len, len(reacs))
+                next_fn_index = min(rxn_ind + unroll_len, len(reacs))
                 # get flags
                 rev = False
                 pdep = False
@@ -2488,7 +2584,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 has_jnplus_one = False
                 batch_has_m = False
                 have_pres_mod_temp = False
-                for ind_next in range(rind, next_fn_index):
+                for ind_next in range(rxn_ind, next_fn_index):
                     if reacs[ind_next].rev:
                         rev = True
                     if reacs[ind_next].pdep:
@@ -2528,7 +2624,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                                        )
 
             if lang == 'cuda' and smm is not None:
-                variable_list, usages = calculate_shared_memory(rind, rxn, specs,
+                variable_list, usages = calculate_shared_memory(rxn_ind, rxn, specs,
                                                                 reacs, rev_reacs,
                                                                 pdep_reacs
                                                                 )
@@ -2539,13 +2635,13 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
             # with respect to temperature
             ######################################
 
-            write_dt_comment(file, lang, rind)
+            write_dt_comment(file, lang, rxn_ind)
 
             # first we need any pres mod terms
             jline = ''
-            pind = None
+            pres_rxn_ind = None
             if rxn.pdep:
-                pind = pdep_reacs.index(rind)
+                pres_rxn_ind = pdep_reacs.index(rxn_ind)
                 last_conc_temp = write_pr(file, lang, specs, reacs, pdep_reacs,
                                           rxn, get_array, last_conc_temp
                                           )
@@ -2556,29 +2652,29 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 elif rxn.sri:
                     write_sri(file, lang)
 
-                jline = get_pdep_dt(lang, rxn, rev_reacs, rind, pind, get_array)
+                jline = get_pdep_dt(lang, rxn, rev_reacs, rxn_ind, pres_rxn_ind, get_array)
 
             elif rxn.thd_body:
                 # third body reaction
-                pind = pdep_reacs.index(rind)
+                pres_rxn_ind = pdep_reacs.index(rxn_ind)
 
                 jline = (utils.line_start +
                          'j_temp = ((-' +
-                         get_array(lang, 'pres_mod', pind) +
+                         get_array(lang, 'pres_mod', pres_rxn_ind) +
                          ' * '
                          )
 
                 if rxn.rev:
                     # forward and reverse reaction rates
-                    jline += '(' + get_array(lang, 'fwd_rates', rind)
+                    jline += '(' + get_array(lang, 'fwd_rates', rxn_ind)
                     jline += ' - ' + \
-                        get_array(lang, 'rev_rates', rev_reacs.index(rind))
+                        get_array(lang, 'rev_rates', rev_reacs.index(rxn_ind))
                     jline += ')'
                 else:
                     # forward reaction rate only
-                    jline += get_array(lang, 'fwd_rates', rind)
+                    jline += get_array(lang, 'fwd_rates', rxn_ind)
 
-                jline += ' / T) + (' + get_array(lang, 'pres_mod', pind)
+                jline += ' / T) + (' + get_array(lang, 'pres_mod', pres_rxn_ind)
 
             else:
                 if lang in ['c', 'cuda', 'matlab']:
@@ -2590,21 +2686,21 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
 
             doT = True
             if rxn.plog:
-                write_plog_rxn_dt(file, lang, jline, specs, rxn, rind,
-                                  rev_reacs.index(rind) if rxn.rev else None,
+                write_plog_rxn_dt(file, lang, jline, specs, rxn, rxn_ind,
+                                  rev_reacs.index(rxn_ind) if rxn.rev else None,
                                   get_array, do_unroll
                                   )
 
             elif rxn.cheb:
-                write_cheb_rxn_dt(file, lang, jline, rxn, rind,
-                                  rev_reacs.index(rind) if rxn.rev else None,
+                write_cheb_rxn_dt(file, lang, jline, rxn, rxn_ind,
+                                  rev_reacs.index(rxn_ind) if rxn.rev else None,
                                   specs, get_array, do_unroll
                                   )
 
             else:
                 dkdt = get_elementary_rxn_dt(
-                    lang, specs, rxn, rind,
-                    rev_reacs.index(rind) if rxn.rev else None,
+                    lang, specs, rxn, rxn_ind,
+                    rev_reacs.index(rxn_ind) if rxn.rev else None,
                     get_array, do_unroll
                     )
                 if dkdt:
@@ -2661,15 +2757,15 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
             ######################################
             # with respect to species
             ######################################
-            write_dy_comment(file, lang, rind)
+            write_dy_comment(file, lang, rxn_ind)
 
             if rxn.rev and not rxn.rev_par:
                 # need to find Kc
                 write_kc(file, lang, specs, rxn)
 
             # need to write the dr/dy parts (independent of any species)
-            write_dr_dy(file, lang, rev_reacs, rxn, rind,
-                        pind, get_array
+            write_dr_dy(file, lang, rev_reacs, rxn, rxn_ind,
+                        pres_rxn_ind, get_array
                         )
 
             # write the forward / backwards rates:
@@ -2677,8 +2773,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
 
             # now loop through each species
             for j_sp, sp_j in enumerate(specs[:-1]):
-                dr_dyj = write_dr_dy_species(lang, specs, rxn, pind,
-                                                        j_sp, sp_j, rind,
+                dr_dyj = write_dr_dy_species(lang, specs, rxn, pres_rxn_ind,
+                                                        j_sp, sp_j, rxn_ind,
                                                         rev_reacs, get_array
                                                         )
                 for k_sp in set(rxn.reac + rxn.prod):
@@ -2692,8 +2788,8 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                     jline = utils.line_start
                     if k_sp + 1 < num_s:
                         lin_index = k_sp + 1 + (num_s) * (j_sp + 1)
-                        #if not rind in thelist and lin_index == 30608:
-                        #    thelist.add(rind)
+                        #if not rxn_ind in thelist and lin_index == 30608:
+                        #    thelist.add(rxn_ind)
                         # sparse indexes
                         if lang in ['c', 'cuda']:
                             jline += (
@@ -2755,7 +2851,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 evictable = [x for x in variable_list if not x.base == 'conc']
                 smm.mark_for_eviction(evictable)
 
-            if do_unroll and (rind == next_fn_index - 1 or rind == len(reacs) - 1):
+            if do_unroll and (rxn_ind == next_fn_index - 1 or rxn_ind == len(reacs) - 1):
                 # switch back
                 file.write('}\n\n')
                 file.close()
@@ -2788,7 +2884,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                     line += ', dot_prod'
                 line += ')'
                 file.write(line + utils.line_end[lang])
-        success = rind == len(reacs) - 1
+        success = rxn_ind == len(reacs) - 1
 
     ###################################
     # Partial derivatives of temperature (energy equation)

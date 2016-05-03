@@ -137,7 +137,7 @@ void eval_jacob(const double t, const double p, const double* y,
         file.write('/* Species Indexes\n'
                    '\n'.join('{}  {}'.format(i, spec.name)
                              for i, spec in enumerate(specs)
-                             )
+                             ) + 
                    '*/\n\n'
                    )
 

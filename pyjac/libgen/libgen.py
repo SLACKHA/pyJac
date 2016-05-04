@@ -12,6 +12,7 @@ import platform
 from .. import utils
 
 def lib_ext(shared):
+    """Returns the appropriate library extension based on the shared flag"""
     return '.a' if not shared else '.so'
 
 
@@ -22,6 +23,8 @@ cmd_compile = dict(c='gcc',
 
 
 def cmd_lib(lang, shared):
+    """Returns the appropriate compilation command for creation of the library based on the 
+    language and shared flag"""
     if lang == 'c':
         return ['ar', 'rcs'] if not shared else ['gcc', '-shared']
     elif lang == 'cuda':
@@ -53,6 +56,8 @@ libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
 
 
 def which(file):
+    """A substitute for the `which` command, searches the PATH for
+    a given file"""
     for path in os.environ["PATH"].split(os.pathsep):
         if os.path.exists(os.path.join(path, file)):
                 return os.path.join(path, file)
@@ -60,12 +65,23 @@ def which(file):
     return None
 
 
-def getf(x):
-    return os.path.basename(x)
-
-
 def compiler(fstruct):
-    """
+    """Given a file structure, this method will compile the source file for the 
+    language and options specified
+
+    Parameters
+    ----------
+    fstruct : `file_struct`
+        An information struct that holds the various compilation options
+
+    Returns
+    -------
+    success : int
+        0 if the compilation process was sucessful, -1 otherwise
+
+    Notes
+    -----
+    Designed to work with a multiprocess compilation workflow
     """
     args = [cmd_compile[fstruct.build_lang]]
     if fstruct.auto_diff:
@@ -86,7 +102,7 @@ def compiler(fstruct):
         os.path.join(fstruct.source_dir, fstruct.filename +
                      utils.file_ext[fstruct.build_lang]
                      ),
-        '-o', os.path.join(fstruct.obj_dir, getf(fstruct.filename) + '.o')
+        '-o', os.path.join(fstruct.obj_dir, os.path.basename(fstruct.filename) + '.o')
         ])
     args = [val for val in args if val.strip()]
     try:
@@ -127,7 +143,23 @@ def get_cuda_path():
 
 
 def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
-    """
+    """Create a library from a list of compiled files
+
+    Parameters
+    ----------
+    Parameters
+    ----------
+    obj_dir : str
+        Path with object files
+    out_dir : str
+        Path to place the library in
+    lang : {'c', 'cuda'}
+        Programming language
+    filelist : List of `str`
+        The list of object files to include in the library
+    auto_diff : Optional[bool]
+        Optional; if ``True``, include autodifferentiation
+
     """
     command = cmd_lib(lang, shared)
 
@@ -153,7 +185,7 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
         command += [os.path.join(out_dir, libname)]
 
     #add the files
-    command.extend([os.path.join(obj_dir, getf(f) + '.o') for f in filelist])
+    command.extend([os.path.join(obj_dir, os.path.basename(f) + '.o') for f in filelist])
 
     if shared:
         command.extend(shared_flags[lang])
@@ -177,9 +209,32 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
 
 class file_struct(object):
+    """A simple structure designed to enable multiprocess compilation
+    """
     def __init__(self, lang, build_lang, filename, i_dirs, args,
                  source_dir, obj_dir, shared
                  ):
+        """
+        Parameters
+        ----------
+        lang : str
+            Compiler to use
+        build_lang : {'c', 'cuda'}
+            Programming language
+        file_name : str
+            The file to compile
+        i_dirs : List of str
+            List of include directorys for compilation
+        args : List of str
+            List of additional arguements
+        source_dir : str
+            The directory the file is located in
+        obj_dir : str
+            The directory to place the compiled object file in
+        shared : bool
+            If true, this is creating a shared library
+        """
+
         self.lang = lang
         self.build_lang = build_lang
         self.filename = filename

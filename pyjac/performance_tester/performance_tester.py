@@ -174,7 +174,7 @@ def cmd_link(lang, shared):
         cmd = ['gcc']
     elif lang == 'cuda':
         cmd = ['nvcc'] if not shared else ['g++']
-    else
+    else:
         print('Lang must be one of {icc, c, cuda}')
         raise
     return cmd

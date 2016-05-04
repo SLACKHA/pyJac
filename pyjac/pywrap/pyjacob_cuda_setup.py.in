@@ -8,7 +8,7 @@ import numpy
 
 import distutils.ccompiler
 import parallel_compiler as pcc
-distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
+distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
 
 def find_in_path(name, path):
     "Find a file in a search path"
@@ -80,9 +80,9 @@ ext = Extension('cu_pyjacob',
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
-                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v', 
+                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v',
                                     '--compiler-options', "'-fPIC'",
-                                    '--ftz=false', '--prec-div=true', 
+                                    '--ftz=false', '--prec-div=true',
                                     '--prec-sqrt=true', '-m64']},
                 include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes
                 )
@@ -124,7 +124,7 @@ def customize_linker_for_nvcc(self):
         #now call the actual link, with the extra dlink object
         self.linker_so = linker_so_save[:]
 
-        super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o'), '$libname'], 
+        super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o'), '$libname'],
             output_filename, output_dir,
             libraries, library_dirs, runtime_library_dirs, export_symbols,
             debug, extra_preargs, extra_postargs, build_temp, target_lang)
@@ -162,7 +162,7 @@ def customize_compiler_for_nvcc(self):
         if os.path.splitext(src)[1] == '.cu':
             # use the cuda for .cu files
             self.set_executable('compiler_so', CUDA['nvcc'])
-            the_cc = cc_args[:] 
+            the_cc = cc_args[:]
             # use only a subset of the extra_postargs, which are 1-1 translated
             # from the extra_compile_args in the Extension class
             postargs = extra_postargs['nvcc'][:]
@@ -170,7 +170,7 @@ def customize_compiler_for_nvcc(self):
             the_cc.append('-dc')
             postargs = []
         else:
-            the_cc = cc_args[:] 
+            the_cc = cc_args[:]
             postargs = extra_postargs['gcc'][:]
 
         super(obj, src, ext, the_cc, postargs, pp_opts)

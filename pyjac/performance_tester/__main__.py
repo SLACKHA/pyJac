@@ -4,7 +4,6 @@ import os
 import performance_tester as pt
 from argparse import ArgumentParser
 
-
 def main(args=None):
     if args is None:
         # command line arguments

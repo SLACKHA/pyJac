@@ -3418,10 +3418,12 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
         with open(os.path.join(build_path, 'ad_jacob.h'), 'w') as file:
             file.write('#ifndef AD_JAC_H\n'
                        '#define AD_JAC_H\n'
-                       'void eval_jacob (const double t, const double pres, const double* y, double* jac);\n'
-                       '#endif\n')
+                       'void eval_jacob (const double t, const double pres, '
+                       'const double* y, double* jac);\n'
+                       '#endif\n'
+                       )
 
-    assert mech_name is not None or gas is not None, "No mechanism specified!"
+    assert mech_name is not None or gas is not None, 'No mechanism specified!'
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.

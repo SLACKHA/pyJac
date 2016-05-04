@@ -25,6 +25,8 @@ PA = 101325.0
 
 
 class CommonEqualityMixin(object):
+    """Base class for `ReacInfo` and `SpecInfo` classes for equality comparison
+    """
     def __eq__(self, other):
         try:
             for key, value in self.__dict__.iteritems():

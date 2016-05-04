@@ -562,6 +562,24 @@ class cpyjac_evaluator(object):
                                           )
 
     def dydt(self, t, pres, y, dydt):
+        """Evaluate derivative
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        dydt : ``numpy.array``
+            Derivative of state vector
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_y = self.__copy(y[self.fwd_dydt_map])
             test_dydt = np.zeros_like(test_y)
@@ -571,6 +589,24 @@ class cpyjac_evaluator(object):
             self.pyjac.py_dydt(t, pres, y, dydt)
 
     def eval_jacobian(self, t, pres, y, jacob):
+        """Evaluate the Jacobian matrix
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        jacob : ``numpy.array``
+            Jacobian matrix
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_y = self.__copy(y[self.fwd_dydt_map][:])
             self.pyjac.py_eval_jacobian(t, pres, test_y, jacob)
@@ -578,6 +614,18 @@ class cpyjac_evaluator(object):
             self.pyjac.py_eval_jacobian(t, pres, y, jacob)
 
     def update(self, index):
+        """Updates evaluator index
+
+        Parameters
+        ----------
+        index : int
+            Index of data for evaluating quantities
+
+        Returns
+        -------
+        None
+
+        """
         self.index = index
 
     def clean(self):
@@ -644,6 +692,18 @@ class cupyjac_evaluator(cpyjac_evaluator):
                                         )
 
     def update(self, index):
+        """Updates evaluator index
+
+        Parameters
+        ----------
+        index : int
+            Index of data for evaluating quantities
+
+        Returns
+        -------
+        None
+
+        """
         self.index = index % self.num_cond
         if (index % self.num_cond == 0 and
             index != 0 and
@@ -652,8 +712,20 @@ class cupyjac_evaluator(cpyjac_evaluator):
             self.__eval()
 
     def czeros(self, shape):
-            arr = np.zeros(shape)
-            return arr.flatten(order='c')
+        """Return array of zeros in C ordering.
+
+        Parameters
+        ----------
+        shape : int
+            Shape of array
+
+        Returns
+        -------
+        ``numpy.array`` of zeros with shape `shape` in C ordering
+
+        """
+        arr = np.zeros(shape)
+        return arr.flatten(order='c')
 
     def reshaper(self, arr, shape, reorder=None):
         arr = arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
@@ -687,22 +759,132 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.index = 0
 
     def eval_conc(self, temp, pres, mass_frac, conc):
+        """Evaluate species concentrations at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        mass_frac : ``numpy.array``
+            Species mass fractions
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+
+        Returns
+        -------
+        None
+
+        """
         conc[:] = self.test_conc[self.index, :]
 
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        """Evaluate reaction rates of progress at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         fwd_rates[:] = self.test_fwd_rates[self.index, :]
         rev_rates[:] = self.test_rev_rates[self.index, :]
 
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        """Evaluate reaction rate pressure modifications at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+        pres_mod : ``numpy.array``
+            Reaction rate pressure modification
+
+        Returns
+        -------
+        None
+
+        """
         pres_mod[:] = self.test_pres_mod[self.index, :]
 
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        """Evaluate species overall production rates at current state.
+
+        Parameters
+        ----------
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+        pres_mod : ``numpy.array``
+            Reaction rate pressure modification
+        spec_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         spec_rates[:] = self.test_spec_rates[self.index, :]
 
     def dydt(self, t, pres, y, dydt):
+        """Evaluate derivative
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        dydt : ``numpy.array``
+            Derivative of state vector
+
+        Returns
+        -------
+        None
+
+        """
         dydt[:] = self.test_dydt[self.index, :]
 
     def eval_jacobian(self, t, pres, y, jacob):
+        """Evaluate the Jacobian matrix
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        jacob : ``numpy.array``
+            Jacobian matrix
+
+        Returns
+        -------
+        None
+
+        """
         jacob[:] = self.test_jacob[self.index, :]
 
 
@@ -766,19 +948,81 @@ class tchem_evaluator(cpyjac_evaluator):
         self.index = 0
 
     def get_conc(self, conc):
+        """Evaluate species concentrations at current state.
+
+        Parameters
+        ----------
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+
+        Returns
+        -------
+        None
+
+        """
         conc[:] = self.test_conc[self.index, :]
 
     def get_rxn_rates(self, fwd_rates, rev_rates):
+        """Evaluate reaction rates of progress at current state.
+
+        Parameters
+        ----------
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         fwd_rates[:] = self.test_fwd_rates[self.index, :]
         rev_rates[:] = self.test_rev_rates[self.index, :]
 
     def get_spec_rates(self, spec_rates):
+        """Evaluate species overall production rates at current state.
+
+        Parameters
+        ----------
+        spec_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         spec_rates[:] = self.test_spec_rates[self.index, :]
 
     def get_dydt(self, dydt):
+        """Evaluate derivative
+
+        Parameters
+        ----------
+        dydt : ``numpy.array``
+            Derivative of state vector
+
+        Returns
+        -------
+        None
+
+        """
         dydt[:] = self.test_dydt[self.index, :-1]
 
     def get_jacobian(self, jacob):
+        """Evaluate the Jacobian matrix
+
+        Parameters
+        ----------
+        jacob : ``numpy.array``
+            Jacobian matrix
+
+        Returns
+        -------
+        None
+
+        """
         jacob[:] = self.test_jacob[self.index, :]
 
 
@@ -799,6 +1043,7 @@ def safe_remove(file):
         os.remove(file)
     except:
         pass
+
 
 def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,

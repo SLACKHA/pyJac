@@ -663,18 +663,64 @@ def get_infs(rxn):
 
 
 def write_dt_comment(file, lang, rxn_ind):
+    """Writes comment line for temperature partial derivatives of reactions
+
+    Parameters
+    ----------
+    file : `File`
+        Open file object
+    lang : str
+        Programming language
+    rxn_ind : int
+        Index of reaction
+
+    Returns
+    -------
+    None
+
+    """
     line = utils.line_start + utils.comment[lang]
     line += ('partial of rxn ' + str(rxn_ind) + ' wrt T' + '\n')
     file.write(line)
 
 
 def write_dy_comment(file, lang, rxn_ind):
+    """Writes comment line for species mass fraction partial derivatives
+
+    Parameters
+    ----------
+    file : `File`
+        Open file object
+    lang : str
+        Programming language
+    rxn_ind : int
+        Index of reaction
+
+    Returns
+    -------
+    None
+
+    """
     line = utils.line_start + utils.comment[lang]
     line += ('partial of rxn ' + str(rxn_ind) + ' wrt species' + '\n')
     file.write(line)
 
 
 def write_dy_y_finish_comment(file, lang):
+    """Writes comment line for finishing species mass fraction derivatives
+
+    Parameters
+    ----------
+    file : `File`
+        Open file object
+    lang : str
+        Programming language
+
+    Returns
+    -------
+    None
+
+    """
     line = utils.line_start + utils.comment[lang]
     line += 'Finish dYk / Yj\'s\n'
     line += utils.line_start + utils.comment[lang]
@@ -683,15 +729,20 @@ def write_dy_y_finish_comment(file, lang):
 
 
 def get_rxn_params_dt(rxn, rev=False):
-    """Write evaluation of the forward/reverse reaction rate constant for a reaction
+    """Write evaluation of the forward/reverse reaction rate constant
 
     Parameters
     ----------
-
     rxn : `ReacInfo`
         The reaction to consider
     rev : bool, optional
         If true, get the reverse constant rate constant derivative
+
+    Returns
+    -------
+    jline : str
+        String containing evaluation of forward/reverse reaction rate constant
+
     """
     jline = ''
     if rev:
@@ -721,11 +772,10 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
-    lang : str
-        The Programming language
+    lang : {'c', 'cuda'}
+        The programming language
     specs : list of `SpecInfo`
         The species in the mechanism
     reacs : list of `ReacInfo`
@@ -733,10 +783,15 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
     rev_reacs : list of `ReacInfo`
         The reversible reactions in the mechanism
     dBdT_flag : list of bool
-        Upon completion of this method this list contains ``True`` for in the index of
-        all species with non-zero dB/dT entries
+        Upon completion of this method this list contains ``True`` for
+        the index of all species with non-zero dB/dT entries
     do_unroll : bool
-        If true, Jacobian unrolling is turned on
+        If ``True``, turn on Jacobian unrolling
+
+    Returns
+    -------
+    None
+
     """
     if len(rev_reacs):
         if lang == 'c':
@@ -745,8 +800,10 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
                        )
         else:
             file.write(utils.line_start +
-                'double * {} dBdT = d_mem->dBdT'.format(utils.restrict[lang]) +
-                utils.line_end[lang])
+                       'double * {} '.format(utils.restrict[lang]) +
+                       'dBdT = d_mem->dBdT' +
+                       utils.line_end[lang]
+                       )
     t_mid = {}
     for i_rxn in rev_reacs:
         rxn = reacs[i_rxn]
@@ -814,20 +871,26 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
         elif lang == 'matlab':
             file.write('  end\n\n')
 
+
 def get_db_dt(lang, specs, rxn, do_unroll):
     """Write evaluation of dB/dT term
 
     Parameters
     ----------
-
-    lang : str
-        The Programming language
+    lang : {'c', 'cuda'}
+        The programming language
     specs : list of `SpecInfo`
         The species in the mechanism
     rxn : `ReacInfo`
-        The reactio to consider
+        The reaction to consider
     do_unroll : bool
-        If true, Jacobian unrolling is turned on
+        If ``True``, Jacobian unrolling is turned on
+
+    Returns
+    -------
+    jline : str
+        String containing evaluation of dB/dT term
+
     """
     jline = ''
     notfirst = False
@@ -1012,13 +1075,17 @@ def write_troe(file, lang, rxn):
 
     Parameters
     ----------
-
     file : `File`
         The open file object to write to
-    lang : str
-        The Programming language
+    lang : {'c', 'cuda'}
+        The programming language
     rxn : `ReacInfo`
         The reaction to consider
+
+    Returns
+    -------
+    None
+    
     """
     line = ('  Fcent = '
             '{:.16e} * '.format(1.0 - rxn.troe_par[0]) +

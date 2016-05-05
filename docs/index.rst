@@ -6,9 +6,13 @@
 pyJac
 =====
 
-**pyJac** is a Python package that generates source code used to analytically calculate chemical kinetics Jacobian matrices, customized for a particular model/reaction mechanism.
+**pyJac** is a Python package that generates source code used to analytically
+calculate chemical kinetics Jacobian matrices, customized for a particular
+model/reaction mechanism.
 
-**pyJac** welcomes your feedback and/or contributions. It relies heavily on the `numpy`_ libraries for core functionality, and other libraries including the `Cython`_ language and `Cantera`_ for functional and performance testing.
+**pyJac** welcomes your feedback and/or contributions. It relies heavily on
+the `numpy`_ libraries for core functionality, and other libraries including
+the `Cython`_ language and `Cantera`_ for functional and performance testing.
 
 .. _numpy: http://numpy.org
 .. _Cython: http://cython.org
@@ -36,8 +40,8 @@ Indices and tables
 Citation
 --------
 
-Up-to-date information about citing **pyJac** can be found within the `citation`_
-file.
+Up-to-date information about citing **pyJac** can be found within the
+`CITATION.md`_ file.
 
 .. _citation: https://github.com/kyleniemeyer/pyJac/blob/master/CITATION.md
 
@@ -61,7 +65,7 @@ Get in touch
 
 .. _on GitHub: https://github.com/kyleniemeyer/pyJac
 .. _a guide to contributing: https://github.com/kyleniemeyer/pyJac/blob/master/CONTRIBUTING.md
-.. _on Twitter: http://twitter.com/kyle_niemeyer
+.. _on Twitter: http://twitter.com/kyleniemeyer
 
 
 License

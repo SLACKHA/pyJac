@@ -1,4 +1,5 @@
 #! /usr/bin/env python2.7
+from __future__ import print_function
 
 import sys
 from performance_extractor import get_data
@@ -33,7 +34,7 @@ def get_fullscale(data):
     #need to filter out runs on subsets
     for mech in mechanisms:
         max_x = max(x.x for x in [y for y in data if y.mechanism == mech])
-        data = [x for x in data if x.mechanism != mech or 
+        data = [x for x in data if x.mechanism != mech or
                     (x.x == max_x)]
     return data
 
@@ -110,14 +111,14 @@ def fullscale_comp(lang, plot_std=True, homedir=None,
 
     def thefilter(x):
         return x.cache_opt==cache_opt_default and x.smem == smem_default
-    
+
     fit_vals = []
     data = get_data(homedir)
     data = [x for x in data if x.lang in langs]
     data = filter(thefilter, data)
     data = get_fullscale(data)
     if not len(data):
-        print 'no data found... exiting'
+        print('no data found... exiting')
         sys.exit(-1)
 
     fig, ax = plt.subplots()

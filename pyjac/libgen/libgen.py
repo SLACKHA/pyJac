@@ -1,5 +1,6 @@
 """Module used to create a shared/static library from pyJac files.
 """
+from __future__ import print_function
 
 import shutil
 import re
@@ -23,7 +24,7 @@ cmd_compile = dict(c='gcc',
 
 
 def cmd_lib(lang, shared):
-    """Returns the appropriate compilation command for creation of the library based on the 
+    """Returns the appropriate compilation command for creation of the library based on the
     language and shared flag"""
     if lang == 'c':
         return ['ar', 'rcs'] if not shared else ['gcc', '-shared']
@@ -66,7 +67,7 @@ def which(file):
 
 
 def compiler(fstruct):
-    """Given a file structure, this method will compile the source file for the 
+    """Given a file structure, this method will compile the source file for the
     language and options specified
 
     Parameters
@@ -268,7 +269,7 @@ def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
         List of include directories
     files : list of `str`
         List of files
-        
+
     """
     i_dirs = [source_dir]
     if AD:
@@ -340,14 +341,14 @@ def generate_library(lang, source_dir, obj_dir=None,
     """
     #check lang
     if lang not in flags.keys():
-        print 'Cannot generate library for unknown language {}'.format(lang)
+        print('Cannot generate library for unknown language {}'.format(lang))
         sys.exit(-1)
 
     if shared is None:
         shared = lang != 'cuda'
 
     if lang == 'cuda' and shared:
-        print 'CUDA does not support linking of shared device libraries.'
+        print('CUDA does not support linking of shared device libraries.')
         sys.exit(-1)
 
     build_lang = lang if lang != 'icc' else 'c'

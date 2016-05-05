@@ -1,6 +1,25 @@
-recursive-include pyjac *.py
+include MANIFEST.in
+include LICENSE
+include README.md
+include setup.py
+include setup.cfg
+include requirements.txt
+include optional-requirements.txt
+
+include pyjac/utils.py
+include pyjac/__init__.py
+include pyjac/__main__.py
+include pyjac/_version.py
 recursive-include pyjac/core *.py
 recursive-include pyjac/functional_tester *.py *.yaml
 recursive-include pyjac/performance_tester *.c *.cu *.in *.h *.py
 recursive-include pyjac/pywrap *.py *.pyx *.c *.h *.cu *.cuh *.in
 recursive-include pyjac/libgen *.py
+
+global-exclude *.so
+global-exclude *.pyd
+global-exclude *.pyc
+global-exclude *~
+global-exclude \#*
+global-exclude .git*
+global-exclude .DS_Store

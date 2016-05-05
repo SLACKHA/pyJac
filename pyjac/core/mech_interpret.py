@@ -942,25 +942,27 @@ def read_mech_ct(filename=None, gas=None):
         if isinstance(rxn, ct.ThreeBodyReaction):
             # Instantiate internal reaction based on Cantera Reaction data.
             reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
+                                 list(rxn.reactants.keys()),
+                                 list(rxn.reactants.values()),
+                                 list(rxn.products.keys()),
+                                 list(rxn.products.values()),
                                  rxn.rate.pre_exponential_factor,
                                  rxn.rate.temperature_exponent,
                                  rxn.rate.activation_energy * E_fac
                                  )
             reac.thd_body = True
             for thd_body in rxn.efficiencies:
-                reac.thd_body_eff.append([thd_body, rxn.efficiencies[thd_body]])
+                reac.thd_body_eff.append([thd_body,
+                                          rxn.efficiencies[thd_body]
+                                          ])
 
         elif isinstance(rxn, ct.FalloffReaction) and \
              not isinstance(rxn, ct.ChemicallyActivatedReaction):
             reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
+                                 list(rxn.reactants.keys()),
+                                 list(rxn.reactants.values()),
+                                 list(rxn.products.keys()),
+                                 list(rxn.products.values()),
                                  rxn.high_rate.pre_exponential_factor,
                                  rxn.high_rate.temperature_exponent,
                                  rxn.high_rate.activation_energy * E_fac
@@ -968,7 +970,7 @@ def read_mech_ct(filename=None, gas=None):
             reac.pdep = True
             # See if single species acts as third body
             if rxn.default_efficiency == 0.0:
-                reac.pdep_sp = rxn.efficiencies.keys()[0]
+                reac.pdep_sp = list(rxn.efficiencies.keys())[0]
             else:
                 for sp in rxn.efficiencies:
                     reac.thd_body_eff.append([sp, rxn.efficiencies[sp]])
@@ -987,10 +989,10 @@ def read_mech_ct(filename=None, gas=None):
 
         elif isinstance(rxn, ct.ChemicallyActivatedReaction):
             reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
+                                 list(rxn.reactants.keys()),
+                                 list(rxn.reactants.values()),
+                                 list(rxn.products.keys()),
+                                 list(rxn.products.values()),
                                  rxn.low_rate.pre_exponential_factor,
                                  rxn.low_rate.temperature_exponent,
                                  rxn.low_rate.activation_energy * E_fac
@@ -998,7 +1000,7 @@ def read_mech_ct(filename=None, gas=None):
             reac.pdep = True
             # See if single species acts as third body
             if rxn.default_efficiency == 0.0:
-                reac.pdep_sp = rxn.efficiencies.keys()[0]
+                reac.pdep_sp = list(rxn.efficiencies.keys())[0]
             else:
                 for sp in rxn.efficiencies:
                     reac.thd_body_eff.append([sp, rxn.efficiencies[sp]])
@@ -1017,10 +1019,10 @@ def read_mech_ct(filename=None, gas=None):
 
         elif isinstance(rxn, ct.PlogReaction):
             reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
+                                 list(rxn.reactants.keys()),
+                                 list(rxn.reactants.values()),
+                                 list(rxn.products.keys()),
+                                 list(rxn.products.values()),
                                  0.0, 0.0, 0.0
                                  )
             reac.plog = True
@@ -1034,10 +1036,10 @@ def read_mech_ct(filename=None, gas=None):
 
         elif isinstance(rxn, ct.ChebyshevReaction):
             reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
+                                 list(rxn.reactants.keys()),
+                                 list(rxn.reactants.values()),
+                                 list(rxn.products.keys()),
+                                 list(rxn.products.values()),
                                  0.0, 0.0, 0.0
                                  )
             reac.cheb = True
@@ -1055,10 +1057,10 @@ def read_mech_ct(filename=None, gas=None):
                 continue
 
             reac = chem.ReacInfo(rxn.reversible,
-                                 rxn.reactants.keys(),
-                                 rxn.reactants.values(),
-                                 rxn.products.keys(),
-                                 rxn.products.values(),
+                                 list(rxn.reactants.keys()),
+                                 list(rxn.reactants.values()),
+                                 list(rxn.products.keys()),
+                                 list(rxn.products.values()),
                                  rxn.rate.pre_exponential_factor,
                                  rxn.rate.temperature_exponent,
                                  rxn.rate.activation_energy * E_fac

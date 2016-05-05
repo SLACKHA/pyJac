@@ -8,7 +8,7 @@ from __future__ import print_function
 
 # Standard libraries
 import sys
-from itertools import product
+import itertools
 from argparse import ArgumentParser
 
 # More Python 2 compatibility
@@ -420,26 +420,26 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     oxid_elems = {}
 
     # Check sum of fuel and oxidizer values; normalize if greater than 1
-    fuel_sum = sum(fuel.values())
+    fuel_sum = sum(list(fuel.values()))
     if fuel_sum > 1.0:
         for sp, x in fuel.items():
             fuel[sp] = x / fuel_sum
 
-    oxid_sum = sum(oxidizer.values())
+    oxid_sum = sum(list(oxidizer.values()))
     if oxid_sum > 1.0:
         for sp, x in oxidizer.items():
             oxidizer[sp] = x / oxid_sum
 
     # Check oxidation state of complete products
-    for sp, el in product(complete_products, gas.element_names):
+    for sp, el in itertools.product(complete_products, gas.element_names):
         if el.upper() not in cprod_elems:
             cprod_elems[el.upper()] = {}
 
         cprod_elems[el.upper()][sp] = int(gas.n_atoms(sp, el))
 
-    num_C_cprod = sum(cprod_elems.get('C', {0: 0}).values())
-    num_H_cprod = sum(cprod_elems.get('H', {0: 0}).values())
-    num_O_cprod = sum(cprod_elems.get('O', {0: 0}).values())
+    num_C_cprod = sum(list(cprod_elems.get('C', {0: 0}).values()))
+    num_H_cprod = sum(list(cprod_elems.get('H', {0: 0}).values()))
+    num_O_cprod = sum(list(cprod_elems.get('O', {0: 0}).values()))
 
     oxid_state = 4*num_C_cprod + num_H_cprod - 2*num_O_cprod
     if oxid_state != 0:
@@ -447,7 +447,7 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
               'were specified.')
 
     # Find the number of H, C, and O atoms in the fuel molecules.
-    for sp, el in product(fuel.keys(), gas.element_names):
+    for sp, el in itertools.product(fuel.keys(), gas.element_names):
         if el not in fuel_elems:
             fuel_elems[el.upper()] = 0
 
@@ -458,7 +458,7 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     num_O_fuel = fuel_elems.get('O', 0)
 
     # Find the number of H, C, and O atoms in the oxidizer molecules.
-    for sp, el in product(oxidizer.keys(), gas.element_names):
+    for sp, el in itertools.product(oxidizer.keys(), gas.element_names):
         if el not in oxid_elems:
             oxid_elems[el.upper()] = 0
 
@@ -469,9 +469,14 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     # Check that all of the elements specified in the fuel and oxidizer
     # are present in the complete products and vice versa.
     for el in cprod_elems.keys():
-        if ((sum(cprod_elems[el].values()) > 0 and fuel_elems[el] == 0 and
-             oxid_elems[el] == 0) or (sum(cprod_elems[el].values()) == 0 and
-            (fuel_elems[el] > 0 or oxid_elems[el] > 0))):
+        if ((sum(list(cprod_elems[el].values())) > 0 and
+             fuel_elems[el] == 0 and
+             oxid_elems[el] == 0
+             ) or
+            (sum(list(cprod_elems[el].values())) == 0 and
+             (fuel_elems[el] > 0 or oxid_elems[el] > 0)
+             )
+            ):
             print('Error: Must specify all elements in the fuel + oxidizer '
                   'in the complete products and vice-versa')
             sys.exit(1)
@@ -481,22 +486,25 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     if num_C_cprod > 0:
         spec = cprod_elems['C'].keys()
         ox = sum([cprod_elems['O'][sp]
-                  for sp in spec if cprod_elems['C'][sp] > 0])
-        C_multiplier = ox/num_C_cprod
+                 for sp in spec if cprod_elems['C'][sp] > 0]
+                 )
+        C_multiplier = ox / num_C_cprod
     else:
         C_multiplier = 0
 
     if num_H_cprod > 0:
         spec = cprod_elems['H'].keys()
         ox = sum([cprod_elems['O'][sp]
-                  for sp in spec if cprod_elems['H'][sp] > 0])
-        H_multiplier = ox/num_H_cprod
+                 for sp in spec if cprod_elems['H'][sp] > 0]
+                 )
+        H_multiplier = ox / num_H_cprod
     else:
         H_multiplier = 0
 
     # Compute how many O atoms are required to oxidize everybody
     num_O_req = (num_C_fuel * C_multiplier +
-                 num_H_fuel * H_multiplier - num_O_fuel)
+                 num_H_fuel * H_multiplier - num_O_fuel
+                 )
     O_mult = num_O_req / num_O_oxid
 
     # Find the total number of moles in the fuel + oxidizer mixture
@@ -795,7 +803,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     num_substeps = 1 + int(dt_max / dt_sub)
 
     time_end = num_res * tau_res
-    num_steps = (time_end / dt_avg)
+    num_steps = int(time_end / dt_avg)
 
     # Set initial conditions
     gas = ct.Solution(mech)

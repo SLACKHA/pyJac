@@ -99,8 +99,9 @@ if __name__ == '__main__':
                              ' useful for debugging.')
     args = parser.parse_args()
     test.test(args.lang, os.path.dirname(os.path.abspath(test.__file__)),
-         args.build_dir, args.mech, args.thermo, args.input,
-         args.generate_jacob, args.compile_jacob, args.seed, args.pasr_output,
-         args.last_spec, args.cache_optimization, args.no_shared, args.tchem,
-         args.only_reaction, args.do_not_remove, args.condition_numbers
-         )
+              args.build_dir, args.mech, args.thermo, args.input,
+              args.generate_jacob, args.compile_jacob, args.seed,
+              args.pasr_output, args.last_spec, args.cache_optimization,
+              args.no_shared, args.tchem, args.only_reaction,
+              args.do_not_remove, args.condition_numbers
+              )

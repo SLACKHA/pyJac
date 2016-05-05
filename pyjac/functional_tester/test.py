@@ -1,3 +1,6 @@
+"""Module for testing function (accuracy) of pyJac.
+"""
+
 # Python 2 compatibility
 from __future__ import division
 from __future__ import print_function
@@ -46,18 +49,36 @@ libs = dict(c=['-lm', '-std=c99'],
 
 
 class ReactorConstPres(object):
-
+    """Object for constant pressure ODE system.
+    """
     def __init__(self, gas):
-        # Parameters of the ODE system and auxiliary data are stored in the
-        # ReactorConstPres object.
+        """
+        Parameters
+        ----------
+        gas : `cantera.Solution`
+            `cantera.Solution` object with the kinetic system
+
+        Returns
+        -------
+        None
+
+        """
         self.gas = gas
         self.P = gas.P
 
     def __call__(self):
-        """the ODE function, y' = f(t,y) """
+        """Return the ODE function, y' = f(t,y)
 
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        `numpy.array` with dT/dt + dY/dt
+
+        """
         # State vector is [T, Y_1, Y_2, ... Y_K]
-        # Only set state if something is input
         rho = self.gas.density
 
         wdot = self.gas.net_production_rates
@@ -70,18 +91,37 @@ class ReactorConstPres(object):
 
 
 class ReactorConstVol(object):
-
+    """Object for constant volume ODE system.
+    """
     def __init__(self, gas):
-        # Parameters of the ODE system and auxiliary data are stored in the
-        # ReactorConstVol object.
+        """Initialize `ReactorConstVol`
+
+        Parameters
+        ----------
+        gas : `cantera.Solution`
+            `cantera.Solution` object with the kinetic system
+
+        Returns
+        -------
+        None
+
+        """
         self.gas = gas
         self.density = gas.density
 
     def __call__(self):
-        """the ODE function, y' = f(t,y) """
+        """Return the ODE function, y' = f(t,y)
 
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        `numpy.array` with dT/dt + dY/dt
+
+        """
         # State vector is [T, Y_1, Y_2, ... Y_K]
-        # Only set state if something is input
 
         wdot = self.gas.net_production_rates
         dTdt = - (np.dot(self.gas.partial_molar_int_energies, wdot) /
@@ -98,12 +138,20 @@ def convert_mech(mech_filename, therm_filename=None):
     Convert a CHEMKIN format mechanism to the Cantera CTI format using
     the Cantera built-in script ``ck2cti``.
 
-    :param mech_filename:
+    Parameters
+    ----------
+    mech_filename : str
         Filename of the input CHEMKIN format mechanism. The converted
         CTI file will have the same name, but with ``.cti`` extension.
-    :param thermo_filename:
-        Filename of the thermodynamic database. Optional if the
+    thermo_filename : str
+        Filename of the thermodynamic database. Optional, if the
         thermodynamic database is present in the mechanism input.
+
+    Returns
+    -------
+    mech_filename : str
+        Filename of converted mechanism in Cantera ``.cti`` format.
+
     """
 
     arg = ['--input=' + mech_filename]
@@ -120,17 +168,43 @@ def convert_mech(mech_filename, therm_filename=None):
     return mech_filename
 
 
-class autodiff_jacob:
+class AutodiffJacob(object):
+    """Class for
+    """
     def __init__(self, pressure, fwd_spec_map):
+        """Initialize autodifferentation object.
+
+        Parameters
+        ----------
+        pressure : float
+            Pressure in Pascals
+        fwd_spec_map : `numpy.array`
+            Map of original species indices to new indices
+
+        Returns
+        -------
+        None
+
+        """
         self.pres = pressure
         self.fwd_spec_map = fwd_spec_map
         import adjacob
         self.jac = adjacob
 
     def eval_jacobian(self, gas):
-        """Evaluate finite difference Jacobian.
+        """Evaluate finite difference Jacobian using Adept \
+        autodifferentiation package.
 
-        Uses autodifferentiation package Adept
+        Parameters
+        ----------
+        gas : `cantera.Solution`
+            `cantera.Solution` object with the kinetic system
+
+        Returns
+        -------
+        jacob : `numpy.array`
+            Jacobian matrix evaluated using autodifferentiation
+
         """
 
         y = np.hstack((gas.T, gas.Y[self.fwd_spec_map][:-1]))
@@ -142,12 +216,41 @@ class autodiff_jacob:
 
 
 def is_pdep(rxn):
+    """Check if reaction is traditionally pressure dependent
+
+    Parameters
+    ----------
+    rxn : `ReacInfo`
+        Reaction object of interest
+
+    Returns
+    -------
+    ``True`` if third-body, falloff, or chemically activated reaction.
+    """
     return (isinstance(rxn, ct.ThreeBodyReaction) or
-    isinstance(rxn, ct.FalloffReaction) or
-    isinstance(rxn, ct.ChemicallyActivatedReaction))
+            isinstance(rxn, ct.FalloffReaction) or
+            isinstance(rxn, ct.ChemicallyActivatedReaction)
+            )
 
 
-def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
+def run_pasr(pasr_input_file, mech_filename, pasr_output_file=None):
+    """Run PaSR simulation to get thermochemical data for testing.
+
+    Parameters
+    ----------
+    pasr_input_file : str
+        Name of PaSR input file in YAML format
+    mech_filename : str
+        Name of Cantera-format mechanism file
+    pasr_output_file : str
+        Optional; filename for saving PaSR output data
+
+    Returns
+    -------
+    state_data : ``numpy.array``
+        Array with state data (time, temperature, pressure, mass fractions)
+
+    """
     # Run PaSR to get data
     pasr_input = pasr.parse_input_file(pasr_input_file)
     state_data = pasr.run_simulation(
@@ -167,17 +270,36 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file):
                     )
     if pasr_output_file:
         np.save(pasr_output_file, state_data)
+
     return state_data
 
 
 class cpyjac_evaluator(object):
+    """Class for pyJac-based Jacobian matrix evaluator
+    """
     def __copy(self, B):
+        """Copy NumPy array into new array
+        """
         A = np.empty_like(B)
         A[:] = B
         return A
 
     def check_numbers(self, build_dir, gas, filename='mechanism.h'):
-        """Ensures numbers of species and forward reaction match.
+        """Ensure numbers of species and forward reaction match.
+
+        Parameters
+        ----------
+        build_dir : str
+            Path of directory for build objects
+        gas : `cantera.Solution`
+            Object with kinetic system
+        filename : str
+            Optional; filename of header with mechanism information
+
+        Returns
+        -------
+        None
+
         """
         with open(os.path.join(build_dir, filename), 'r') as file:
             n_spec = None
@@ -198,14 +320,32 @@ class cpyjac_evaluator(object):
 
         if n_spec != gas.n_species:
             print('Error: species counts do not match between '
-                  'mechanism.h and Cantera.')
-            sys.exit(1)
+                  'mechanism.h and Cantera.'
+                  )
+            raise
         if n_reac != gas.n_reactions:
             print('Error: forward reaction counts do not match between '
-                  'mechanism.h and Cantera.')
-            sys.exit(1)
+                  'mechanism.h and Cantera.'
+                  )
+            raise
 
     def check_optimized(self, build_dir, gas, filename='mechanism.h'):
+        """Check if pyJac files were cache-optimized (and thus rearranged)
+
+        Parameters
+        ----------
+        build_dir : str
+            Path of directory for build objects
+        gas : `cantera.Solution`
+            Object with kinetic system
+        filename : str
+            Optional; filename of header with mechanism information
+
+        Returns
+        -------
+        None
+
+        """
         self.fwd_spec_map = np.array(range(gas.n_species))
         with open(os.path.join(build_dir, filename), 'r') as file:
             opt = False
@@ -221,7 +361,9 @@ class cpyjac_evaluator(object):
 
         self.last_spec = last_spec
         self.cache_opt = opt
-        self.dydt_mask = np.array([0] + [x + 1 for x in range(gas.n_species) if x != last_spec])
+        self.dydt_mask = np.array([0] + [x + 1 for x in range(gas.n_species)
+                                  if x != last_spec]
+                                  )
         if self.cache_opt:
             with open(os.path.join(build_dir, 'optimized.pickle'), 'rb') as file:
                 dummy = pickle.load(file)
@@ -234,7 +376,10 @@ class cpyjac_evaluator(object):
             #still need to treat it as a cache optimized
             self.cache_opt = True
 
-            self.fwd_spec_map, self.back_spec_map = utils.get_species_mappings(gas.n_species, last_spec)
+            (self.fwd_spec_map,
+             self.back_spec_map
+             ) = utils.get_species_mappings(gas.n_species, last_spec)
+
             self.fwd_spec_map = np.array(self.fwd_spec_map)
             self.back_spec_map = np.array(self.back_spec_map)
 
@@ -252,41 +397,94 @@ class cpyjac_evaluator(object):
 
         self.fwd_dydt_map = np.array([0] + [x + 1 for x in self.fwd_spec_map])
 
-        self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map if
-                gas.reaction(i).reversible])
+        self.fwd_rev_rxn_map = np.array([i for i in self.fwd_rxn_map
+                                        if gas.reaction(i).reversible]
+                                        )
         rev_reacs = self.fwd_rev_rxn_map.shape[0]
         self.back_rev_rxn_map = np.sort(self.fwd_rev_rxn_map)
-        self.back_rev_rxn_map = np.array([np.where(self.fwd_rev_rxn_map == x)[0][0]
-                                    for x in self.back_rev_rxn_map])
-        self.fwd_rev_rxn_map = np.array([np.where(self.back_rev_rxn_map == x)[0][0]
-                                    for x in range(rev_reacs)])
+        self.back_rev_rxn_map = np.array(
+                                    [np.where(self.fwd_rev_rxn_map == x)[0][0]
+                                    for x in self.back_rev_rxn_map]
+                                    )
+        self.fwd_rev_rxn_map = np.array(
+                                    [np.where(self.back_rev_rxn_map == x)[0][0]
+                                    for x in range(rev_reacs)]
+                                    )
 
         self.fwd_pdep_map = [self.fwd_rxn_map[i] for i in range(n_reac)
-                                if is_pdep(gas.reaction(self.fwd_rxn_map[i]))]
+                             if is_pdep(gas.reaction(self.fwd_rxn_map[i]))
+                             ]
         pdep_reacs = len(self.fwd_pdep_map)
         self.back_pdep_map = sorted(self.fwd_pdep_map)
         self.back_pdep_map = np.array([self.fwd_pdep_map.index(x)
-                                for x in self.back_pdep_map])
+                                      for x in self.back_pdep_map]
+                                      )
         self.fwd_pdep_map = np.array([np.where(self.back_pdep_map == x)[0][0]
-                                for x in range(pdep_reacs)])
+                                     for x in range(pdep_reacs)]
+                                     )
 
-        self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
+        self.back_dydt_map = np.array([0] +
+                                      [x + 1 for x in self.back_spec_map]
+                                      )
 
-    def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):
+    def __init__(self, build_dir, gas, module_name='pyjacob',
+                 filename='mechanism.h'
+                 ):
         self.check_numbers(build_dir, gas, filename)
         self.check_optimized(build_dir, gas, filename)
         self.pyjac = __import__(module_name)
 
     def eval_conc(self, temp, pres, mass_frac, conc):
+        """Evaluate species concentrations at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        mass_frac : ``numpy.array``
+            Species mass fractions
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+
+        Returns
+        -------
+        None
+
+        """
         mw_avg = 0
         rho = 0
         if self.cache_opt:
             test_mass_frac = self.__copy(mass_frac[self.fwd_spec_map])
-            self.pyjac.py_eval_conc(temp, pres, test_mass_frac, mw_avg, rho, conc)
+            self.pyjac.py_eval_conc(temp, pres, test_mass_frac,
+                                    mw_avg, rho, conc
+                                    )
             conc[:] = conc[self.back_spec_map]
         else:
             self.pyjac.py_eval_conc(temp, pres, mass_frac, mw_avg, rho, conc)
+
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        """Evaluate reaction rates of progress at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_conc = self.__copy(conc[self.fwd_spec_map])
             self.pyjac.py_eval_rxn_rates(temp, pres, test_conc,
@@ -295,15 +493,55 @@ class cpyjac_evaluator(object):
             if self.back_rev_rxn_map.size:
                 rev_rates[:] = rev_rates[self.back_rev_rxn_map]
         else:
-            self.pyjac.py_eval_rxn_rates(temp, pres, conc, fwd_rates, rev_rates)
+            self.pyjac.py_eval_rxn_rates(temp, pres, conc,
+                                         fwd_rates, rev_rates
+                                         )
+
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        """Evaluate reaction rate pressure modifications at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+        pres_mod : ``numpy.array``
+            Reaction rate pressure modification
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_conc = self.__copy(conc[self.fwd_spec_map])
             self.pyjac.py_get_rxn_pres_mod(temp, pres, test_conc, pres_mod)
             pres_mod[:] = pres_mod[self.back_pdep_map]
         else:
             self.pyjac.py_get_rxn_pres_mod(temp, pres, conc, pres_mod)
+
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        """Evaluate species overall production rates at current state.
+
+        Parameters
+        ----------
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+        pres_mod : ``numpy.array``
+            Reaction rate pressure modification
+        spec_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_fwd = self.__copy(fwd_rates[self.fwd_rxn_map])
             if self.fwd_rev_rxn_map.size:
@@ -314,11 +552,34 @@ class cpyjac_evaluator(object):
                 test_pdep = self.__copy(pres_mod[self.fwd_pdep_map])
             else:
                 test_pdep = self.__copy(pres_mod)
-            self.pyjac.py_eval_spec_rates(test_fwd, test_rev, test_pdep, spec_rates)
+            self.pyjac.py_eval_spec_rates(test_fwd, test_rev,
+                                          test_pdep, spec_rates
+                                          )
             spec_rates[:] = spec_rates[self.back_spec_map]
         else:
-            self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates, pres_mod, spec_rates)
+            self.pyjac.py_eval_spec_rates(fwd_rates, rev_rates,
+                                          pres_mod, spec_rates
+                                          )
+
     def dydt(self, t, pres, y, dydt):
+        """Evaluate derivative
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        dydt : ``numpy.array``
+            Derivative of state vector
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_y = self.__copy(y[self.fwd_dydt_map])
             test_dydt = np.zeros_like(test_y)
@@ -326,13 +587,45 @@ class cpyjac_evaluator(object):
             dydt[self.dydt_mask] = test_dydt[self.back_dydt_map[self.dydt_mask]]
         else:
             self.pyjac.py_dydt(t, pres, y, dydt)
+
     def eval_jacobian(self, t, pres, y, jacob):
+        """Evaluate the Jacobian matrix
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        jacob : ``numpy.array``
+            Jacobian matrix
+
+        Returns
+        -------
+        None
+
+        """
         if self.cache_opt:
             test_y = self.__copy(y[self.fwd_dydt_map][:])
             self.pyjac.py_eval_jacobian(t, pres, test_y, jacob)
         else:
             self.pyjac.py_eval_jacobian(t, pres, y, jacob)
+
     def update(self, index):
+        """Updates evaluator index
+
+        Parameters
+        ----------
+        index : int
+            Index of data for evaluating quantities
+
+        Returns
+        -------
+        None
+
+        """
         self.index = index
 
     def clean(self):
@@ -340,6 +633,8 @@ class cpyjac_evaluator(object):
 
 
 class cupyjac_evaluator(cpyjac_evaluator):
+    """Class for CUDA-based pyJac Jacobian matrix evaluator
+    """
     def clean(self):
         self.pyjac.py_cuclean()
 
@@ -356,32 +651,82 @@ class cupyjac_evaluator(cpyjac_evaluator):
         mw_avg = self.czeros(num_eval)
         rho = self.czeros(num_eval)
         pres = self.cuda_state[:num_eval, 1].flatten(order='c')
-        y = self.cuda_state[:num_eval, [0] + [2 + x for x in self.fwd_spec_map]].flatten(order='f')\
-                                                                   .astype(np.dtype('d'), order='c')
-        self.pyjac.py_cujac(num_eval, self.num_cond, pres, y, test_conc, test_fwd_rates,
-                        test_rev_rates, test_pres_mod, test_spec_rates,
-                        test_dydt, test_jacob)
-
+        y = self.cuda_state[:num_eval, [0] +
+                            [2 + x for x in self.fwd_spec_map]
+                            ].flatten(order='f').astype(np.dtype('d'),
+                                                        order='c'
+                                                        )
+        self.pyjac.py_cujac(num_eval, self.num_cond, pres, y, test_conc,
+                            test_fwd_rates, test_rev_rates, test_pres_mod,
+                            test_spec_rates, test_dydt, test_jacob
+                            )
 
         self.cuda_state = self.cuda_state[num_eval:, ]
 
         #reshape for comparison
-        self.test_conc = self.reshaper(test_conc, (num_eval, self.nsp), self.back_spec_map)
-        self.test_fwd_rates = self.reshaper(test_fwd_rates, (num_eval, self.nr), self.back_rxn_map)
-        self.test_rev_rates = self.reshaper(test_rev_rates, (num_eval, self.num_rev), self.back_rev_rxn_map)
-        self.test_pres_mod = self.reshaper(test_pres_mod, (num_eval, self.num_pdep), self.back_pdep_map)
-        self.test_spec_rates = self.reshaper(test_spec_rates, (num_eval,self.nsp), self.back_spec_map)
-        self.test_dydt = self.reshaper(test_dydt, (num_eval, self.nsp + 1), self.back_dydt_map)
-        self.test_jacob = self.reshaper(test_jacob, (num_eval, (self.nsp) * (self.nsp)))
+        self.test_conc = self.reshaper(test_conc, (num_eval, self.nsp),
+                                       self.back_spec_map
+                                       )
+        self.test_fwd_rates = self.reshaper(test_fwd_rates,
+                                            (num_eval, self.nr),
+                                            self.back_rxn_map
+                                            )
+        self.test_rev_rates = self.reshaper(test_rev_rates,
+                                            (num_eval, self.num_rev),
+                                            self.back_rev_rxn_map
+                                            )
+        self.test_pres_mod = self.reshaper(test_pres_mod,
+                                           (num_eval, self.num_pdep),
+                                           self.back_pdep_map
+                                           )
+        self.test_spec_rates = self.reshaper(test_spec_rates,
+                                             (num_eval,self.nsp),
+                                             self.back_spec_map
+                                             )
+        self.test_dydt = self.reshaper(test_dydt,
+                                       (num_eval, self.nsp + 1),
+                                       self.back_dydt_map
+                                       )
+        self.test_jacob = self.reshaper(test_jacob,
+                                        (num_eval, (self.nsp) * (self.nsp))
+                                        )
 
     def update(self, index):
+        """Updates evaluator index
+
+        Parameters
+        ----------
+        index : int
+            Index of data for evaluating quantities
+
+        Returns
+        -------
+        None
+
+        """
         self.index = index % self.num_cond
-        if index % self.num_cond == 0 and index != 0 and self.cuda_state.shape[0] > 0:
+        if (index % self.num_cond == 0 and
+            index != 0 and
+            self.cuda_state.shape[0] > 0
+            ):
             self.__eval()
 
     def czeros(self, shape):
-            arr = np.zeros(shape)
-            return arr.flatten(order='c')
+        """Return array of zeros in C ordering.
+
+        Parameters
+        ----------
+        shape : int
+            Shape of array
+
+        Returns
+        -------
+        ``numpy.array`` of zeros with shape `shape` in C ordering
+
+        """
+        arr = np.zeros(shape)
+        return arr.flatten(order='c')
+
     def reshaper(self, arr, shape, reorder=None):
         arr = arr.reshape(shape, order='f').astype(np.dtype('d'), order='c')
         if reorder is not None:
@@ -389,15 +734,21 @@ class cupyjac_evaluator(cpyjac_evaluator):
         return arr
 
     def __init__(self, build_dir, gas, state_data):
-        super(cupyjac_evaluator, self).__init__(build_dir, gas, 'cu_pyjacob', 'mechanism.cuh')
+        super(cupyjac_evaluator, self).__init__(build_dir, gas,
+                                                'cu_pyjacob', 'mechanism.cuh'
+                                                )
 
         self.num_cond = self.pyjac.py_cuinit(state_data.shape[0])
 
         if not self.cache_opt:
             self.fwd_spec_map = np.arange(gas.n_species)
 
-        self.num_rev = np.array([rxn.reversible for rxn in gas.reactions()]).sum()
-        self.num_pdep = np.array([is_pdep(rxn) for rxn in gas.reactions()]).sum()
+        self.num_rev = np.array([rxn.reversible
+                                for rxn in gas.reactions()]
+                                ).sum()
+        self.num_pdep = np.array([is_pdep(rxn)
+                                 for rxn in gas.reactions()]
+                                 ).sum()
         self.cuda_state = state_data[:, 1:]
 
         self.nsp = gas.n_species
@@ -408,21 +759,138 @@ class cupyjac_evaluator(cpyjac_evaluator):
         self.index = 0
 
     def eval_conc(self, temp, pres, mass_frac, conc):
+        """Evaluate species concentrations at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        mass_frac : ``numpy.array``
+            Species mass fractions
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+
+        Returns
+        -------
+        None
+
+        """
         conc[:] = self.test_conc[self.index, :]
+
     def eval_rxn_rates(self, temp, pres, conc, fwd_rates, rev_rates):
+        """Evaluate reaction rates of progress at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         fwd_rates[:] = self.test_fwd_rates[self.index, :]
         rev_rates[:] = self.test_rev_rates[self.index, :]
+
     def get_rxn_pres_mod(self, temp, pres, conc, pres_mod):
+        """Evaluate reaction rate pressure modifications at current state.
+
+        Parameters
+        ----------
+        temp : float
+            Temperature, in Kelvin
+        pres : float
+            Pressure, in Pascals
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+        pres_mod : ``numpy.array``
+            Reaction rate pressure modification
+
+        Returns
+        -------
+        None
+
+        """
         pres_mod[:] = self.test_pres_mod[self.index, :]
+
     def eval_spec_rates(self, fwd_rates, rev_rates, pres_mod, spec_rates):
+        """Evaluate species overall production rates at current state.
+
+        Parameters
+        ----------
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+        pres_mod : ``numpy.array``
+            Reaction rate pressure modification
+        spec_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         spec_rates[:] = self.test_spec_rates[self.index, :]
+
     def dydt(self, t, pres, y, dydt):
+        """Evaluate derivative
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        dydt : ``numpy.array``
+            Derivative of state vector
+
+        Returns
+        -------
+        None
+
+        """
         dydt[:] = self.test_dydt[self.index, :]
+
     def eval_jacobian(self, t, pres, y, jacob):
+        """Evaluate the Jacobian matrix
+
+        Parameters
+        ----------
+        t : float
+            Time, in seconds
+        pres : float
+            Pressure, in Pascals
+        y : ``numpy.array``
+            State vector (temperature + species mass fractions)
+        jacob : ``numpy.array``
+            Jacobian matrix
+
+        Returns
+        -------
+        None
+
+        """
         jacob[:] = self.test_jacob[self.index, :]
 
 
 class tchem_evaluator(cpyjac_evaluator):
+    """Class for TChem-based Jacobian matrix evaluator
+    """
     def __init__(self, build_dir, gas, state_data, mechfile, thermofile,
                  module_name='py_tchem', filename='mechanism.h'
                  ):
@@ -480,31 +948,155 @@ class tchem_evaluator(cpyjac_evaluator):
         self.index = 0
 
     def get_conc(self, conc):
+        """Evaluate species concentrations at current state.
+
+        Parameters
+        ----------
+        conc : ``numpy.array``
+            Species concentrations, in kmol/m^3
+
+        Returns
+        -------
+        None
+
+        """
         conc[:] = self.test_conc[self.index, :]
+
     def get_rxn_rates(self, fwd_rates, rev_rates):
+        """Evaluate reaction rates of progress at current state.
+
+        Parameters
+        ----------
+        fwd_rates : ``numpy.array``
+            Reaction forward rates of progress, in kmol/m^3/s
+        rev_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         fwd_rates[:] = self.test_fwd_rates[self.index, :]
         rev_rates[:] = self.test_rev_rates[self.index, :]
+
     def get_spec_rates(self, spec_rates):
+        """Evaluate species overall production rates at current state.
+
+        Parameters
+        ----------
+        spec_rates : ``numpy.array``
+            Reaction reverse rates of progress, in kmol/m^3/s
+
+        Returns
+        -------
+        None
+
+        """
         spec_rates[:] = self.test_spec_rates[self.index, :]
+
     def get_dydt(self, dydt):
+        """Evaluate derivative
+
+        Parameters
+        ----------
+        dydt : ``numpy.array``
+            Derivative of state vector
+
+        Returns
+        -------
+        None
+
+        """
         dydt[:] = self.test_dydt[self.index, :-1]
+
     def get_jacobian(self, jacob):
+        """Evaluate the Jacobian matrix
+
+        Parameters
+        ----------
+        jacob : ``numpy.array``
+            Jacobian matrix
+
+        Returns
+        -------
+        None
+
+        """
         jacob[:] = self.test_jacob[self.index, :]
 
 
 def safe_remove(file):
+    """Try to safely remove a file
+
+    Parameters
+    ----------
+    file : str
+        Path for file to be removed
+
+    Returns
+    -------
+    None
+
+    """
     try:
         os.remove(file)
     except:
         pass
 
+
 def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
          pasr_input_file='pasr_input.yaml', generate_jacob=True,
          compile_jacob=True, seed=None, pasr_output_file=None, last_spec=None,
          cache_optimization=False, no_shared=False, tchem_flag=False,
-         only_rxn=None, do_not_remove=False, condition_numbers=None):
+         only_rxn=None, do_not_remove=False, condition_numbers=None
+         ):
     """Compares pyJac results against Cantera (and optionally TChem) using
     state data from PaSR simulations.
+
+    Parameters
+    ----------
+    lang : {'c', 'cuda'}
+        Programming language
+    home_dir : str
+        Path to home directory for testing and data
+    build_dir : str
+        Path to directory for building Jacobian files
+    mech_filename : str
+        Chemkin- or Cantera-format mechanism file
+    therm_filename : str
+        Optional; name of thermodynamic database file (if needed)
+    pasr_input_file : str
+        Optional; name of YAML-formatted file with PaSR test input
+    generate_jacob : bool
+        Optional; if ``True``, generate Jacobian files.
+        Otherwise, use existing files.
+    compile_jacob : bool
+        Optional; if ``True``, compile Jacobian files. Otherwise, using existing.
+    seed : int
+        Optional; random seed for PaSR
+    pasr_output_file : str
+        Optional; name of output file for saving PaSR results
+    last_spec : str
+        Optional; name of species to move to last position.
+        If not specified, will try searching for N2, Ar, or He.
+    cache_optimization : bool
+        If ``True``, enable reordering to optimize cache usage
+    no_shared : bool
+        If ``True``, do not use GPU shared memory
+    tchem_flag : bool
+        If ``True``, compare with TChem results
+    only_rxn : str
+        Optional; string with list of reaction numbers to retain.
+        All other reactions removed.
+    do_not_remove : bool
+        If ``True``, keep all generated files.
+    condition_numbers : int
+        Optional; string with list of conditions numbers to use.
+
+    Returns
+    -------
+    None
 
     """
 
@@ -541,14 +1133,6 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     # get the cantera object
     gas = ct.Solution(mech_filename)
-    # Remove reactions with zero pre-exponental factors
-    #gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
-    #                  species=gas.species(),
-    #                  reactions=[rxn for rxn in gas.reactions() if
-    #                             isinstance(rxn, ct.ElementaryReaction) and
-    #                            rxn.rate.pre_exponential_factor != 0.0
-    #                             ]
-    #                  )
 
     if only_rxn is not None:
         reacs = [int(x) for x in only_rxn.split(',')]
@@ -578,14 +1162,20 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
         # Create Jacobian and supporting source code files
         create_jacobian(lang, gas=gas,
-                        optimize_cache=cache_optimization, build_path=build_dir,
-                        no_shared=no_shared, last_spec=last_spec, auto_diff=False,
+                        optimize_cache=cache_optimization,
+                        build_path=build_dir,
+                        no_shared=no_shared,
+                        last_spec=last_spec,
+                        auto_diff=False,
                         )
         #We're going to need the c autodiff interface for testing the jacobian
         create_jacobian('c', gas=gas,
-                    optimize_cache=cache_optimization, build_path=build_dir,
-                    no_shared=no_shared, last_spec=last_spec, auto_diff=True
-                    )
+                        optimize_cache=cache_optimization,
+                        build_path=build_dir,
+                        no_shared=no_shared,
+                        last_spec=last_spec,
+                        auto_diff=True
+                        )
 
     if compile_jacob:
         #write and compile the dydt python wrapper
@@ -710,7 +1300,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         pres = state[2]
         mass_frac = state[3:]
 
-        ajac = autodiff_jacob(pres, pyjacob.fwd_spec_map)
+        ajac = AutodiffJacob(pres, pyjacob.fwd_spec_map)
 
         gas.TPY = temp, pres, mass_frac
 
@@ -901,9 +1491,12 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             max_err = np.max(err)
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
-            print('L2 norm difference with TChem concentration: {:.2e} %'.format(err))
-            print('Max difference with TChem concentration: {:.2e} % @ species {}'
-                .format(max_err * 100., loc))
+            print('L2 norm difference with TChem concentration: '
+                  '{:.2e} %'.format(err)
+                  )
+            print('Max difference with TChem concentration: '
+                  '{:.2e} % @ species {}'.format(max_err * 100., loc)
+                  )
 
             tchem_fwd_rates = np.zeros(gas.n_reactions)
             tchem_rev_rates = np.zeros(gas.n_reactions)
@@ -947,8 +1540,8 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             max_err = np.max(err)
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
-            print('L2 norm relative difference with TChem net production rates: '
-                  '{:.2e} %'.format(err)
+            print('L2 norm relative difference with TChem net production'
+                  ' rates: {:.2e} %'.format(err)
                   )
             print('Max difference with TChem net production rates: {:.2e}% '
                   '@ species {}'.format(max_err * 100., loc)
@@ -1011,10 +1604,9 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
         # Cleanup TChem crud
         if tchem_flag:
-            for f in ['periodictable.dat', 'kmod.echo', 'kmod.err', 'kmod.list',
-                      'kmod.out', 'math_elem.dat', 'math_falloff.dat',
-                      'math_nasapol7.dat', 'math_reac.dat', 'math_spec.dat',
-                      'math_trdbody.dat']:
+            for f in ['periodictable.dat', 'kmod.echo', 'kmod.err',
+                      'kmod.list', 'kmod.out', 'math_elem.dat',
+                      'math_falloff.dat', 'math_nasapol7.dat',
+                      'math_reac.dat', 'math_spec.dat', 'math_trdbody.dat'
+                      ]:
                 os.remove(f)
-
-    return 0

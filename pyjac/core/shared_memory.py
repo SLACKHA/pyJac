@@ -58,6 +58,8 @@ class variable(object):
 
 
 class shared_memory_manager(object):
+    """Manager for GPU shared memory.
+    """
     def __init__(self, blocks_per_sm=8, num_threads=64, L1_PREFERRED=True):
         """Creates a shared memory manager
 

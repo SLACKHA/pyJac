@@ -27,7 +27,7 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version=__version__,
 
-    description='pyJac',
+    description='Create analytical Jacobian matrix source code for chemical kinetics',
     long_description=long_description,
 
     # The project's main homepage.
@@ -38,7 +38,7 @@ setup(
     author_email='kyle.niemeyer@gmail.com',
 
     # Choose your license
-    license='BSD 3-Clause License',
+    license='MIT License',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -50,9 +50,13 @@ setup(
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
+
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -60,10 +64,14 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
+
+        'Topic :: Scientific/Engineering',
+        'Topic :: Scientific/Engineering :: Physics',
+        'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 
     # What does your project relate to?
-    keywords='chemical_kinetics analytical jacobian',
+    keywords='chemical_kinetics analytical_Jacobian',
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
@@ -93,9 +101,11 @@ setup(
     package_data={
         'pyjac.pywrap': ['*.pyx', '*.c', '*.h', '*.cu', '*.cuh', '*.in'],
         'pyjac.functional_tester' : ['*.yaml'],
-        'pyjac.performance_tester' : ['*.pyx', '*.c', 
-                        '*.h', '*.cu', '*.cuh', '*.in'],
+        'pyjac.performance_tester' : ['*.pyx', '*.c', '*.h', '*.cu',
+                                      '*.cuh', '*.in'
+                                      ],
     },
+    include_package_data=True,
 
     # Although 'package_data' is the preferred approach, in some case you may
     # need to place data files outside of your packages. See:

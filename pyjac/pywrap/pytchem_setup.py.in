@@ -7,7 +7,7 @@ import numpy
 
 import distutils.ccompiler
 import parallel_compiler as pcc
-distutils.ccompiler.CCompiler.compile = pcc.parallelCompile
+distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
 
 if os.getenv('TCHEM_HOME'):
     tchem_home = os.getenv('TCHEM_HOME')

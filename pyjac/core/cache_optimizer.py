@@ -19,14 +19,17 @@ import datetime
 from .. import utils
 
 #dependencies
-have_bitarray = True
+have_bitarray = False
 try:
     from bitarray import bitarray
+    have_bitarray = True
 except:
     print('bitarray not found, turning off cache-optimization')
-    have_bitarray = False
+
 
 def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
+    """Convenience plotting function. Marked for removal.
+    """
     nr = len(reacs)
     nsp = len(specs)
     #plot for visibility
@@ -43,7 +46,9 @@ def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
         rxn = reacs[rind]
         plot = set(rxn.reac + rxn.prod)
         if consider_thd:
-            plot = plot.union(set([x[0] for x in rxn.thd_body_eff] + [rxn.pdep_sp]))
+            plot = plot.union(set([x[0] for x in rxn.thd_body_eff] +
+                              [rxn.pdep_sp])
+                              )
         plot = [name_map[sp] for sp in plot if sp]
         for sp in plot:
             arr[rind, sp] = [0, 0, 0]
@@ -74,13 +79,33 @@ def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
     plt.imshow(arr, interpolation='nearest')
     plt.savefig('new.pdf')
 
-def optimizer_loop_star(args):
-    return optimizer_loop(*args)
-
 
 def optimizer_loop(starting_order, mapping, lookback,
                    improve_cutoff, random_tries
                    ):
+    """
+
+    Parameters
+    ----------
+    starting_order :
+        Initial order of elements
+    mapping :
+        Mapping of order to "correct" location
+    lookback : int
+        Width of lookahead/lookforward
+    improve_cutoff : int
+        Number of iterations without improvement before return
+    random_tries : int
+        Number of random initializations to try
+
+    Returns
+    -------
+    global_max :
+
+    global_max_order :
+
+
+    """
     nvar = len(starting_order)
     order = starting_order[:]
 
@@ -187,6 +212,7 @@ def optimizer_loop(starting_order, mapping, lookback,
 
     return global_max, global_max_order
 
+
 def optimize_cache(specs, reacs, multi_thread,
                    force_optimize, build_path,
                    last_spec, consider_thd=False,
@@ -196,8 +222,7 @@ def optimize_cache(specs, reacs, multi_thread,
                    rand_restarts_max=5,
                    max_time=100*60 #100 min
                    ):
-    """
-    Optimize species and reaction orders to improve cache hit rates.
+    """Optimize species and reaction orders to improve cache hit rates.
 
     Parameters
     ----------
@@ -256,10 +281,12 @@ def optimize_cache(specs, reacs, multi_thread,
                 fwd_rxn_mapping = pickle.load(file)
                 reverse_spec_mapping = pickle.load(file)
                 reverse_rxn_mapping = pickle.load(file)
-            same_mech = all(any(s == sp for sp in specs) for s in old_specs) and \
-                        len(specs) == len(old_specs) and \
-                        all(any(r == rxn for rxn in reacs) for r in old_reacs) and \
-                        len(reacs) == len(old_reacs)
+            same_mech = (
+                all(any(s == sp for sp in specs) for s in old_specs) and
+                len(specs) == len(old_specs) and
+                all(any(r == rxn for rxn in reacs) for r in old_reacs) and
+                len(reacs) == len(old_reacs)
+                )
             if reverse_spec_mapping[last_spec] != len(specs) - 1:
                 print('Different last species detected, '
                       'old species was {} and new species is {}'.format(
@@ -278,8 +305,9 @@ def optimize_cache(specs, reacs, multi_thread,
                   ' returning previous optimization'
                   )
             # we have to do the spec_rate_order each time
-            return old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping, \
+            return (old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping,
                     reverse_spec_mapping, reverse_rxn_mapping
+                    )
 
     nsp = len(specs)
     nr = len(reacs)
@@ -434,4 +462,6 @@ def optimize_cache(specs, reacs, multi_thread,
         pickle.dump(reverse_rxn_mapping, file)
 
     # complete, so now return
-    return specs, reacs, fwd_spec_mapping, fwd_rxn_mapping, reverse_spec_mapping, reverse_rxn_mapping
+    return (specs, reacs, fwd_spec_mapping, fwd_rxn_mapping,
+            reverse_spec_mapping, reverse_rxn_mapping
+            )

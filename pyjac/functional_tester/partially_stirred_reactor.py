@@ -30,7 +30,8 @@ except ImportError:
 try:
     import yaml
 except ImportError:
-    print('Warning: YAML must be installed to read input file.')
+    print('Error: YAML must be installed to read input file.')
+    raise
 
 # Parallel processing for reaction substep
 parallel = True

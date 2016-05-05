@@ -386,8 +386,8 @@ class cpyjac_evaluator(object):
             self.fwd_rxn_map = np.array(range(gas.n_reactions))
             self.back_rxn_map = np.array(range(gas.n_reactions))
         else:
-            self.fwd_spec_map = range(gas.n_species)
-            self.back_spec_map = range(gas.n_species)
+            self.fwd_spec_map = list(range(gas.n_species))
+            self.back_spec_map = list(range(gas.n_species))
             self.fwd_rxn_map = np.array(range(gas.n_reactions))
             self.back_rxn_map = np.array(range(gas.n_reactions))
 
@@ -1230,7 +1230,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         #load old test data
         try:
             state_data = np.load(pasr_output_file)
-        except Exception, e:
+        except Exception as e:
             # Run PaSR to get data
             print('Could not load saved pasr data... re-running')
             state_data = run_pasr(pasr_input_file, mech_filename,

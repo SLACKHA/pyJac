@@ -171,7 +171,7 @@ class shared_memory_manager(object):
 
         """
         self.shared_dict = {}
-        self.shared_indexes = range(self.shared_per_thread)
+        self.shared_indexes = list(range(self.shared_per_thread))
         self.eviction_marking = [False for x in range(self.shared_per_thread)]
         self.on_eviction = None
 

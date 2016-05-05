@@ -72,8 +72,8 @@ def get_species_mappings(num_specs, last_species):
 
     """
 
-    fwd_species_map = range(num_specs)
-    back_species_map = range(num_specs)
+    fwd_species_map = list(range(num_specs))
+    back_species_map = list(range(num_specs))
 
     #in the forward mapping process
     #last_species -> end

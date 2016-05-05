@@ -38,7 +38,7 @@ class CommonEqualityMixin(object):
                 elif value != other.__dict__[key]:
                     return False
             return True
-        except Exception, e:
+        except Exception as e:
             return False
 
     def __ne__(self, other):

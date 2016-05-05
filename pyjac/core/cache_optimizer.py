@@ -295,7 +295,7 @@ def optimize_cache(specs, reacs, multi_thread,
                 print('Forcing reoptimization...')
                 same_mech = False
 
-        except Exception, e:
+        except Exception as e:
             print('Old optimization file not found, or does not match '
                   'current mechanism... forcing optimization'
                   )

@@ -1085,7 +1085,7 @@ def write_troe(file, lang, rxn):
     Returns
     -------
     None
-    
+
     """
     line = ('  Fcent = '
             '{:.16e} * '.format(1.0 - rxn.troe_par[0]) +
@@ -2571,7 +2571,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
         if any(rxn.troe for rxn in reacs):
             line = ''.join([
                 '  double {} = 0.0{}'.format(x, utils.line_end[lang])
-                for x in 'Fcent', 'A', 'B', 'lnF_AB'
+                for x in ['Fcent', 'A', 'B', 'lnF_AB']
                 ])
             file.write(line)
 
@@ -2592,7 +2592,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
             file.write(utils.line_start +
                        ('double dot_prod[{}]'.format(dim) if lang == 'c'
                        else 'double * {} dot_prod = d_mem->dot_prod'.format(
-                        utils.restrict[lang])) +
+                       utils.restrict[lang])) +
                        utils.line_end[lang]
                        )
 
@@ -2610,9 +2610,9 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
     if any(len(specs) - 1 in set(reac.reac + reac.prod) and \
         utils.get_nu(len(specs) - 1, reac) for reac in reacs):
         file.write(utils.line_start +
-           'double J_nplusone = 0' +
-           utils.line_end[lang]
-           )
+                   'double J_nplusone = 0' +
+                   utils.line_end[lang]
+                   )
         if lang == 'c':
             file.write(utils.line_start +
                        'double J_nplusjplus[NSP]' +
@@ -2621,7 +2621,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
         else:
             file.write(utils.line_start +
                        'double * {} J_nplusjplus = d_mem->J_nplusjplus'.format(
-                        utils.restrict[lang]) +
+                       utils.restrict[lang]) +
                        utils.line_end[lang]
                        )
 
@@ -3557,8 +3557,8 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
                                      force_optimize, build_path, last_spec
                                      )
     else:
-        fwd_rxn_mapping = range(len(reacs))
-        reverse_rxn_mapping = range(len(reacs))
+        fwd_rxn_mapping = list(range(len(reacs)))
+        reverse_rxn_mapping = list(range(len(reacs)))
 
         fwd_spec_mapping, \
         reverse_spec_mapping = \

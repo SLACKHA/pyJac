@@ -38,7 +38,7 @@ setup(
     author_email='kyle.niemeyer@gmail.com',
 
     # Choose your license
-    license='BSD 3-Clause License',
+    license='MIT License',
 
     # See https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[
@@ -52,7 +52,7 @@ setup(
         'Intended Audience :: Developers',
 
         # Pick your license as you wish (should match "license" above)
-        'License :: OSI Approved :: BSD License',
+        'License :: OSI Approved :: MIT License',
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
@@ -93,7 +93,7 @@ setup(
     package_data={
         'pyjac.pywrap': ['*.pyx', '*.c', '*.h', '*.cu', '*.cuh', '*.in'],
         'pyjac.functional_tester' : ['*.yaml'],
-        'pyjac.performance_tester' : ['*.pyx', '*.c', 
+        'pyjac.performance_tester' : ['*.pyx', '*.c',
                         '*.h', '*.cu', '*.cuh', '*.in'],
     },
 

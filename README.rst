@@ -25,7 +25,9 @@ or from PyPI using pip::
 
    pip install pyjac
 
-## Usage
+=====
+Usage
+=====
 
 pyJac can be run as a python module::
 
@@ -44,7 +46,8 @@ pyJac is released under the MIT license; see the
 details.
 
 If you use this package as part of a scholarly publication, please see
-``CITATION.md`` for the appropriate citation(s).
+`CITATION.md <https://github.com/kyleniemeyer/pyJac/blob/master/CITATION.md>`_
+for the appropriate citation(s).
 
 ============
 Contributing

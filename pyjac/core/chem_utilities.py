@@ -29,7 +29,7 @@ class CommonEqualityMixin(object):
     """
     def __eq__(self, other):
         try:
-            for key, value in self.__dict__.iteritems():
+            for key, value in self.__dict__.items():
                 if not key in other.__dict__:
                     return False
                 if isinstance(value, np.ndarray):

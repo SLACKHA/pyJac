@@ -137,7 +137,7 @@ void eval_jacob(const double t, const double p, const double* y,
         file.write('/* Species Indexes\n'
                    '\n'.join('{}  {}'.format(i, spec.name)
                              for i, spec in enumerate(specs)
-                             ) + 
+                             ) +
                    '*/\n\n'
                    )
 
@@ -343,7 +343,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        '  //returns the total required size for the mechanism per thread\n'
                        '  size_t mech_size = 0;\n'
                        )
-            for array, size in gpu_memory.iteritems():
+            for array, size in gpu_memory.items():
                 file.write('  //{}\n'.format(array) +
                            '  mech_size += {};\n'.format(size)
                            )
@@ -365,7 +365,7 @@ void eval_jacob(const double t, const double p, const double* y,
                 '  //allocate the device arrays on the host pointer\n'
                 )
 
-            for array, size in gpu_memory.iteritems():
+            for array, size in gpu_memory.items():
                 file.write(
                     err_check.format(
                     'cudaMalloc(&((*h_mem)->{}), {}'.format(array, size) +

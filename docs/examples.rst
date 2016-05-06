@@ -31,7 +31,7 @@ partially stirred reactor (PaSR) module::
 
     python -m pyjac.functional_tester.partially_stirred_reactor \
     --mech examples/h2o2.cti --input examples/pasr_input.yaml \
-    --output h2_pasr_output.npy
+    --output examples/h2_pasr_output.npy
 
 Alternatively, you can use provided example data::
 
@@ -40,7 +40,7 @@ Alternatively, you can use provided example data::
 Then, functional testing using this data can be performed via::
 
     python3 -m pyjac.functional_tester --mech examples/h2o2.cti --lang c \
-    --pasr_output h2_pasr_output.npy
+    --pasr_output examples/h2_pasr_output.npy
 
 Detailed error statistics are saved in ``error_arrays.npz``, and overall results
 printed to screen.

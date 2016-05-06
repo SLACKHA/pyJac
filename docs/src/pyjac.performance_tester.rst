@@ -1,13 +1,6 @@
 pyjac.performance_tester package
 ================================
 
-Subpackages
------------
-
-.. toctree::
-
-    pyjac.performance_tester.optionLoop
-
 Submodules
 ----------
 

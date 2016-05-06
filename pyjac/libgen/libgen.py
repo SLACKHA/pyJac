@@ -34,13 +34,13 @@ def cmd_lib(lang, shared):
         return ['ar', 'rcs'] if not shared else ['icc', '-shared']
 
 
-includes = dict(c=[], icc=[],
+includes = dict(c=['/usr/local/include/'], icc=['/usr/local/include/'],
                 cuda=['/usr/local/cuda/include/',
                       '/usr/local/cuda/samples/common/inc/'
                       ]
                 )
 
-flags = dict(c=['-std=c99', '-O3', '-mtune=native', '-fopenmp'],
+flags = dict(c=['-std=c99', '-O3', '-mtune=native'],
              icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
              cuda=['-O3', '-arch=sm_20']
              )
@@ -50,7 +50,7 @@ shared_flags = dict(c=['-fPIC'],
                     cuda=['-Xcompiler', '"-fPIC"']
                     )
 
-libs = dict(c=['-lm', '-std=c99', '-fopenmp'],
+libs = dict(c=['-lm', '-std=c99'],
             cuda=['-lcudart'],
             icc=['-m64', '-ipo', '-lm', '-std=c99']
             )

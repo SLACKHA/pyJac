@@ -234,6 +234,10 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
     #find the mechanisms to test
     mechanism_list = {}
+    if not os.path.exists(work_dir):
+        print ('Error: work directory {} for '.format(work_dir) +
+               'performance testing not found, exiting...')
+        sys.exit(-1)
     for name in os.listdir(work_dir):
         if os.path.isdir(os.path.join(work_dir, name)):
             #check for cti

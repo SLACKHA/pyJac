@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -60,14 +62,17 @@
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
 
 <span class="c1">#dependencies</span>
-<span class="n">have_bitarray</span> <span class="o">=</span> <span class="bp">True</span>
+<span class="n">have_bitarray</span> <span class="o">=</span> <span class="bp">False</span>
 <span class="k">try</span><span class="p">:</span>
     <span class="kn">from</span> <span class="nn">bitarray</span> <span class="kn">import</span> <span class="n">bitarray</span>
+    <span class="n">have_bitarray</span> <span class="o">=</span> <span class="bp">True</span>
 <span class="k">except</span><span class="p">:</span>
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;bitarray not found, turning off cache-optimization&#39;</span><span class="p">)</span>
-    <span class="n">have_bitarray</span> <span class="o">=</span> <span class="bp">False</span>
+
 
 <div class="viewcode-block" id="plot"><a class="viewcode-back" href="../../../src/pyjac.core.cache_optimizer.html#pyjac.core.cache_optimizer.plot">[docs]</a><span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">consider_thd</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Convenience plotting function. Marked for removal.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">nr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span>
     <span class="n">nsp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span>
     <span class="c1">#plot for visibility</span>
@@ -84,7 +89,9 @@
         <span class="n">rxn</span> <span class="o">=</span> <span class="n">reacs</span><span class="p">[</span><span class="n">rind</span><span class="p">]</span>
         <span class="n">plot</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">consider_thd</span><span class="p">:</span>
-            <span class="n">plot</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">rxn</span><span class="o">.</span><span class="n">pdep_sp</span><span class="p">]))</span>
+            <span class="n">plot</span> <span class="o">=</span> <span class="n">plot</span><span class="o">.</span><span class="n">union</span><span class="p">(</span><span class="nb">set</span><span class="p">([</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="p">]</span> <span class="o">+</span>
+                              <span class="p">[</span><span class="n">rxn</span><span class="o">.</span><span class="n">pdep_sp</span><span class="p">])</span>
+                              <span class="p">)</span>
         <span class="n">plot</span> <span class="o">=</span> <span class="p">[</span><span class="n">name_map</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">plot</span> <span class="k">if</span> <span class="n">sp</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">plot</span><span class="p">:</span>
             <span class="n">arr</span><span class="p">[</span><span class="n">rind</span><span class="p">,</span> <span class="n">sp</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
@@ -115,13 +122,33 @@
     <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
     <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s1">&#39;new.pdf&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="optimizer_loop_star"><a class="viewcode-back" href="../../../src/pyjac.core.cache_optimizer.html#pyjac.core.cache_optimizer.optimizer_loop_star">[docs]</a><span class="k">def</span> <span class="nf">optimizer_loop_star</span><span class="p">(</span><span class="n">args</span><span class="p">):</span>
-    <span class="k">return</span> <span class="n">optimizer_loop</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">)</span></div>
-
 
 <div class="viewcode-block" id="optimizer_loop"><a class="viewcode-back" href="../../../src/pyjac.core.cache_optimizer.html#pyjac.core.cache_optimizer.optimizer_loop">[docs]</a><span class="k">def</span> <span class="nf">optimizer_loop</span><span class="p">(</span><span class="n">starting_order</span><span class="p">,</span> <span class="n">mapping</span><span class="p">,</span> <span class="n">lookback</span><span class="p">,</span>
                    <span class="n">improve_cutoff</span><span class="p">,</span> <span class="n">random_tries</span>
                    <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    starting_order :</span>
+<span class="sd">        Initial order of elements</span>
+<span class="sd">    mapping :</span>
+<span class="sd">        Mapping of order to &quot;correct&quot; location</span>
+<span class="sd">    lookback : int</span>
+<span class="sd">        Width of lookahead/lookforward</span>
+<span class="sd">    improve_cutoff : int</span>
+<span class="sd">        Number of iterations without improvement before return</span>
+<span class="sd">    random_tries : int</span>
+<span class="sd">        Number of random initializations to try</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    global_max :</span>
+
+<span class="sd">    global_max_order :</span>
+
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">nvar</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">starting_order</span><span class="p">)</span>
     <span class="n">order</span> <span class="o">=</span> <span class="n">starting_order</span><span class="p">[:]</span>
 
@@ -228,6 +255,7 @@
 
     <span class="k">return</span> <span class="n">global_max</span><span class="p">,</span> <span class="n">global_max_order</span></div>
 
+
 <div class="viewcode-block" id="optimize_cache"><a class="viewcode-back" href="../../../src/pyjac.core.cache_optimizer.html#pyjac.core.cache_optimizer.optimize_cache">[docs]</a><span class="k">def</span> <span class="nf">optimize_cache</span><span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">multi_thread</span><span class="p">,</span>
                    <span class="n">force_optimize</span><span class="p">,</span> <span class="n">build_path</span><span class="p">,</span>
                    <span class="n">last_spec</span><span class="p">,</span> <span class="n">consider_thd</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
@@ -237,8 +265,7 @@
                    <span class="n">rand_restarts_max</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
                    <span class="n">max_time</span><span class="o">=</span><span class="mi">100</span><span class="o">*</span><span class="mi">60</span> <span class="c1">#100 min</span>
                    <span class="p">):</span>
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Optimize species and reaction orders to improve cache hit rates.</span>
+    <span class="sd">&quot;&quot;&quot;Optimize species and reaction orders to improve cache hit rates.</span>
 
 <span class="sd">    Parameters</span>
 <span class="sd">    ----------</span>
@@ -297,10 +324,12 @@
                 <span class="n">fwd_rxn_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
                 <span class="n">reverse_spec_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
                 <span class="n">reverse_rxn_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-            <span class="n">same_mech</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">sp</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">old_specs</span><span class="p">)</span> <span class="ow">and</span> \
-                        <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_specs</span><span class="p">)</span> <span class="ow">and</span> \
-                        <span class="nb">all</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">r</span> <span class="o">==</span> <span class="n">rxn</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">old_reacs</span><span class="p">)</span> <span class="ow">and</span> \
-                        <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_reacs</span><span class="p">)</span>
+            <span class="n">same_mech</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="nb">all</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">sp</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">old_specs</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_specs</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="nb">all</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">r</span> <span class="o">==</span> <span class="n">rxn</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">reacs</span><span class="p">)</span> <span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">old_reacs</span><span class="p">)</span> <span class="ow">and</span>
+                <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_reacs</span><span class="p">)</span>
+                <span class="p">)</span>
             <span class="k">if</span> <span class="n">reverse_spec_mapping</span><span class="p">[</span><span class="n">last_spec</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Different last species detected, &#39;</span>
                       <span class="s1">&#39;old species was {} and new species is {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
@@ -309,7 +338,7 @@
                 <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Forcing reoptimization...&#39;</span><span class="p">)</span>
                 <span class="n">same_mech</span> <span class="o">=</span> <span class="bp">False</span>
 
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Old optimization file not found, or does not match &#39;</span>
                   <span class="s1">&#39;current mechanism... forcing optimization&#39;</span>
                   <span class="p">)</span>
@@ -319,8 +348,9 @@
                   <span class="s1">&#39; returning previous optimization&#39;</span>
                   <span class="p">)</span>
             <span class="c1"># we have to do the spec_rate_order each time</span>
-            <span class="k">return</span> <span class="n">old_specs</span><span class="p">,</span> <span class="n">old_reacs</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span> \
+            <span class="k">return</span> <span class="p">(</span><span class="n">old_specs</span><span class="p">,</span> <span class="n">old_reacs</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span>
                     <span class="n">reverse_spec_mapping</span><span class="p">,</span> <span class="n">reverse_rxn_mapping</span>
+                    <span class="p">)</span>
 
     <span class="n">nsp</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span>
     <span class="n">nr</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span>
@@ -475,7 +505,9 @@
         <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reverse_rxn_mapping</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
 
     <span class="c1"># complete, so now return</span>
-    <span class="k">return</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span> <span class="n">reverse_spec_mapping</span><span class="p">,</span> <span class="n">reverse_rxn_mapping</span></div>
+    <span class="k">return</span> <span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span>
+            <span class="n">reverse_spec_mapping</span><span class="p">,</span> <span class="n">reverse_rxn_mapping</span>
+            <span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -491,10 +523,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -527,7 +561,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

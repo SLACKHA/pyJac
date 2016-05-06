@@ -26,11 +26,13 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -39,16 +41,44 @@
             
   <div class="section" id="module-pyjac.functional_tester.test">
 <span id="pyjac-functional-tester-test-module"></span><h1>pyjac.functional_tester.test module<a class="headerlink" href="#module-pyjac.functional_tester.test" title="Permalink to this headline">¶</a></h1>
+<p>Module for testing function (accuracy) of pyJac.</p>
 <dl class="class">
 <dt id="pyjac.functional_tester.test.ReactorConstPres">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">ReactorConstPres</code><span class="sig-paren">(</span><em>gas</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#ReactorConstPres"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.ReactorConstPres" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Object for constant pressure ODE system.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="class">
 <dt id="pyjac.functional_tester.test.ReactorConstVol">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">ReactorConstVol</code><span class="sig-paren">(</span><em>gas</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#ReactorConstVol"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.ReactorConstVol" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Object for constant volume ODE system.</p>
+<p>Initialize <a class="reference internal" href="#pyjac.functional_tester.test.ReactorConstVol" title="pyjac.functional_tester.test.ReactorConstVol"><code class="xref any py py-class docutils literal"><span class="pre">ReactorConstVol</span></code></a></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
@@ -61,12 +91,18 @@ the Cantera built-in script <code class="docutils literal"><span class="pre">ck2
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>mech_filename</strong> &#8211; Filename of the input CHEMKIN format mechanism. The converted
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename of the input CHEMKIN format mechanism. The converted
 CTI file will have the same name, but with <code class="docutils literal"><span class="pre">.cti</span></code> extension.</li>
-<li><strong>thermo_filename</strong> &#8211; Filename of the thermodynamic database. Optional if the
+<li><strong>thermo_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename of the thermodynamic database. Optional, if the
 thermodynamic database is present in the mechanism input.</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mech_filename</strong> &#8211; Filename of converted mechanism in Cantera <code class="docutils literal"><span class="pre">.cti</span></code> format.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
 </td>
 </tr>
 </tbody>
@@ -74,13 +110,45 @@ thermodynamic database is present in the mechanism input.</li>
 </dd></dl>
 
 <dl class="class">
-<dt id="pyjac.functional_tester.test.autodiff_jacob">
-<em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">autodiff_jacob</code><span class="sig-paren">(</span><em>pressure</em>, <em>fwd_spec_map</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#autodiff_jacob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.autodiff_jacob" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="method">
-<dt id="pyjac.functional_tester.test.autodiff_jacob.eval_jacobian">
-<code class="descname">eval_jacobian</code><span class="sig-paren">(</span><em>gas</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#autodiff_jacob.eval_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.autodiff_jacob.eval_jacobian" title="Permalink to this definition">¶</a></dt>
-<dd><p>Evaluate finite difference Jacobian.</p>
-<p>Uses autodifferentiation package Adept</p>
+<dt id="pyjac.functional_tester.test.AutodiffJacob">
+<em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">AutodiffJacob</code><span class="sig-paren">(</span><em>pressure</em>, <em>fwd_spec_map</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#AutodiffJacob"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.AutodiffJacob" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Class for</p>
+<p>Initialize autodifferentation object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pressure</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure in Pascals</li>
+<li><strong>fwd_spec_map</strong> (<code class="xref any docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Map of original species indices to new indices</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+<dl class="method">
+<dt id="pyjac.functional_tester.test.AutodiffJacob.eval_jacobian">
+<code class="descname">eval_jacobian</code><span class="sig-paren">(</span><em>gas</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#AutodiffJacob.eval_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.AutodiffJacob.eval_jacobian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Evaluate finite difference Jacobian using Adept         autodifferentiation package.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>jacob</strong> &#8211; Jacobian matrix evaluated using autodifferentiation</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><code class="xref any docutils literal"><span class="pre">numpy.array</span></code></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -88,62 +156,275 @@ thermodynamic database is present in the mechanism input.</li>
 <dl class="function">
 <dt id="pyjac.functional_tester.test.is_pdep">
 <code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">is_pdep</code><span class="sig-paren">(</span><em>rxn</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#is_pdep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.is_pdep" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Check if reaction is traditionally pressure dependent</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction object of interest</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><code class="docutils literal"><span class="pre">True</span></code> if third-body, falloff, or chemically activated reaction.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.functional_tester.test.run_pasr">
-<code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">run_pasr</code><span class="sig-paren">(</span><em>pasr_input_file</em>, <em>mech_filename</em>, <em>pasr_output_file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#run_pasr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.run_pasr" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">run_pasr</code><span class="sig-paren">(</span><em>pasr_input_file</em>, <em>mech_filename</em>, <em>pasr_output_file=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#run_pasr"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.run_pasr" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run PaSR simulation to get thermochemical data for testing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>pasr_input_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of PaSR input file in YAML format</li>
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of Cantera-format mechanism file</li>
+<li><strong>pasr_output_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; filename for saving PaSR output data</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>state_data</strong> &#8211; Array with state data (time, temperature, pressure, mass fractions)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="docutils literal"><span class="pre">numpy.array</span></code></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="class">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">cpyjac_evaluator</code><span class="sig-paren">(</span><em>build_dir</em>, <em>gas</em>, <em>module_name='pyjacob'</em>, <em>filename='mechanism.h'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Class for pyJac-based Jacobian matrix evaluator</p>
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.check_numbers">
 <code class="descname">check_numbers</code><span class="sig-paren">(</span><em>build_dir</em>, <em>gas</em>, <em>filename='mechanism.h'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.check_numbers"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.check_numbers" title="Permalink to this definition">¶</a></dt>
-<dd><p>Ensures numbers of species and forward reaction match.</p>
+<dd><p>Ensure numbers of species and forward reaction match.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of directory for build objects</li>
+<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; Object with kinetic system</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; filename of header with mechanism information</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.check_optimized">
 <code class="descname">check_optimized</code><span class="sig-paren">(</span><em>build_dir</em>, <em>gas</em>, <em>filename='mechanism.h'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.check_optimized"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.check_optimized" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Check if pyJac files were cache-optimized (and thus rearranged)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of directory for build objects</li>
+<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; Object with kinetic system</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; filename of header with mechanism information</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.eval_conc">
 <code class="descname">eval_conc</code><span class="sig-paren">(</span><em>temp</em>, <em>pres</em>, <em>mass_frac</em>, <em>conc</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.eval_conc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.eval_conc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate species concentrations at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>mass_frac</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species mass fractions</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.eval_rxn_rates">
 <code class="descname">eval_rxn_rates</code><span class="sig-paren">(</span><em>temp</em>, <em>pres</em>, <em>conc</em>, <em>fwd_rates</em>, <em>rev_rates</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.eval_rxn_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.eval_rxn_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate reaction rates of progress at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.get_rxn_pres_mod">
 <code class="descname">get_rxn_pres_mod</code><span class="sig-paren">(</span><em>temp</em>, <em>pres</em>, <em>conc</em>, <em>pres_mod</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.get_rxn_pres_mod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.get_rxn_pres_mod" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate reaction rate pressure modifications at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.eval_spec_rates">
 <code class="descname">eval_spec_rates</code><span class="sig-paren">(</span><em>fwd_rates</em>, <em>rev_rates</em>, <em>pres_mod</em>, <em>spec_rates</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.eval_spec_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.eval_spec_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate species overall production rates at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
+<li><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.dydt">
 <code class="descname">dydt</code><span class="sig-paren">(</span><em>t</em>, <em>pres</em>, <em>y</em>, <em>dydt</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.dydt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.dydt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate derivative</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
+<li><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Derivative of state vector</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.eval_jacobian">
 <code class="descname">eval_jacobian</code><span class="sig-paren">(</span><em>t</em>, <em>pres</em>, <em>y</em>, <em>jacob</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.eval_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.eval_jacobian" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate the Jacobian matrix</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
+<li><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Jacobian matrix</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cpyjac_evaluator.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cpyjac_evaluator.update" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Updates evaluator index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of data for evaluating quantities</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cpyjac_evaluator.clean">
@@ -156,6 +437,7 @@ thermodynamic database is present in the mechanism input.</li>
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">cupyjac_evaluator</code><span class="sig-paren">(</span><em>build_dir</em>, <em>gas</em>, <em>state_data</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#pyjac.functional_tester.test.cpyjac_evaluator" title="pyjac.functional_tester.test.cpyjac_evaluator"><code class="xref py py-class docutils literal"><span class="pre">pyjac.functional_tester.test.cpyjac_evaluator</span></code></a></p>
+<p>Class for CUDA-based pyJac Jacobian matrix evaluator</p>
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.clean">
 <code class="descname">clean</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.clean"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.clean" title="Permalink to this definition">¶</a></dt>
@@ -164,12 +446,38 @@ thermodynamic database is present in the mechanism input.</li>
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.update">
 <code class="descname">update</code><span class="sig-paren">(</span><em>index</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.update"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.update" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Updates evaluator index</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of data for evaluating quantities</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.czeros">
 <code class="descname">czeros</code><span class="sig-paren">(</span><em>shape</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.czeros"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.czeros" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Return array of zeros in C ordering.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shape</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Shape of array</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><code class="docutils literal"><span class="pre">numpy.array</span></code> of zeros with shape <code class="xref any docutils literal"><span class="pre">shape</span></code> in C ordering</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.reshaper">
@@ -179,32 +487,159 @@ thermodynamic database is present in the mechanism input.</li>
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.eval_conc">
 <code class="descname">eval_conc</code><span class="sig-paren">(</span><em>temp</em>, <em>pres</em>, <em>mass_frac</em>, <em>conc</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.eval_conc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.eval_conc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate species concentrations at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>mass_frac</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species mass fractions</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.eval_rxn_rates">
 <code class="descname">eval_rxn_rates</code><span class="sig-paren">(</span><em>temp</em>, <em>pres</em>, <em>conc</em>, <em>fwd_rates</em>, <em>rev_rates</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.eval_rxn_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.eval_rxn_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate reaction rates of progress at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.get_rxn_pres_mod">
 <code class="descname">get_rxn_pres_mod</code><span class="sig-paren">(</span><em>temp</em>, <em>pres</em>, <em>conc</em>, <em>pres_mod</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.get_rxn_pres_mod"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.get_rxn_pres_mod" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate reaction rate pressure modifications at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.eval_spec_rates">
 <code class="descname">eval_spec_rates</code><span class="sig-paren">(</span><em>fwd_rates</em>, <em>rev_rates</em>, <em>pres_mod</em>, <em>spec_rates</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.eval_spec_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.eval_spec_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate species overall production rates at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
+<li><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.dydt">
 <code class="descname">dydt</code><span class="sig-paren">(</span><em>t</em>, <em>pres</em>, <em>y</em>, <em>dydt</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.dydt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.dydt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate derivative</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
+<li><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Derivative of state vector</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.cupyjac_evaluator.eval_jacobian">
 <code class="descname">eval_jacobian</code><span class="sig-paren">(</span><em>t</em>, <em>pres</em>, <em>y</em>, <em>jacob</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#cupyjac_evaluator.eval_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.cupyjac_evaluator.eval_jacobian" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate the Jacobian matrix</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
+<li><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Jacobian matrix</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </dd></dl>
 
@@ -212,43 +647,164 @@ thermodynamic database is present in the mechanism input.</li>
 <dt id="pyjac.functional_tester.test.tchem_evaluator">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">tchem_evaluator</code><span class="sig-paren">(</span><em>build_dir</em>, <em>gas</em>, <em>state_data</em>, <em>mechfile</em>, <em>thermofile</em>, <em>module_name='py_tchem'</em>, <em>filename='mechanism.h'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#tchem_evaluator"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.tchem_evaluator" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference internal" href="#pyjac.functional_tester.test.cpyjac_evaluator" title="pyjac.functional_tester.test.cpyjac_evaluator"><code class="xref py py-class docutils literal"><span class="pre">pyjac.functional_tester.test.cpyjac_evaluator</span></code></a></p>
+<p>Class for TChem-based Jacobian matrix evaluator</p>
 <dl class="method">
 <dt id="pyjac.functional_tester.test.tchem_evaluator.get_conc">
 <code class="descname">get_conc</code><span class="sig-paren">(</span><em>conc</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#tchem_evaluator.get_conc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.tchem_evaluator.get_conc" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate species concentrations at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.tchem_evaluator.get_rxn_rates">
 <code class="descname">get_rxn_rates</code><span class="sig-paren">(</span><em>fwd_rates</em>, <em>rev_rates</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#tchem_evaluator.get_rxn_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.tchem_evaluator.get_rxn_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate reaction rates of progress at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.tchem_evaluator.get_spec_rates">
 <code class="descname">get_spec_rates</code><span class="sig-paren">(</span><em>spec_rates</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#tchem_evaluator.get_spec_rates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.tchem_evaluator.get_spec_rates" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate species overall production rates at current state.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.tchem_evaluator.get_dydt">
 <code class="descname">get_dydt</code><span class="sig-paren">(</span><em>dydt</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#tchem_evaluator.get_dydt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.tchem_evaluator.get_dydt" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate derivative</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Derivative of state vector</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="method">
 <dt id="pyjac.functional_tester.test.tchem_evaluator.get_jacobian">
 <code class="descname">get_jacobian</code><span class="sig-paren">(</span><em>jacob</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#tchem_evaluator.get_jacobian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.tchem_evaluator.get_jacobian" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Evaluate the Jacobian matrix</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Jacobian matrix</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </dd></dl>
 
 <dl class="function">
 <dt id="pyjac.functional_tester.test.safe_remove">
 <code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">safe_remove</code><span class="sig-paren">(</span><em>file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#safe_remove"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.safe_remove" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Try to safely remove a file</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path for file to be removed</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.functional_tester.test.test">
 <code class="descclassname">pyjac.functional_tester.test.</code><code class="descname">test</code><span class="sig-paren">(</span><em>lang</em>, <em>home_dir</em>, <em>build_dir</em>, <em>mech_filename</em>, <em>therm_filename=None</em>, <em>pasr_input_file='pasr_input.yaml'</em>, <em>generate_jacob=True</em>, <em>compile_jacob=True</em>, <em>seed=None</em>, <em>pasr_output_file=None</em>, <em>last_spec=None</em>, <em>cache_optimization=False</em>, <em>no_shared=False</em>, <em>tchem_flag=False</em>, <em>only_rxn=None</em>, <em>do_not_remove=False</em>, <em>condition_numbers=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/test.html#test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.test.test" title="Permalink to this definition">¶</a></dt>
 <dd><p>Compares pyJac results against Cantera (and optionally TChem) using
 state data from PaSR simulations.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>home_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to home directory for testing and data</li>
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to directory for building Jacobian files</li>
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Chemkin- or Cantera-format mechanism file</li>
+<li><strong>therm_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of thermodynamic database file (if needed)</li>
+<li><strong>pasr_input_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of YAML-formatted file with PaSR test input</li>
+<li><strong>generate_jacob</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, generate Jacobian files.
+Otherwise, use existing files.</li>
+<li><strong>compile_jacob</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, compile Jacobian files. Otherwise, using existing.</li>
+<li><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Optional; random seed for PaSR</li>
+<li><strong>pasr_output_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of output file for saving PaSR results</li>
+<li><strong>last_spec</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of species to move to last position.
+If not specified, will try searching for N2, Ar, or He.</li>
+<li><strong>cache_optimization</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, enable reordering to optimize cache usage</li>
+<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use GPU shared memory</li>
+<li><strong>tchem_flag</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, compare with TChem results</li>
+<li><strong>only_rxn</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; string with list of reaction numbers to retain.
+All other reactions removed.</li>
+<li><strong>do_not_remove</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, keep all generated files.</li>
+<li><strong>condition_numbers</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Optional; string with list of conditions numbers to use.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -267,10 +823,12 @@ state data from PaSR simulations.</p>
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -303,7 +861,7 @@ state data from PaSR simulations.</p>
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.functional_tester.test.txt"

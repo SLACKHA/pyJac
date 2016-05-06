@@ -26,11 +26,13 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -39,56 +41,166 @@
             
   <div class="section" id="module-pyjac.libgen.libgen">
 <span id="pyjac-libgen-libgen-module"></span><h1>pyjac.libgen.libgen module<a class="headerlink" href="#module-pyjac.libgen.libgen" title="Permalink to this headline">¶</a></h1>
+<p>Module used to create a shared/static library from pyJac files.</p>
 <dl class="function">
 <dt id="pyjac.libgen.libgen.lib_ext">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">lib_ext</code><span class="sig-paren">(</span><em>shared</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#lib_ext"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.lib_ext" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the appropriate library extension based on the shared flag</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.cmd_lib">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">cmd_lib</code><span class="sig-paren">(</span><em>lang</em>, <em>shared</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#cmd_lib"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.cmd_lib" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns the appropriate compilation command for creation of the library based on the
+language and shared flag</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.which">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">which</code><span class="sig-paren">(</span><em>file</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#which"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.which" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.libgen.libgen.getf">
-<code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">getf</code><span class="sig-paren">(</span><em>x</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#getf"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.getf" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>A substitute for the <a class="reference internal" href="#pyjac.libgen.libgen.which" title="pyjac.libgen.libgen.which"><code class="xref any py py-func docutils literal"><span class="pre">which</span></code></a> command, searches the PATH for
+a given file</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.compiler">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">compiler</code><span class="sig-paren">(</span><em>fstruct</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#compiler"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.compiler" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Given a file structure, this method will compile the source file for the
+language and options specified</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>fstruct</strong> (<a class="reference internal" href="#pyjac.libgen.libgen.file_struct" title="pyjac.libgen.libgen.file_struct"><code class="xref any py py-class docutils literal"><span class="pre">file_struct</span></code></a>) &#8211; An information struct that holds the various compilation options</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>success</strong> &#8211; 0 if the compilation process was sucessful, -1 otherwise</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)">int</a></td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Designed to work with a multiprocess compilation workflow</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.get_cuda_path">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">get_cuda_path</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#get_cuda_path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.get_cuda_path" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Returns location of CUDA (nvcc) on the system.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>None</strong> &#8211; </td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>cuda_path</strong> &#8211; Path where CUDA (nvcc) is found on the system.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.libgen">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">libgen</code><span class="sig-paren">(</span><em>lang</em>, <em>obj_dir</em>, <em>out_dir</em>, <em>filelist</em>, <em>shared</em>, <em>auto_diff</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#libgen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.libgen" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Create a library from a list of compiled files</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>obj_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path with object files</li>
+<li><strong>out_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to place the library in</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>filelist</strong> (List of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; The list of object files to include in the library</li>
+<li><strong>auto_diff</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="class">
 <dt id="pyjac.libgen.libgen.file_struct">
 <em class="property">class </em><code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">file_struct</code><span class="sig-paren">(</span><em>lang</em>, <em>build_lang</em>, <em>filename</em>, <em>i_dirs</em>, <em>args</em>, <em>source_dir</em>, <em>obj_dir</em>, <em>shared</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#file_struct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.file_struct" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>A simple structure designed to enable multiprocess compilation</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Compiler to use</li>
+<li><strong>build_lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>file_name</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The file to compile</li>
+<li><strong>i_dirs</strong> (<em>List of str</em>) &#8211; List of include directorys for compilation</li>
+<li><strong>args</strong> (<em>List of str</em>) &#8211; List of additional arguements</li>
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory the file is located in</li>
+<li><strong>obj_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory to place the compiled object file in</li>
+<li><strong>shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this is creating a shared library</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.get_file_list">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">get_file_list</code><span class="sig-paren">(</span><em>source_dir</em>, <em>pmod</em>, <em>lang</em>, <em>FD=False</em>, <em>AD=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#get_file_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.get_file_list" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path with source files</li>
+<li><strong>pmod</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; <code class="docutils literal"><span class="pre">True</span></code> if pressure dependent reactions present in mechanism</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>FD</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, include finite difference</li>
+<li><strong>AD</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>i_dirs</strong> (list of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of include directories</li>
+<li><strong>files</strong> (list of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of files</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.libgen.libgen.generate_library">
 <code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">generate_library</code><span class="sig-paren">(</span><em>lang</em>, <em>source_dir</em>, <em>obj_dir=None</em>, <em>out_dir=None</em>, <em>shared=None</em>, <em>finite_difference=False</em>, <em>auto_diff=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#generate_library"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.generate_library" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Generate shared/static library for pyJac files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of folder with pyJac files</li>
+<li><strong>obj_dir</strong> (<em>Optional[str]</em>) &#8211; Optional; path of folder to store generated object files</li>
+<li><strong>shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate shared library (vs. static)</li>
+<li><strong>finite_difference</strong> (<em>Optional[bool]</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, include finite differences</li>
+<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Location of generated library</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 </div>
 
@@ -106,10 +218,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -142,7 +256,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.libgen.libgen.txt"

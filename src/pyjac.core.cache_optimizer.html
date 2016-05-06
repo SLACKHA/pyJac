@@ -26,11 +26,13 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -43,17 +45,35 @@
 <dl class="function">
 <dt id="pyjac.core.cache_optimizer.plot">
 <code class="descclassname">pyjac.core.cache_optimizer.</code><code class="descname">plot</code><span class="sig-paren">(</span><em>specs</em>, <em>reacs</em>, <em>consider_thd</em>, <em>fwd_spec_mapping</em>, <em>fwd_rxn_mapping</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/cache_optimizer.html#plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.cache_optimizer.plot" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.cache_optimizer.optimizer_loop_star">
-<code class="descclassname">pyjac.core.cache_optimizer.</code><code class="descname">optimizer_loop_star</code><span class="sig-paren">(</span><em>args</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/cache_optimizer.html#optimizer_loop_star"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.cache_optimizer.optimizer_loop_star" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><p>Convenience plotting function. Marked for removal.</p>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.cache_optimizer.optimizer_loop">
 <code class="descclassname">pyjac.core.cache_optimizer.</code><code class="descname">optimizer_loop</code><span class="sig-paren">(</span><em>starting_order</em>, <em>mapping</em>, <em>lookback</em>, <em>improve_cutoff</em>, <em>random_tries</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/cache_optimizer.html#optimizer_loop"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.cache_optimizer.optimizer_loop" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>starting_order</strong> &#8211; Initial order of elements</li>
+<li><strong>mapping</strong> &#8211; Mapping of order to &#8220;correct&#8221; location</li>
+<li><strong>lookback</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Width of lookahead/lookforward</li>
+<li><strong>improve_cutoff</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of iterations without improvement before return</li>
+<li><strong>random_tries</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of random initializations to try</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><em>global_max</em></li>
+<li><em>global_max_order</em></li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
 
 <dl class="function">
 <dt id="pyjac.core.cache_optimizer.optimize_cache">
@@ -110,10 +130,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -146,7 +168,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.core.cache_optimizer.txt"

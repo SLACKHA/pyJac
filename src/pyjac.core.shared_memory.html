@@ -26,11 +26,13 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -44,8 +46,9 @@
 <dt id="pyjac.core.shared_memory.variable">
 <em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">variable</code><span class="sig-paren">(</span><em>base</em>, <em>index</em>, <em>lang='cuda'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Class that represents an array/index pair.  Used for in the internal dicitonary of the
-<a class="reference internal" href="#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> for identification and tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> usage for eviction</p>
+<p>Class that represents an array/index pair.  Used for in the internal
+dicitonary of the <a class="reference internal" href="#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> for identification and
+tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> usage for eviction.</p>
 <p>Creates a <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> with given base and index</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -83,6 +86,7 @@
 <dt id="pyjac.core.shared_memory.shared_memory_manager">
 <em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">shared_memory_manager</code><span class="sig-paren">(</span><em>blocks_per_sm=8</em>, <em>num_threads=64</em>, <em>L1_PREFERRED=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager" title="Permalink to this definition">¶</a></dt>
 <dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<p>Manager for GPU shared memory.</p>
 <p>Creates a shared memory manager</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
@@ -91,7 +95,8 @@
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
 <li><strong>blocks_per_sm</strong> (<em>int, optional</em>) &#8211; The number of blocks / streaming multiprocessor to target</li>
 <li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The number of threads / block expected in kernel launches</li>
-<li><strong>L1_PREFERRED</strong> (<em>bool, optional</em>) &#8211; Whether or not to prefer a larger L1 cache over more shared memory (recommended)</li>
+<li><strong>L1_PREFERRED</strong> (<em>bool, optional</em>) &#8211; Whether or not to prefer a larger L1 cache over more shared memory
+(recommended).</li>
 </ul>
 </td>
 </tr>
@@ -99,21 +104,21 @@
 </table>
 <p class="rubric">Notes</p>
 <p>For ease, a single SMM is used in the entire program.
-Thus this class has methods for setting the state/behaviour (e.g. reset, and set_on_eviction)</p>
+Thus this class has methods for setting the state/behaviour
+(e.g., <a class="reference internal" href="#pyjac.core.shared_memory.shared_memory_manager.reset" title="pyjac.core.shared_memory.shared_memory_manager.reset"><code class="xref any py py-meth docutils literal"><span class="pre">reset</span></code></a>, and <a class="reference internal" href="#pyjac.core.shared_memory.shared_memory_manager.set_on_eviction" title="pyjac.core.shared_memory.shared_memory_manager.set_on_eviction"><code class="xref any py py-meth docutils literal"><span class="pre">set_on_eviction</span></code></a>).</p>
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.force_eviction">
 <code class="descname">force_eviction</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.force_eviction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.force_eviction" title="Permalink to this definition">¶</a></dt>
-<dd><p>Forces eviction of the manager&#8217;s internal dictionary</p>
+<dd><p>Forces eviction of the manager&#8217;s internal dictionary.</p>
 <p class="rubric">Notes</p>
 <p>The internal dictionary will be reset, and (if supplied) the
-on_eviction function will be called on each evicted entry</p>
+<code class="xref any docutils literal"><span class="pre">on_eviction</span></code> function will be called on each evicted entry.</p>
 </dd></dl>
 
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap">
 <code class="descname">evict_longest_gap</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.evict_longest_gap"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap" title="Permalink to this definition">¶</a></dt>
-<dd><p>Evicts the entry in the internal dictionary
-that has gone the longest without use</p>
+<dd><p>Evicts entry in the internal dictionary the longest without use.</p>
 </dd></dl>
 
 <dl class="method">
@@ -129,7 +134,7 @@ that has gone the longest without use</p>
 </tbody>
 </table>
 <p class="rubric">Notes</p>
-<p>If set, on_eviction will be called</p>
+<p>If set, <code class="xref any docutils literal"><span class="pre">on_eviction</span></code> will be called.</p>
 </dd></dl>
 
 <dl class="method">
@@ -159,6 +164,10 @@ that has gone the longest without use</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<a class="reference external" href="https://docs.python.org/glossary.html#term-function" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">function</span></code></a>) &#8211; Function that takes one arguement (the evicted variable)</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -167,6 +176,16 @@ that has gone the longest without use</p>
 <dt id="pyjac.core.shared_memory.shared_memory_manager.reset">
 <code class="descname">reset</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.reset"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.reset" title="Permalink to this definition">¶</a></dt>
 <dd><p>Resets the SMM for use by other methods/callers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="method">
@@ -177,10 +196,16 @@ that has gone the longest without use</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open <code class="xref any docutils literal"><span class="pre">File</span></code> object to write to</li>
 <li><strong>indent</strong> (<em>int, optional</em>) &#8211; The number of spaces to use in the indent</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
 </td>
 </tr>
 </tbody>
@@ -190,19 +215,27 @@ that has gone the longest without use</p>
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.load_into_shared">
 <code class="descname">load_into_shared</code><span class="sig-paren">(</span><em>file</em>, <em>variables</em>, <em>estimated_usage=None</em>, <em>indent=2</em>, <em>load=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.load_into_shared"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.load_into_shared" title="Permalink to this definition">¶</a></dt>
-<dd><p>The main SMM method, loads/evicts variables based upon estimated usage and stagnancy</p>
+<dd><p>The main SMM method, loads/evicts variables based upon estimated
+usage and stagnancy.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open <code class="xref any docutils literal"><span class="pre">File</span></code> object to write to</li>
 <li><strong>variables</strong> (list of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; List of variables to consider loading</li>
 <li><strong>estimated_usage</strong> (<em>list of float, optional</em>) &#8211; If specified, these will be used to prioritize variable additon</li>
 <li><strong>indent</strong> (<em>int, optional</em>) &#8211; The number of spaces to use in the indentation</li>
-<li><strong>load</strong> (<em>bool, optional</em>) &#8211; If true (default), a load into the internal dictionary will be written to the file.
-If false, this will must be handled by the calling routine</li>
+<li><strong>load</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code> (default), a load into the internal dictionary will be
+written to the file. If <code class="docutils literal"><span class="pre">False</span></code>, this will must be handled by
+the calling routine.</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List of <a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a> to indicate if variables are loaded in shared memory.</p>
 </td>
 </tr>
 </tbody>
@@ -234,6 +267,12 @@ If so returns internal index and variable</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>var</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; The variable to check</td>
 </tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>our_ind</strong> (<em>int</em>) &#8211; Index of variable in internal dictionary</li>
+<li><strong>our_var</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; Variable found in internal dictionary</li>
+</ul>
+</td>
+</tr>
 </tbody>
 </table>
 </dd></dl>
@@ -241,8 +280,29 @@ If so returns internal index and variable</p>
 <dl class="method">
 <dt id="pyjac.core.shared_memory.shared_memory_manager.get_array">
 <code class="descname">get_array</code><span class="sig-paren">(</span><em>lang</em>, <em>thevar</em>, <em>index</em>, <em>twod=None</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager.get_array"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager.get_array" title="Permalink to this definition">¶</a></dt>
-<dd><p>A substitute for utils.get_array. If the variable is in our internal dictionary
-returns shared memory address, otherwise calles utils.get_array</p>
+<dd><p>A substitute for <a class="reference internal" href="pyjac.utils.html#pyjac.utils.get_array" title="pyjac.utils.get_array"><code class="xref any py py-func docutils literal"><span class="pre">utils.get_array</span></code></a>.</p>
+<p>If the variable is in our internal dictionary returns shared memory
+address, otherwise calls <a class="reference internal" href="pyjac.utils.html#pyjac.utils.get_array" title="pyjac.utils.get_array"><code class="xref any py py-func docutils literal"><span class="pre">utils.get_array</span></code></a>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language.</li>
+<li><strong>thevar</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; Variable of interest.</li>
+<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index in the array.</li>
+<li><strong>twod</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Not used in this function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>name</strong> &#8211; String with indexed array.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </dd></dl>
@@ -263,10 +323,12 @@ returns shared memory address, otherwise calles utils.get_array</p>
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -299,7 +361,7 @@ returns shared memory address, otherwise calles utils.get_array</p>
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.core.shared_memory.txt"

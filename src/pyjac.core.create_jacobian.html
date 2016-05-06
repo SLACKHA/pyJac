@@ -26,11 +26,13 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -48,10 +50,21 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>rxn_ind</strong> (<em>into</em>) &#8211; Index of reaction of interest.</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction of interest.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Full list of reactions.</li>
+<li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of reversible reactions.</li>
+<li><strong>pdep_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of pressure-dependent reactions.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
 <li><em>variable_list</em></li>
 <li><em>usages</em></li>
 </ul>
+</p>
 </td>
 </tr>
 </tbody>
@@ -179,10 +192,13 @@ reaction rate R with respect to a species <code class="docutils literal"><span c
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
-<li><strong>beta_0minf</strong> (<em>float</em>) &#8211; Arrhenius temperature exponent</li>
-<li><strong>E_0minf</strong> (<em>float</em>) &#8211; Arrhenius activation energy</li>
-<li><strong>k0kinf</strong> (<em>float</em>) &#8211; Arrhenius temperature exponent</li>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction object for pressure-dependent reaction (falloff or
+chemically activated bimolecular)</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><strong>beta_0minf</strong> (<em>float</em>) &#8211; Low-pressure limit temperature exponent minus high-pressure value.</li>
+<li><strong>E_0minf</strong> (<em>float</em>) &#8211; Low-pressure limit activation energy minus high-pressure value.</li>
+<li><strong>k0kinf</strong> (<em>float</em>) &#8211; Low-pressure limit reaction coefficient divided by high-pressure value.</li>
 </ul>
 </td>
 </tr>
@@ -193,30 +209,95 @@ reaction rate R with respect to a species <code class="docutils literal"><span c
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_dt_comment">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dt_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn_ind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dt_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dt_comment" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.create_jacobian.write_dy_comment">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn_ind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_comment" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.create_jacobian.write_dy_y_finish_comment">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_y_finish_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_y_finish_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_y_finish_comment" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="function">
-<dt id="pyjac.core.create_jacobian.get_rxn_params_dt">
-<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_rxn_params_dt</code><span class="sig-paren">(</span><em>rxn</em>, <em>rev=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_rxn_params_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_rxn_params_dt" title="Permalink to this definition">¶</a></dt>
-<dd><p>Write evaluation of the forward/reverse reaction rate constant for a reaction</p>
+<dd><p>Writes comment line for temperature partial derivatives of reactions</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open file object</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Programming language</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of reaction</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dy_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em>, <em>rxn_ind</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_comment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes comment line for species mass fraction partial derivatives</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open file object</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Programming language</li>
+<li><strong>rxn_ind</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of reaction</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.write_dy_y_finish_comment">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_dy_y_finish_comment</code><span class="sig-paren">(</span><em>file</em>, <em>lang</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_dy_y_finish_comment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_dy_y_finish_comment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Writes comment line for finishing species mass fraction derivatives</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open file object</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Programming language</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyjac.core.create_jacobian.get_rxn_params_dt">
+<code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">get_rxn_params_dt</code><span class="sig-paren">(</span><em>rxn</em>, <em>rev=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#get_rxn_params_dt"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.get_rxn_params_dt" title="Permalink to this definition">¶</a></dt>
+<dd><p>Write evaluation of the forward/reverse reaction rate constant</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
 <li><strong>rev</strong> (<em>bool, optional</em>) &#8211; If true, get the reverse constant rate constant derivative</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>jline</strong> &#8211; String containing evaluation of forward/reverse reaction rate constant</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
 </td>
 </tr>
 </tbody>
@@ -231,16 +312,22 @@ reaction rate R with respect to a species <code class="docutils literal"><span c
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
-<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
 <li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactions in the mechanism</li>
 <li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reversible reactions in the mechanism</li>
-<li><strong>dBdT_flag</strong> (<em>list of bool</em>) &#8211; Upon completion of this method this list contains <code class="docutils literal"><span class="pre">True</span></code> for in the index of
-all species with non-zero dB/dT entries</li>
-<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+<li><strong>dBdT_flag</strong> (<em>list of bool</em>) &#8211; Upon completion of this method this list contains <code class="docutils literal"><span class="pre">True</span></code> for
+the index of all species with non-zero dB/dT entries</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, turn on Jacobian unrolling</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
 </td>
 </tr>
 </tbody>
@@ -255,12 +342,18 @@ all species with non-zero dB/dT entries</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
-<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactio to consider</li>
-<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, Jacobian unrolling is turned on</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
+<li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, Jacobian unrolling is turned on</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>jline</strong> &#8211; String containing evaluation of dB/dT term</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
 </td>
 </tr>
 </tbody>
@@ -306,11 +399,17 @@ pressure dependent reaction</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
-<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The Programming language</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
 </td>
 </tr>
 </tbody>
@@ -407,10 +506,10 @@ a pressure dependent reaction</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Programming language, {&#8216;c&#8217;, &#8216;cuda&#8217;}</li>
-<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction of interest; pressure dependence expressed with Troe falloff</li>
-<li><strong>beta_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
-<li><strong>E_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
-<li><strong>k0kinf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; </li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction of interest; pressure dependence expressed with Troe falloff.</li>
+<li><strong>beta_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Low-pressure limit temperature exponent minus high-pressure value.</li>
+<li><strong>E_0minf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Low-pressure limit activation energy minus high-pressure value.</li>
+<li><strong>k0kinf</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Low-pressure limit reaction coefficient divided by high-pressure value.</li>
 </ul>
 </td>
 </tr>
@@ -577,7 +676,7 @@ elementary reaction.</p>
 <dl class="function">
 <dt id="pyjac.core.create_jacobian.write_sub_intro">
 <code class="descclassname">pyjac.core.create_jacobian.</code><code class="descname">write_sub_intro</code><span class="sig-paren">(</span><em>path</em>, <em>lang</em>, <em>number</em>, <em>rate_list</em>, <em>this_rev</em>, <em>this_pdep</em>, <em>have_pres_mod_temp</em>, <em>batch_has_m</em>, <em>this_thd</em>, <em>this_troe</em>, <em>this_sri</em>, <em>this_cheb</em>, <em>cheb_dim</em>, <em>this_plog</em>, <em>no_shared</em>, <em>has_nsp</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/create_jacobian.html#write_sub_intro"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.create_jacobian.write_sub_intro" title="Permalink to this definition">¶</a></dt>
-<dd><p>Writes the header and definitions for the various Jacobian reaction update subfiles</p>
+<dd><p>Writes the header and definitions for the Jacobian reaction update subfiles</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
@@ -587,25 +686,25 @@ elementary reaction.</p>
 <li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; Programming language</li>
 <li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Jacobian subfile number</li>
 <li><strong>rate_list</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The required reaction/species rate strings needed for the intro</li>
-<li><strong>this_rev</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a reversible reaction</li>
-<li><strong>this_pdep</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a pressure dependent (not counting PLog/Cheb) reaction</li>
-<li><strong>have_pres_mod_temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch requires definition of pres_mod_temp</li>
-<li><strong>batch_has_m</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch requires the overall concentration &#8216;m&#8217;</li>
-<li><strong>this_thd</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch has a third body reaction</li>
-<li><strong>this_troe</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a Troe reaction</li>
-<li><strong>this_sri</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains an SRI reaction</li>
-<li><strong>this_cheb</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a Chebyshev reaction</li>
-<li><strong>cheb_dim</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; If this_cheb is true, this is the largest chebyshev dimension required</li>
-<li><strong>this_plog</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this batch contains a PLOG reaction</li>
-<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, do not use CUDA shared memory</li>
-<li><strong>has_nsp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, at least one reaction has a non-zero contribution from the last species</li>
+<li><strong>this_rev</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains a reversible reaction</li>
+<li><strong>this_pdep</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains pressure dependent (falloff/bimolecular) reaction</li>
+<li><strong>have_pres_mod_temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch requires definition of <code class="xref any docutils literal"><span class="pre">pres_mod_temp</span></code></li>
+<li><strong>batch_has_m</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch requires the overall concentration &#8216;m&#8217;</li>
+<li><strong>this_thd</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch has a third-body reaction</li>
+<li><strong>this_troe</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains a Troe reaction</li>
+<li><strong>this_sri</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains an SRI reaction</li>
+<li><strong>this_cheb</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains a Chebyshev reaction</li>
+<li><strong>cheb_dim</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; If <code class="xref any docutils literal"><span class="pre">this_cheb</span></code> is <code class="docutils literal"><span class="pre">True</span></code>, the largest Chebyshev dimension required</li>
+<li><strong>this_plog</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains a PLOG reaction</li>
+<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use CUDA shared memory</li>
+<li><strong>has_nsp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, &gt;=1 reaction has nonzero contribution from the last species</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>file</strong> &#8211; Opened Jacobian file</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">file object</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="xref any docutils literal"><span class="pre">File</span></code> object</p>
 </td>
 </tr>
 </tbody>
@@ -620,12 +719,18 @@ elementary reaction.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The path to place the file in</li>
 <li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The jacobian subfile index</li>
-<li><strong>have_jnplus_jplus</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, the last species has non-zero contributions to the Jacobian</li>
+<li><strong>have_jnplus_jplus</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, the last species has non-zero contributions to the Jacobian</li>
 </ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>file</strong> &#8211; Jacobian file object</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="xref any docutils literal"><span class="pre">File</span></code></p>
 </td>
 </tr>
 </tbody>
@@ -645,7 +750,7 @@ elementary reaction.</p>
 <li><strong>lang</strong> (<em>str {'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
 <li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in the mechanism.</li>
 <li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in the mechanism.</li>
-<li><strong>seen_sp</strong> (<em>list of bool</em>) &#8211; List of booleans, False if species i has an (identically) zero species rate</li>
+<li><strong>seen_sp</strong> (<em>list of bool</em>) &#8211; List of <a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a>; <code class="docutils literal"><span class="pre">False</span></code> if species has (identically) zero rate</li>
 <li><strong>smm</strong> (<em>shared_memory_manager, optional</em>) &#8211; If not <code class="docutils literal"><span class="pre">None</span></code>, use this to manage shared memory optimization</li>
 </ul>
 </td>
@@ -746,10 +851,12 @@ Typically should be N2, Ar, He or another inert bath gas</li>
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -782,7 +889,7 @@ Typically should be N2, Ar, He or another inert bath gas</li>
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.core.create_jacobian.txt"

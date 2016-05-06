@@ -26,11 +26,13 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -39,22 +41,76 @@
             
   <div class="section" id="module-pyjac.pywrap.pywrap_gen">
 <span id="pyjac-pywrap-pywrap-gen-module"></span><h1>pyjac.pywrap.pywrap_gen module<a class="headerlink" href="#module-pyjac.pywrap.pywrap_gen" title="Permalink to this headline">¶</a></h1>
+<p>Module for generating Python wrapper around pyJac code.</p>
 <dl class="function">
 <dt id="pyjac.pywrap.pywrap_gen.generate_setup">
 <code class="descclassname">pyjac.pywrap.pywrap_gen.</code><code class="descname">generate_setup</code><span class="sig-paren">(</span><em>setupfile</em>, <em>home_dir</em>, <em>build_dir</em>, <em>out_dir</em>, <em>libname</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/pywrap/pywrap_gen.html#generate_setup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.pywrap.pywrap_gen.generate_setup" title="Permalink to this definition">¶</a></dt>
 <dd><p>Helper method to fill in the template .in files</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>setupfile</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename of existing setup file</li>
+<li><strong>home_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Home directory path</li>
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Build directory path</li>
+<li><strong>out_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Output directory path</li>
+<li><strong>libname</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Library name</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pyjac.pywrap.pywrap_gen.distutils_dir_name">
 <code class="descclassname">pyjac.pywrap.pywrap_gen.</code><code class="descname">distutils_dir_name</code><span class="sig-paren">(</span><em>dname</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/pywrap/pywrap_gen.html#distutils_dir_name"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.pywrap.pywrap_gen.distutils_dir_name" title="Permalink to this definition">¶</a></dt>
 <dd><p>Returns the name of a distutils build directory</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dname</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Base directory name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Name of a distutils build directory</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 <dl class="function">
 <dt id="pyjac.pywrap.pywrap_gen.generate_wrapper">
 <code class="descclassname">pyjac.pywrap.pywrap_gen.</code><code class="descname">generate_wrapper</code><span class="sig-paren">(</span><em>lang</em>, <em>source_dir</em>, <em>out_dir=None</em>, <em>auto_diff=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/pywrap/pywrap_gen.html#generate_wrapper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.pywrap.pywrap_gen.generate_wrapper" title="Permalink to this definition">¶</a></dt>
-<dd><p>Generates a python wrapper for the given language and source files</p>
+<dd><p>Generates a Python wrapper for the given language and source files</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lang</strong> (<em>{'cuda', 'c', 'tchem'}</em>) &#8211; Programming language of pyJac (cuda, c) or TChem</li>
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Directory path of source files.</li>
+<li><strong>out_dir</strong> (<em>Optional[str]</em>) &#8211; Directory path for output files</li>
+<li><strong>auto_diff</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, build autodifferentiation library</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -73,10 +129,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -109,7 +167,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.pywrap.pywrap_gen.txt"

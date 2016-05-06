@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -39,7 +41,8 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.core.shared_memory</h1><div class="highlight"><pre>
-<span></span><span class="sd">&quot;&quot;&quot;Handles shared memory usage to accelerate memory accesses for CUDA&quot;&quot;&quot;</span>
+<span></span><span class="sd">&quot;&quot;&quot;Handles shared memory usage to accelerate memory accesses for CUDA</span>
+<span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -51,8 +54,9 @@
 
 <div class="viewcode-block" id="variable"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.variable">[docs]</a><span class="k">class</span> <span class="nc">variable</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    Class that represents an array/index pair.  Used for in the internal dicitonary of the</span>
-<span class="sd">    `shared_memory_manager` for identification and tracking of `variable` usage for eviction</span>
+<span class="sd">    Class that represents an array/index pair.  Used for in the internal</span>
+<span class="sd">    dicitonary of the `shared_memory_manager` for identification and</span>
+<span class="sd">    tracking of `variable` usage for eviction.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">lang</span><span class="o">=</span><span class="s1">&#39;cuda&#39;</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -65,24 +69,29 @@
 <span class="sd">            The name of the array</span>
 <span class="sd">        index : int</span>
 <span class="sd">            The index in the array</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">=</span> <span class="n">base</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_use_count</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lang</span> <span class="o">=</span> <span class="n">lang</span>
+
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Tests `variable` equality&quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">base</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">base</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">index</span>
+
 <div class="viewcode-block" id="variable.reset"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.variable.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Reset the usage count of this `variable`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_use_count</span> <span class="o">=</span> <span class="mi">0</span></div>
+
 <div class="viewcode-block" id="variable.update"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.variable.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Increment the usage count of this `variable`</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">last_use_count</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
 <div class="viewcode-block" id="variable.to_string"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.variable.to_string">[docs]</a>    <span class="k">def</span> <span class="nf">to_string</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Converts this `variable` to a string representation</span>
 <span class="sd">        &quot;&quot;&quot;</span>
@@ -90,7 +99,10 @@
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span>
         <span class="k">return</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lang</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">base</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">)</span></div></div>
 
+
 <div class="viewcode-block" id="shared_memory_manager"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager">[docs]</a><span class="k">class</span> <span class="nc">shared_memory_manager</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Manager for GPU shared memory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">blocks_per_sm</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">L1_PREFERRED</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Creates a shared memory manager</span>
 
@@ -101,12 +113,15 @@
 <span class="sd">        num_threads : int, optional</span>
 <span class="sd">            The number of threads / block expected in kernel launches</span>
 <span class="sd">        L1_PREFERRED : bool, optional</span>
-<span class="sd">            Whether or not to prefer a larger L1 cache over more shared memory (recommended)</span>
+<span class="sd">            Whether or not to prefer a larger L1 cache over more shared memory</span>
+<span class="sd">            (recommended).</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        For ease, a single SMM is used in the entire program.  </span>
-<span class="sd">        Thus this class has methods for setting the state/behaviour (e.g. reset, and set_on_eviction)</span>
+<span class="sd">        For ease, a single SMM is used in the entire program.</span>
+<span class="sd">        Thus this class has methods for setting the state/behaviour</span>
+<span class="sd">        (e.g., `reset`, and `set_on_eviction`).</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">SHARED_MEMORY_SIZE</span> <span class="o">=</span> <span class="n">CUDAParams</span><span class="o">.</span><span class="n">get_shared_size</span><span class="p">(</span><span class="n">L1_PREFERRED</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">blocks_per_sm</span> <span class="o">=</span> <span class="n">blocks_per_sm</span>
@@ -121,23 +136,25 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">self_eviction_strategy</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">last_use_count</span> <span class="o">&gt;=</span> <span class="mi">2</span>
 
 <div class="viewcode-block" id="shared_memory_manager.force_eviction"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.force_eviction">[docs]</a>    <span class="k">def</span> <span class="nf">force_eviction</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Forces eviction of the manager&#39;s internal dictionary</span>
+        <span class="sd">&quot;&quot;&quot;Forces eviction of the manager&#39;s internal dictionary.</span>
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        The internal dictionary will be reset, and (if supplied) the </span>
-<span class="sd">        on_eviction function will be called on each evicted entry</span>
+<span class="sd">        The internal dictionary will be reset, and (if supplied) the</span>
+<span class="sd">        `on_eviction` function will be called on each evicted entry.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">key_copy</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">iterkeys</span><span class="p">()]</span>
+        <span class="n">key_copy</span> <span class="o">=</span> <span class="p">[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()]</span>
         <span class="k">for</span> <span class="n">shared_index</span> <span class="ow">in</span> <span class="n">key_copy</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">evict</span><span class="p">(</span><span class="n">shared_index</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="shared_memory_manager.evict_longest_gap"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.evict_longest_gap">[docs]</a>    <span class="k">def</span> <span class="nf">evict_longest_gap</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Evicts the entry in the internal dictionary </span>
-<span class="sd">           that has gone the longest without use&quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Evicts entry in the internal dictionary the longest without use.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">):</span>
             <span class="n">ind</span> <span class="o">=</span> <span class="nb">max</span><span class="p">((</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span><span class="p">[</span><span class="n">x</span><span class="p">]),</span>
-                      <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">last_use_count</span><span class="p">)</span>
+                      <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">k</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">[</span><span class="n">k</span><span class="p">]</span><span class="o">.</span><span class="n">last_use_count</span>
+                      <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">evict</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="shared_memory_manager.evict"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.evict">[docs]</a>    <span class="k">def</span> <span class="nf">evict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shared_index</span><span class="p">):</span>
@@ -150,7 +167,8 @@
 
 <span class="sd">        Notes</span>
 <span class="sd">        -----</span>
-<span class="sd">        If set, on_eviction will be called</span>
+<span class="sd">        If set, `on_eviction` will be called.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">[</span><span class="n">shared_index</span><span class="p">]</span>
         <span class="k">del</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">[</span><span class="n">shared_index</span><span class="p">]</span>
@@ -158,6 +176,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span><span class="p">[</span><span class="n">shared_index</span><span class="p">]</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">on_eviction</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">on_eviction</span><span class="p">(</span><span class="n">var</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_string</span><span class="p">(</span><span class="n">shared_index</span><span class="p">),</span> <span class="n">shared_index</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="shared_memory_manager.add_to_dictionary"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.add_to_dictionary">[docs]</a>    <span class="k">def</span> <span class="nf">add_to_dictionary</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">val</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Adds the value to the next available dictionary location</span>
 
@@ -165,26 +184,37 @@
 <span class="sd">        ----------</span>
 <span class="sd">        val : `variable`</span>
 <span class="sd">            The value to add to the dictionary</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_indexes</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_indexes</span><span class="o">.</span><span class="n">pop</span><span class="p">()]</span> <span class="o">=</span> <span class="n">val</span></div>
 
 <div class="viewcode-block" id="shared_memory_manager.set_on_eviction"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.set_on_eviction">[docs]</a>    <span class="k">def</span> <span class="nf">set_on_eviction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">func</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Sets a callback function that is called upon eviction of a variable from the </span>
+        <span class="sd">&quot;&quot;&quot;Sets a callback function that is called upon eviction of a variable from the</span>
 <span class="sd">           internal dictionary</span>
-<span class="sd">        </span>
+
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
 <span class="sd">        func : `function`</span>
 <span class="sd">            Function that takes one arguement (the evicted variable)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">on_eviction</span> <span class="o">=</span> <span class="n">func</span></div>
 
 <div class="viewcode-block" id="shared_memory_manager.reset"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.reset">[docs]</a>    <span class="k">def</span> <span class="nf">reset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Resets the SMM for use by other methods/callers</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span> <span class="o">=</span> <span class="p">{}</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">shared_indexes</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">shared_indexes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span><span class="p">))</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span> <span class="o">=</span> <span class="p">[</span><span class="bp">False</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span><span class="p">)]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">on_eviction</span> <span class="o">=</span> <span class="bp">None</span></div>
 
@@ -197,16 +227,25 @@
 <span class="sd">            Open `File` object to write to</span>
 <span class="sd">        indent : int, optional</span>
 <span class="sd">            The number of spaces to use in the indent</span>
-<span class="sd">        &quot;&quot;&quot;</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39; &#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">indent</span><span class="p">)])</span> <span class="o">+</span> <span class="s1">&#39;extern __shared__ double &#39;</span> <span class="o">+</span>
-                   <span class="bp">self</span><span class="o">.</span><span class="n">skeleton</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="s1">&#39;cuda&#39;</span><span class="p">])</span></div>
 
-<div class="viewcode-block" id="shared_memory_manager.load_into_shared"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.load_into_shared">[docs]</a>    <span class="k">def</span> <span class="nf">load_into_shared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">estimated_usage</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">load</span><span class="o">=</span><span class="bp">True</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;The main SMM method, loads/evicts variables based upon estimated usage and stagnancy</span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="s1">&#39; &#39;</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">indent</span><span class="p">)])</span> <span class="o">+</span>
+                   <span class="s1">&#39;extern __shared__ double &#39;</span> <span class="o">+</span>
+                   <span class="bp">self</span><span class="o">.</span><span class="n">skeleton</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="s1">&#39;cuda&#39;</span><span class="p">]</span>
+                   <span class="p">)</span></div>
+
+<div class="viewcode-block" id="shared_memory_manager.load_into_shared"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.load_into_shared">[docs]</a>    <span class="k">def</span> <span class="nf">load_into_shared</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="nb">file</span><span class="p">,</span> <span class="n">variables</span><span class="p">,</span> <span class="n">estimated_usage</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                         <span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">load</span><span class="o">=</span><span class="bp">True</span>
+                         <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;The main SMM method, loads/evicts variables based upon estimated</span>
+<span class="sd">        usage and stagnancy.</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-
 <span class="sd">        file : `File`</span>
 <span class="sd">            Open `File` object to write to</span>
 <span class="sd">        variables : list of `variable`</span>
@@ -216,14 +255,20 @@
 <span class="sd">        indent : int, optional</span>
 <span class="sd">            The number of spaces to use in the indentation</span>
 <span class="sd">        load : bool, optional</span>
-<span class="sd">            If true (default), a load into the internal dictionary will be written to the file.</span>
-<span class="sd">            If false, this will must be handled by the calling routine</span>
+<span class="sd">            If ``True`` (default), a load into the internal dictionary will be</span>
+<span class="sd">            written to the file. If ``False``, this will must be handled by</span>
+<span class="sd">            the calling routine.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        List of `bool` to indicate if variables are loaded in shared memory.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1">#save old variables</span>
         <span class="n">old_index</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="n">old_variables</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">):</span>
-            <span class="n">old_index</span><span class="p">,</span> <span class="n">old_variables</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">())</span>
+            <span class="n">old_index</span><span class="p">,</span> <span class="n">old_variables</span> <span class="o">=</span> <span class="nb">zip</span><span class="p">(</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">items</span><span class="p">())</span>
 
         <span class="c1">#update all the old variables usage counts</span>
         <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">old_variables</span><span class="p">:</span>
@@ -231,7 +276,7 @@
 
         <span class="c1">#check for self_eviction</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">self_eviction_strategy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="c1">#if qualifies for self eviction and not in current set</span>
                 <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">self_eviction_strategy</span><span class="p">(</span><span class="n">val</span><span class="p">)</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span><span class="p">[</span><span class="n">ind</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
@@ -241,7 +286,9 @@
         <span class="c1">#sort by usage if available</span>
         <span class="k">if</span> <span class="n">estimated_usage</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
             <span class="n">variables</span> <span class="o">=</span> <span class="p">[(</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">estimated_usage</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span>
-                         <span class="nb">sorted</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">variables</span><span class="p">),</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">estimated_usage</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)]</span>
+                         <span class="nb">sorted</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">variables</span><span class="p">),</span>
+                         <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">estimated_usage</span><span class="p">[</span><span class="n">x</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span> <span class="n">reverse</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                         <span class="p">]</span>
 
         <span class="c1">#now update for new variables</span>
         <span class="k">for</span> <span class="n">thevar</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
@@ -251,14 +298,15 @@
                 <span class="n">var</span> <span class="o">=</span> <span class="n">thevar</span>
                 <span class="n">usage</span> <span class="o">=</span> <span class="bp">None</span>
             <span class="c1">#don&#39;t re-add if it&#39;s already in</span>
-            <span class="k">if</span> <span class="ow">not</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
                 <span class="c1">#skip barely used ones</span>
                 <span class="k">if</span> <span class="n">usage</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
                     <span class="k">continue</span>
                 <span class="c1">#if we have something marked for eviction, now&#39;s the time</span>
-                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span> <span class="ow">and</span> \
-                        <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="bp">True</span><span class="p">):</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">evict_longest_gap</span><span class="p">()</span>
+                <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span> <span class="ow">and</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="bp">True</span><span class="p">)</span>
+                    <span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">evict_longest_gap</span><span class="p">()</span>
                 <span class="c1">#add it if possible</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span><span class="p">:</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">add_to_dictionary</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
@@ -266,37 +314,55 @@
         <span class="k">if</span> <span class="n">estimated_usage</span><span class="p">:</span>
             <span class="c1"># add any usage = 1 ones if space</span>
             <span class="k">for</span> <span class="n">var</span><span class="p">,</span> <span class="n">usage</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">itervalues</span><span class="p">():</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="p">)</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_per_thread</span><span class="p">:</span>
                         <span class="bp">self</span><span class="o">.</span><span class="n">add_to_dictionary</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">load</span> <span class="ow">is</span> <span class="bp">True</span><span class="p">:</span>
             <span class="c1"># need to write loads for any new vars</span>
-            <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">ind</span><span class="p">,</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">old_variables</span><span class="p">:</span>
-                    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="n">indent</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_string</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="o">+</span> <span class="s1">&#39; = &#39;</span> <span class="o">+</span> <span class="n">val</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="o">+</span>
-                                <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="s1">&#39;cuda&#39;</span><span class="p">])</span>
+                    <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39; &#39;</span> <span class="o">*</span> <span class="n">indent</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_string</span><span class="p">(</span><span class="n">ind</span><span class="p">)</span> <span class="o">+</span>
+                               <span class="s1">&#39; = &#39;</span> <span class="o">+</span> <span class="n">val</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span> <span class="o">+</span>
+                               <span class="n">utils</span><span class="o">.</span><span class="n">line_end</span><span class="p">[</span><span class="s1">&#39;cuda&#39;</span><span class="p">]</span>
+                               <span class="p">)</span>
 
-        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:(</span><span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">old_variables</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()}</span></div>
+        <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:(</span><span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">old_variables</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">}</span></div>
 
 <div class="viewcode-block" id="shared_memory_manager.mark_for_eviction"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.mark_for_eviction">[docs]</a>    <span class="k">def</span> <span class="nf">mark_for_eviction</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Marks variables for possible eviction upon next load_into_shared call</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-
 <span class="sd">        variables : list of `variable`</span>
 <span class="sd">            List of variables to consider for eviction</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span> <span class="ow">in</span> <span class="n">variables</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">itervalues</span><span class="p">()]</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">eviction_marking</span> <span class="o">=</span> <span class="p">[</span><span class="n">var</span> <span class="ow">in</span> <span class="n">variables</span> <span class="k">for</span> <span class="n">var</span> <span class="ow">in</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+                                 <span class="p">]</span></div>
 
     <span class="k">def</span> <span class="nf">__get_string</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Convenience method to get correct GPU shared memory addressing</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        index : int</span>
+<span class="sd">            Index of GPU block.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        str</span>
+<span class="sd">            String with shared memory addressing.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">skeleton</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;threadIdx.x&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">skeleton</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;threadIdx.x + {} * blockDim.x&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">skeleton</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;threadIdx.x + &#39;</span>
+                                        <span class="s1">&#39;{} * blockDim.x&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                                        <span class="p">)</span>
 
 <div class="viewcode-block" id="shared_memory_manager.get_index"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.get_index">[docs]</a>    <span class="k">def</span> <span class="nf">get_index</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">var</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;Checks to see if a variable is in the internal dictionary.</span>
@@ -304,16 +370,44 @@
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
-
 <span class="sd">        var : `variable`</span>
 <span class="sd">            The variable to check</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        our_ind : int</span>
+<span class="sd">            Index of variable in internal dictionary</span>
+<span class="sd">        our_var : `variable`</span>
+<span class="sd">            Variable found in internal dictionary</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">our_ind</span><span class="p">,</span> <span class="n">our_var</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">val</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">iteritems</span><span class="p">()</span> <span class="k">if</span> <span class="n">val</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">var</span><span class="p">),</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">))</span>
+        <span class="n">our_ind</span><span class="p">,</span> <span class="n">our_var</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">val</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">shared_dict</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                                <span class="k">if</span> <span class="n">val</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="n">var</span><span class="p">),</span> <span class="p">(</span><span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+                                <span class="p">)</span>
         <span class="k">return</span> <span class="n">our_ind</span><span class="p">,</span> <span class="n">our_var</span></div>
 
 <div class="viewcode-block" id="shared_memory_manager.get_array"><a class="viewcode-back" href="../../../src/pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager.get_array">[docs]</a>    <span class="k">def</span> <span class="nf">get_array</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">thevar</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">twod</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;A substitute for utils.get_array. If the variable is in our internal dictionary</span>
-<span class="sd">        returns shared memory address, otherwise calles utils.get_array</span>
+        <span class="sd">&quot;&quot;&quot;A substitute for `utils.get_array`.</span>
+
+<span class="sd">        If the variable is in our internal dictionary returns shared memory</span>
+<span class="sd">        address, otherwise calls `utils.get_array`.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lang : {&#39;c&#39;, &#39;cuda&#39;}</span>
+<span class="sd">            Programming language.</span>
+<span class="sd">        thevar : `variable`</span>
+<span class="sd">            Variable of interest.</span>
+<span class="sd">        index : int</span>
+<span class="sd">            Index in the array.</span>
+<span class="sd">        twod : int</span>
+<span class="sd">            Not used in this function.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        name : str</span>
+<span class="sd">            String with indexed array.</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">var</span> <span class="o">=</span> <span class="n">variable</span><span class="p">(</span><span class="n">thevar</span><span class="p">,</span> <span class="n">index</span><span class="p">,</span> <span class="n">lang</span><span class="p">)</span>
         <span class="n">our_ind</span><span class="p">,</span> <span class="n">our_var</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_index</span><span class="p">(</span><span class="n">var</span><span class="p">)</span>
@@ -321,9 +415,10 @@
             <span class="c1">#mark as used</span>
             <span class="n">our_var</span><span class="o">.</span><span class="n">reset</span><span class="p">()</span>
             <span class="c1">#and return the shared string</span>
-            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_string</span><span class="p">(</span><span class="n">our_ind</span><span class="p">)</span>
+            <span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__get_string</span><span class="p">(</span><span class="n">our_ind</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="k">return</span> <span class="n">var</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span></div></div>
+            <span class="n">name</span> <span class="o">=</span> <span class="n">var</span><span class="o">.</span><span class="n">to_string</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">name</span></div></div>
 </pre></div>
 
           </div>
@@ -339,10 +434,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -375,7 +472,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

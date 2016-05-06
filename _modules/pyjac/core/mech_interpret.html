@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -983,25 +985,27 @@
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ThreeBodyReaction</span><span class="p">):</span>
             <span class="c1"># Instantiate internal reaction based on Cantera Reaction data.</span>
             <span class="n">reac</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">ReacInfo</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span><span class="p">,</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">pre_exponential_factor</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">temperature_exponent</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
                                  <span class="p">)</span>
             <span class="n">reac</span><span class="o">.</span><span class="n">thd_body</span> <span class="o">=</span> <span class="bp">True</span>
             <span class="k">for</span> <span class="n">thd_body</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
-                <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">thd_body</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">thd_body</span><span class="p">]])</span>
+                <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">thd_body</span><span class="p">,</span>
+                                          <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">thd_body</span><span class="p">]</span>
+                                          <span class="p">])</span>
 
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">and</span> \
              <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">):</span>
             <span class="n">reac</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">ReacInfo</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span><span class="p">,</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">high_rate</span><span class="o">.</span><span class="n">pre_exponential_factor</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">high_rate</span><span class="o">.</span><span class="n">temperature_exponent</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">high_rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
@@ -1009,7 +1013,7 @@
             <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="bp">True</span>
             <span class="c1"># See if single species acts as third body</span>
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">default_efficiency</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
                     <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">sp</span><span class="p">]])</span>
@@ -1028,10 +1032,10 @@
 
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">):</span>
             <span class="n">reac</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">ReacInfo</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span><span class="p">,</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">low_rate</span><span class="o">.</span><span class="n">pre_exponential_factor</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">low_rate</span><span class="o">.</span><span class="n">temperature_exponent</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">low_rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
@@ -1039,7 +1043,7 @@
             <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="bp">True</span>
             <span class="c1"># See if single species acts as third body</span>
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">default_efficiency</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
                     <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">sp</span><span class="p">]])</span>
@@ -1058,10 +1062,10 @@
 
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">PlogReaction</span><span class="p">):</span>
             <span class="n">reac</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">ReacInfo</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span><span class="p">,</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
                                  <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span>
                                  <span class="p">)</span>
             <span class="n">reac</span><span class="o">.</span><span class="n">plog</span> <span class="o">=</span> <span class="bp">True</span>
@@ -1075,10 +1079,10 @@
 
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChebyshevReaction</span><span class="p">):</span>
             <span class="n">reac</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">ReacInfo</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span><span class="p">,</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
                                  <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.0</span>
                                  <span class="p">)</span>
             <span class="n">reac</span><span class="o">.</span><span class="n">cheb</span> <span class="o">=</span> <span class="bp">True</span>
@@ -1096,10 +1100,10 @@
                 <span class="k">continue</span>
 
             <span class="n">reac</span> <span class="o">=</span> <span class="n">chem</span><span class="o">.</span><span class="n">ReacInfo</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span><span class="p">,</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">(),</span>
-                                 <span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">(),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">reactants</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">keys</span><span class="p">()),</span>
+                                 <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">products</span><span class="o">.</span><span class="n">values</span><span class="p">()),</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">pre_exponential_factor</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">temperature_exponent</span><span class="p">,</span>
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
@@ -1131,10 +1135,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -1167,7 +1173,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

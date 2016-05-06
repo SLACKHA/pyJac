@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -175,12 +177,12 @@
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//last_spec {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">last_spec</span><span class="p">))</span>
 
         <span class="c1"># convience: write species indexes</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;/* Species Indexes</span><span class="se">\n</span><span class="s1">&#39;</span>
-                   <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;{}  {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;/* Species Indexes</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;{}  {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
                              <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span>
-                             <span class="p">)</span> <span class="o">+</span> 
-                   <span class="s1">&#39;*/</span><span class="se">\n\n</span><span class="s1">&#39;</span>
+                             <span class="p">)</span>
                    <span class="p">)</span>
+        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;*/</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;//Number of species</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;#define NSP {}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">))</span> <span class="o">+</span>
@@ -384,7 +386,7 @@
                        <span class="s1">&#39;  //returns the total required size for the mechanism per thread</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;  size_t mech_size = 0;</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="p">)</span>
-            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;  //{}</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">)</span> <span class="o">+</span>
                            <span class="s1">&#39;  mech_size += {};</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">size</span><span class="p">)</span>
                            <span class="p">)</span>
@@ -406,7 +408,7 @@
                 <span class="s1">&#39;  //allocate the device arrays on the host pointer</span><span class="se">\n</span><span class="s1">&#39;</span>
                 <span class="p">)</span>
 
-            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">iteritems</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">array</span><span class="p">,</span> <span class="n">size</span> <span class="ow">in</span> <span class="n">gpu_memory</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
                     <span class="n">err_check</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                     <span class="s1">&#39;cudaMalloc(&amp;((*h_mem)-&gt;{}), {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">size</span><span class="p">)</span> <span class="o">+</span>
@@ -533,10 +535,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -569,7 +573,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

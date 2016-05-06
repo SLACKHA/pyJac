@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -39,7 +41,10 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.functional_tester.test</h1><div class="highlight"><pre>
-<span></span><span class="c1"># Python 2 compatibility</span>
+<span></span><span class="sd">&quot;&quot;&quot;Module for testing function (accuracy) of pyJac.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="c1"># Python 2 compatibility</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
 <span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
 
@@ -87,18 +92,36 @@
 
 
 <div class="viewcode-block" id="ReactorConstPres"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.ReactorConstPres">[docs]</a><span class="k">class</span> <span class="nc">ReactorConstPres</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
+    <span class="sd">&quot;&quot;&quot;Object for constant pressure ODE system.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">):</span>
-        <span class="c1"># Parameters of the ODE system and auxiliary data are stored in the</span>
-        <span class="c1"># ReactorConstPres object.</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            `cantera.Solution` object with the kinetic system</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gas</span> <span class="o">=</span> <span class="n">gas</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">P</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">P</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;the ODE function, y&#39; = f(t,y) &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Return the ODE function, y&#39; = f(t,y)</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `numpy.array` with dT/dt + dY/dt</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># State vector is [T, Y_1, Y_2, ... Y_K]</span>
-        <span class="c1"># Only set state if something is input</span>
         <span class="n">rho</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">density</span>
 
         <span class="n">wdot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">net_production_rates</span>
@@ -111,18 +134,37 @@
 
 
 <div class="viewcode-block" id="ReactorConstVol"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.ReactorConstVol">[docs]</a><span class="k">class</span> <span class="nc">ReactorConstVol</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
-
+    <span class="sd">&quot;&quot;&quot;Object for constant volume ODE system.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">):</span>
-        <span class="c1"># Parameters of the ODE system and auxiliary data are stored in the</span>
-        <span class="c1"># ReactorConstVol object.</span>
+        <span class="sd">&quot;&quot;&quot;Initialize `ReactorConstVol`</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            `cantera.Solution` object with the kinetic system</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">gas</span> <span class="o">=</span> <span class="n">gas</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">density</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">density</span>
 
     <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;the ODE function, y&#39; = f(t,y) &quot;&quot;&quot;</span>
+        <span class="sd">&quot;&quot;&quot;Return the ODE function, y&#39; = f(t,y)</span>
 
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        `numpy.array` with dT/dt + dY/dt</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="c1"># State vector is [T, Y_1, Y_2, ... Y_K]</span>
-        <span class="c1"># Only set state if something is input</span>
 
         <span class="n">wdot</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">net_production_rates</span>
         <span class="n">dTdt</span> <span class="o">=</span> <span class="o">-</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gas</span><span class="o">.</span><span class="n">partial_molar_int_energies</span><span class="p">,</span> <span class="n">wdot</span><span class="p">)</span> <span class="o">/</span>
@@ -139,12 +181,20 @@
 <span class="sd">    Convert a CHEMKIN format mechanism to the Cantera CTI format using</span>
 <span class="sd">    the Cantera built-in script ``ck2cti``.</span>
 
-<span class="sd">    :param mech_filename:</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    mech_filename : str</span>
 <span class="sd">        Filename of the input CHEMKIN format mechanism. The converted</span>
 <span class="sd">        CTI file will have the same name, but with ``.cti`` extension.</span>
-<span class="sd">    :param thermo_filename:</span>
-<span class="sd">        Filename of the thermodynamic database. Optional if the</span>
+<span class="sd">    thermo_filename : str</span>
+<span class="sd">        Filename of the thermodynamic database. Optional, if the</span>
 <span class="sd">        thermodynamic database is present in the mechanism input.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mech_filename : str</span>
+<span class="sd">        Filename of converted mechanism in Cantera ``.cti`` format.</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">arg</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;--input=&#39;</span> <span class="o">+</span> <span class="n">mech_filename</span><span class="p">]</span>
@@ -161,17 +211,43 @@
     <span class="k">return</span> <span class="n">mech_filename</span></div>
 
 
-<div class="viewcode-block" id="autodiff_jacob"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.autodiff_jacob">[docs]</a><span class="k">class</span> <span class="nc">autodiff_jacob</span><span class="p">:</span>
+<div class="viewcode-block" id="AutodiffJacob"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.AutodiffJacob">[docs]</a><span class="k">class</span> <span class="nc">AutodiffJacob</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pressure</span><span class="p">,</span> <span class="n">fwd_spec_map</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Initialize autodifferentation object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pressure : float</span>
+<span class="sd">            Pressure in Pascals</span>
+<span class="sd">        fwd_spec_map : `numpy.array`</span>
+<span class="sd">            Map of original species indices to new indices</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pres</span> <span class="o">=</span> <span class="n">pressure</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">fwd_spec_map</span>
         <span class="kn">import</span> <span class="nn">adjacob</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">jac</span> <span class="o">=</span> <span class="n">adjacob</span>
 
-<div class="viewcode-block" id="autodiff_jacob.eval_jacobian"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.autodiff_jacob.eval_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">eval_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Evaluate finite difference Jacobian.</span>
+<div class="viewcode-block" id="AutodiffJacob.eval_jacobian"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.AutodiffJacob.eval_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">eval_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">gas</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate finite difference Jacobian using Adept \</span>
+<span class="sd">        autodifferentiation package.</span>
 
-<span class="sd">        Uses autodifferentiation package Adept</span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            `cantera.Solution` object with the kinetic system</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        jacob : `numpy.array`</span>
+<span class="sd">            Jacobian matrix evaluated using autodifferentiation</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
 
         <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">gas</span><span class="o">.</span><span class="n">T</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">][:</span><span class="o">-</span><span class="mi">1</span><span class="p">]))</span>
@@ -183,12 +259,41 @@
 
 
 <div class="viewcode-block" id="is_pdep"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.is_pdep">[docs]</a><span class="k">def</span> <span class="nf">is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Check if reaction is traditionally pressure dependent</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rxn : `ReacInfo`</span>
+<span class="sd">        Reaction object of interest</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ``True`` if third-body, falloff, or chemically activated reaction.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ThreeBodyReaction</span><span class="p">)</span> <span class="ow">or</span>
-    <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">or</span>
-    <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">))</span></div>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">or</span>
+            <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">)</span>
+            <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="run_pasr"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.run_pasr">[docs]</a><span class="k">def</span> <span class="nf">run_pasr</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="p">):</span>
+<div class="viewcode-block" id="run_pasr"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.run_pasr">[docs]</a><span class="k">def</span> <span class="nf">run_pasr</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Run PaSR simulation to get thermochemical data for testing.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    pasr_input_file : str</span>
+<span class="sd">        Name of PaSR input file in YAML format</span>
+<span class="sd">    mech_filename : str</span>
+<span class="sd">        Name of Cantera-format mechanism file</span>
+<span class="sd">    pasr_output_file : str</span>
+<span class="sd">        Optional; filename for saving PaSR output data</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    state_data : ``numpy.array``</span>
+<span class="sd">        Array with state data (time, temperature, pressure, mass fractions)</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># Run PaSR to get data</span>
     <span class="n">pasr_input</span> <span class="o">=</span> <span class="n">pasr</span><span class="o">.</span><span class="n">parse_input_file</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">)</span>
     <span class="n">state_data</span> <span class="o">=</span> <span class="n">pasr</span><span class="o">.</span><span class="n">run_simulation</span><span class="p">(</span>
@@ -208,17 +313,36 @@
                     <span class="p">)</span>
     <span class="k">if</span> <span class="n">pasr_output_file</span><span class="p">:</span>
         <span class="n">np</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">pasr_output_file</span><span class="p">,</span> <span class="n">state_data</span><span class="p">)</span>
+
     <span class="k">return</span> <span class="n">state_data</span></div>
 
 
 <div class="viewcode-block" id="cpyjac_evaluator"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator">[docs]</a><span class="k">class</span> <span class="nc">cpyjac_evaluator</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for pyJac-based Jacobian matrix evaluator</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__copy</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">B</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Copy NumPy array into new array</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty_like</span><span class="p">(</span><span class="n">B</span><span class="p">)</span>
         <span class="n">A</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">B</span>
         <span class="k">return</span> <span class="n">A</span>
 
 <div class="viewcode-block" id="cpyjac_evaluator.check_numbers"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.check_numbers">[docs]</a>    <span class="k">def</span> <span class="nf">check_numbers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;mechanism.h&#39;</span><span class="p">):</span>
-        <span class="sd">&quot;&quot;&quot;Ensures numbers of species and forward reaction match.</span>
+        <span class="sd">&quot;&quot;&quot;Ensure numbers of species and forward reaction match.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        build_dir : str</span>
+<span class="sd">            Path of directory for build objects</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            Object with kinetic system</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            Optional; filename of header with mechanism information</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
             <span class="n">n_spec</span> <span class="o">=</span> <span class="bp">None</span>
@@ -239,14 +363,32 @@
 
         <span class="k">if</span> <span class="n">n_spec</span> <span class="o">!=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">:</span>
             <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: species counts do not match between &#39;</span>
-                  <span class="s1">&#39;mechanism.h and Cantera.&#39;</span><span class="p">)</span>
-            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+                  <span class="s1">&#39;mechanism.h and Cantera.&#39;</span>
+                  <span class="p">)</span>
+            <span class="k">raise</span>
         <span class="k">if</span> <span class="n">n_reac</span> <span class="o">!=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">:</span>
             <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: forward reaction counts do not match between &#39;</span>
-                  <span class="s1">&#39;mechanism.h and Cantera.&#39;</span><span class="p">)</span>
-            <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
+                  <span class="s1">&#39;mechanism.h and Cantera.&#39;</span>
+                  <span class="p">)</span>
+            <span class="k">raise</span></div>
 
 <div class="viewcode-block" id="cpyjac_evaluator.check_optimized"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.check_optimized">[docs]</a>    <span class="k">def</span> <span class="nf">check_optimized</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;mechanism.h&#39;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Check if pyJac files were cache-optimized (and thus rearranged)</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        build_dir : str</span>
+<span class="sd">            Path of directory for build objects</span>
+<span class="sd">        gas : `cantera.Solution`</span>
+<span class="sd">            Object with kinetic system</span>
+<span class="sd">        filename : str</span>
+<span class="sd">            Optional; filename of header with mechanism information</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
             <span class="n">opt</span> <span class="o">=</span> <span class="bp">False</span>
@@ -262,7 +404,9 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">last_spec</span> <span class="o">=</span> <span class="n">last_spec</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span> <span class="o">=</span> <span class="n">opt</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dydt_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="n">last_spec</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dydt_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
+                                  <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="n">last_spec</span><span class="p">]</span>
+                                  <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
                 <span class="n">dummy</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
@@ -275,15 +419,18 @@
             <span class="c1">#still need to treat it as a cache optimized</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span> <span class="o">=</span> <span class="bp">True</span>
 
-            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_species_mappings</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">,</span> <span class="n">last_spec</span><span class="p">)</span>
+            <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">,</span>
+             <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span>
+             <span class="p">)</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">get_species_mappings</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">,</span> <span class="n">last_spec</span><span class="p">)</span>
+
             <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">)</span>
 
             <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">back_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">))</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span> <span class="o">=</span> <span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">))</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">back_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">))</span>
 
@@ -293,41 +440,94 @@
 
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_dydt_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">])</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span> <span class="k">if</span>
-                <span class="n">gas</span><span class="o">.</span><span class="n">reaction</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">reversible</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span>
+                                        <span class="k">if</span> <span class="n">gas</span><span class="o">.</span><span class="n">reaction</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">.</span><span class="n">reversible</span><span class="p">]</span>
+                                        <span class="p">)</span>
         <span class="n">rev_reacs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span> <span class="o">==</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-                                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span> <span class="o">==</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-                                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rev_reacs</span><span class="p">)])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                                    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span> <span class="o">==</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span><span class="p">]</span>
+                                    <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+                                    <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span> <span class="o">==</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+                                    <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">rev_reacs</span><span class="p">)]</span>
+                                    <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_pdep_map</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_reac</span><span class="p">)</span>
-                                <span class="k">if</span> <span class="n">is_pdep</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">reaction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span><span class="p">[</span><span class="n">i</span><span class="p">]))]</span>
+                             <span class="k">if</span> <span class="n">is_pdep</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">reaction</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+                             <span class="p">]</span>
         <span class="n">pdep_reacs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_pdep_map</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_pdep_map</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_pdep_map</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
-                                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span><span class="p">])</span>
+                                      <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span><span class="p">]</span>
+                                      <span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_pdep_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span> <span class="o">==</span> <span class="n">x</span><span class="p">)[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
-                                <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pdep_reacs</span><span class="p">)])</span>
+                                     <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">pdep_reacs</span><span class="p">)]</span>
+                                     <span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">back_dydt_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">])</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">back_dydt_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span>
+                                      <span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">]</span>
+                                      <span class="p">)</span></div>
 
-    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">module_name</span><span class="o">=</span><span class="s1">&#39;pyjacob&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;mechanism.h&#39;</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">module_name</span><span class="o">=</span><span class="s1">&#39;pyjacob&#39;</span><span class="p">,</span>
+                 <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;mechanism.h&#39;</span>
+                 <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_numbers</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">check_optimized</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
 
 <div class="viewcode-block" id="cpyjac_evaluator.eval_conc"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.eval_conc">[docs]</a>    <span class="k">def</span> <span class="nf">eval_conc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">mass_frac</span><span class="p">,</span> <span class="n">conc</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate species concentrations at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temp : float</span>
+<span class="sd">            Temperature, in Kelvin</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        mass_frac : ``numpy.array``</span>
+<span class="sd">            Species mass fractions</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">mw_avg</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="n">rho</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="n">test_mass_frac</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">mass_frac</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">])</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_conc</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">test_mass_frac</span><span class="p">,</span> <span class="n">mw_avg</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">conc</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_conc</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">test_mass_frac</span><span class="p">,</span>
+                                    <span class="n">mw_avg</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">conc</span>
+                                    <span class="p">)</span>
             <span class="n">conc</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">conc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_conc</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">mass_frac</span><span class="p">,</span> <span class="n">mw_avg</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">conc</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="cpyjac_evaluator.eval_rxn_rates"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.eval_rxn_rates">[docs]</a>    <span class="k">def</span> <span class="nf">eval_rxn_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span> <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate reaction rates of progress at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temp : float</span>
+<span class="sd">            Temperature, in Kelvin</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+<span class="sd">        fwd_rates : ``numpy.array``</span>
+<span class="sd">            Reaction forward rates of progress, in kmol/m^3/s</span>
+<span class="sd">        rev_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="n">test_conc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">conc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_rxn_rates</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">test_conc</span><span class="p">,</span>
@@ -336,15 +536,55 @@
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
                 <span class="n">rev_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">rev_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_rxn_rates</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span> <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_rxn_rates</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span>
+                                         <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span>
+                                         <span class="p">)</span></div>
+
 <div class="viewcode-block" id="cpyjac_evaluator.get_rxn_pres_mod"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.get_rxn_pres_mod">[docs]</a>    <span class="k">def</span> <span class="nf">get_rxn_pres_mod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate reaction rate pressure modifications at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temp : float</span>
+<span class="sd">            Temperature, in Kelvin</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+<span class="sd">        pres_mod : ``numpy.array``</span>
+<span class="sd">            Reaction rate pressure modification</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="n">test_conc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">conc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_get_rxn_pres_mod</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">test_conc</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">)</span>
             <span class="n">pres_mod</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">pres_mod</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_get_rxn_pres_mod</span><span class="p">(</span><span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="cpyjac_evaluator.eval_spec_rates"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.eval_spec_rates">[docs]</a>    <span class="k">def</span> <span class="nf">eval_spec_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">,</span> <span class="n">spec_rates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate species overall production rates at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fwd_rates : ``numpy.array``</span>
+<span class="sd">            Reaction forward rates of progress, in kmol/m^3/s</span>
+<span class="sd">        rev_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+<span class="sd">        pres_mod : ``numpy.array``</span>
+<span class="sd">            Reaction rate pressure modification</span>
+<span class="sd">        spec_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="n">test_fwd</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">fwd_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span><span class="p">])</span>
             <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rev_rxn_map</span><span class="o">.</span><span class="n">size</span><span class="p">:</span>
@@ -355,11 +595,34 @@
                 <span class="n">test_pdep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">pres_mod</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_pdep_map</span><span class="p">])</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">test_pdep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">pres_mod</span><span class="p">)</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_spec_rates</span><span class="p">(</span><span class="n">test_fwd</span><span class="p">,</span> <span class="n">test_rev</span><span class="p">,</span> <span class="n">test_pdep</span><span class="p">,</span> <span class="n">spec_rates</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_spec_rates</span><span class="p">(</span><span class="n">test_fwd</span><span class="p">,</span> <span class="n">test_rev</span><span class="p">,</span>
+                                          <span class="n">test_pdep</span><span class="p">,</span> <span class="n">spec_rates</span>
+                                          <span class="p">)</span>
             <span class="n">spec_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="n">spec_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">]</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_spec_rates</span><span class="p">(</span><span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">,</span> <span class="n">spec_rates</span><span class="p">)</span></div>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_spec_rates</span><span class="p">(</span><span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">,</span>
+                                          <span class="n">pres_mod</span><span class="p">,</span> <span class="n">spec_rates</span>
+                                          <span class="p">)</span></div>
+
 <div class="viewcode-block" id="cpyjac_evaluator.dydt"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.dydt">[docs]</a>    <span class="k">def</span> <span class="nf">dydt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dydt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate derivative</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        t : float</span>
+<span class="sd">            Time, in seconds</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        y : ``numpy.array``</span>
+<span class="sd">            State vector (temperature + species mass fractions)</span>
+<span class="sd">        dydt : ``numpy.array``</span>
+<span class="sd">            Derivative of state vector</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="n">test_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_dydt_map</span><span class="p">])</span>
             <span class="n">test_dydt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">test_y</span><span class="p">)</span>
@@ -367,13 +630,45 @@
             <span class="n">dydt</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dydt_mask</span><span class="p">]</span> <span class="o">=</span> <span class="n">test_dydt</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">back_dydt_map</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">dydt_mask</span><span class="p">]]</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_dydt</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dydt</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="cpyjac_evaluator.eval_jacobian"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.eval_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">eval_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">jacob</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the Jacobian matrix</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        t : float</span>
+<span class="sd">            Time, in seconds</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        y : ``numpy.array``</span>
+<span class="sd">            State vector (temperature + species mass fractions)</span>
+<span class="sd">        jacob : ``numpy.array``</span>
+<span class="sd">            Jacobian matrix</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="n">test_y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__copy</span><span class="p">(</span><span class="n">y</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_dydt_map</span><span class="p">][:])</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_jacobian</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">test_y</span><span class="p">,</span> <span class="n">jacob</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_eval_jacobian</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">jacob</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="cpyjac_evaluator.update"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates evaluator index</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        index : int</span>
+<span class="sd">            Index of data for evaluating quantities</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span></div>
 
 <div class="viewcode-block" id="cpyjac_evaluator.clean"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
@@ -381,6 +676,8 @@
 
 
 <div class="viewcode-block" id="cupyjac_evaluator"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator">[docs]</a><span class="k">class</span> <span class="nc">cupyjac_evaluator</span><span class="p">(</span><span class="n">cpyjac_evaluator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for CUDA-based pyJac Jacobian matrix evaluator</span>
+<span class="sd">    &quot;&quot;&quot;</span>
 <div class="viewcode-block" id="cupyjac_evaluator.clean"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_cuclean</span><span class="p">()</span></div>
 
@@ -397,32 +694,82 @@
         <span class="n">mw_avg</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">czeros</span><span class="p">(</span><span class="n">num_eval</span><span class="p">)</span>
         <span class="n">rho</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">czeros</span><span class="p">(</span><span class="n">num_eval</span><span class="p">)</span>
         <span class="n">pres</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span><span class="p">[:</span><span class="n">num_eval</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span><span class="p">[:</span><span class="n">num_eval</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">]]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span>\
-                                                                   <span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_cujac</span><span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cond</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_conc</span><span class="p">,</span> <span class="n">test_fwd_rates</span><span class="p">,</span>
-                        <span class="n">test_rev_rates</span><span class="p">,</span> <span class="n">test_pres_mod</span><span class="p">,</span> <span class="n">test_spec_rates</span><span class="p">,</span>
-                        <span class="n">test_dydt</span><span class="p">,</span> <span class="n">test_jacob</span><span class="p">)</span>
-
+        <span class="n">y</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span><span class="p">[:</span><span class="n">num_eval</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+</span>
+                            <span class="p">[</span><span class="mi">2</span> <span class="o">+</span> <span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">]</span>
+                            <span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span>
+                                                        <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span>
+                                                        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_cujac</span><span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cond</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">test_conc</span><span class="p">,</span>
+                            <span class="n">test_fwd_rates</span><span class="p">,</span> <span class="n">test_rev_rates</span><span class="p">,</span> <span class="n">test_pres_mod</span><span class="p">,</span>
+                            <span class="n">test_spec_rates</span><span class="p">,</span> <span class="n">test_dydt</span><span class="p">,</span> <span class="n">test_jacob</span>
+                            <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span><span class="p">[</span><span class="n">num_eval</span><span class="p">:,</span> <span class="p">]</span>
 
         <span class="c1">#reshape for comparison</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_conc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_conc</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_fwd_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_fwd_rates</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_rxn_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_rev_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_rev_rates</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_rev</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_pres_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_pres_mod</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_pdep</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_spec_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_spec_rates</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_dydt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_dydt</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="bp">self</span><span class="o">.</span><span class="n">back_dydt_map</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">test_jacob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_jacob</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">)))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_conc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_conc</span><span class="p">,</span> <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">),</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span>
+                                       <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_fwd_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_fwd_rates</span><span class="p">,</span>
+                                            <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nr</span><span class="p">),</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">back_rxn_map</span>
+                                            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_rev_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_rev_rates</span><span class="p">,</span>
+                                            <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_rev</span><span class="p">),</span>
+                                            <span class="bp">self</span><span class="o">.</span><span class="n">back_rev_rxn_map</span>
+                                            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_pres_mod</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_pres_mod</span><span class="p">,</span>
+                                           <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_pdep</span><span class="p">),</span>
+                                           <span class="bp">self</span><span class="o">.</span><span class="n">back_pdep_map</span>
+                                           <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_spec_rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_spec_rates</span><span class="p">,</span>
+                                             <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span><span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">),</span>
+                                             <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span>
+                                             <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_dydt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_dydt</span><span class="p">,</span>
+                                       <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                                       <span class="bp">self</span><span class="o">.</span><span class="n">back_dydt_map</span>
+                                       <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">test_jacob</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">reshaper</span><span class="p">(</span><span class="n">test_jacob</span><span class="p">,</span>
+                                        <span class="p">(</span><span class="n">num_eval</span><span class="p">,</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">nsp</span><span class="p">))</span>
+                                        <span class="p">)</span>
 
 <div class="viewcode-block" id="cupyjac_evaluator.update"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.update">[docs]</a>    <span class="k">def</span> <span class="nf">update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">index</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Updates evaluator index</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        index : int</span>
+<span class="sd">            Index of data for evaluating quantities</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">index</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cond</span>
-        <span class="k">if</span> <span class="n">index</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cond</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">index</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">index</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_cond</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span>
+            <span class="n">index</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+            <span class="p">):</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">__eval</span><span class="p">()</span></div>
 
 <div class="viewcode-block" id="cupyjac_evaluator.czeros"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.czeros">[docs]</a>    <span class="k">def</span> <span class="nf">czeros</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">shape</span><span class="p">):</span>
-            <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
-            <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span></div>
+        <span class="sd">&quot;&quot;&quot;Return array of zeros in C ordering.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        shape : int</span>
+<span class="sd">            Shape of array</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ``numpy.array`` of zeros with shape `shape` in C ordering</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="cupyjac_evaluator.reshaper"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.reshaper">[docs]</a>    <span class="k">def</span> <span class="nf">reshaper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">reorder</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
         <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">reorder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
@@ -430,15 +777,21 @@
         <span class="k">return</span> <span class="n">arr</span></div>
 
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">state_data</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">(</span><span class="n">cupyjac_evaluator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="s1">&#39;cu_pyjacob&#39;</span><span class="p">,</span> <span class="s1">&#39;mechanism.cuh&#39;</span><span class="p">)</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">cupyjac_evaluator</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span>
+                                                <span class="s1">&#39;cu_pyjacob&#39;</span><span class="p">,</span> <span class="s1">&#39;mechanism.cuh&#39;</span>
+                                                <span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">num_cond</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pyjac</span><span class="o">.</span><span class="n">py_cuinit</span><span class="p">(</span><span class="n">state_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
 
         <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_rev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">num_pdep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">)</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()])</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_rev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span>
+                                <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()]</span>
+                                <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">num_pdep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">)</span>
+                                 <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()]</span>
+                                 <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cuda_state</span> <span class="o">=</span> <span class="n">state_data</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">nsp</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span>
@@ -449,21 +802,138 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
 
 <div class="viewcode-block" id="cupyjac_evaluator.eval_conc"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.eval_conc">[docs]</a>    <span class="k">def</span> <span class="nf">eval_conc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">mass_frac</span><span class="p">,</span> <span class="n">conc</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate species concentrations at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temp : float</span>
+<span class="sd">            Temperature, in Kelvin</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        mass_frac : ``numpy.array``</span>
+<span class="sd">            Species mass fractions</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">conc</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_conc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="cupyjac_evaluator.eval_rxn_rates"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.eval_rxn_rates">[docs]</a>    <span class="k">def</span> <span class="nf">eval_rxn_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span> <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate reaction rates of progress at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temp : float</span>
+<span class="sd">            Temperature, in Kelvin</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+<span class="sd">        fwd_rates : ``numpy.array``</span>
+<span class="sd">            Reaction forward rates of progress, in kmol/m^3/s</span>
+<span class="sd">        rev_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">fwd_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_fwd_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span>
         <span class="n">rev_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_rev_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="cupyjac_evaluator.get_rxn_pres_mod"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.get_rxn_pres_mod">[docs]</a>    <span class="k">def</span> <span class="nf">get_rxn_pres_mod</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">conc</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate reaction rate pressure modifications at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        temp : float</span>
+<span class="sd">            Temperature, in Kelvin</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+<span class="sd">        pres_mod : ``numpy.array``</span>
+<span class="sd">            Reaction rate pressure modification</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">pres_mod</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_pres_mod</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="cupyjac_evaluator.eval_spec_rates"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.eval_spec_rates">[docs]</a>    <span class="k">def</span> <span class="nf">eval_spec_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">,</span> <span class="n">spec_rates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate species overall production rates at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fwd_rates : ``numpy.array``</span>
+<span class="sd">            Reaction forward rates of progress, in kmol/m^3/s</span>
+<span class="sd">        rev_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+<span class="sd">        pres_mod : ``numpy.array``</span>
+<span class="sd">            Reaction rate pressure modification</span>
+<span class="sd">        spec_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">spec_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_spec_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="cupyjac_evaluator.dydt"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.dydt">[docs]</a>    <span class="k">def</span> <span class="nf">dydt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dydt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate derivative</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        t : float</span>
+<span class="sd">            Time, in seconds</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        y : ``numpy.array``</span>
+<span class="sd">            State vector (temperature + species mass fractions)</span>
+<span class="sd">        dydt : ``numpy.array``</span>
+<span class="sd">            Derivative of state vector</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dydt</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dydt</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="cupyjac_evaluator.eval_jacobian"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.eval_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">eval_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">jacob</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the Jacobian matrix</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        t : float</span>
+<span class="sd">            Time, in seconds</span>
+<span class="sd">        pres : float</span>
+<span class="sd">            Pressure, in Pascals</span>
+<span class="sd">        y : ``numpy.array``</span>
+<span class="sd">            State vector (temperature + species mass fractions)</span>
+<span class="sd">        jacob : ``numpy.array``</span>
+<span class="sd">            Jacobian matrix</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">jacob</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_jacob</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div></div>
 
 
 <div class="viewcode-block" id="tchem_evaluator"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.tchem_evaluator">[docs]</a><span class="k">class</span> <span class="nc">tchem_evaluator</span><span class="p">(</span><span class="n">cpyjac_evaluator</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Class for TChem-based Jacobian matrix evaluator</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">state_data</span><span class="p">,</span> <span class="n">mechfile</span><span class="p">,</span> <span class="n">thermofile</span><span class="p">,</span>
                  <span class="n">module_name</span><span class="o">=</span><span class="s1">&#39;py_tchem&#39;</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="s1">&#39;mechanism.h&#39;</span>
                  <span class="p">):</span>
@@ -521,31 +991,155 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
 
 <div class="viewcode-block" id="tchem_evaluator.get_conc"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.tchem_evaluator.get_conc">[docs]</a>    <span class="k">def</span> <span class="nf">get_conc</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">conc</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate species concentrations at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        conc : ``numpy.array``</span>
+<span class="sd">            Species concentrations, in kmol/m^3</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">conc</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_conc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="tchem_evaluator.get_rxn_rates"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.tchem_evaluator.get_rxn_rates">[docs]</a>    <span class="k">def</span> <span class="nf">get_rxn_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate reaction rates of progress at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        fwd_rates : ``numpy.array``</span>
+<span class="sd">            Reaction forward rates of progress, in kmol/m^3/s</span>
+<span class="sd">        rev_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">fwd_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_fwd_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span>
         <span class="n">rev_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_rev_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="tchem_evaluator.get_spec_rates"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.tchem_evaluator.get_spec_rates">[docs]</a>    <span class="k">def</span> <span class="nf">get_spec_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">spec_rates</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate species overall production rates at current state.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        spec_rates : ``numpy.array``</span>
+<span class="sd">            Reaction reverse rates of progress, in kmol/m^3/s</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">spec_rates</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_spec_rates</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div>
+
 <div class="viewcode-block" id="tchem_evaluator.get_dydt"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.tchem_evaluator.get_dydt">[docs]</a>    <span class="k">def</span> <span class="nf">get_dydt</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dydt</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate derivative</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dydt : ``numpy.array``</span>
+<span class="sd">            Derivative of state vector</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">dydt</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_dydt</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
 <div class="viewcode-block" id="tchem_evaluator.get_jacobian"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.tchem_evaluator.get_jacobian">[docs]</a>    <span class="k">def</span> <span class="nf">get_jacobian</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">jacob</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Evaluate the Jacobian matrix</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        jacob : ``numpy.array``</span>
+<span class="sd">            Jacobian matrix</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        None</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">jacob</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_jacob</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div></div>
 
 
 <div class="viewcode-block" id="safe_remove"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.safe_remove">[docs]</a><span class="k">def</span> <span class="nf">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Try to safely remove a file</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    file : str</span>
+<span class="sd">        Path for file to be removed</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
     <span class="k">except</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
+
 <div class="viewcode-block" id="test"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.test">[docs]</a><span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">home_dir</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
          <span class="n">pasr_input_file</span><span class="o">=</span><span class="s1">&#39;pasr_input.yaml&#39;</span><span class="p">,</span> <span class="n">generate_jacob</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
          <span class="n">compile_jacob</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
          <span class="n">cache_optimization</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">tchem_flag</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-         <span class="n">only_rxn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">do_not_remove</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">condition_numbers</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+         <span class="n">only_rxn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">do_not_remove</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">condition_numbers</span><span class="o">=</span><span class="bp">None</span>
+         <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Compares pyJac results against Cantera (and optionally TChem) using</span>
 <span class="sd">    state data from PaSR simulations.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    lang : {&#39;c&#39;, &#39;cuda&#39;}</span>
+<span class="sd">        Programming language</span>
+<span class="sd">    home_dir : str</span>
+<span class="sd">        Path to home directory for testing and data</span>
+<span class="sd">    build_dir : str</span>
+<span class="sd">        Path to directory for building Jacobian files</span>
+<span class="sd">    mech_filename : str</span>
+<span class="sd">        Chemkin- or Cantera-format mechanism file</span>
+<span class="sd">    therm_filename : str</span>
+<span class="sd">        Optional; name of thermodynamic database file (if needed)</span>
+<span class="sd">    pasr_input_file : str</span>
+<span class="sd">        Optional; name of YAML-formatted file with PaSR test input</span>
+<span class="sd">    generate_jacob : bool</span>
+<span class="sd">        Optional; if ``True``, generate Jacobian files.</span>
+<span class="sd">        Otherwise, use existing files.</span>
+<span class="sd">    compile_jacob : bool</span>
+<span class="sd">        Optional; if ``True``, compile Jacobian files. Otherwise, using existing.</span>
+<span class="sd">    seed : int</span>
+<span class="sd">        Optional; random seed for PaSR</span>
+<span class="sd">    pasr_output_file : str</span>
+<span class="sd">        Optional; name of output file for saving PaSR results</span>
+<span class="sd">    last_spec : str</span>
+<span class="sd">        Optional; name of species to move to last position.</span>
+<span class="sd">        If not specified, will try searching for N2, Ar, or He.</span>
+<span class="sd">    cache_optimization : bool</span>
+<span class="sd">        If ``True``, enable reordering to optimize cache usage</span>
+<span class="sd">    no_shared : bool</span>
+<span class="sd">        If ``True``, do not use GPU shared memory</span>
+<span class="sd">    tchem_flag : bool</span>
+<span class="sd">        If ``True``, compare with TChem results</span>
+<span class="sd">    only_rxn : str</span>
+<span class="sd">        Optional; string with list of reaction numbers to retain.</span>
+<span class="sd">        All other reactions removed.</span>
+<span class="sd">    do_not_remove : bool</span>
+<span class="sd">        If ``True``, keep all generated files.</span>
+<span class="sd">    condition_numbers : int</span>
+<span class="sd">        Optional; string with list of conditions numbers to use.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    None</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
@@ -582,14 +1176,6 @@
 
     <span class="c1"># get the cantera object</span>
     <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">)</span>
-    <span class="c1"># Remove reactions with zero pre-exponental factors</span>
-    <span class="c1">#gas = ct.Solution(thermo=&#39;IdealGas&#39;, kinetics=&#39;GasKinetics&#39;,</span>
-    <span class="c1">#                  species=gas.species(),</span>
-    <span class="c1">#                  reactions=[rxn for rxn in gas.reactions() if</span>
-    <span class="c1">#                             isinstance(rxn, ct.ElementaryReaction) and</span>
-    <span class="c1">#                            rxn.rate.pre_exponential_factor != 0.0</span>
-    <span class="c1">#                             ]</span>
-    <span class="c1">#                  )</span>
 
     <span class="k">if</span> <span class="n">only_rxn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
         <span class="n">reacs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">only_rxn</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)]</span>
@@ -619,14 +1205,20 @@
 
         <span class="c1"># Create Jacobian and supporting source code files</span>
         <span class="n">create_jacobian</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">gas</span><span class="o">=</span><span class="n">gas</span><span class="p">,</span>
-                        <span class="n">optimize_cache</span><span class="o">=</span><span class="n">cache_optimization</span><span class="p">,</span> <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
-                        <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                        <span class="n">optimize_cache</span><span class="o">=</span><span class="n">cache_optimization</span><span class="p">,</span>
+                        <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
+                        <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span>
+                        <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span>
+                        <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
                         <span class="p">)</span>
         <span class="c1">#We&#39;re going to need the c autodiff interface for testing the jacobian</span>
         <span class="n">create_jacobian</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">gas</span><span class="o">=</span><span class="n">gas</span><span class="p">,</span>
-                    <span class="n">optimize_cache</span><span class="o">=</span><span class="n">cache_optimization</span><span class="p">,</span> <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
-                    <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">True</span>
-                    <span class="p">)</span>
+                        <span class="n">optimize_cache</span><span class="o">=</span><span class="n">cache_optimization</span><span class="p">,</span>
+                        <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
+                        <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span>
+                        <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span>
+                        <span class="n">auto_diff</span><span class="o">=</span><span class="bp">True</span>
+                        <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">compile_jacob</span><span class="p">:</span>
         <span class="c1">#write and compile the dydt python wrapper</span>
@@ -681,7 +1273,7 @@
         <span class="c1">#load old test data</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="n">state_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pasr_output_file</span><span class="p">)</span>
-        <span class="k">except</span> <span class="ne">Exception</span><span class="p">,</span> <span class="n">e</span><span class="p">:</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="c1"># Run PaSR to get data</span>
             <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Could not load saved pasr data... re-running&#39;</span><span class="p">)</span>
             <span class="n">state_data</span> <span class="o">=</span> <span class="n">run_pasr</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span>
@@ -751,7 +1343,7 @@
         <span class="n">pres</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
         <span class="n">mass_frac</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
 
-        <span class="n">ajac</span> <span class="o">=</span> <span class="n">autodiff_jacob</span><span class="p">(</span><span class="n">pres</span><span class="p">,</span> <span class="n">pyjacob</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">)</span>
+        <span class="n">ajac</span> <span class="o">=</span> <span class="n">AutodiffJacob</span><span class="p">(</span><span class="n">pres</span><span class="p">,</span> <span class="n">pyjacob</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">)</span>
 
         <span class="n">gas</span><span class="o">.</span><span class="n">TPY</span> <span class="o">=</span> <span class="n">temp</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">mass_frac</span>
 
@@ -942,9 +1534,12 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem concentration: {:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem concentration: {:.2e} % @ species {}&#39;</span>
-                <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem concentration: &#39;</span>
+                  <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+                  <span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem concentration: &#39;</span>
+                  <span class="s1">&#39;{:.2e} % @ species {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+                  <span class="p">)</span>
 
             <span class="n">tchem_fwd_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">)</span>
             <span class="n">tchem_rev_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">)</span>
@@ -988,8 +1583,8 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative difference with TChem net production rates: &#39;</span>
-                  <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative difference with TChem net production&#39;</span>
+                  <span class="s1">&#39; rates: {:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                   <span class="p">)</span>
             <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem net production rates: {:.2e}% &#39;</span>
                   <span class="s1">&#39;@ species {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
@@ -1035,6 +1630,14 @@
              <span class="n">err_jac_thr_max</span><span class="o">=</span><span class="n">err_jac_thr_max</span>
              <span class="p">)</span>
 
+    <span class="c1"># Report overall error statistics</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Maximum of thresholded L2 norm relative error: &#39;</span>
+          <span class="s1">&#39;{:.3e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err_jac_thr</span><span class="p">))</span>
+          <span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Standard deviation of thresholded L2 norm relative error: &#39;</span>
+          <span class="s1">&#39;{:.3e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">err_jac_thr</span><span class="p">))</span>
+          <span class="p">)</span>
+
     <span class="k">if</span> <span class="ow">not</span> <span class="n">do_not_remove</span><span class="p">:</span>
         <span class="c1"># Cleanup all compiled files.</span>
         <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;adjacob.so&#39;</span><span class="p">)</span>
@@ -1052,13 +1655,12 @@
 
         <span class="c1"># Cleanup TChem crud</span>
         <span class="k">if</span> <span class="n">tchem_flag</span><span class="p">:</span>
-            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;periodictable.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;kmod.echo&#39;</span><span class="p">,</span> <span class="s1">&#39;kmod.err&#39;</span><span class="p">,</span> <span class="s1">&#39;kmod.list&#39;</span><span class="p">,</span>
-                      <span class="s1">&#39;kmod.out&#39;</span><span class="p">,</span> <span class="s1">&#39;math_elem.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;math_falloff.dat&#39;</span><span class="p">,</span>
-                      <span class="s1">&#39;math_nasapol7.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;math_reac.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;math_spec.dat&#39;</span><span class="p">,</span>
-                      <span class="s1">&#39;math_trdbody.dat&#39;</span><span class="p">]:</span>
-                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
-
-    <span class="k">return</span> <span class="mi">0</span></div>
+            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;periodictable.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;kmod.echo&#39;</span><span class="p">,</span> <span class="s1">&#39;kmod.err&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;kmod.list&#39;</span><span class="p">,</span> <span class="s1">&#39;kmod.out&#39;</span><span class="p">,</span> <span class="s1">&#39;math_elem.dat&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;math_falloff.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;math_nasapol7.dat&#39;</span><span class="p">,</span>
+                      <span class="s1">&#39;math_reac.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;math_spec.dat&#39;</span><span class="p">,</span> <span class="s1">&#39;math_trdbody.dat&#39;</span>
+                      <span class="p">]:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">f</span><span class="p">)</span></div>
 </pre></div>
 
           </div>
@@ -1074,10 +1676,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -1110,7 +1714,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

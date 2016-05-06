@@ -26,132 +26,21 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
           <div class="body" role="main">
             
-  <div class="section" id="module-pyjac.performance_tester.optionLoop.optionloop">
-<span id="pyjac-performance-tester-optionloop-optionloop-module"></span><h1>pyjac.performance_tester.optionLoop.optionloop module<a class="headerlink" href="#module-pyjac.performance_tester.optionLoop.optionloop" title="Permalink to this headline">¶</a></h1>
-<p>Provides implementation of a simple iteratable dictionary structure
-that can be used to iterate over options in a single for-loop.</p>
-<p>No longer will you need a million nested for-loops...</p>
-<p>The optionloop works as follows:</p>
-<p class="rubric">Example</p>
-<p>First, initialize a dictionary with various keys and values, e.g.:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;doThingX&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="s1">&#39;doThingY&#39;</span> <span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
-<span class="gp">... </span>    <span class="s1">&#39;thingZValue&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">,</span> <span class="s1">&#39;b&#39;</span><span class="p">,</span> <span class="mi">1</span><span class="p">]}</span>
-</pre></div>
-</div>
-<p>Next create the option loop:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">oploop</span> <span class="o">=</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>Finally iterate and get your values:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">oploop</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">doX</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;doThingX&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">doY</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;doThingY&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">zVal</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;thingZValue&#39;</span><span class="p">]</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="p">(</span><span class="n">doX</span><span class="p">,</span> <span class="n">doY</span><span class="p">,</span> <span class="n">zVal</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>This is intended to replace an equivalent looping structure of:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">doX</span> <span class="ow">in</span> <span class="n">doThingX</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">doY</span> <span class="ow">in</span> <span class="n">doThingY</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">zVal</span> <span class="ow">in</span> <span class="n">thingZValue</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>            <span class="n">f</span><span class="p">(</span><span class="n">doX</span><span class="p">,</span> <span class="n">doY</span><span class="p">,</span> <span class="n">zVal</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>which quickly becomes cumbersome.</p>
-<p>Also, option loops can be added to create even more complex looping structures, e.g.:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">d1</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">],</span> <span class="s1">&#39;doThingX&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]}</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">d2</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="s1">&#39;fortran&#39;</span><span class="p">],</span> <span class="s1">&#39;doThingX&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">],</span> <span class="s1">&#39;doThingY&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]}</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">oploop1</span> <span class="o">=</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">d1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">oploop2</span> <span class="o">=</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">d2</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">oploop</span> <span class="o">=</span> <span class="n">oploop1</span> <span class="o">+</span> <span class="n">oploop2</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">oploop</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>is equivalent to:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">langs</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="s1">&#39;fortran&#39;</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">doThingX</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">doThingY</span> <span class="o">=</span> <span class="p">[</span><span class="kc">True</span><span class="p">,</span> <span class="kc">False</span><span class="p">]</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">lang</span> <span class="ow">in</span> <span class="n">langs</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">doX</span> <span class="ow">in</span> <span class="n">doThingX</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>            <span class="n">f</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">doX</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">elif</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;fortran&#39;</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">doX</span> <span class="ow">in</span> <span class="n">doThingX</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>            <span class="k">for</span> <span class="n">doY</span> <span class="ow">in</span> <span class="n">doThingY</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>                <span class="n">f</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">doX</span><span class="p">,</span> <span class="n">doY</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="n">d</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;a&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;b&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="kc">False</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">d</span><span class="p">[</span><span class="s1">&#39;c&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">oploop</span> <span class="o">=</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">d</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">state</span> <span class="ow">in</span> <span class="n">oploop</span><span class="p">:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">f</span><span class="p">(</span><span class="n">state</span><span class="p">)</span>
-</pre></div>
-</div>
-<p>is equivalent to:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]:</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="p">[</span><span class="kc">False</span><span class="p">]:</span>
-<span class="gp">&gt;&gt;&gt; </span>        <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">]:</span>
-<span class="gp">&gt;&gt;&gt; </span>            <span class="n">f</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="n">b</span><span class="p">,</span><span class="n">c</span><span class="p">)</span>
-</pre></div>
-</div>
-<dl class="class">
-<dt id="pyjac.performance_tester.optionLoop.optionloop.optionloop">
-<em class="property">class </em><code class="descclassname">pyjac.performance_tester.optionLoop.optionloop.</code><code class="descname">optionloop</code><span class="sig-paren">(</span><em>initializing_dictionary</em>, <em>default_dict_factory=None</em><span class="sig-paren">)</span><a class="headerlink" href="#pyjac.performance_tester.optionLoop.optionloop.optionloop" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<p>Initializes the optionloop.</p>
-<p>&#64;param initializing_dictionary :
-The basis of the option loop.
-The various options to iterate are the keys of the dictionary,
-while the value(s) associated with the key are iterated over</p>
-<p>&#64;param default_dict_factory :
-if not None, default dicts will be returned using this factory</p>
-<dl class="method">
-<dt id="pyjac.performance_tester.optionLoop.optionloop.optionloop.next">
-<code class="descname">next</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyjac.performance_tester.optionLoop.optionloop.optionloop.next" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="class">
-<dt id="pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat">
-<em class="property">class </em><code class="descname">optionloopconcat</code><span class="sig-paren">(</span><em>oploop_list</em><span class="sig-paren">)</span><a class="headerlink" href="#pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
-<dl class="method">
-<dt id="pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat.check_all">
-<code class="descname">check_all</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat.check_all" title="Permalink to this definition">¶</a></dt>
-<dd><p>Checks to see that all option loops are unstarted.</p>
-</dd></dl>
-
-<dl class="method">
-<dt id="pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat.next">
-<code class="descname">next</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyjac.performance_tester.optionLoop.optionloop.optionloop.optionloopconcat.next" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-</dd></dl>
-
-</dd></dl>
-
+  <div class="section" id="pyjac-performance-tester-optionloop-optionloop-module">
+<h1>pyjac.performance_tester.optionLoop.optionloop module<a class="headerlink" href="#pyjac-performance-tester-optionloop-optionloop-module" title="Permalink to this headline">¶</a></h1>
 </div>
 
 
@@ -168,10 +57,12 @@ if not None, default dicts will be returned using this factory</p>
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -204,7 +95,7 @@ if not None, default dicts will be returned using this factory</p>
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="../_sources/src/pyjac.performance_tester.optionLoop.optionloop.txt"

@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -39,16 +41,47 @@
           <div class="body" role="main">
             
   <h1>Source code for pyjac.pywrap.parallel_compiler</h1><div class="highlight"><pre>
-<span></span><span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span></span><span class="sd">&quot;&quot;&quot;Module for performing parallel compilation of source code files.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
 <span class="kn">from</span> <span class="nn">multiprocessing.pool</span> <span class="kn">import</span> <span class="n">ThreadPool</span>
 <span class="kn">import</span> <span class="nn">distutils.ccompiler</span>
 
 <span class="n">N</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
 
 <span class="c1"># monkey-patch for parallel compilation</span>
-<div class="viewcode-block" id="parallelCompile"><a class="viewcode-back" href="../../../src/pyjac.pywrap.parallel_compiler.html#pyjac.pywrap.parallel_compiler.parallelCompile">[docs]</a><span class="k">def</span> <span class="nf">parallelCompile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">macros</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                     <span class="n">include_dirs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">extra_preargs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                     <span class="n">extra_postargs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">depends</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="parallel_compile"><a class="viewcode-back" href="../../../src/pyjac.pywrap.parallel_compiler.html#pyjac.pywrap.parallel_compiler.parallel_compile">[docs]</a><span class="k">def</span> <span class="nf">parallel_compile</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">output_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">macros</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                     <span class="n">include_dirs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">extra_preargs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
+                     <span class="n">extra_postargs</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">depends</span><span class="o">=</span><span class="bp">None</span>
+                     <span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Compile source files in parallel.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    sources : list of `str`</span>
+<span class="sd">        List of source files</span>
+<span class="sd">    output_dir : str</span>
+<span class="sd">        Optional; path to directory for object files</span>
+<span class="sd">    macros : list of `tuple`</span>
+<span class="sd">        Optional; list of macro definitions, like (name, value) or (name,)</span>
+<span class="sd">    include_dirs : list of `str`</span>
+<span class="sd">        Optional; list of directories to add to default include file search path</span>
+<span class="sd">    debug : bool</span>
+<span class="sd">        Optional; if ``True``, instruct compiler to output debug signals</span>
+<span class="sd">    extra_preargs : list of `str`</span>
+<span class="sd">        Optional; extra command-line arguments to prepend to compiler command</span>
+<span class="sd">    extra_postargs : list of `str`</span>
+<span class="sd">        Optional; extra command-line arguments to append to compiler command</span>
+<span class="sd">    depends : list of `str`</span>
+<span class="sd">        Optional; list of filenames that target depends on</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    objects : list of `str`</span>
+<span class="sd">        List of object files generated</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1"># those lines are copied from distutils.ccompiler.CCompiler directly</span>
     <span class="n">macros</span><span class="p">,</span> <span class="n">objects</span><span class="p">,</span> <span class="n">extra_postargs</span><span class="p">,</span> <span class="n">pp_opts</span><span class="p">,</span> <span class="n">build</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_setup_compile</span><span class="p">(</span>
         <span class="n">output_dir</span><span class="p">,</span> <span class="n">macros</span><span class="p">,</span> <span class="n">include_dirs</span><span class="p">,</span> <span class="n">sources</span><span class="p">,</span> <span class="n">depends</span><span class="p">,</span> <span class="n">extra_postargs</span>
@@ -58,6 +91,8 @@
     <span class="c1"># number of parallel compilations</span>
 
     <span class="k">def</span> <span class="nf">_single_compile</span><span class="p">(</span><span class="n">obj</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Compile single file.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">try</span><span class="p">:</span> <span class="n">src</span><span class="p">,</span> <span class="n">ext</span> <span class="o">=</span> <span class="n">build</span><span class="p">[</span><span class="n">obj</span><span class="p">]</span>
         <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span> <span class="k">return</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">_compile</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">src</span><span class="p">,</span> <span class="n">ext</span><span class="p">,</span> <span class="n">cc_args</span><span class="p">,</span> <span class="n">extra_postargs</span><span class="p">,</span> <span class="n">pp_opts</span><span class="p">)</span>
@@ -80,10 +115,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -116,7 +153,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

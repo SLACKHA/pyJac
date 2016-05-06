@@ -87,16 +87,20 @@ if __name__ == '__main__':
     parser.add_argument('-orxn', '--only_reaction',
                         type=str,
                         default=None,
-                        help='A comma separated list of reactions to test.')
+                        help='A comma separated list of reactions to test.'
+                        )
     parser.add_argument('-dnr', '--do_not_remove',
                         default=False,
                         action='store_true',
-                        help='Do not remove old pyjacob module.  Useful for debugging.')
+                        help='Do not remove old pyjacob module. '
+                        'Useful for debugging.'
+                        )
     parser.add_argument('-cn', '--condition_numbers',
                         default=None,
                         type=str,
                         help='Comma separated list of conditions to test,'
-                             ' useful for debugging.')
+                             ' useful for debugging.'
+                        )
     args = parser.parse_args()
     test.test(args.lang, os.path.dirname(os.path.abspath(test.__file__)),
               args.build_dir, args.mech, args.thermo, args.input,

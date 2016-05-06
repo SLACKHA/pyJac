@@ -1,4 +1,3 @@
-#! /usr/bin/env python2.7
 """Module for performance testing of pyJac and related tools.
 """
 

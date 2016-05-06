@@ -255,6 +255,11 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                     if thermo is not None:
                         mechanism_list[name]['thermo'] = thermo
 
+    if len(mechanism_list) == 0:
+        print('No mechanisms found for performance testing in {}, exiting...'.format(
+            work_dir))
+        sys.exit(-1)
+
     if os.getenv('TCHEM_HOME'):
         tchem_home = os.getenv('TCHEM_HOME')
     else:

@@ -17,6 +17,7 @@ recursive-include pyjac/functional_tester *.py *.yaml
 recursive-include pyjac/performance_tester *.c *.cu *.in *.h *.py
 recursive-include pyjac/pywrap *.py *.pyx *.c *.h *.cu *.cuh *.in
 recursive-include pyjac/libgen *.py
+recursive-include data/ *.npy *.cti *.inp *.yaml
 
 global-exclude *.so
 global-exclude *.pyd

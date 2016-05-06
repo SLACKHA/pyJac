@@ -1,7 +1,7 @@
 Examples
 ########
 
-Some example input files are included in the ``examples`` directory.
+Some example input files are included in the ``data`` directory.
 
 After installing pyJac, or in the package directory, you can see all of the
 usage options with a standard ``--help`` or ``-h`` option::
@@ -15,11 +15,11 @@ Jacobian file generation
 To generate the Jacobian source files for a hydrogen-air system in C (without
 any cache optimization)::
 
-    python -m pyjac --lang c --input examples/h2o2.inp -nco
+    python -m pyjac --lang c --input data/h2o2.inp -nco
 
 CUDA source code can be generated similarly::
 
-    python -m pyjac --lang cuda --input examples/h2o2.inp -nco
+    python -m pyjac --lang cuda --input data/h2o2.inp -nco
 
 ==================
 Functional testing
@@ -30,17 +30,18 @@ requires thermochemical state data. This can be generated using the built-in
 partially stirred reactor (PaSR) module::
 
     python -m pyjac.functional_tester.partially_stirred_reactor \
-    --mech examples/h2o2.cti --input examples/pasr_input.yaml \
-    --output examples/h2_pasr_output.npy
-
-Alternatively, you can use provided example data::
-
-    cp examples/h2_pasr_output.npy .
+    --mech data/h2o2.cti --input data/pasr_input.yaml \
+    --output h2_pasr_output.npy
 
 Then, functional testing using this data can be performed via::
 
-    python3 -m pyjac.functional_tester --mech examples/h2o2.cti --lang c \
-    --pasr_output examples/h2_pasr_output.npy
+    python3 -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
+    --pasr_output h2_pasr_output.npy
+
+**Alternatively**, you can perform the test using provided example data::
+
+    python3 -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
+    --pasr_output data/h2_pasr_output.npy
 
 Detailed error statistics are saved in ``error_arrays.npz``, and overall results
 printed to screen.

@@ -162,7 +162,11 @@
     <span class="n">generate_setup</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home_dir</span><span class="p">,</span> <span class="n">setupfile</span><span class="p">),</span> <span class="n">home_dir</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span>
                    <span class="n">distutils_build</span><span class="p">,</span> <span class="n">lib</span>
                    <span class="p">)</span>
-    <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s1">&#39;python2.7&#39;</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home_dir</span><span class="p">,</span>
+    <span class="n">python_str</span> <span class="o">=</span> <span class="s1">&#39;python2.7&#39;</span>
+    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="n">python_str</span> <span class="o">=</span> <span class="s1">&#39;python3&#39;</span>
+
+    <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="n">python_str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home_dir</span><span class="p">,</span>
                            <span class="n">setupfile</span><span class="p">[:</span><span class="n">setupfile</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.in&#39;</span><span class="p">)]),</span>
                            <span class="s1">&#39;build_ext&#39;</span><span class="p">,</span> <span class="s1">&#39;--build-lib&#39;</span><span class="p">,</span> <span class="n">out_dir</span>
                            <span class="p">])</span></div>

@@ -43,7 +43,7 @@
             
   <div class="section" id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
-<p>Some example input files are included in the <code class="docutils literal"><span class="pre">examples</span></code> directory.</p>
+<p>Some example input files are included in the <code class="docutils literal"><span class="pre">data</span></code> directory.</p>
 <p>After installing pyJac, or in the package directory, you can see all of the
 usage options with a standard <code class="docutils literal"><span class="pre">--help</span></code> or <code class="docutils literal"><span class="pre">-h</span></code> option:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span> <span class="o">--</span><span class="n">help</span>
@@ -53,11 +53,11 @@ usage options with a standard <code class="docutils literal"><span class="pre">-
 <h2>Jacobian file generation<a class="headerlink" href="#jacobian-file-generation" title="Permalink to this headline">¶</a></h2>
 <p>To generate the Jacobian source files for a hydrogen-air system in C (without
 any cache optimization):</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> <span class="o">--</span><span class="nb">input</span> <span class="n">examples</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">inp</span> <span class="o">-</span><span class="n">nco</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> <span class="o">--</span><span class="nb">input</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">inp</span> <span class="o">-</span><span class="n">nco</span>
 </pre></div>
 </div>
 <p>CUDA source code can be generated similarly:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span> <span class="o">--</span><span class="n">lang</span> <span class="n">cuda</span> <span class="o">--</span><span class="nb">input</span> <span class="n">examples</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">inp</span> <span class="o">-</span><span class="n">nco</span>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span> <span class="o">--</span><span class="n">lang</span> <span class="n">cuda</span> <span class="o">--</span><span class="nb">input</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">inp</span> <span class="o">-</span><span class="n">nco</span>
 </pre></div>
 </div>
 </div>
@@ -67,17 +67,18 @@ any cache optimization):</p>
 requires thermochemical state data. This can be generated using the built-in
 partially stirred reactor (PaSR) module:</p>
 <div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span><span class="o">.</span><span class="n">partially_stirred_reactor</span> \
-<span class="o">--</span><span class="n">mech</span> <span class="n">examples</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="nb">input</span> <span class="n">examples</span><span class="o">/</span><span class="n">pasr_input</span><span class="o">.</span><span class="n">yaml</span> \
+<span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="nb">input</span> <span class="n">data</span><span class="o">/</span><span class="n">pasr_input</span><span class="o">.</span><span class="n">yaml</span> \
 <span class="o">--</span><span class="n">output</span> <span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span>
 </pre></div>
 </div>
-<p>Alternatively, you can use provided example data:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">cp</span> <span class="n">examples</span><span class="o">/</span><span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span> <span class="o">.</span>
+<p>Then, functional testing using this data can be performed via:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
+<span class="o">--</span><span class="n">pasr_output</span> <span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span>
 </pre></div>
 </div>
-<p>Then, functional testing using this data can be performed via:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">examples</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
-<span class="o">--</span><span class="n">pasr_output</span> <span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span>
+<p><strong>Alternatively</strong>, you can perform the test using provided example data:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
+<span class="o">--</span><span class="n">pasr_output</span> <span class="n">data</span><span class="o">/</span><span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span>
 </pre></div>
 </div>
 <p>Detailed error statistics are saved in <code class="docutils literal"><span class="pre">error_arrays.npz</span></code>, and overall results

@@ -1,5 +1,3 @@
-#! /usr/bin/env python2.7
-
 import numpy as np
 cimport numpy as np
 cimport cython

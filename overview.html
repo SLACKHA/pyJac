@@ -28,13 +28,11 @@
     <link rel="next" title="Examples" href="examples.html" />
     <link rel="prev" title="pyJac" href="index.html" />
    
-  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
-  
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
@@ -43,6 +41,40 @@
             
   <div class="section" id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
+<p>pyJac creates the C or CUDA source code files necessary to evaluate the
+analytical Jacobian matrix for a constant-pressure reacting system. Briefly, a
+thermochemical state is described using a composition vector:</p>
+<div class="math">
+\[\Phi = \left \lbrace T, Y_1, Y_2, \dotsc,
+Y_{N_{\text{sp}} - 1} \right \rbrace^{\text{T}}\]</div>
+<p>where <em>T</em> is the temperature, <span class="math">\(Y_i\)</span> are the mass fractions, and
+<span class="math">\(N_{\text{sp}}\)</span> is the number of species in the model. The mass fraction
+of the final species is determined through conservation of mass:</p>
+<div class="math">
+\[Y_{N_{\text{sp}}} = 1 - \sum_{k=1}^{N_{\text{sp}} - 1} Y_k\]</div>
+<p>The governing equations of chemical kinetics include ordinary differential
+equations for the rate of change of temperature and the species&#8217; mass fractions:</p>
+<div class="math">
+\[\begin{split}f &amp;= \frac{\partial \Phi}{\partial t} \\
+  &amp;= \left \lbrace \frac{\partial T}{\partial t},
+  \frac{\partial Y_1}{\partial t}, \frac{\partial Y_2}{\partial t},
+  \dotsc, \frac{\partial Y_{N_{\text{sp}} - 1}}{\partial t}
+  \right \rbrace^{\text{T}}\end{split}\]</div>
+<p>where</p>
+<div class="math">
+\[\begin{split}\frac{\partial T}{\partial t} &amp;= \frac{-1}{\rho c_p}
+\sum_{k=1}^{N_{\text{sp}}} h_k W_k \dot{\omega}_k \\
+\frac{\partial Y_k}{\partial t} &amp;= \frac{1}{\rho} W_k
+\dot{\omega}_k \quad k = 1, \dotsc, N_{\text{sp}} - 1\end{split}\]</div>
+<p>where <span class="math">\(c_p\)</span> is the mass-averaged constant-pressure specific heat,
+<span class="math">\(h_k\)</span> is the specific enthalpy of species <em>k</em>, and <span class="math">\(\dot{\omega}_k\)</span>
+is the overall production rate of species <em>k</em>.</p>
+<p>The Jacobian matrix is then filled by the partial derivaties
+<span class="math">\(\partial f / \partial \Phi\)</span>, such that</p>
+<div class="math">
+\[\mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j}\]</div>
+<p>More details can be found in the paper fully describing version 1.0 of pyJac:
+<a class="reference external" href="http://kyleniemeyer.github.io/pyJac-paper/">http://kyleniemeyer.github.io/pyJac-paper/</a></p>
 </div>
 
 
@@ -59,12 +91,10 @@
 
 
 
-
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
-
 
 
 
@@ -97,7 +127,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
       |
       <a href="_sources/overview.txt"

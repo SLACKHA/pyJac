@@ -15,11 +15,11 @@ Jacobian file generation
 To generate the Jacobian source files for a hydrogen-air system in C (without
 any cache optimization)::
 
-    python -m pyjac --lang c --input data/h2o2.inp -nco
+    python -m pyjac --lang c --input data/h2o2.inp
 
 CUDA source code can be generated similarly::
 
-    python -m pyjac --lang cuda --input data/h2o2.inp -nco
+    python -m pyjac --lang cuda --input data/h2o2.inp
 
 ==================
 Functional testing

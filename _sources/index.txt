@@ -43,7 +43,7 @@ Citation
 Up-to-date information about citing **pyJac** can be found within the
 `CITATION.md`_ file.
 
-.. _citation: https://github.com/kyleniemeyer/pyJac/blob/master/CITATION.md
+.. _CITATION.md: https://github.com/kyleniemeyer/pyJac/blob/master/CITATION.md
 
 See also
 --------

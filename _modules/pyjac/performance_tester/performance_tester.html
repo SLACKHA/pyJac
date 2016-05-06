@@ -27,13 +27,11 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
-  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
-  
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
@@ -58,12 +56,6 @@
 <span class="kn">import</span> <span class="nn">shutil</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">defaultdict</span>
 
-<span class="c1"># More Python 2 compatibility</span>
-<span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="nb">zip</span>
-<span class="k">elif</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="o">.</span><span class="n">major</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">itertools</span> <span class="kn">import</span> <span class="n">izip</span> <span class="k">as</span> <span class="nb">zip</span>
-
 <span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
 
 <span class="c1"># Related modules</span>
@@ -77,7 +69,7 @@
     <span class="k">raise</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">optionloop</span> <span class="kn">import</span> <span class="n">optionloop</span>
+    <span class="kn">from</span> <span class="nn">optionloop</span> <span class="kn">import</span> <span class="n">optionloop</span> <span class="k">as</span> <span class="n">oploop</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: optionloop must be installed.&#39;</span><span class="p">)</span>
     <span class="k">raise</span>
@@ -283,6 +275,10 @@
 
     <span class="c1">#find the mechanisms to test</span>
     <span class="n">mechanism_list</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">work_dir</span><span class="p">):</span>
+        <span class="k">print</span> <span class="p">(</span><span class="s1">&#39;Error: work directory {} for &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">work_dir</span><span class="p">)</span> <span class="o">+</span>
+               <span class="s1">&#39;performance testing not found, exiting...&#39;</span><span class="p">)</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">work_dir</span><span class="p">):</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">work_dir</span><span class="p">,</span> <span class="n">name</span><span class="p">)):</span>
             <span class="c1">#check for cti</span>
@@ -299,6 +295,11 @@
                     <span class="n">thermo</span> <span class="o">=</span> <span class="nb">next</span><span class="p">((</span><span class="n">tf</span> <span class="k">for</span> <span class="n">tf</span> <span class="ow">in</span> <span class="n">files</span> <span class="k">if</span> <span class="s1">&#39;therm&#39;</span> <span class="ow">in</span> <span class="n">tf</span><span class="p">),</span> <span class="bp">None</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">thermo</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
                         <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;thermo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">thermo</span>
+
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mechanism_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;No mechanisms found for performance testing in {}, exiting...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+            <span class="n">work_dir</span><span class="p">))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">):</span>
         <span class="n">tchem_home</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">)</span>
@@ -377,9 +378,9 @@
 
         <span class="n">the_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
         <span class="n">first_run</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="n">op</span> <span class="o">=</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">c_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
-        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">cuda_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
-        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">optionloop</span><span class="p">(</span><span class="n">tchem_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">oploop</span><span class="p">(</span><span class="n">c_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">oploop</span><span class="p">(</span><span class="n">cuda_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">oploop</span><span class="p">(</span><span class="n">tchem_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
 
         <span class="n">haveOpt</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span>
@@ -473,11 +474,11 @@
                 <span class="n">lib</span> <span class="o">=</span> <span class="n">generate_library</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span>
                                        <span class="n">finite_difference</span><span class="o">=</span><span class="n">FD</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="ow">not</span> <span class="n">STATIC</span>
                                        <span class="p">)</span>
-                <span class="k">if</span> <span class="ow">not</span> <span class="n">STATIC</span><span class="p">:</span>
-                    <span class="n">lib</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">lib</span><span class="p">)</span>
-                    <span class="n">lib</span> <span class="o">=</span> <span class="p">(</span><span class="n">lib</span><span class="p">[</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">)</span> <span class="o">+</span>
-                           <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">):</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.so&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">STATIC</span> <span class="k">else</span> <span class="s1">&#39;.a&#39;</span><span class="p">)]</span>
-                           <span class="p">)</span>
+                
+                <span class="n">lib</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">lib</span><span class="p">)</span>
+                <span class="n">lib</span> <span class="o">=</span> <span class="p">(</span><span class="n">lib</span><span class="p">[</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">)</span> <span class="o">+</span>
+                       <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">):</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.so&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">STATIC</span> <span class="k">else</span> <span class="s1">&#39;.a&#39;</span><span class="p">)]</span>
+                       <span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">files</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;mechanism&#39;</span><span class="p">,</span> <span class="s1">&#39;mass_mole&#39;</span><span class="p">]</span>
 
@@ -528,12 +529,10 @@
 
 
 
-
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
-
 
 
 
@@ -566,7 +565,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
     </div>
 

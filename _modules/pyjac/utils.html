@@ -27,13 +27,11 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../index.html" />
     <link rel="up" title="Module code" href="../index.html" />
    
-  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
-  
+  <body role="document">  
 
     <div class="document">
       <div class="documentwrapper">
@@ -397,12 +395,12 @@
 <span class="s1">                                Species in moles&#39;</span>
                         <span class="p">)</span>
     <span class="c1"># cuda specific</span>
-    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-nco&#39;</span><span class="p">,</span> <span class="s1">&#39;--no-cache-optimizer&#39;</span><span class="p">,</span>
+    <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-co&#39;</span><span class="p">,</span> <span class="s1">&#39;--cache-optimizer&#39;</span><span class="p">,</span>
                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;cache_optimizer&#39;</span><span class="p">,</span>
-                        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_false&#39;</span><span class="p">,</span>
-                        <span class="n">default</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Do not attempt to optimize cache store/loading &#39;</span>
-                             <span class="s1">&#39;via use of a greedy selection algorithm.&#39;</span>
+                        <span class="n">action</span><span class="o">=</span><span class="s1">&#39;store_true&#39;</span><span class="p">,</span>
+                        <span class="n">default</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                        <span class="n">help</span><span class="o">=</span><span class="s1">&#39;Attempt to optimize cache store/loading &#39;</span>
+                             <span class="s1">&#39;via use of a greedy selection algorithm. (Experimental)&#39;</span>
                         <span class="p">)</span>
     <span class="n">parser</span><span class="o">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s1">&#39;-nosmem&#39;</span><span class="p">,</span> <span class="s1">&#39;--no-shared-memory&#39;</span><span class="p">,</span>
                         <span class="n">dest</span><span class="o">=</span><span class="s1">&#39;no_shared&#39;</span><span class="p">,</span>
@@ -491,12 +489,10 @@
 
 
 
-
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
-
 
 
 
@@ -529,7 +525,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
       
     </div>
 

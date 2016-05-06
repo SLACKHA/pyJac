@@ -15,12 +15,6 @@ import multiprocessing
 import shutil
 from collections import defaultdict
 
-# More Python 2 compatibility
-if sys.version_info.major == 3:
-    from itertools import zip
-elif sys.version_info.major == 2:
-    from itertools import izip as zip
-
 from string import Template
 
 # Related modules

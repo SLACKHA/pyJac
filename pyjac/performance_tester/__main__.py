@@ -1,7 +1,7 @@
 import sys
 import os
 
-import performance_tester as pt
+from . import performance_tester as pt
 from argparse import ArgumentParser
 
 def main(args=None):

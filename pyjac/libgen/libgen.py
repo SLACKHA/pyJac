@@ -176,9 +176,9 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
     #remove the old library
     if os.path.exists(os.path.join(out_dir, libname + lib_ext(shared))):
-        os.path.join(out_dir, libname + lib_ext(shared))
+        os.remove(os.path.join(out_dir, libname + lib_ext(shared)))
     if os.path.exists(os.path.join(out_dir, libname + lib_ext(not shared))):
-        os.path.join(out_dir, libname + lib_ext(not shared))
+        os.remove(os.path.join(out_dir, libname + lib_ext(not shared)))
 
     libname += lib_ext(shared)
 

@@ -15,12 +15,6 @@ import multiprocessing
 import shutil
 from collections import defaultdict
 
-# More Python 2 compatibility
-if sys.version_info.major == 3:
-    from itertools import zip
-elif sys.version_info.major == 2:
-    from itertools import izip as zip
-
 from string import Template
 
 # Related modules
@@ -34,7 +28,7 @@ except ImportError:
     raise
 
 try:
-    from optionloop import optionloop
+    from optionloop import optionloop as oploop
 except ImportError:
     print('Error: optionloop must be installed.')
     raise
@@ -240,6 +234,10 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
     #find the mechanisms to test
     mechanism_list = {}
+    if not os.path.exists(work_dir):
+        print ('Error: work directory {} for '.format(work_dir) +
+               'performance testing not found, exiting...')
+        sys.exit(-1)
     for name in os.listdir(work_dir):
         if os.path.isdir(os.path.join(work_dir, name)):
             #check for cti
@@ -256,6 +254,11 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                     thermo = next((tf for tf in files if 'therm' in tf), None)
                     if thermo is not None:
                         mechanism_list[name]['thermo'] = thermo
+
+    if len(mechanism_list) == 0:
+        print('No mechanisms found for performance testing in {}, exiting...'.format(
+            work_dir))
+        sys.exit(-1)
 
     if os.getenv('TCHEM_HOME'):
         tchem_home = os.getenv('TCHEM_HOME')
@@ -334,9 +337,9 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
         the_path = os.getcwd()
         first_run = True
-        op = optionloop(c_params, false_factory)
-        op = op + optionloop(cuda_params, false_factory)
-        op = op + optionloop(tchem_params, false_factory)
+        op = oploop(c_params, false_factory)
+        op = op + oploop(cuda_params, false_factory)
+        op = op + oploop(tchem_params, false_factory)
 
         haveOpt = False
         if os.path.isfile(os.path.join(os.getcwd(),
@@ -430,11 +433,11 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                 lib = generate_library(lang, build_dir, test_dir,
                                        finite_difference=FD, shared=not STATIC
                                        )
-                if not STATIC:
-                    lib = os.path.normpath(lib)
-                    lib = (lib[lib.index('lib') +
-                           len('lib'):lib.index('.so' if not STATIC else '.a')]
-                           )
+                
+                lib = os.path.normpath(lib)
+                lib = (lib[lib.index('lib') +
+                       len('lib'):lib.index('.so' if not STATIC else '.a')]
+                       )
             else:
                 files += ['mechanism', 'mass_mole']
 

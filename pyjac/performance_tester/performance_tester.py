@@ -433,11 +433,11 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                 lib = generate_library(lang, build_dir, test_dir,
                                        finite_difference=FD, shared=not STATIC
                                        )
-                if not STATIC:
-                    lib = os.path.normpath(lib)
-                    lib = (lib[lib.index('lib') +
-                           len('lib'):lib.index('.so' if not STATIC else '.a')]
-                           )
+                
+                lib = os.path.normpath(lib)
+                lib = (lib[lib.index('lib') +
+                       len('lib'):lib.index('.so' if not STATIC else '.a')]
+                       )
             else:
                 files += ['mechanism', 'mass_mole']
 

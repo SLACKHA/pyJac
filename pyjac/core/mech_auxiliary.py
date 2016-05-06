@@ -134,12 +134,12 @@ void eval_jacob(const double t, const double p, const double* y,
         file.write('//last_spec {}\n'.format(last_spec))
 
         # convience: write species indexes
-        file.write('/* Species Indexes\n'
-                   '\n'.join('{}  {}'.format(i, spec.name)
+        file.write('/* Species Indexes\n')
+        file.write('\n'.join('{}  {}'.format(i, spec.name)
                              for i, spec in enumerate(specs)
-                             ) +
-                   '*/\n\n'
+                             )
                    )
+        file.write('*/\n\n')
 
         file.write('//Number of species\n'
                    '#define NSP {}\n'.format(len(specs)) +

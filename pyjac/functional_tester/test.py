@@ -1587,6 +1587,14 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
              err_jac_thr_max=err_jac_thr_max
              )
 
+    # Report overall error statistics
+    print('Maximum of thresholded L2 norm relative error: '
+          '{:.3e}%'.format(np.max(err_jac_thr))
+          )
+    print('Standard deviation of thresholded L2 norm relative error: '
+          '{:.3e}%'.format(np.std(err_jac_thr))
+          )
+
     if not do_not_remove:
         # Cleanup all compiled files.
         safe_remove('adjacob.so')

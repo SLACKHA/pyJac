@@ -326,6 +326,10 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
             num_conditions += state_data.shape[0]
             print(num_conditions)
 
+        if num_conditions == 0:
+            print('No data found in folder {}, continuing...'.format(mech_name))
+            continue
+
         #figure out gpu steps
         step_size = 1
         steplist = []

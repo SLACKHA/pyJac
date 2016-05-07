@@ -17,14 +17,14 @@
             "affiliation": "University of Connecticut"
         }
     ],
-    "identifier": "http://dx.doi.org/",
+    "identifier": "http://dx.doi.org/10.5281/zenodo.51139",
     "codeRepository": "https://github.com/kyleniemeyer/pyJac",
     "datePublished": "2015-",
     "description": "pyJac creates code for CPU and GPU chemical kinetics Jacobian matrices",
     "keywords": "Jacobian, chemical kinetics, SIMD, GPU",
     "license": "https://opensource.org/licenses/MIT",
     "title": "pyJac",
-    "version": "0.99",
+    "version": "1.0",
     "uploadedBy":
         {
             "@id": "http://orcid.org/0000-0003-4425-7097",

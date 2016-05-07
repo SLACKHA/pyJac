@@ -49,3 +49,19 @@ printed to screen.
 ===================
 Performance testing
 ===================
+
+Performance testing (i.e. testing the speed of the various pyJac libraries against TChem)
+is given (typically two arguements), a base directory and a number of OMP threads to use.
+The program scans for all subdirectories in the base directory, looking for the following keys:
+
+    * A cantera mechanism (ending with .cti)
+    * A chemkin mechanism of the same name (ending with .dat)
+    * An (optional) chemkin thermo file (with 'therm' in filename) if required
+    * If the thermo file is not specified, the chemkin mechanism is assumed to contain the thermo data.
+    * Thermochemical state data (as generated previously using the PaSR module) files ending with *.npy
+
+Note that all *.npy files in a directory will be used for testing purposes
+
+The performance tester can be called using:
+
+python -m pyjac.performance_tester -w data/ -nt 12

@@ -27,11 +27,13 @@
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -69,7 +71,7 @@
     <span class="k">raise</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">optionloop</span> <span class="kn">import</span> <span class="n">optionloop</span> <span class="k">as</span> <span class="n">oploop</span>
+    <span class="kn">from</span> <span class="nn">optionloop</span> <span class="kn">import</span> <span class="n">OptionLoop</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
     <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: optionloop must be installed.&#39;</span><span class="p">)</span>
     <span class="k">raise</span>
@@ -297,8 +299,9 @@
                         <span class="n">mechanism_list</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s1">&#39;thermo&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">thermo</span>
 
     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">mechanism_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;No mechanisms found for performance testing in {}, exiting...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
-            <span class="n">work_dir</span><span class="p">))</span>
+        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;No mechanisms found for performance testing in &#39;</span>
+              <span class="s1">&#39;{}, exiting...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">work_dir</span><span class="p">)</span>
+              <span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">getenv</span><span class="p">(</span><span class="s1">&#39;TCHEM_HOME&#39;</span><span class="p">):</span>
@@ -367,6 +370,10 @@
             <span class="n">num_conditions</span> <span class="o">+=</span> <span class="n">state_data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="k">print</span><span class="p">(</span><span class="n">num_conditions</span><span class="p">)</span>
 
+        <span class="k">if</span> <span class="n">num_conditions</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;No data found in folder {}, continuing...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mech_name</span><span class="p">))</span>
+            <span class="k">continue</span>
+
         <span class="c1">#figure out gpu steps</span>
         <span class="n">step_size</span> <span class="o">=</span> <span class="mi">1</span>
         <span class="n">steplist</span> <span class="o">=</span> <span class="p">[]</span>
@@ -378,9 +385,9 @@
 
         <span class="n">the_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
         <span class="n">first_run</span> <span class="o">=</span> <span class="bp">True</span>
-        <span class="n">op</span> <span class="o">=</span> <span class="n">oploop</span><span class="p">(</span><span class="n">c_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
-        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">oploop</span><span class="p">(</span><span class="n">cuda_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
-        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">oploop</span><span class="p">(</span><span class="n">tchem_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">OptionLoop</span><span class="p">(</span><span class="n">c_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">OptionLoop</span><span class="p">(</span><span class="n">cuda_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
+        <span class="n">op</span> <span class="o">=</span> <span class="n">op</span> <span class="o">+</span> <span class="n">OptionLoop</span><span class="p">(</span><span class="n">tchem_params</span><span class="p">,</span> <span class="n">false_factory</span><span class="p">)</span>
 
         <span class="n">haveOpt</span> <span class="o">=</span> <span class="bp">False</span>
         <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span>
@@ -450,7 +457,11 @@
                 <span class="n">src</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">substitute</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="n">file_data</span><span class="p">[</span><span class="s1">&#39;mechfile&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;chemkin&#39;</span><span class="p">]</span>
-                <span class="n">file_data</span><span class="p">[</span><span class="s1">&#39;thermofile&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;thermo&#39;</span><span class="p">]</span>
+                <span class="k">if</span> <span class="s1">&#39;thermo&#39;</span> <span class="ow">in</span> <span class="n">mech_info</span><span class="p">:</span>
+                    <span class="n">file_data</span><span class="p">[</span><span class="s1">&#39;thermofile&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;thermo&#39;</span><span class="p">]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1">#it&#39;s the same file</span>
+                    <span class="n">file_data</span><span class="p">[</span><span class="s1">&#39;thermofile&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mech_info</span><span class="p">[</span><span class="s1">&#39;chemkin&#39;</span><span class="p">]</span>
                 <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home</span><span class="p">,</span>
                                        <span class="s1">&#39;tc_tester.c.in&#39;</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
                     <span class="n">src</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
@@ -474,7 +485,7 @@
                 <span class="n">lib</span> <span class="o">=</span> <span class="n">generate_library</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">test_dir</span><span class="p">,</span>
                                        <span class="n">finite_difference</span><span class="o">=</span><span class="n">FD</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="ow">not</span> <span class="n">STATIC</span>
                                        <span class="p">)</span>
-                
+
                 <span class="n">lib</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">lib</span><span class="p">)</span>
                 <span class="n">lib</span> <span class="o">=</span> <span class="p">(</span><span class="n">lib</span><span class="p">[</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">)</span> <span class="o">+</span>
                        <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">):</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.so&#39;</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">STATIC</span> <span class="k">else</span> <span class="s1">&#39;.a&#39;</span><span class="p">)]</span>
@@ -529,10 +540,12 @@
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -565,7 +578,7 @@
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
     </div>
 

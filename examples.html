@@ -28,11 +28,13 @@
     <link rel="next" title="Installation" href="installing.html" />
     <link rel="prev" title="Overview" href="overview.html" />
    
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">  
+  <body role="document">
+  
 
     <div class="document">
       <div class="documentwrapper">
@@ -70,17 +72,41 @@ partially stirred reactor (PaSR) module:</p>
 </pre></div>
 </div>
 <p>Then, functional testing using this data can be performed via:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
 <span class="o">--</span><span class="n">pasr_output</span> <span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span>
 </pre></div>
 </div>
 <p><strong>Alternatively</strong>, you can perform the test using provided example data:</p>
-<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python3</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">functional_tester</span> <span class="o">--</span><span class="n">mech</span> <span class="n">data</span><span class="o">/</span><span class="n">h2o2</span><span class="o">.</span><span class="n">cti</span> <span class="o">--</span><span class="n">lang</span> <span class="n">c</span> \
 <span class="o">--</span><span class="n">pasr_output</span> <span class="n">data</span><span class="o">/</span><span class="n">h2_pasr_output</span><span class="o">.</span><span class="n">npy</span>
 </pre></div>
 </div>
 <p>Detailed error statistics are saved in <code class="docutils literal"><span class="pre">error_arrays.npz</span></code>, and overall results
 printed to screen.</p>
+</div>
+<div class="section" id="performance-testing">
+<h2>Performance testing<a class="headerlink" href="#performance-testing" title="Permalink to this headline">¶</a></h2>
+<p>The performance of the analytical Jacobian matrix evaluation using pyJac can be
+tested against finite differencing and TChem. With the appropriate environment
+established, this test can be performed by giving only two arguments: a base
+directory and a number of OpenMP threads to use. The program scans for
+subdirectories in the base directory, looking for the following keys:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A Cantera mechanism (ending with .cti)</li>
+<li>A Chemkin mechanism of the same name (ending with .dat)</li>
+<li>An (optional) Chemkin thermodynamic file (with &#8220;therm&#8221; in filename)
+if required. If the thermo file is not specified, the mechanism is assumed
+to contain the thermo data.</li>
+<li>Thermochemical state data (as generated previously using the PaSR module)
+files ending with <code class="docutils literal"><span class="pre">*.npy</span></code></li>
+</ul>
+</div></blockquote>
+<p>Note that all <code class="docutils literal"><span class="pre">*.npy</span></code> files in a directory will be used for testing purposes.</p>
+<p>The performance tester can be called using:</p>
+<div class="highlight-default"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pyjac</span><span class="o">.</span><span class="n">performance_tester</span> <span class="o">-</span><span class="n">w</span> <span class="n">data</span><span class="o">/</span> <span class="o">-</span><span class="n">nt</span> <span class="mi">12</span>
+</pre></div>
+</div>
 </div>
 </div>
 
@@ -98,10 +124,12 @@ printed to screen.</p>
 
 
 
+
 <p>
-<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large"
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
   allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
 </p>
+
 
 
 
@@ -134,7 +162,7 @@ printed to screen.</p>
       
       |
       Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
       
       |
       <a href="_sources/examples.txt"

@@ -256,8 +256,9 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                         mechanism_list[name]['thermo'] = thermo
 
     if len(mechanism_list) == 0:
-        print('No mechanisms found for performance testing in {}, exiting...'.format(
-            work_dir))
+        print('No mechanisms found for performance testing in '
+              '{}, exiting...'.format(work_dir)
+              )
         sys.exit(-1)
 
     if os.getenv('TCHEM_HOME'):
@@ -441,7 +442,7 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                 lib = generate_library(lang, build_dir, test_dir,
                                        finite_difference=FD, shared=not STATIC
                                        )
-                
+
                 lib = os.path.normpath(lib)
                 lib = (lib[lib.index('lib') +
                        len('lib'):lib.index('.so' if not STATIC else '.a')]

@@ -35,13 +35,17 @@ partially stirred reactor (PaSR) module::
 
 Then, functional testing using this data can be performed via::
 
-    python3 -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
+    python -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
     --pasr_output h2_pasr_output.npy
 
 **Alternatively**, you can perform the test using provided example data::
 
-    python3 -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
+    python -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
     --pasr_output data/h2_pasr_output.npy
 
 Detailed error statistics are saved in ``error_arrays.npz``, and overall results
 printed to screen.
+
+===================
+Performance testing
+===================

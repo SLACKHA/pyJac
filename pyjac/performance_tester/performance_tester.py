@@ -413,7 +413,11 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                 src = src.substitute(file_data)
             else:
                 file_data['mechfile'] = mech_info['chemkin']
-                file_data['thermofile'] = mech_info['thermo']
+                if 'thermo' in mech_info:
+                    file_data['thermofile'] = mech_info['thermo']
+                else:
+                    #it's the same file
+                    file_data['thermofile'] = mech_info['chemkin']
                 with open(os.path.join(home,
                                        'tc_tester.c.in'), 'r') as file:
                     src = Template(file.read())

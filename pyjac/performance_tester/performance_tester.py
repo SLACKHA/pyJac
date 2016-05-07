@@ -28,7 +28,7 @@ except ImportError:
     raise
 
 try:
-    from optionloop import OptionLoop as oploop
+    from optionloop import OptionLoop
 except ImportError:
     print('Error: optionloop must be installed.')
     raise
@@ -337,9 +337,9 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
         the_path = os.getcwd()
         first_run = True
-        op = oploop(c_params, false_factory)
-        op = op + oploop(cuda_params, false_factory)
-        op = op + oploop(tchem_params, false_factory)
+        op = OptionLoop(c_params, false_factory)
+        op = op + OptionLoop(cuda_params, false_factory)
+        op = op + OptionLoop(tchem_params, false_factory)
 
         haveOpt = False
         if os.path.isfile(os.path.join(os.getcwd(),

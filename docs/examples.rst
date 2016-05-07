@@ -56,13 +56,13 @@ established, this test can be performed by giving only two arguments: a base
 directory and a number of OpenMP threads to use. The program scans for
 subdirectories in the base directory, looking for the following keys:
 
-    * A Cantera mechanism (ending with .cti)
-    * A Chemkin mechanism of the same name (ending with .dat)
-    * An (optional) Chemkin thermodynamic file (with "therm" in filename)
-    if required. If the thermo file is not specified, the mechanism is assumed
-    to contain the thermo data.
-    * Thermochemical state data (as generated previously using the PaSR module)
-    files ending with ``*.npy``
+ * A Cantera mechanism (ending with .cti)
+ * A Chemkin mechanism of the same name (ending with .dat)
+ * An (optional) Chemkin thermodynamic file (with "therm" in filename)
+   if required. If the thermo file is not specified, the mechanism is assumed
+   to contain the thermo data.
+ * Thermochemical state data (as generated previously using the PaSR module)
+   files ending with ``*.npy``
 
 Note that all ``*.npy`` files in a directory will be used for testing purposes.
 

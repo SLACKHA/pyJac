@@ -24,8 +24,7 @@ def main(args=None):
                             )
         parser.add_argument('-nt', '--num_omp_threads',
                             type=int,
-                            default=12,
-                            required=False,
+                            required=True,
                             help='Number of threads to use for OpenMP '
                                  'parallelization of the C codes.'
                                  )

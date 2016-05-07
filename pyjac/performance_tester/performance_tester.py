@@ -28,7 +28,7 @@ except ImportError:
     raise
 
 try:
-    from optionloop import optionloop as oploop
+    from optionloop import OptionLoop as oploop
 except ImportError:
     print('Error: optionloop must be installed.')
     raise

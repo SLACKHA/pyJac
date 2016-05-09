@@ -406,7 +406,7 @@ def optimize_cache(specs, reacs, multi_thread,
                 mapping_list = [x for x in mapping_list if x != last_spec]
             result_list.append(
                 pool.apply_async(optimizer_loop,
-                                 (mapping_list, copy_mapping(reac_mapping),
+                                 (mapping_list, copy_mapping(spec_mapping),
                                   lookback_list[i], improve_cutoff_list[i],
                                   rand_restarts_list[i]
                                   )

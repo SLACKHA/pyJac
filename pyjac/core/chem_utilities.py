@@ -35,6 +35,9 @@ class CommonEqualityMixin(object):
                 if isinstance(value, np.ndarray):
                     if not np.array_equal(value, other.__dict__[key]):
                         return False
+                elif isinstance(value, list):
+                    if not all([any(x == y for y in other.__dict__[key]) for x in value]):
+                        return False
                 elif value != other.__dict__[key]:
                     return False
             return True

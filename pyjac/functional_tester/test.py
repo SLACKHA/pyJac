@@ -12,6 +12,8 @@ import sys
 import subprocess
 import pickle
 from argparse import ArgumentParser
+import multiprocessing
+import glob
 
 # Related modules
 import numpy as np
@@ -1143,22 +1145,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     if generate_jacob:
         #remove the old jaclist
-        try:
-            os.remove(os.path.join(build_dir, 'jacobs', 'jac_list_c'))
-        except:
-            pass
-        try:
-            os.remove(os.path.join(build_dir, 'jacobs', 'rate_list_c'))
-        except:
-            pass
-        try:
-            os.remove(os.path.join(build_dir, 'jacobs', 'jac_list_cuda'))
-        except:
-            pass
-        try:
-            os.remove(os.path.join(build_dir, 'rates', 'rate_list_cuda'))
-        except:
-            pass
+        safe_remove(os.path.join(build_dir, 'jacobs', 'jac_list_c'))
+        safe_remove(os.path.join(build_dir, 'jacobs', 'rate_list_c'))
+        safe_remove(os.path.join(build_dir, 'jacobs', 'jac_list_cuda'))
+        safe_remove(os.path.join(build_dir, 'rates', 'rate_list_cuda'))
 
         # Create Jacobian and supporting source code files
         create_jacobian(lang, gas=gas,
@@ -1167,6 +1157,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
                         no_shared=no_shared,
                         last_spec=last_spec,
                         auto_diff=False,
+                        multi_thread=multiprocessing.cpu_count()
                         )
         #We're going to need the c autodiff interface for testing the jacobian
         create_jacobian('c', gas=gas,
@@ -1597,10 +1588,14 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     if not do_not_remove:
         # Cleanup all compiled files.
-        safe_remove('adjacob.so')
-        safe_remove('cu_pyjacob.so')
-        safe_remove('pyjacob.so')
-        safe_remove('py_tchem.so')
+        for file in glob.glob('adjacob*.so'):
+            safe_remove(file)
+        for file in glob.glob('cu_pyjacob*.so'):
+            safe_remove(file)
+        for file in glob.glob('pyjacob*.so'):
+            safe_remove(file)
+        for file in glob.glob('py_tchem*.so'):
+            safe_remove(file)
 
         # Now clean build directory
         for root, dirs, files in os.walk('./build', topdown=False):

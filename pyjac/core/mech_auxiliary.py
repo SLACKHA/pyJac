@@ -414,7 +414,8 @@ void eval_jacob(const double t, const double p, const double* y,
     '#include <helper_cuda.h>\n'
     '\n'
     '#define GRID_DIM (blockDim.x * gridDim.x)\n'
-    '#define INDEX(i) (threadIdx.x + blockDim.x * blockIdx.x + (i) * GRID_DIM)\n'
+    '#define T_ID (threadIdx.x + blockIdx.x * blockDim.x)\n'
+    '#define INDEX(i) (T_ID + (i) * GRID_DIM)\n'
     '\n'
     )
 

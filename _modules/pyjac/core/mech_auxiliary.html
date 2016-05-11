@@ -57,10 +57,10 @@
 <span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
 <span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">chem_utilities</span> <span class="k">as</span> <span class="n">chem</span>
 
-<div class="viewcode-block" id="write_mechanism_initializers"><a class="viewcode-back" href="../../../src/pyjac.core.mech_auxiliary.html#pyjac.core.mech_auxiliary.write_mechanism_initializers">[docs]</a><span class="k">def</span> <span class="nf">write_mechanism_initializers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">initial_conditions</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span>
-                                 <span class="n">old_spec_order</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">old_rxn_order</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                                 <span class="n">cache_optimized</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                                 <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="write_mechanism_initializers"><a class="viewcode-back" href="../../../src/pyjac.core.mech_auxiliary.html#pyjac.core.mech_auxiliary.write_mechanism_initializers">[docs]</a><span class="k">def</span> <span class="nf">write_mechanism_initializers</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span>
+                                 <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">back_spec_mapping</span><span class="p">,</span>
+                                 <span class="n">initial_conditions</span><span class="o">=</span><span class="s1">&#39;&#39;</span><span class="p">,</span> <span class="n">cache_optimized</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                                 <span class="n">last_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Writes mechanism-specific files.</span>
 
 <span class="sd">    Parameters</span>
@@ -73,13 +73,13 @@
 <span class="sd">        List of species in the mechanism.</span>
 <span class="sd">    reacs : list of `ReacInfo`</span>
 <span class="sd">        List of reactions in the mechanism.</span>
+<span class="sd">    fwd_spec_mapping : list of int</span>
+<span class="sd">        A mapping of the original mechanism to the new species order</span>
+<span class="sd">    back_spec_mapping : list of int</span>
+<span class="sd">        A mapping of the new species order to the original mechanism</span>
 <span class="sd">    initial_conditions : Optional[str]</span>
 <span class="sd">        A comma separated list of the initial conditions to use in form</span>
 <span class="sd">        T,P,X (e.g. &#39;800,1,H2=1.0,O2=0.5&#39;). Temperature in K, P in atm.</span>
-<span class="sd">    old_spec_order : Optional[list of int]</span>
-<span class="sd">        A mapping of the new species order to the original mechanism</span>
-<span class="sd">    old_rxn_order : Optional[list of int]</span>
-<span class="sd">        A mapping of the new reaction order to the original mechanism</span>
 <span class="sd">    cache_optimized : Optional[bool]</span>
 <span class="sd">        If ``True``, use the greedy optimizer to attempt to improve cache hit rates</span>
 <span class="sd">    last_spec : Optional[str]</span>
@@ -216,10 +216,6 @@
 
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#endif</span><span class="se">\n\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
-    <span class="n">reversed_specs</span> <span class="o">=</span> <span class="p">[]</span>
-    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)):</span>
-        <span class="n">reversed_specs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">old_spec_order</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
-
     <span class="c1"># now the mechanism file</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;mechanism&#39;</span> <span class="o">+</span> <span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">]),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
@@ -236,8 +232,8 @@
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        double temp [NSP];</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">old_spec_order</span><span class="p">):</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">fwd_spec_mapping</span><span class="p">):</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="p">))</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    //reverse masking of ICs for cache optimized mechanisms</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
@@ -246,8 +242,8 @@
             <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        double temp [NSP];</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="s1">&#39;        memcpy(temp, y_specs, NSP * sizeof(double));</span><span class="se">\n</span><span class="s1">&#39;</span>
                        <span class="p">)</span>
-            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reversed_specs</span><span class="p">):</span>
-                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">spec</span><span class="p">,</span> <span class="n">i</span><span class="p">))</span>
+            <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">spec</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">back_spec_mapping</span><span class="p">):</span>
+                <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;        y_specs[{0}] = temp[{1}];</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">spec</span><span class="p">))</span>
         <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;    }</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
 
         <span class="n">needed_arr</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">,</span> <span class="s1">&#39;var&#39;</span><span class="p">]</span>
@@ -461,7 +457,8 @@
     <span class="s1">&#39;#include &lt;helper_cuda.h&gt;</span><span class="se">\n</span><span class="s1">&#39;</span>
     <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
     <span class="s1">&#39;#define GRID_DIM (blockDim.x * gridDim.x)</span><span class="se">\n</span><span class="s1">&#39;</span>
-    <span class="s1">&#39;#define INDEX(i) (threadIdx.x + blockDim.x * blockIdx.x + (i) * GRID_DIM)</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#define T_ID (threadIdx.x + blockIdx.x * blockDim.x)</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="s1">&#39;#define INDEX(i) (T_ID + (i) * GRID_DIM)</span><span class="se">\n</span><span class="s1">&#39;</span>
     <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span>
     <span class="p">)</span>
 

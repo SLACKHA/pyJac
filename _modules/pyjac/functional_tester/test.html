@@ -55,6 +55,8 @@
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">pickle</span>
 <span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">import</span> <span class="nn">multiprocessing</span>
+<span class="kn">import</span> <span class="nn">glob</span>
 
 <span class="c1"># Related modules</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
@@ -1186,22 +1188,10 @@
 
     <span class="k">if</span> <span class="n">generate_jacob</span><span class="p">:</span>
         <span class="c1">#remove the old jaclist</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;jac_list_c&#39;</span><span class="p">))</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;rate_list_c&#39;</span><span class="p">))</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;jac_list_cuda&#39;</span><span class="p">))</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">pass</span>
-        <span class="k">try</span><span class="p">:</span>
-            <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;rates&#39;</span><span class="p">,</span> <span class="s1">&#39;rate_list_cuda&#39;</span><span class="p">))</span>
-        <span class="k">except</span><span class="p">:</span>
-            <span class="k">pass</span>
+        <span class="n">safe_remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;jac_list_c&#39;</span><span class="p">))</span>
+        <span class="n">safe_remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;rate_list_c&#39;</span><span class="p">))</span>
+        <span class="n">safe_remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;jac_list_cuda&#39;</span><span class="p">))</span>
+        <span class="n">safe_remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;rates&#39;</span><span class="p">,</span> <span class="s1">&#39;rate_list_cuda&#39;</span><span class="p">))</span>
 
         <span class="c1"># Create Jacobian and supporting source code files</span>
         <span class="n">create_jacobian</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">gas</span><span class="o">=</span><span class="n">gas</span><span class="p">,</span>
@@ -1210,6 +1200,7 @@
                         <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span>
                         <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span>
                         <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                        <span class="n">multi_thread</span><span class="o">=</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
                         <span class="p">)</span>
         <span class="c1">#We&#39;re going to need the c autodiff interface for testing the jacobian</span>
         <span class="n">create_jacobian</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">gas</span><span class="o">=</span><span class="n">gas</span><span class="p">,</span>
@@ -1640,10 +1631,14 @@
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">do_not_remove</span><span class="p">:</span>
         <span class="c1"># Cleanup all compiled files.</span>
-        <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;adjacob.so&#39;</span><span class="p">)</span>
-        <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;cu_pyjacob.so&#39;</span><span class="p">)</span>
-        <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;pyjacob.so&#39;</span><span class="p">)</span>
-        <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;py_tchem.so&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;adjacob*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;cu_pyjacob*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;pyjacob*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;py_tchem*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
 
         <span class="c1"># Now clean build directory</span>
         <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s1">&#39;./build&#39;</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>

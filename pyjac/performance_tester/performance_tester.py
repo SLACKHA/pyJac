@@ -359,6 +359,14 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
             opt = state['cache_opt']
             smem = state['shared']
 
+            if any([isinstance(rxn, ct.PlogReaction) or
+                isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
+                ]) and lang == 'tchem':
+                print('TChem performance evaluation disabled; '
+                      'not compatible with Plog or Chebyshev reactions.'
+                      )
+                continue
+
             data_output = ('{}_{}_{}_{}'.format(lang, 'co' if opt else 'nco',
                                                 'smem' if smem else 'nosmem',
                                                 'fd' if FD else 'ajac'

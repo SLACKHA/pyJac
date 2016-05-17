@@ -305,27 +305,27 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
         subprocess.check_call(['mkdir', '-p', build_dir])
         subprocess.check_call(['mkdir', '-p', test_dir])
 
-        #clear old data
-        with open(os.path.join('data.bin'), 'wb') as file:
-            pass
-
+        num_conditions = 0
         npy_files = [f for f in os.listdir(os.path.join(work_dir, mech_name))
                         if f.endswith('.npy')
                         and os.path.isfile(f)]
-        num_conditions = 0
-        #load PaSR data for different pressures/conditions,
-        # and save to binary C file
-        for npy in npy_files:
-            state_data = np.load(npy)
-            state_data = state_data.reshape(state_data.shape[0] *
-                                state_data.shape[1],
-                                state_data.shape[2]
-                                )
-            with open(os.path.join('data.bin'), "ab") as file:
-                    state_data.tofile(file)
-
-            num_conditions += state_data.shape[0]
-            print(num_conditions)
+        data = None
+        with open('data.bin', 'wb') as file:
+            #load PaSR data for different pressures/conditions,
+            # and save to binary C file
+            for npy in sorted(npy_files):
+                state_data = np.load(npy)
+                state_data = state_data.reshape(state_data.shape[0] *
+                                    state_data.shape[1],
+                                    state_data.shape[2]
+                                    )
+                if data is None:
+                    data = state_data
+                else:
+                    data = np.vstack((data, state_data))
+                num_conditions += state_data.shape[0]
+                print(num_conditions, data.shape)
+            data.tofile(file)
 
         if num_conditions == 0:
             print('No data found in folder {}, continuing...'.format(mech_name))

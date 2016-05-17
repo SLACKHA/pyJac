@@ -266,11 +266,6 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
     else:
         raise SystemError('TCHEM_HOME environment variable not set.')
 
-
-    cache_opt_base = [False, True]
-    shared_base = [True, False]
-    finite_diffs_base = [False, True]
-
     cpu_repeats = 10
     gpu_repeats = 10
 

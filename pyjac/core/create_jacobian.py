@@ -2010,7 +2010,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
 
     if not no_shared and lang == 'cuda':
         file.write(utils.line_start +
-                   'extern __shared__ double shared_temp[]' +
+                   'extern volatile __shared__ double shared_temp[]' +
                    utils.line_end[lang]
                    )
         # third-body variable needed for reactions

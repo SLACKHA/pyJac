@@ -191,7 +191,7 @@ class shared_memory_manager(object):
 
         """
         file.write(''.join([' ' for i in range(indent)]) +
-                   'extern __shared__ double ' +
+                   'extern volatile __shared__ double ' +
                    self.skeleton.format('') + utils.line_end['cuda']
                    )
 

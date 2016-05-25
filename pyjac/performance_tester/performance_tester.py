@@ -285,8 +285,8 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
     #set up testing environment
     env = os.environ.copy()
-    env['OMP_NUM_THREADS'] = str(num_threads)
-    env['MKL_NUM_THREADS'] = str(num_threads)
+    env['OMP_NUM_THREADS'] = str(1)
+    env['MKL_NUM_THREADS'] = str(1)
 
     for mech_name, mech_info in sorted(mechanism_list.items(),
                                        key=lambda x:x[1]['ns']
@@ -482,5 +482,5 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                         subprocess.check_call(
                             [os.path.join(the_path,
                             test_dir, 'speedtest'),
-                            str(stepsize)], stdout=file, env=env
+                            str(stepsize), str(num_threads)], stdout=file, env=env
                             )

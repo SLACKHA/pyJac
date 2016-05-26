@@ -4,6 +4,8 @@ pyJac
 
 .. image:: https://zenodo.org/badge/doi/10.5281/zenodo.53100.svg
    :target: http://dx.doi.org/10.5281/zenodo.53100
+.. image:: https://badge.fury.io/py/pyJac@2x.png
+    :target: https://badge.fury.io/py/pyJac
 
 This utility creates source code to calculate the Jacobian matrix analytically
 for a chemical reaction mechanism.

@@ -266,11 +266,6 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
     else:
         raise SystemError('TCHEM_HOME environment variable not set.')
 
-
-    cache_opt_base = [False, True]
-    shared_base = [True, False]
-    finite_diffs_base = [False, True]
-
     cpu_repeats = 10
     gpu_repeats = 10
 
@@ -290,8 +285,8 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
     #set up testing environment
     env = os.environ.copy()
-    env['OMP_NUM_THREADS'] = str(num_threads)
-    env['MKL_NUM_THREADS'] = str(num_threads)
+    env['OMP_NUM_THREADS'] = str(1)
+    env['MKL_NUM_THREADS'] = str(1)
 
     for mech_name, mech_info in sorted(mechanism_list.items(),
                                        key=lambda x:x[1]['ns']
@@ -305,31 +300,30 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
         subprocess.check_call(['mkdir', '-p', build_dir])
         subprocess.check_call(['mkdir', '-p', test_dir])
 
-        #clear old data
-        with open(os.path.join('data.bin'), 'wb') as file:
-            pass
-
+        num_conditions = 0
         npy_files = [f for f in os.listdir(os.path.join(work_dir, mech_name))
                         if f.endswith('.npy')
                         and os.path.isfile(f)]
-        num_conditions = 0
-        #load PaSR data for different pressures/conditions,
-        # and save to binary C file
-        for npy in npy_files:
-            state_data = np.load(npy)
-            state_data = state_data.reshape(state_data.shape[0] *
-                                state_data.shape[1],
-                                state_data.shape[2]
-                                )
-            with open(os.path.join('data.bin'), "ab") as file:
-                    state_data.tofile(file)
-
-            num_conditions += state_data.shape[0]
-            print(num_conditions)
-
-        if num_conditions == 0:
-            print('No data found in folder {}, continuing...'.format(mech_name))
-            continue
+        data = None
+        with open('data.bin', 'wb') as file:
+            #load PaSR data for different pressures/conditions,
+            # and save to binary C file
+            for npy in sorted(npy_files):
+                state_data = np.load(npy)
+                state_data = state_data.reshape(state_data.shape[0] *
+                                    state_data.shape[1],
+                                    state_data.shape[2]
+                                    )
+                if data is None:
+                    data = state_data
+                else:
+                    data = np.vstack((data, state_data))
+                num_conditions += state_data.shape[0]
+                print(num_conditions, data.shape)
+            if num_conditions == 0:
+                print('No data found in folder {}, continuing...'.format(mech_name))
+                continue
+            data.tofile(file)
 
         #figure out gpu steps
         step_size = 1
@@ -364,6 +358,14 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
             opt = state['cache_opt']
             smem = state['shared']
+
+            if any([isinstance(rxn, ct.PlogReaction) or
+                isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
+                ]) and lang == 'tchem':
+                print('TChem performance evaluation disabled; '
+                      'not compatible with Plog or Chebyshev reactions.'
+                      )
+                continue
 
             data_output = ('{}_{}_{}_{}'.format(lang, 'co' if opt else 'nco',
                                                 'smem' if smem else 'nosmem',
@@ -480,5 +482,5 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                         subprocess.check_call(
                             [os.path.join(the_path,
                             test_dir, 'speedtest'),
-                            str(stepsize)], stdout=file, env=env
+                            str(stepsize), str(num_threads)], stdout=file, env=env
                             )

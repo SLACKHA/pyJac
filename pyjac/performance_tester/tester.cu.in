@@ -21,8 +21,6 @@ void eval_jacob (const double, const double, const double *, double *, const mec
 __host__
 void read_initial_conditions(const char*, int, double**, double**);
 
-#define T_ID (threadIdx.x + (blockDim.x * blockIdx.x))
-#define GRID_SIZE (blockDim.x * gridDim.x)
 __global__
 #ifdef FINITE_DIFF
 void jac_driver(int NUM, const double* pres, const double* y, const mechanism_memory* d_mem, double* y_temp)

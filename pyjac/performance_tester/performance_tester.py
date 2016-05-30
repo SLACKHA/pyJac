@@ -460,6 +460,9 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                                    build_dir, test_dir, not STATIC
                                    ) for f in files
                        ]
+            if lang != 'cuda':
+                for s in structs:
+                    s.args.append('-fopenmp')
 
             pool = multiprocessing.Pool()
             results = pool.map(compiler, structs)

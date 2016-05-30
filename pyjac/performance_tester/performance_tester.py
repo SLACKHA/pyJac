@@ -184,6 +184,8 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
     if temp_lang == 'cuda':
         args.append('-L{}'.format(get_cuda_path()))
     args.extend(libs[temp_lang])
+    if temp_lang != 'cuda':
+        args.append('-fopenmp')
     if lang == 'tchem':
         if os.getenv('TCHEM_HOME'):
             tchem_home = os.getenv('TCHEM_HOME')

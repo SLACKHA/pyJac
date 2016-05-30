@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
       exit(-1);
   }
   int num_threads = 1;
-  if (sscanf(argv[1], "%i", &num_threads) !=1 || (num_threads <= 0))
+  if (sscanf(argv[2], "%i", &num_threads) !=1 || (num_threads <= 0))
   {
     exit(-1);
   }

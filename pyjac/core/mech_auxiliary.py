@@ -139,7 +139,7 @@ void eval_jacob(const double t, const double p, const double* y,
                              for i, spec in enumerate(specs)
                              )
                    )
-        file.write('*/\n\n')
+        file.write('\n*/\n\n')
 
         file.write('//Number of species\n'
                    '#define NSP {}\n'.format(len(specs)) +

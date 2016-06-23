@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
 
-from libgen import generate_library
+from .libgen import generate_library
 from .. import utils
 
 if __name__ == '__main__':

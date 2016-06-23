@@ -360,7 +360,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             line = ('#ifndef RATES_HEAD_{0}\n'
                    '#define RATES_HEAD_{0}\n'
                    '\n'
-                   '#include "../header{1}"\n'
+                   '#include "header{1}"\n'
                    '\n'
                    ).format(rate_count, utils.header_ext[lang])
             file.write(line)

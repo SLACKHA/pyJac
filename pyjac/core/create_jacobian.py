@@ -1960,7 +1960,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
-                   '#include "../header{}"\n'.format(utils.header_ext[lang]) +
+                   '#include "header{}"\n'.format(utils.header_ext[lang]) +
                    '\n' + ('__device__ ' if lang == 'cuda' else '') +
                    ''
                    'void eval_jacob_{} ('.format(number)
@@ -1984,7 +1984,7 @@ def write_sub_intro(path, lang, number, rate_list, this_rev, this_pdep,
                 utils.file_ext[lang]), 'w'
                 )
     file.write('#include <math.h>\n'
-               '#include "../header{}"\n'.format(utils.header_ext[lang]) +
+               '#include "header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                )
 
@@ -2142,7 +2142,7 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
         file.write('#ifndef JACOB_HEAD_{}\n'.format(number) +
                    '#define JACOB_HEAD_{}\n'.format(number) +
                    '\n'
-                   '#include "../header{}"\n'.format(utils.header_ext[lang]) +
+                   '#include "header{}"\n'.format(utils.header_ext[lang]) +
                    '\n' +
                    ('__device__ ' if lang == 'cuda' else '') +
                    'void eval_jacob_{} ('.format(number)
@@ -2157,7 +2157,7 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
     file = open(os.path.join(path, 'jacob_' + str(number) +
                 utils.file_ext[lang]), 'w'
                 )
-    file.write('#include "../header{}"\n'.format(utils.header_ext[lang]) +
+    file.write('#include "header{}"\n'.format(utils.header_ext[lang]) +
                '\n'
                )
 

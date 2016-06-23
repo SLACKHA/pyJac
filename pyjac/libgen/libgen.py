@@ -109,6 +109,9 @@ def compiler(fstruct):
     try:
         print(' '.join(args))
         subprocess.check_call(args)
+    except OSError:
+        print('Error: Compiler {} not found, generation of pyjac library failed.'.format(args[0]))
+        sys.exit(-1)
     except subprocess.CalledProcessError:
         print('Error: compilation failed for ' + fstruct.filename +
               utils.file_ext[fstruct.build_lang]
@@ -202,6 +205,9 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
     try:
         print(' '.join(command))
         subprocess.check_call(command)
+    except OSError:
+        print('Error: Compiler {} not found, generation of pyjac library failed.'.format(args[0]))
+        sys.exit(-1)
     except subprocess.CalledProcessError:
         print('Error: Generation of pyjac library failed.')
         sys.exit(-1)

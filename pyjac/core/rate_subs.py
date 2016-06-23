@@ -407,8 +407,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
             file.write('#include "rates/rates_include{}"\n'.format(utils.header_ext[lang]))
 
         if lang in ['c', 'cuda']:
-            file.write('#include "{}{}rates'.format(
-                            '../' if rate_count is not None else '',
+            file.write('#include "{}rates'.format(
                             file_prefix)
                         + utils.header_ext[lang] + '"\n')
             if auto_diff:

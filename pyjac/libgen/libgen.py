@@ -350,8 +350,7 @@ def generate_library(lang, source_dir, obj_dir=None,
         print('Cannot generate library for unknown language {}'.format(lang))
         sys.exit(-1)
 
-    if shared is None:
-        shared = lang != 'cuda'
+    shared = shared and lang != 'cuda'
 
     if lang == 'cuda' and shared:
         print('CUDA does not support linking of shared device libraries.')

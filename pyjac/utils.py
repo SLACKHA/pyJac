@@ -347,11 +347,11 @@ def get_parser():
                         required=False,
                         help='A comma separated list of initial initial '
                              'conditions to set in the '
-                             'set_same_initial_conditions method. \
-                                Expected Form: T,P,Species1=...,Species2=...,...\n\
-                                Temperature in K\n\
-                                Pressure in Atm\n\
-                                Species in moles'
+                             'set_same_initial_conditions method.\n'
+                             '   Expected Form: T,P,Species1=...,Species2=...,...\n'
+                             '   Temperature in K\n'
+                             '   Pressure in Atm\n'
+                             '   Species in moles'
                         )
     # cuda specific
     parser.add_argument('-co', '--cache-optimizer',

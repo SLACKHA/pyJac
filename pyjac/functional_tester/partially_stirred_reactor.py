@@ -86,6 +86,8 @@ class Particle(object):
     """Class for particle in reactor.
     """
 
+    particle_mass = 0.1 #kg
+
     def __init__(self, gas):
         """Initialize particle object with thermochemical state.
 
@@ -101,8 +103,6 @@ class Particle(object):
         """
 
         self.gas = gas
-        self.reac = ct.IdealGasConstPressureReactor(self.gas)
-        self.netw = ct.ReactorNet([self.reac])
 
     def __call__(self, comp=None):
         """Return or set composition.
@@ -126,8 +126,6 @@ class Particle(object):
             else:
                 return NotImplemented
             self.gas.HPY = h, self.gas.P, Y
-            self.reac.syncState()
-            self.netw.reinitialize()
         else:
             return np.hstack((self.gas.enthalpy_mass, self.gas.Y))
 
@@ -311,8 +309,6 @@ class Particle(object):
         else:
             return NotImplemented
         self.gas.HPY = h, self.gas.P, Y
-        self.reac.syncState()
-        self.netw.reinitialize()
         return self
 
     def __isub__(self, other):
@@ -341,8 +337,6 @@ class Particle(object):
         else:
             return NotImplemented
         self.gas.HPY = h, self.gas.P, Y
-        self.reac.syncState()
-        self.netw.reinitialize()
         return self
 
     def __imul__(self, other):
@@ -365,8 +359,6 @@ class Particle(object):
         else:
             return NotImplemented
         self.gas.HPY = h, self.gas.P, Y
-        self.reac.syncState()
-        self.netw.reinitialize()
         return self
 
     def react(self, dt):
@@ -382,7 +374,10 @@ class Particle(object):
         None
 
         """
-        self.netw.advance(self.netw.time + dt)
+        reac = ct.IdealGasConstPressureReactor(self.gas,
+            volume=Particle.particle_mass/self.gas.density)
+        netw = ct.ReactorNet([reac])
+        netw.advance(netw.time + dt)
 
 
 def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):

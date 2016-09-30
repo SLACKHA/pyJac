@@ -9,8 +9,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 - Minor compilation fixes for including OpenMP
-### Depreciated
+
+### Deprecated
 - Shared library creation for CUDA disabled, as CUDA does not allow linkage of SO's into another CUDA kernel
+
 ### Fixed
 - Explicitly conserve mass in PaSR
 - Minor path fixes
@@ -18,8 +20,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ## [1.0.1] - 2016-05-25
 ### Added
 - Added GPU macros, e.g. THREAD_ID, GRID_SIZE
+
 ### Changed
 - Much better handling of removal of files created during testing
+
 ### Fixed
 - Bugfix that generates data.bin's correctly from npy files for performance testing (**important**)
 - Explicit setting of omp # threads for performance testing
@@ -30,22 +34,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - pyJac now posesses the ability to create a static/shared library for a mechanism (for external linkage)
 - documentation added
 - examples added
+
 ### Changed
 - much better handling of CUDA compilation via cython
 - pointers are now restricted where appropriate
 - better python3 compatiblitity
+
 ### Fixed
 - other minor bugfixes
 
 ## [0.9.1-beta] - 2015-10-29
-###Changed
+### Changed
 - Implemented the strict mass conservation formulation
 - Updated CUDA implementation such that it is testable v.s. pyJac c-version (and Cantera where applicable)
 - More robust build folder management
 - More robust mapping for strict mass consv. testing 
 
 ## 0.9-beta - 2015-10-02
-###Added
+### Added
 - First working / tested version of pyJac
 
 

@@ -1,6 +1,6 @@
-from enum import IntEnum
+from enum import Enum
 
-class reaction_type(IntEnum):
+class reaction_type(Enum):
     elementary = 1
     thd = 2
     fall = 3
@@ -8,19 +8,19 @@ class reaction_type(IntEnum):
     plog = 5
     cheb = 6
 
-class thd_body_type(IntEnum):
+class thd_body_type(Enum):
     none = 0
     mix = 1
     species = 2
     unity = 3
 
-class falloff_form(IntEnum):
+class falloff_form(Enum):
     none = 0
     lind = 1
     troe = 2
     sri = 3
 
-class reversible_type(IntEnum):
+class reversible_type(Enum):
     non_reversible = 1
     explicit = 2
     non_explicit = 3

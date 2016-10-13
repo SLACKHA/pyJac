@@ -709,6 +709,9 @@ def read_mech(mech_filename, therm_filename):
         print('Error: missing thermo data for ' + ', '.join(missing_mw))
         sys.exit(1)
 
+    #determine reaction type enums
+    for reac in reacs:
+        reac.finalize(len(specs))
     return (elems, specs, reacs)
 
 
@@ -1076,4 +1079,7 @@ def read_mech_ct(filename=None, gas=None):
 
         reacs.append(reac)
 
+    #determine reaction type enums
+    for reac in reacs:
+        reac.finalize(len(specs))
     return (elems, specs, reacs)

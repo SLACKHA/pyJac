@@ -8,6 +8,7 @@ from __future__ import division
 # Standard libraries
 import math
 import numpy as np
+from .reaction_types import *
 
 __all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',
            'ReacInfo', 'SpecInfo', 'calc_spec_smh']
@@ -214,6 +215,58 @@ class ReacInfo(CommonEqualityMixin):
         self.plog = False
         # List of arrays with [pressure [Pa], A, b, E]
         self.plog_par = None
+
+        #enums
+        self.type = []
+
+    def finalize(self, num_species):
+        """
+
+        Takes all the various options of the reaction, and turns it into `reaction_types` enums
+        for use with the SymPy equation databases
+
+        """
+
+        if self.rev:
+            self.type.append(reversible_type.explicit if self.rev_par\
+                else reversible_type.non_explicit)
+        else:
+            self.type.append(reversible_type.non_reversible)
+
+        if self.thd_body:
+            self.type.append(reaction_type.thd)
+        elif self.pdep and self.low:
+            self.type.append(reaction_type.fall)
+        elif self.pdep and self.high:
+            self.type.append(reaction_type.chem)
+        elif self.plog:
+            self.type.append(reaction_type.plog)
+        else:
+            self.type.append(reaction_type.elementary)
+
+        if reaction_type.fall in self.type or \
+            reaction_type.chem in self.type or\
+            reaction_type.thd in self.type:
+            
+            #figure out the third body type
+            if self.pdep_sp: #single species
+                self.type.append(thd_body_type.species)
+            elif not self.thd_body_eff or \
+                (len(self.thd_body_eff) == num_species \
+                and all(thd[1] == 1.0 for thd in self.thd_body_eff)): #check for all = 1
+                self.type.append(thd_body_type.unity)
+            else: #mixture as third body
+                self.type.append(thd_body_type.mix)
+
+        if reaction_type.fall in self.type or \
+            reaction_type.chem in self.type:
+            if self.troe:
+                self.type.append(falloff_form.troe)
+            elif self.sri:
+                self.type.append(falloff_form.sri)
+            else:
+                self.type.append(falloff_form.lind)
+
 
 
 class SpecInfo(CommonEqualityMixin):

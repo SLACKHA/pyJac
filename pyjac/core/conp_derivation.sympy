@@ -1,0 +1,426 @@
+k_2
+P_{max}
+\frac{\text{d} {C_p} }{\text{d} T }[k]
+t
+N_P
+j
+\frac{\partial R }{\partial T }[i]
+H[k]
+\tilde{P}
+S^{\prime\prime}[j]
+b
+\frac{\partial \dot{\omega} }{\partial T }[k]
+S^{\prime}[j]
+U[k]
+W
+c[i]
+\nu^{\prime}[k, i]
+B[k]
+k_1
+R[i]
+\frac{\partial c }{\partial [C][j] }[i]
+A[i]
+a[k, 3]
+\nu^{\prime}[l, i]
+a[k, 6]
+P_1
+a[k, 5]
+F_{cent}
+{R_r}[i]
+\nu[k, i]
+E_{a, \infty}
+{E_{a}}[i]
+T^{***}
+A_{\infty}
+S^{\prime}[Ns()]
+\Theta_{F_i, \partial [C][j]}
+\frac{\partial F_{i} }{\partial [C][j] }
+{k_f}[i]
+k_{0, i}
+e
+T
+F_{i}
+{K_c}[i]
+T^{**}
+[C][Ns()]
+{\beta_r}[i]
+log(k_f(T, pressure()))
+\beta_{0}
+E_{a, 0}
+Eq(\mathcal{J}[k + 1, j + 1], \frac{\partial \dot{\omega} }{\partial [C][j] }[k])
+\frac{\text{d} H }{\text{d} T }[k]
+A_{Troe}
+T_{min}
+\frac{\partial c }{\partial T }[i]
+S^{\prime\prime}[l]
+S^{\prime}[l]
+\frac{\partial P_{r, i} }{\partial [C][j] }
+\nu^{\prime\prime}[l, i]
+{C_p}[k]
+A_0
+T_{max}
+a[k, 0]
+[C][m]
+P_2
+S^{\prime\prime}[Ns()]
+[C][k]
+\mathcal{J}[k + 1, 1]
+\dot{\omega}[k]
+W[k]
+\frac{\partial q }{\partial [C][j] }[k]
+[C]
+[X]_i
+\frac{\text{d} {C_v} }{\text{d} T }[k]
+c
+T^{*}
+\alpha[Ns(), i]
+l
+B_{Troe}
+\mathcal{J}[k + 1, j + 1]
+\beta[i]
+\frac{\text{d} F_{cent} }{\text{d} T }
+\frac{\partial P_{r, i} }{\partial T }
+X
+\frac{\partial [X]_i }{\partial T }
+\Theta_{F_i, \partial T}
+P_{r, i}
+\frac{\partial q }{\partial T }[i]
+\frac{\partial R }{\partial [C][j] }[i]
+\eta[l, j]
+{C_v}[k]
+log(k_f(T, pressure()))/log(10)
+[C]
+N_T
+\beta_1
+{k_r}[i]
+\frac{\partial F_{i} }{\partial F_{cent} }
+m
+d
+{E_{a,r}}[i]
+\beta_0
+\tilde{T}
+\frac{\partial B_{Troe} }{\partial F_{cent} }
+\frac{\partial F_{i} }{\partial T }
+a[k, 2]
+\beta_{\infty}
+\frac{\partial F_{i} }{\partial P_{r, i} }
+a[k, 1]
+\frac{\partial A_{Troe} }{\partial F_{cent} }
+k_{\infty, i}
+\frac{\text{d} B }{\text{d} T }[k]
+a[k, 4]
+{A_{r}}[i]
+\frac{\partial [X]_i }{\partial [C][j] }
+\nu^{\prime\prime}[k, i]
+\alpha[k, i]
+\Theta_{\partial T, i}
+E_{a_2}
+P_{min}
+\alpha[j, i]
+E_{a_1}
+\beta_2
+a
+\frac{\partial q }{\partial [C][j] }[i]
+\frac{\partial \dot{\omega} }{\partial [C][k] }[k]
+{R_f}[i]
+[C][l]
+F_{i}
+
+{C_p}[k]
+gas_constant()*(T*(T*(T*(T*a[k, 4] + a[k, 3]) + a[k, 2]) + a[k, 1]) + a[k, 0])
+
+\frac{\partial q }{\partial [C][j] }[k]
+if reaction_type.plog,reaction_type.chem
+-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i]
+if reaction_type.elementary
+-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i]
+if reaction_type.thd,thd_body_type.mix
+[X]_i*(-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i]) + (-\alpha[Ns(), i] + \alpha[j, i])*R[i]
+if reaction_type.thd,thd_body_type.species
+((-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m))*R[i] + (-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*[C][m]
+if reaction_type.thd,thd_body_type.unity
+[C]*(-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])
+
+log(k_f(T, pressure()))
+(-log(k_1) + log(k_2))*(-log(P_1) + log(pressure()))/(-log(P_1) + log(P_2)) + log(k_1)
+
+\frac{\partial R }{\partial T }[i]
+if reversible_type.explicit
+[C]*S^{\prime\prime}[Ns()]*{k_r}[i]/T - [C]*S^{\prime}[Ns()]*{k_f}[i]/T + (\beta[i] + {E_{a}}[i]/(T*gas_constant()))*{R_f}[i]/T - ({\beta_r}[i] + {E_{a,r}}[i]/(T*gas_constant()))*{R_r}[i]/T
+if reversible_type.non_explicit
+-(-Sum(\nu[k, i]*\frac{\text{d} B }{\text{d} T }[k], (k, 1, Ns())) + (\beta[i] + {E_{a}}[i]/(T*gas_constant()))/T)*{R_r}[i] + [C]*S^{\prime\prime}[Ns()]*{k_r}[i]/T - [C]*S^{\prime}[Ns()]*{k_f}[i]/T + (\beta[i] + {E_{a}}[i]/(T*gas_constant()))*{R_f}[i]/T
+
+H[k]
+gas_constant()*(T*(T*(T*(T*(T*a[k, 4]/5 + a[k, 3]/4) + a[k, 2]/3) + a[k, 1]/2) + a[k, 0]) + a[k, 5])
+
+\tilde{P}
+(-log(P_{max}) - log(P_{min}) + 2*log(pressure()))/(log(P_{max}) - log(P_{min}))
+
+\dot{\omega}[k]
+Sum(\nu[k, i]*R[i]*c[i], (i, 1, Nr()))
+
+{k_r}[i]
+if reversible_type.non_explicit
+{k_f}[i]/{K_c}[i]
+
+[C]
+pressure()/(T*gas_constant())
+
+U[k]
+gas_constant()*(T*(T*(T*(T*(T*a[k, 4]/5 + a[k, 3]/4) + a[k, 2]/3) + a[k, 1]/2) + a[k, 0]) - T + a[k, 5])
+
+[X]_i
+if thd_body_type.mix
+[C] - Sum((-\alpha[k, i] + 1)*[C][k], (k, 1, Ns()))
+if thd_body_type.species
+[C][m]
+
+\frac{\text{d} {C_v} }{\text{d} T }[k]
+gas_constant()*(T*(T*(T*a[k, 4] + a[k, 3]) + a[k, 2]) + T*(T*(T*a[k, 4] + a[k, 3]) + T*(2*T*a[k, 4] + a[k, 3]) + a[k, 2]) + a[k, 1])
+
+c[i]
+if reaction_type.elementary
+1
+if reaction_type.thd
+[X]_i
+if reaction_type.fall
+F_{i}*P_{r, i}/(P_{r, i} + 1)
+if reaction_type.chem
+F_{i}/(P_{r, i} + 1)
+
+B[k]
+T*(T*(T*(T*a[k, 4]/20 + a[k, 3]/12) + a[k, 2]/6) + a[k, 1]/2) + (a[k, 0] - 1)*log(T) - a[k, 0] + a[k, 6] - a[k, 5]/T
+
+R[i]
+{R_f}[i] - {R_r}[i]
+
+\frac{\partial c }{\partial [C][j] }[i]
+if reaction_type.thd,thd_body_type.species
+(-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m)
+if reaction_type.fall
+(P_{r, i}*\frac{\partial F_{i} }{\partial [C][j] } + \frac{\partial P_{r, i} }{\partial [C][j] }*(F_{i} - c[i]))/(P_{r, i} + 1)
+if reaction_type.chem
+(\frac{\partial F_{i} }{\partial [C][j] } - \frac{\partial P_{r, i} }{\partial [C][j] }*c[i])/(P_{r, i} + 1)
+
+\frac{\text{d} H }{\text{d} T }[k]
+gas_constant()*(T*(T*(3*T*(4*T*a[k, 4] + 5*a[k, 3]) + 20*a[k, 2]) + 30*a[k, 1]) + T*(T*(3*T*(4*T*a[k, 4] + 5*a[k, 3]) + 20*a[k, 2]) + T*(3*T*(4*T*a[k, 4] + 5*a[k, 3]) + 3*T*(8*T*a[k, 4] + 5*a[k, 3]) + 20*a[k, 2]) + 30*a[k, 1]) + 60*a[k, 0])/60
+
+\mathcal{J}[k + 1, j + 1]
+Sum(\nu[k, i]*\frac{\partial q }{\partial [C][j] }[i], (i, 1, Nr()))
+
+\frac{\text{d} F_{cent} }{\text{d} T }
+-a*exp(-T/T^{*})/T^{*} - (-a + 1)*exp(-T/T^{***})/T^{***} + T^{**}*exp(-T^{**}/T)/T**2
+
+X
+1/(log(P_{r, i})**2/log(10)**2 + 1)
+
+\frac{\partial \dot{\omega} }{\partial T }[k]
+Sum(\nu[k, i]*R[i]*\frac{\partial c }{\partial T }[i] + \nu[k, i]*\frac{\partial R }{\partial T }[i]*c[i], (i, 1, Nr()))
+
+\Theta_{F_i, \partial T}
+if reaction_type.fall,reaction_type.chem,falloff_form.lind,thd_body_type.mix
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.troe,thd_body_type.mix
+-F_{i}*B_{Troe}*(2*A_{Troe}*F_{cent}*(0.14*A_{Troe} + B_{Troe})*(P_{r, i}*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/T - [C]*k_{0, i}*\alpha[Ns(), i]/(T*k_{\infty, i}))*log(F_{cent}) + P_{r, i}*\frac{\text{d} F_{cent} }{\text{d} T }*(2*A_{Troe}*(1.1762*A_{Troe} - 0.67*B_{Troe})*log(F_{cent}) - B_{Troe}*(A_{Troe}**2 + B_{Troe}**2)*log(10)))/(F_{cent}*P_{r, i}*(A_{Troe}**2 + B_{Troe}**2)**2*log(10))
+if reaction_type.fall,reaction_type.chem,falloff_form.sri,thd_body_type.mix
+F_{i}*(-X*(exp(-T/c)/c - a*b*exp(-b/T)/T**2)/(a*exp(-b/T) + exp(-T/c)) + e/T - 2*X**2*(P_{r, i}*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/T - [C]*k_{0, i}*\alpha[Ns(), i]/(T*k_{\infty, i}))*log(P_{r, i})*log(a*exp(-b/T) + exp(-T/c))/(P_{r, i}*log(10)**2))
+if reaction_type.fall,reaction_type.chem,falloff_form.lind,thd_body_type.species
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.troe,thd_body_type.species
+-F_{i}*B_{Troe}*(2*A_{Troe}*F_{cent}*P_{r, i}*(0.14*A_{Troe} + B_{Troe})*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))*log(F_{cent})/T + P_{r, i}*\frac{\text{d} F_{cent} }{\text{d} T }*(2*A_{Troe}*(1.1762*A_{Troe} - 0.67*B_{Troe})*log(F_{cent}) - B_{Troe}*(A_{Troe}**2 + B_{Troe}**2)*log(10)))/(F_{cent}*P_{r, i}*(A_{Troe}**2 + B_{Troe}**2)**2*log(10))
+if reaction_type.fall,reaction_type.chem,falloff_form.sri,thd_body_type.species
+F_{i}*(-X*(exp(-T/c)/c - a*b*exp(-b/T)/T**2)/(a*exp(-b/T) + exp(-T/c)) - 2*X**2*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))*log(P_{r, i})*log(a*exp(-b/T) + exp(-T/c))/(T*log(10)**2) + e/T)
+if reaction_type.fall,reaction_type.chem,falloff_form.lind,thd_body_type.unity
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.troe,thd_body_type.unity
+-F_{i}*B_{Troe}*(2*A_{Troe}*F_{cent}*P_{r, i}*(0.14*A_{Troe} + B_{Troe})*(\beta_{0} - \beta_{\infty} - 1 + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))*log(F_{cent})/T + P_{r, i}*\frac{\text{d} F_{cent} }{\text{d} T }*(2*A_{Troe}*(1.1762*A_{Troe} - 0.67*B_{Troe})*log(F_{cent}) - B_{Troe}*(A_{Troe}**2 + B_{Troe}**2)*log(10)))/(F_{cent}*P_{r, i}*(A_{Troe}**2 + B_{Troe}**2)**2*log(10))
+if reaction_type.fall,reaction_type.chem,falloff_form.sri,thd_body_type.unity
+F_{i}*(-X*(exp(-T/c)/c - a*b*exp(-b/T)/T**2)/(a*exp(-b/T) + exp(-T/c)) - 2*X**2*(\beta_{0} - \beta_{\infty} - 1 + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))*log(P_{r, i})*log(a*exp(-b/T) + exp(-T/c))/(T*log(10)**2) + e/T)
+
+P_{r, i}
+if thd_body_type.mix
+[X]_i*k_{0, i}/k_{\infty, i}
+if thd_body_type.species
+k_{0, i}*[C][m]/k_{\infty, i}
+if thd_body_type.unity
+k_{0, i}*[C][m]/k_{\infty, i}
+
+{k_f}[i]
+T**\beta[i]*exp(-{E_{a}}[i]/(T*gas_constant()))*A[i]
+
+\frac{\text{d} {C_p} }{\text{d} T }[k]
+gas_constant()*(T*(T*(T*a[k, 4] + a[k, 3]) + a[k, 2]) + T*(T*(T*a[k, 4] + a[k, 3]) + T*(2*T*a[k, 4] + a[k, 3]) + a[k, 2]) + a[k, 1])
+
+{C_v}[k]
+gas_constant()*(T*(T*(T*(T*a[k, 4] + a[k, 3]) + a[k, 2]) + a[k, 1]) + a[k, 0] - 1)
+
+F_{cent}
+a*exp(-T/T^{*}) + (-a + 1)*exp(-T/T^{***}) + exp(-T^{**}/T)
+
+{R_r}[i]
+if reversible_type.explicit
+T**{\beta_r}[i]*exp(-{E_{a,r}}[i]/(T*gas_constant()))*{A_{r}}[i]*Product([C][k]**\nu^{\prime\prime}[k, i], (k, 1, Ns()))
+
+log(k_f(T, pressure()))/log(10)
+Sum(chebyshevt(j - 1, \tilde{T})*chebyshevt(l - 1, \tilde{P})*\eta[l, j], (l, 1, N_P), (j, 1, N_T))
+
+\frac{\partial F_{i} }{\partial F_{cent} }
+F_{i}*(2*A_{Troe}*(A_{Troe}*\frac{\partial B_{Troe} }{\partial F_{cent} }/B_{Troe} - \frac{\partial A_{Troe} }{\partial F_{cent} })*log(F_{cent})/(B_{Troe}**2*(A_{Troe}**2/B_{Troe}**2 + 1)) + 1/F_{cent})/(A_{Troe}**2/B_{Troe}**2 + 1)
+
+\frac{\partial q }{\partial [C][j] }[i]
+if reaction_type.fall,thd_body_type.mix
+(-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*c[i] + (k_{0, i}*(F_{i} - c[i])*(-\alpha[Ns(), i] + \alpha[j, i])/(k_{\infty, i}*(P_{r, i} + 1)) + \Theta_{F_i, \partial [C][j]}*c[i])*R[i]
+if reaction_type.fall,thd_body_type.species
+(-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*c[i] + (k_{0, i}*(F_{i} - c[i])*((-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m))/(k_{\infty, i}*(P_{r, i} + 1)) + \Theta_{F_i, \partial [C][j]}*c[i])*R[i]
+if reaction_type.fall,thd_body_type.unity
+(\Theta_{F_i, \partial [C][j]}*R[i] - (-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*c[i]
+if reaction_type.chem,thd_body_type.mix
+((-k_{0, i}*(-\alpha[Ns(), i] + \alpha[j, i])/(k_{\infty, i}*(P_{r, i} + 1)) + \Theta_{F_i, \partial [C][j]})*R[i] - (-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*c[i]
+if reaction_type.chem,thd_body_type.species
+((-k_{0, i}*((-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m))/(k_{\infty, i}*(P_{r, i} + 1)) + \Theta_{F_i, \partial [C][j]})*R[i] - (-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*c[i]
+if reaction_type.chem,thd_body_type.unity
+(\Theta_{F_i, \partial [C][j]}*R[i] - (-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i])*c[i]
+
+\Theta_{F_i, \partial [C][j]}
+if reaction_type.fall,reaction_type.chem,falloff_form.lind,thd_body_type.mix
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.troe,thd_body_type.mix
+-2*F_{i}*A_{Troe}*B_{Troe}*k_{0, i}*(0.14*A_{Troe} + B_{Troe})*(-\alpha[Ns(), i] + \alpha[j, i])*log(F_{cent})/(P_{r, i}*k_{\infty, i}*(A_{Troe}**2 + B_{Troe}**2)**2*log(10))
+if reaction_type.fall,reaction_type.chem,falloff_form.sri,thd_body_type.mix
+-2*F_{i}*X**2*k_{0, i}*(-\alpha[Ns(), i] + \alpha[j, i])*log(P_{r, i})*log(a*exp(-b/T) + exp(-T/c))/(P_{r, i}*k_{\infty, i}*log(10)**2)
+if reaction_type.fall,reaction_type.chem,falloff_form.lind,thd_body_type.species
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.troe,thd_body_type.species
+-2*F_{i}*A_{Troe}*B_{Troe}*k_{0, i}*(0.14*A_{Troe} + B_{Troe})*((-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m))*log(F_{cent})/(P_{r, i}*k_{\infty, i}*(A_{Troe}**2 + B_{Troe}**2)**2*log(10))
+if reaction_type.fall,reaction_type.chem,falloff_form.sri,thd_body_type.species
+-2*F_{i}*X**2*k_{0, i}*((-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m))*log(P_{r, i})*log(a*exp(-b/T) + exp(-T/c))/(P_{r, i}*k_{\infty, i}*log(10)**2)
+if reaction_type.fall,reaction_type.chem,falloff_form.lind,thd_body_type.unity
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.troe,thd_body_type.unity
+0
+if reaction_type.fall,reaction_type.chem,falloff_form.sri,thd_body_type.unity
+0
+
+\frac{\partial q }{\partial T }[i]
+if reversible_type.explicit
+\Theta_{\partial T, i}*c[i] + R[i]*\frac{\partial c }{\partial T }[i]
+if reversible_type.non_explicit,reaction_type.elementary,reaction_type.thd,reaction_type.fall,reaction_type.chem
+\Theta_{\partial T, i}*c[i] + R[i]*\frac{\partial c }{\partial T }[i]
+if reaction_type.elementary
+\Theta_{\partial T, i}
+if reaction_type.thd,thd_body_type.mix
+[X]_i*\Theta_{\partial T, i} - [C]*\alpha[Ns(), i]*R[i]/T
+if reaction_type.thd,thd_body_type.species
+\Theta_{\partial T, i}*[C][m] + ((-KroneckerDelta(Ns(), m) + 1)*KroneckerDelta(j, m) - KroneckerDelta(Ns(), m))*R[i]
+if reaction_type.thd,thd_body_type.unity
+[C]*(\Theta_{\partial T, i} - R[i]/T)
+if reaction_type.fall,thd_body_type.mix
+\Theta_{\partial T, i}*c[i] + ((\Theta_{F_i, \partial T} + (-P_{r, i}/(P_{r, i} + 1) + 1)*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/T)*c[i] + [C]*k_{0, i}*(-F_{i} + c[i])*\alpha[Ns(), i]/(T*k_{\infty, i}*(P_{r, i} + 1)))*R[i]
+if reaction_type.fall,thd_body_type.species
+(\Theta_{\partial T, i} + (\Theta_{F_i, \partial T} + (-P_{r, i}/(P_{r, i} + 1) + 1)*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/T)*R[i])*c[i]
+if reaction_type.fall,thd_body_type.unity
+(\Theta_{\partial T, i} + (\Theta_{F_i, \partial T} + (-P_{r, i}/(P_{r, i} + 1) + 1)*(\beta_{0} - \beta_{\infty} - 1 + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/T)*R[i])*c[i]
+if reaction_type.chem,thd_body_type.mix
+(\Theta_{\partial T, i} + (-P_{r, i}*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/(T*(P_{r, i} + 1)) + \Theta_{F_i, \partial T} + [C]*k_{0, i}*\alpha[Ns(), i]/(T*k_{\infty, i}*(P_{r, i} + 1)))*R[i])*c[i]
+if reaction_type.chem,thd_body_type.species
+(\Theta_{\partial T, i} + (-P_{r, i}*(\beta_{0} - \beta_{\infty} + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/(T*(P_{r, i} + 1)) + \Theta_{F_i, \partial T})*R[i])*c[i]
+if reaction_type.chem,thd_body_type.unity
+(\Theta_{\partial T, i} + (-P_{r, i}*(\beta_{0} - \beta_{\infty} - 1 + E_{a, 0}/(T*gas_constant()) - E_{a, \infty}/(T*gas_constant()))/(T*(P_{r, i} + 1)) + \Theta_{F_i, \partial T})*R[i])*c[i]
+
+\tilde{T}
+(-1/T_{min} - 1/T_{max} + 2/T)/(-1/T_{min} + 1/T_{max})
+
+\frac{\partial F_{i} }{\partial [C][j] }
+if falloff_form.lind
+0
+if falloff_form.troe
+\frac{\partial F_{i} }{\partial P_{r, i} }*\frac{\partial P_{r, i} }{\partial [C][j] }
+
+S^{\prime\prime}[l]
+\nu^{\prime\prime}[l, i]*[C][l]**(\nu^{\prime\prime}[l, i] - 1)*Product([C][l]**\nu^{\prime\prime}[l, i], (l, 1, l - 1), (l, l + 1, Ns()))
+
+\frac{\partial F_{i} }{\partial T }
+if falloff_form.lind
+0
+if falloff_form.troe
+\frac{\partial F_{i} }{\partial F_{cent} }*\frac{\text{d} F_{cent} }{\text{d} T } + \frac{\partial F_{i} }{\partial P_{r, i} }*\frac{\partial P_{r, i} }{\partial T }
+
+W
+Sum(W[k]*[C][k], (k, 1, Ns()))/[C]
+
+\frac{\partial R }{\partial [C][j] }[i]
+-(-S^{\prime\prime}[Ns()] + S^{\prime\prime}[j])*{k_r}[i] + (-S^{\prime}[Ns()] + S^{\prime}[j])*{k_f}[i]
+
+{K_c}[i]
+(atm_pressure()/gas_constant())**Sum(\nu[k, i], (k, 1, Ns()))*exp(Sum(\nu[k, i]*B[k], (k, 1, Ns())))
+
+k_{\infty, i}
+T**\beta_{\infty}*A_{\infty}*exp(-E_{a, \infty}/(T*gas_constant()))
+
+k_{0, i}
+T**\beta_0*A_0*exp(-E_{a, 0}/(T*gas_constant()))
+
+[C][Ns()]
+[C] - Sum([C][k], (k, 1, -1 + Ns()))
+
+\frac{\partial [X]_i }{\partial T }
+if reaction_type.thd
+-[C]*\alpha[Ns(), i]/T
+if reaction_type.thd,thd_body_type.unity
+-[C]/T
+
+\frac{\partial [X]_i }{\partial [C][j] }
+if reaction_type.thd,thd_body_type.mix
+-\alpha[Ns(), i] + \alpha[j, i]
+if reaction_type.thd,thd_body_type.unity
+0
+
+Eq(\mathcal{J}[k + 1, j + 1], \frac{\partial \dot{\omega} }{\partial [C][j] }[k])
+Sum(\nu[k, i]*\frac{\partial q }{\partial [C][j] }[i], (i, 1, Nr()))
+
+\Theta_{\partial T, i}
+if reversible_type.explicit
+[C]*S^{\prime\prime}[Ns()]*{k_r}[i]/T - [C]*S^{\prime}[Ns()]*{k_f}[i]/T + (\beta[i] + {E_{a}}[i]/(T*gas_constant()))*{R_f}[i]/T - ({\beta_r}[i] + {E_{a,r}}[i]/(T*gas_constant()))*{R_r}[i]/T
+if reversible_type.non_explicit,reaction_type.elementary,reaction_type.thd,reaction_type.fall,reaction_type.chem
+-(-Sum(\nu[k, i]*\frac{\text{d} B }{\text{d} T }[k], (k, 1, Ns())) + (\beta[i] + {E_{a}}[i]/(T*gas_constant()))/T)*{R_r}[i] + [C]*S^{\prime\prime}[Ns()]*{k_r}[i]/T - [C]*S^{\prime}[Ns()]*{k_f}[i]/T + (\beta[i] + {E_{a}}[i]/(T*gas_constant()))*{R_f}[i]/T
+if reaction_type.plog
+-(-Sum(\nu[k, i]*\frac{\text{d} B }{\text{d} T }[k], (k, 1, Ns())) + (\beta_1 + (-log(P_1) + log(pressure()))*(-\beta_1 + \beta_2 - E_{a_1}/(T*gas_constant()) + E_{a_2}/(T*gas_constant()))/(-log(P_1) + log(P_2)) + E_{a_1}/(T*gas_constant()))/T)*{R_r}[i] + [C]*(S^{\prime\prime}[Ns()]*{k_r}[i] - S^{\prime}[Ns()]*{k_f}[i])/T + (\beta_1 + (-log(P_1) + log(pressure()))*(-\beta_1 + \beta_2 - E_{a_1}/(T*gas_constant()) + E_{a_2}/(T*gas_constant()))/(-log(P_1) + log(P_2)) + E_{a_1}/(T*gas_constant()))*{R_f}[i]/T
+if reaction_type.cheb
+(Sum(\nu[k, i]*\frac{\text{d} B }{\text{d} T }[k], (k, 1, Ns())) + 2*Sum((j - 1)*chebyshevt(l - 1, \tilde{P})*chebyshevu(j - 2, \tilde{T})*\eta[l, j], (l, 1, N_P), (j, 1, N_T))/(T**2*(-1/T_{min} + 1/T_{max})))*{R_r}[i] + {R_f}[i]*Sum(-2*(j - 1)*chebyshevt(l - 1, \tilde{P})*chebyshevu(j - 2, \tilde{T})*\eta[l, j]/(T**2*(-1/T_{min} + 1/T_{max})), (l, 1, N_P), (j, 1, N_T)) + [C]*(S^{\prime\prime}[Ns()]*{k_r}[i] - S^{\prime}[Ns()]*{k_f}[i])/T
+
+B_{Troe}
+-1.1762*log(F_{cent})/log(10) - 0.14*log(P_{r, i})/log(10) + 0.806
+
+A_{Troe}
+-0.67*log(F_{cent})/log(10) + log(P_{r, i})/log(10) - 0.4
+
+\mathcal{J}[k + 1, 1]
+Sum(\nu[k, i]*\frac{\partial q }{\partial T }[i], (i, 1, Nr()))
+
+\frac{\partial c }{\partial T }[i]
+if reaction_type.elementary
+0
+if reaction_type.thd,thd_body_type.species
+-[C]*KroneckerDelta(Ns(), m)/T
+if reaction_type.fall
+(P_{r, i}*\frac{\partial F_{i} }{\partial T } + \frac{\partial P_{r, i} }{\partial T }*(F_{i} - c[i]))/(P_{r, i} + 1)
+if reaction_type.chem
+(\frac{\partial F_{i} }{\partial T } - \frac{\partial P_{r, i} }{\partial T }*c[i])/(P_{r, i} + 1)
+
+\frac{\partial \dot{\omega} }{\partial [C][k] }[k]
+Sum(\nu[k, i]*R[i]*\frac{\partial c }{\partial [C][j] }[i] + \nu[k, i]*\frac{\partial R }{\partial [C][j] }[i]*c[i], (i, 1, Nr()))
+
+S^{\prime}[l]
+\nu^{\prime}[l, i]*[C][l]**(\nu^{\prime}[l, i] - 1)*Product([C][l]**\nu^{\prime}[l, i], (l, 1, l - 1), (l, l + 1, Ns()))
+
+{R_f}[i]
+{k_f}[i]*Product([C][k]**\nu^{\prime}[k, i], (k, 1, Ns()))
+
+F_{i}
+if reaction_type.fall,reaction_type.chem,falloff_form.lind
+1
+if reaction_type.fall,reaction_type.chem,falloff_form.troe
+F_{cent}**(1/(A_{Troe}**2/B_{Troe}**2 + 1))
+if reaction_type.fall,reaction_type.chem,falloff_form.sri
+T**e*d*(a*exp(-b/T) + exp(-T/c))**X
+

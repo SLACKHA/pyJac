@@ -225,6 +225,11 @@ class ReacInfo(CommonEqualityMixin):
         Takes all the various options of the reaction, and turns it into `reaction_types` enums
         for use with the SymPy equation databases
 
+        Parameters
+        ----------
+        num_species : int
+            Number of species in the mechanism
+
         """
 
         if self.rev:
@@ -267,6 +272,42 @@ class ReacInfo(CommonEqualityMixin):
             else:
                 self.type.append(falloff_form.lind)
 
+    def match(self, reac_types):
+        """
+        Given a list of `reaction_types` enums, for conditional equations
+        this method returns true / false if the reaction falls under this equation
+
+        Parameters
+        ----------
+        reac_types : list of `reaction_types`
+            the conditions to check
+
+        Notes
+        -----
+        The matching rules are as follows:
+
+        Repeated `reaction_types` of the same type (e.g. `thd_body_type`)
+            imply an OR; that is, this is a match if this reaction has
+            any of the repeated reaction type
+
+        A match is made if this reaction matches all `reaction types` given
+            with the repeat rule given above
+        
+        """
+
+        if not isinstance(reac_types, list):
+            reac_types = [reac_types]
+
+        #get the types to a more managable form
+        enum_types = set([type(rtype) for rtype in reac_types])
+        enum_types = {etype : [x for x in reac_types if type(x) == etype]
+                        for etype in enum_types}
+
+        for rtype, enum in enum_types.items():
+            if not any(x in self.type for x in enum):
+                return False
+
+        return True
 
 
 class SpecInfo(CommonEqualityMixin):

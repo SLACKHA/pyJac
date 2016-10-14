@@ -14,6 +14,10 @@ import sys
 import math
 import os
 
+# Non-standard librarys
+import sympy
+#import loopy
+
 # Local imports
 from .. import utils
 from . import chem_utilities as chem

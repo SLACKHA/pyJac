@@ -11,8 +11,15 @@ import sympy as sp
 
 #local includes
 from .reaction_types import reaction_type, thd_body_type, falloff_form, reversible_type
+
+#class recognition for sympy import
 from . import sympy_addons as sp_add
-local_dict = vars(sp_add)
+from . import custom_sympy_classes as sp_cust
+local_dict = vars(sp_cust)
+from sympy.tensor.indexed import Idx, Indexed, IndexedBase
+local_dict['Idx'] = Idx
+local_dict['MyIndexedFuncValue'] = sp_cust.MyIndexedFunc.MyIndexedFuncValue
+local_dict['IndexedFuncValue'] = sp_add.IndexedFunc.IndexedFuncValue
 
 enum_map = [reaction_type, thd_body_type, falloff_form, reversible_type]
 enum_map = {str(m.__name__) : m for m in enum_map}
@@ -50,7 +57,6 @@ def load_equations(conp=True, check=False):
     """
 
     script_dir = os.path.abspath(os.path.dirname(__file__))
-    local_dict = {''}
 
     var_list = []
     eqn_list = {}
@@ -58,18 +64,14 @@ def load_equations(conp=True, check=False):
         'p' if conp else 'v')), 'r') as file:
         lines = [line.strip() for line in file.readlines()]
 
-    #the first line break is the end of the symbols
-    ind = next(ind for ind in range(len(lines)) if not lines[ind])
-    var_list = []
-    for i, line in enumerate(lines[:ind]):
-        print(i, line)
-        var_list.append(sp.sympify(line))
-    var_list = [sp.sympify(line) for line in lines[:ind]]
-
-    lines = lines[ind + 1:]
     #now we must parse the equations
-    for i, line in enumerate(lines):
-        sym = sp.sympify(line)
+    i = 0
+    while i < len(lines):
+        try:
+            sym = sp.sympify(lines[i], locals=local_dict)
+        except Exception as e:
+            print (i, lines[i])
+            raise e
 
         if sym in eqn_list:
             raise Exception('Sympy parsing error at line {},'.format(i) + 
@@ -77,10 +79,6 @@ def load_equations(conp=True, check=False):
 
         #bump to definition
         i += 1
-
-        #test to make sure we actually have this variable!
-        if check:
-            assert sym in var_list
         
         #the next line is either an if statement
         conditional = None
@@ -95,17 +93,13 @@ def load_equations(conp=True, check=False):
                         'conditional definition found in non-conditional block')
                 #map conditionals to enums
                 conditional = True
-                conditions = [match.groups(1).split(',')]
-                enums = [enum_from_str(condition) for condition in conditions]
+                conditions = match.group(1).split(',')
+                enums = tuple(enum_from_str(condition) for condition in conditions)
 
                 #place sympified equation in eqn_list
                 if sym not in eqn_list:
                     eqn_list[sym] = {}
-                eqn_list[sym][enums] = sp.sympify(lines[i + 1])
-
-                #if check, make sure we have definitions for all variables
-                if check:
-                    assert all(y in var_list for y in eqn_list[sym][enums].free_symbols)
+                eqn_list[sym][enums] = sp.sympify(lines[i + 1], locals=local_dict)
 
                 i += 2
             else:
@@ -115,9 +109,23 @@ def load_equations(conp=True, check=False):
                         'non-conditional definition found in conditional block')
                 conditional = False
                 #place sympified equation in eqn_list
-                eqn_list[sym] = sp.sympify(lines[i])
-                if check:
-                    assert all(y in var_list for y in eqn_list[sym].free_symbols)
+                try:
+                    eqn_list[sym] = sp.sympify(lines[i], locals=local_dict)
+                except:
+                    print(i, lines[i])
+                    import sys
+                    sys.exit(1)
                 i += 1
+        i += 1
+
+    #populate variable list
+    var_list = set()
+    for x in eqn_list:
+        var_list = var_list.union([y for y in x.free_symbols if not (isinstance(y, Idx))])
+
+    var_list = list(var_list)
+
     if check:
-        assert all(x in eqn_list for x in variable)
+        assert all(x in eqn_list for x in var_list)
+
+    return var_list, eqn_list

@@ -70,8 +70,7 @@ def load_equations(conp=True, check=False):
         try:
             sym = sp.sympify(lines[i], locals=local_dict)
         except Exception as e:
-            print (i, lines[i])
-            raise e
+            raise Exception('Error parsing at line: {}\n{}'.format(i, lines[i]))
 
         if sym in eqn_list:
             raise Exception('Sympy parsing error at line {},'.format(i) + 
@@ -99,7 +98,10 @@ def load_equations(conp=True, check=False):
                 #place sympified equation in eqn_list
                 if sym not in eqn_list:
                     eqn_list[sym] = {}
-                eqn_list[sym][enums] = sp.sympify(lines[i + 1], locals=local_dict)
+                try:
+                    eqn_list[sym][enums] = sp.sympify(lines[i + 1], locals=local_dict)
+                except Exception as e:
+                    raise Exception('Error parsing at line: {}\n{}'.format(i, lines[i]))
 
                 i += 2
             else:
@@ -111,21 +113,34 @@ def load_equations(conp=True, check=False):
                 #place sympified equation in eqn_list
                 try:
                     eqn_list[sym] = sp.sympify(lines[i], locals=local_dict)
-                except:
-                    print(i, lines[i])
-                    import sys
-                    sys.exit(1)
+                except Exception as e:
+                    raise Exception('Error parsing at line: {}\n{}'.format(i, lines[i]))
                 i += 1
         i += 1
 
     #populate variable list
     var_list = set()
+    time = sp.Symbol('t')
+    conc = sp_cust.IndexedConc('[C]', time)
+    blacklist = set([
+        sp.Symbol('P'), sp.Symbol('V'),
+        sp_cust.MyImplicitSymbol('P', time), sp_cust.MyImplicitSymbol('V', time),
+        sp.Symbol('R_u'), sp.Symbol('P_{atm}'),
+        time,
+        sp_cust.MyImplicitSymbol('T', time),
+        conc, conc[sp.Idx('k')], conc[sp.Idx('j')], conc[sp.Idx('m')]])
     for x in eqn_list:
         var_list = var_list.union([y for y in x.free_symbols if not (isinstance(y, Idx))])
+    var_list = var_list - blacklist
 
     var_list = list(var_list)
 
     if check:
-        assert all(x in eqn_list for x in var_list)
+        try:
+            assert all(x in eqn_list for x in var_list)
+        except AssertionError as e:
+            missing = next(x for x in var_list if x not in eqn_list)
+            print(type(missing), missing)
+            raise Exception('On check, missing equation for variable {}.'.format(missing))
 
     return var_list, eqn_list

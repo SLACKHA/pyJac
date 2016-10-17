@@ -13,7 +13,6 @@ def test_load_runs():
     var, eqns = load_equations(False)
 
 def test_enum_from_str():
-    from nose.tools import set_trace; set_trace()
     assert enum_from_str('reversible_type.explicit') == reversible_type.explicit
     try:
         assert enum_from_str('reversible_type.not_real')
@@ -24,7 +23,6 @@ def test_enum_from_str():
 def test_file_structure():
     def __subtest(conp):
         var, eqns = load_equations(conp, True)
-        assert all(key in var for key in eqns.keys())
 
     __subtest(True)
     __subtest(False)

@@ -10,7 +10,7 @@ import re
 import sympy as sp
 
 #local includes
-from .reaction_types import reaction_type, thd_body_type, falloff_form, reversible_type
+from ..core.reaction_types import reaction_type, thd_body_type, falloff_form, reversible_type
 
 #class recognition for sympy import
 from . import sympy_addons as sp_add

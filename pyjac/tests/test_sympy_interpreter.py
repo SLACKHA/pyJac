@@ -1,12 +1,12 @@
 import os
-from ..core.sympy_interpreter import load_equations, enum_from_str
+from ..sympy.sympy_interpreter import load_equations, enum_from_str
 from ..core.reaction_types import *
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 def test_sympy_exists():
-    core_path = os.path.normpath(os.path.join(script_dir, os.pardir, 'core'))
-    assert os.path.isfile(os.path.join(core_path, 'conp_derivation.sympy'))
-    assert os.path.isfile(os.path.join(core_path, 'conv_derivation.sympy'))
+    sp_path = os.path.normpath(os.path.join(script_dir, os.pardir, 'sympy'))
+    assert os.path.isfile(os.path.join(sp_path, 'conp_derivation.sympy'))
+    assert os.path.isfile(os.path.join(sp_path, 'conv_derivation.sympy'))
 
 def test_load_runs():
     var, eqns = load_equations(True)

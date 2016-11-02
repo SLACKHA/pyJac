@@ -302,7 +302,6 @@ def is_integer(val):
         except:
             return False
 
-
 def get_parser():
     """
 

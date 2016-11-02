@@ -15,8 +15,9 @@ import math
 import os
 
 # Non-standard librarys
-import sympy
-#import loopy
+import sympy as sp
+import loopy as lp
+from loopy.kernel.data import temp_var_scope as scopes
 
 # Local imports
 from .. import utils
@@ -1545,8 +1546,145 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
 
     return seen
 
+def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
+    width=None,
+    depth=None,
+    ilp=False,
+    unr=None,
+    order='cpu'):
+    """Helper function that generates kernels for
+       evaluation of various thermodynamic species properties
 
-def write_chem_utils(path, lang, specs, auto_diff):
+    Parameters
+    ----------
+    varname : str
+        The variable to generate the kernel for
+    nicename : str
+        The variable name to use in generated code
+    varlist : list of `sympy.Symbol`
+        The list of variables that form the keys of eqs
+    eqs : dict of `sympy.Symbol`
+        Dictionary defining conditional equations for the variables (keys)
+    specs : list of `SpecInfo`
+        List of species in the mechanism.
+    lang : {'c', 'cuda', 'opencl'}
+        Programming language.
+    width : int
+        If not None, the SIMD lane/SIMT block width.  Cannot be specified along with depth
+    depth : int
+        If not None, the SIMD lane/SIMT block depth.  Cannot be specified along with width
+    ilp : bool
+        If True, use the ILP tag on the species loop.  Cannot be specified along with unr
+    unr : int
+        If not None, the unroll length to apply to the species loop. Cannot be specified along with ilp
+    layout : {'cpu', 'gpu'}
+        The memory layout of the arrays
+
+    Returns
+    -------
+    knl : `loopy.kernel`
+        The generated loopy kernel for code generation / testing
+
+    """
+
+    if width is not None and depth is not None:
+        raise Exception('Cannot specify both SIMD/SIMT width and depth')
+
+    var = next(v for v in varlist if str(v) == varname)
+    eq = eqs[var]
+    poly_dim = specs[0].hi.shape[0]
+    Ns = len(specs)
+
+    k = sp.IndexedBase('k')
+    if order == 'gpu':
+        eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
+                    sp.IndexedBase('a_lo')[k, i]) for i in range(poly_dim)]))
+        eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
+                    sp.IndexedBase('a_hi')[k, i]) for i in range(poly_dim)]))
+    else:
+        eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
+                    sp.IndexedBase('a_lo')[i, k]) for i in range(poly_dim)]))
+        eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
+                    sp.IndexedBase('a_hi')[i, k]) for i in range(poly_dim)]))
+
+    #pick out a values and T_mid
+    a_lo = np.zeros((Ns, poly_dim), dtype=np.float64)
+    a_hi = np.zeros((Ns, poly_dim), dtype=np.float64)
+    T_mid = np.zeros((Ns, 1), dtype=np.float64)
+    T_mid = T_mid.squeeze()
+    for ind, spec in enumerate(specs):
+        a_lo[ind, :] = spec.lo[:]
+        a_hi[ind, :] = spec.hi[:]
+        T_mid[ind] = spec.Trange[1]
+
+    #need to transpose poly arrays
+    if order == 'cpu':
+        a_lo = a_lo.T.copy()
+        a_hi = a_hi.T.copy()
+
+    #loopy variables
+    a_lo_lp = lp.TemporaryVariable('a_lo', shape=a_lo.shape, initializer=a_lo, read_only=True,
+                                scope=scopes.GLOBAL)
+    a_hi_lp = lp.TemporaryVariable('a_hi', shape=a_hi.shape, initializer=a_hi, read_only=True,
+                                scope=scopes.GLOBAL)
+    T_mid_lp = lp.TemporaryVariable('T_mid', shape=T_mid.shape, initializer=T_mid, read_only=True,
+                                scope=scopes.GLOBAL)
+
+    #set target
+    target = lp.OpenCLTarget()
+    if lang == 'c':
+        target = lp.CTarget()
+    elif lang == 'cuda':
+        target = lp.CudaTarget()
+
+    #correct indexing
+    nicename = nicename + ('[k, i]' if order == 'gpu' else '[i, k]')
+
+    T_lp = lp.GlobalArg('T', shape=lp.auto, dtype=np.float64)
+    out_lp = lp.GlobalArg(varname, shape=lp.auto, dtype=np.float64)
+    #first we generate the kernel
+    knl = lp.make_kernel('{{[k, i]: 0<=k<{}, 0<=i<n}}'.format(Ns),
+        """
+        for i
+            for k
+                <> Tcond = T[i] < T_mid[k]
+                if Tcond
+                    {0} = {1}
+                end
+                if not Tcond
+                    {0} = {2}
+                end
+            end
+        end
+        """.format(var_name, eq_lo, eq_hi),
+        target=target,
+        kernel_data=[a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
+        )
+    ref_knl = knl
+
+    if deep is not None:
+        #and assign the l0 axis to 'k'
+        knl = lp.split_iname(ref_knl, 'k', depth, inner_tag='l.0')
+        #and the g0 axis to i
+        knl = lp.tag_inames(ref_knl, [('i', 'g0')])
+    elif wide is not None:
+        #make 'n' the width for proper l0 assignemnt
+        knl = lp.fix_parameters(n=width)
+        #make the kernel a block of specifed width
+        knl = lp.tag_inames(knl, ['i', 'l.0'])
+
+    #now do unr / ilp
+    k_tag = 'k_outer' if deep is not None else 'k'
+    if unr is not None:
+        knl = lp.split_iname(knl, k_tag, unr, inner_tag='unr')
+    elif ilp:
+        knl = lp.tag_inames(knl, [k_tag, 'ilp'])
+
+    return knl
+
+
+def write_chem_utils(path, lang, specs, auto_diff, eqs,
+                        width=None, depth=None):
     """Write subroutine to evaluate species thermodynamic properties.
 
     Notes
@@ -1562,8 +1700,14 @@ def write_chem_utils(path, lang, specs, auto_diff):
         Programming language.
     specs : list of `SpecInfo`
         List of species in the mechanism.
-    auto_diff : bool, optional
+    auto_diff : bool
         If ``True``, generate files for Adept autodifferention library.
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    width : int
+        If not None, the SIMD lane/SIMT block width.  Cannot be specified along with depth
+    depth : int
+        If not None, the SIMD lane/SIMT block depth.  Cannot be specified along with width
 
     Returns
     -------

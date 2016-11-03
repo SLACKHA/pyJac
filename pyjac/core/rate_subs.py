@@ -17,6 +17,7 @@ import os
 # Non-standard librarys
 import sympy as sp
 import loopy as lp
+import numpy as np
 from loopy.kernel.data import temp_var_scope as scopes
 
 # Local imports
@@ -1551,7 +1552,8 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
     depth=None,
     ilp=False,
     unr=None,
-    order='cpu'):
+    order='cpu',
+    test_size=None):
     """Helper function that generates kernels for
        evaluation of various thermodynamic species properties
 
@@ -1579,6 +1581,8 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
         If not None, the unroll length to apply to the species loop. Cannot be specified along with ilp
     layout : {'cpu', 'gpu'}
         The memory layout of the arrays
+    test_size : int
+        If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
 
     Returns
     -------
@@ -1595,13 +1599,14 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
     poly_dim = specs[0].hi.shape[0]
     Ns = len(specs)
 
-    k = sp.IndexedBase('k')
+    k = sp.Idx('k')
     if order == 'gpu':
         eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
                     sp.IndexedBase('a_lo')[k, i]) for i in range(poly_dim)]))
         eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
                     sp.IndexedBase('a_hi')[k, i]) for i in range(poly_dim)]))
     else:
+        eq_lo = eq.subs(sp.IndexedBase('a')[k, 0], sp.IndexedBase('a_lo')[k, 0])
         eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
                     sp.IndexedBase('a_lo')[i, k]) for i in range(poly_dim)]))
         eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
@@ -1630,24 +1635,23 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
     T_mid_lp = lp.TemporaryVariable('T_mid', shape=T_mid.shape, initializer=T_mid, read_only=True,
                                 scope=scopes.GLOBAL)
 
-    #set target
-    target = lp.OpenCLTarget()
-    if lang == 'c':
-        target = lp.CTarget()
-    elif lang == 'cuda':
-        target = lp.CudaTarget()
+    target = utils.get_target(lang)
 
+    #create the loopy arrays
+    test_size = 1 if test_size is None else test_size
+    T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+    out_lp = lp.GlobalArg(nicename, shape=lp.auto, dtype=np.float64)
     #correct indexing
     nicename = nicename + ('[k, i]' if order == 'gpu' else '[i, k]')
 
-    T_lp = lp.GlobalArg('T', shape=lp.auto, dtype=np.float64)
-    out_lp = lp.GlobalArg(varname, shape=lp.auto, dtype=np.float64)
     #first we generate the kernel
-    knl = lp.make_kernel('{{[k, i]: 0<=k<{}, 0<=i<n}}'.format(Ns),
+    knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns, 
+        test_size),
         """
         for i
+            <> T = T_arr[i]
             for k
-                <> Tcond = T[i] < T_mid[k]
+                <> Tcond = T < T_mid[k]
                 if Tcond
                     {0} = {1}
                 end
@@ -1656,29 +1660,31 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
                 end
             end
         end
-        """.format(var_name, eq_lo, eq_hi),
+        """.format(nicename, eq_lo, eq_hi),
         target=target,
         kernel_data=[a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
         )
-    ref_knl = knl
 
-    if deep is not None:
+    if depth is not None:
         #and assign the l0 axis to 'k'
-        knl = lp.split_iname(ref_knl, 'k', depth, inner_tag='l.0')
-        #and the g0 axis to i
-        knl = lp.tag_inames(ref_knl, [('i', 'g0')])
-    elif wide is not None:
-        #make 'n' the width for proper l0 assignemnt
-        knl = lp.fix_parameters(n=width)
+        knl = lp.split_iname(knl, 'k', depth, inner_tag='l.0')
+        #assign g0 to 'i'
+        knl = lp.tag_inames(knl, [('i', 'g.0')])
+    elif width is not None:
         #make the kernel a block of specifed width
-        knl = lp.tag_inames(knl, ['i', 'l.0'])
+        knl = lp.split_iname(knl, 'i', width, inner_tag='l.0')
+        #assign g0 to 'i'
+        knl = lp.tag_inames(knl, [('i_outer', 'g.0')])
+
+    #specify R
+    knl = lp.fix_parameters(knl, R_u=chem.RU)
 
     #now do unr / ilp
-    k_tag = 'k_outer' if deep is not None else 'k'
+    k_tag = 'k_outer' if depth is not None else 'k'
     if unr is not None:
         knl = lp.split_iname(knl, k_tag, unr, inner_tag='unr')
     elif ilp:
-        knl = lp.tag_inames(knl, [k_tag, 'ilp'])
+        knl = lp.tag_inames(knl, [(k_tag, 'ilp')])
 
     return knl
 
@@ -1723,9 +1729,10 @@ def write_chem_utils(path, lang, specs, auto_diff, eqs,
         double_type = 'adouble'
         pres_ref = '&'
 
+    target = None
+
     num_s = len(specs)
 
-    pre = '__device__ ' if lang == 'cuda' else ''
     file = open(os.path.join(path, file_prefix + 'chem_utils'
                              + utils.header_ext[lang]), 'w')
     file.write('#ifndef CHEM_UTILS_HEAD\n'

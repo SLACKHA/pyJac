@@ -1,4 +1,4 @@
-from sympy_addons import *
+from .sympy_addons import *
 
 class MyImplicitSymbol(ImplicitSymbol):
     def _get_df(self, arg, wrt):

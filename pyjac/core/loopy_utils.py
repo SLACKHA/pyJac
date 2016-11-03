@@ -1,8 +1,39 @@
 import loopy as lp
 import numpy as np
 import pyopencl as cl
+from ..utils import check_lang
 
 import os
+
+class loopy_options(object):
+    """
+    Loopy Objects class
+
+    Attributes
+    ----------
+    width : int
+        If not None, the SIMD lane/SIMT block width.  Cannot be specified along with depth
+    depth : int
+        If not None, the SIMD lane/SIMT block depth.  Cannot be specified along with width
+    ilp : bool
+        If True, use the ILP tag on the species loop.  Cannot be specified along with unr
+    unr : int
+        If not None, the unroll length to apply to the species loop. Cannot be specified along with ilp
+    layout : {'cpu', 'gpu'}
+        The memory layout of the arrays
+    lang : {'opencl', 'c', 'cuda'}
+        One of the supported languages
+    """
+    def __init__(self, width=None, depth=None, ilp=False,
+                    unr=None, order='cpu', lang='opencl'):
+        self.width = width
+        self.depth = depth
+        self.ilp = ilp
+        self.unr = unr
+        self.order = order
+        check_lang(lang)
+        self.lang = lang
+
 
 def get_context(device='0'):
     """

@@ -8,7 +8,10 @@ import errno
 from math import log10, floor
 from argparse import ArgumentParser
 
-__all__ = ['line_start', 'comment', 'langs', 'file_ext', 'restrict',
+#modules
+import loopy as lp
+
+__all__ = ['line_start', 'comment', 'langs', 'file_ext',
            'header_ext', 'line_end', 'exp_10_fun', 'array_chars',
            'get_species_mappings', 'get_nu', 'read_str_num', 'split_str',
            'create_dir', 'get_array', 'get_index', 'reassign_species_lists',
@@ -21,17 +24,14 @@ comment = dict(c='//', cuda='//',
                )
 """dict: comment characters for each language"""
 
-langs = ['c', 'cuda', 'fortran', 'matlab']
+langs = ['c', 'cuda', 'opencl']
 """list(`str`): list of supported languages"""
 
-file_ext = dict(c='.c', cuda='.cu', fortran='.f90', matlab='.m')
+file_ext = dict(c='.c', cuda='.cu', opencl='.co')
 """dict: source code file extensions based on language"""
 
-restrict = {'c' : '__restrict__',
-            'cuda' : '__restrict__'}
-"""dict: language-dependent keyword for restrict"""
 
-header_ext = dict(c='.h', cuda='.cuh')
+header_ext = dict(c='.h', cuda='.cuh', opencl='.oh')
 """dict: header extensions based on language"""
 
 line_end = dict(c=';\n', cuda=';\n',
@@ -301,6 +301,29 @@ def is_integer(val):
             return int(val) == float(val)
         except:
             return False
+
+def check_lang(lang):
+    if not lang in langs:
+        raise NotImplementedError('Language {} not supported'.format(lang))
+
+def get_target(lang):
+    """
+
+    Parameters
+    ----------
+    lang : str
+        One of the supported languages, {'c', 'cuda', 'opencl'}
+    """
+
+    check_lang(lang)
+
+    #set target
+    if lang == 'opencl':
+        return lp.PyOpenCLTarget()
+    elif lang == 'c':
+        return lp.CTarget()
+    elif lang == 'cuda':
+        return lp.CudaTarget()
 
 def get_parser():
     """

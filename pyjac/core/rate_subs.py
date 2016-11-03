@@ -1547,13 +1547,8 @@ def write_spec_rates(path, lang, specs, reacs, fwd_spec_mapping,
 
     return seen
 
-def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
-    width=None,
-    depth=None,
-    ilp=False,
-    unr=None,
-    order='cpu',
-    test_size=None):
+def polyfit_kernel_gen(varname, nicename, eqs, specs,
+                            loopy_opt, test_size=None):
     """Helper function that generates kernels for
        evaluation of various thermodynamic species properties
 
@@ -1563,24 +1558,14 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
         The variable to generate the kernel for
     nicename : str
         The variable name to use in generated code
-    varlist : list of `sympy.Symbol`
-        The list of variables that form the keys of eqs
     eqs : dict of `sympy.Symbol`
         Dictionary defining conditional equations for the variables (keys)
     specs : list of `SpecInfo`
         List of species in the mechanism.
     lang : {'c', 'cuda', 'opencl'}
         Programming language.
-    width : int
-        If not None, the SIMD lane/SIMT block width.  Cannot be specified along with depth
-    depth : int
-        If not None, the SIMD lane/SIMT block depth.  Cannot be specified along with width
-    ilp : bool
-        If True, use the ILP tag on the species loop.  Cannot be specified along with unr
-    unr : int
-        If not None, the unroll length to apply to the species loop. Cannot be specified along with ilp
-    layout : {'cpu', 'gpu'}
-        The memory layout of the arrays
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
     test_size : int
         If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
 
@@ -1591,16 +1576,16 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
 
     """
 
-    if width is not None and depth is not None:
+    if loopy_opt.width is not None and loopy_opt.depth is not None:
         raise Exception('Cannot specify both SIMD/SIMT width and depth')
 
-    var = next(v for v in varlist if str(v) == varname)
+    var = next(v for v in eqs.keys() if str(v) == varname)
     eq = eqs[var]
     poly_dim = specs[0].hi.shape[0]
     Ns = len(specs)
 
     k = sp.Idx('k')
-    if order == 'gpu':
+    if loopy_opt.order == 'gpu':
         eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
                     sp.IndexedBase('a_lo')[k, i]) for i in range(poly_dim)]))
         eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
@@ -1623,7 +1608,7 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
         T_mid[ind] = spec.Trange[1]
 
     #need to transpose poly arrays
-    if order == 'cpu':
+    if loopy_opt.order == 'cpu':
         a_lo = a_lo.T.copy()
         a_hi = a_hi.T.copy()
 
@@ -1635,14 +1620,14 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
     T_mid_lp = lp.TemporaryVariable('T_mid', shape=T_mid.shape, initializer=T_mid, read_only=True,
                                 scope=scopes.GLOBAL)
 
-    target = utils.get_target(lang)
+    target = utils.get_target(loopy_opt.lang)
 
     #create the loopy arrays
     test_size = 1 if test_size is None else test_size
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     out_lp = lp.GlobalArg(nicename, shape=lp.auto, dtype=np.float64)
     #correct indexing
-    nicename = nicename + ('[k, i]' if order == 'gpu' else '[i, k]')
+    nicename = nicename + ('[k, i]' if loopy_opt.order == 'gpu' else '[i, k]')
 
     #first we generate the kernel
     knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns, 
@@ -1665,14 +1650,14 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
         kernel_data=[a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
         )
 
-    if depth is not None:
+    if loopy_opt.depth is not None:
         #and assign the l0 axis to 'k'
-        knl = lp.split_iname(knl, 'k', depth, inner_tag='l.0')
+        knl = lp.split_iname(knl, 'k', loopy_opt.depth, inner_tag='l.0')
         #assign g0 to 'i'
         knl = lp.tag_inames(knl, [('i', 'g.0')])
-    elif width is not None:
+    elif loopy_opt.width is not None:
         #make the kernel a block of specifed width
-        knl = lp.split_iname(knl, 'i', width, inner_tag='l.0')
+        knl = lp.split_iname(knl, 'i', loopy_opt.width, inner_tag='l.0')
         #assign g0 to 'i'
         knl = lp.tag_inames(knl, [('i_outer', 'g.0')])
 
@@ -1680,17 +1665,17 @@ def polyfit_kernel_gen(varname, nicename, varlist, eqs, specs, lang,
     knl = lp.fix_parameters(knl, R_u=chem.RU)
 
     #now do unr / ilp
-    k_tag = 'k_outer' if depth is not None else 'k'
-    if unr is not None:
-        knl = lp.split_iname(knl, k_tag, unr, inner_tag='unr')
-    elif ilp:
+    k_tag = 'k_outer' if loopy_opt.depth is not None else 'k'
+    if loopy_opt.unr is not None:
+        knl = lp.split_iname(knl, k_tag, loopy_opt.unr, inner_tag='unr')
+    elif loopy_opt.ilp:
         knl = lp.tag_inames(knl, [(k_tag, 'ilp')])
 
     return knl
 
 
 def write_chem_utils(path, lang, specs, auto_diff, eqs,
-                        width=None, depth=None):
+                        loopy_optimizer):
     """Write subroutine to evaluate species thermodynamic properties.
 
     Notes
@@ -1710,10 +1695,8 @@ def write_chem_utils(path, lang, specs, auto_diff, eqs,
         If ``True``, generate files for Adept autodifferention library.
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    width : int
-        If not None, the SIMD lane/SIMT block width.  Cannot be specified along with depth
-    depth : int
-        If not None, the SIMD lane/SIMT block depth.  Cannot be specified along with width
+    loopy_optimizer : `loopy_options` object
+        A object containing all the loopy options to execute
 
     Returns
     -------
@@ -1729,7 +1712,21 @@ def write_chem_utils(path, lang, specs, auto_diff, eqs,
         double_type = 'adouble'
         pres_ref = '&'
 
-    target = None
+    target = utils.get_target(lang)
+
+    #generate the kernels
+    conp_eqs = eqs['conp']
+    conv_eqs = eqs['conv']
+
+
+    kernels = {}
+    for varname, nicename in [('{C_p}[k]', 'cp'),
+        ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
+        ('U[k]', 'u')]:
+        eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
+        kernels[nicename] = polyfit_kernel_gen(varname, nicename,
+            eq, specs, opt)
+
 
     num_s = len(specs)
 

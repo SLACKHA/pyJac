@@ -5,7 +5,7 @@ from builtins import range
 from ..core.rate_subs import polyfit_kernel_gen
 from ..sympy.sympy_interpreter import load_equations
 from ..core.mech_interpret import read_mech_ct
-from .loopy_utils import auto_run
+from ..core.loopy_utils import auto_run, loopy_options
 
 #modules
 from optionloop import OptionLoop
@@ -21,7 +21,7 @@ elems, specs, reacs = read_mech_ct('h2o2.cti')
 test_size=10000
 
 def __subtest(T, ref_ans, ref_ans_T,
-    varname, nicename, varlist, eqs):
+    varname, nicename, eqs):
     oploop = OptionLoop({'lang': ['opencl'],
         'width' : [4, None],
         'depth' : [4, None],
@@ -32,10 +32,9 @@ def __subtest(T, ref_ans, ref_ans_T,
 
     for state in oploop:
         try:
-            knl = polyfit_kernel_gen(varname, nicename,
-                varlist, eqs, specs, 
-                **{x : state[x] for x in state if x != 'device'},
-                test_size=test_size)
+            opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
+            knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
+                                        opt, test_size=test_size)
             ref = ref_ans if state['order'] == 'gpu' else ref_ans_T
             assert auto_run(knl, ref, device=state['device'], 
                 T_arr=T)
@@ -57,21 +56,21 @@ def __populate(func):
 def test_cp():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.cp(T[i]))
     __subtest(T, ref_ans, ref_ans_T, '{C_p}[k]',
-        'cp', conp_vars, conp_eqs)
+        'cp', conp_eqs)
 
 def test_cv():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.cp(T[i]) - ct.gas_constant)
     ref_ans_T = ref_ans.T.copy()
 
     __subtest(T, ref_ans, ref_ans_T, '{C_v}[k]',
-        'cv', conp_vars, conp_eqs)
+        'cv', conp_eqs)
 
 def test_h():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.h(T[i]))
     __subtest(T, ref_ans, ref_ans_T, 'H[k]',
-        'h', conp_vars, conp_eqs)
+        'h', conp_eqs)
 
 def test_u():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.h(T[i]) - T[i] * ct.gas_constant)
     __subtest(T, ref_ans, ref_ans_T, 'U[k]',
-        'u', conv_vars, conv_eqs)
+        'u', conv_eqs)

@@ -1723,23 +1723,24 @@ def write_chem_utils(path, specs, auto_diff, eqs,
     conv_eqs = eqs['conv']
 
 
-    kernels = {}
+    namelist = ['cp', 'cv', 'h', 'u']
+    kernels = []
     headers = []
     code = []
     for varname, nicename in [('{C_p}[k]', 'cp'),
         ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
         ('U[k]', 'u')]:
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
-        kernels[nicename] = polyfit_kernel_gen(varname, nicename,
-            eq, specs, opts)
+        kernels.append(polyfit_kernel_gen(varname, nicename,
+            eq, specs, opts))
 
     #get headers
-    for nicename in kernels:
-        headers.append(lp_utils.get_header(kernels[nicename]) + utils.line_end[opts.lang])
+    for i in range(len(namelist)):
+        headers.append(lp_utils.get_header(kernels[i]) + utils.line_end[opts.lang])
     
     #and code
-    for nicename in kernels:
-        code.append(lp_utils.get_code(kernels[nicename]))
+    for i in range(len(namelist)):
+        code.append(lp_utils.get_code(kernels[i]))
 
     #need to filter out double definitions of constants in code
     preamble = []

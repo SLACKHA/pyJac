@@ -1,6 +1,7 @@
 import loopy as lp
 import numpy as np
 import pyopencl as cl
+import re
 from ..utils import check_lang
 
 import os
@@ -51,6 +52,12 @@ def get_context(device='0'):
     ctx = cl.create_some_context(interactive=False)
     queue = cl.CommandQueue(ctx)
     return ctx, queue
+
+def get_header(knl):
+    code, _ = lp.generate_code(knl)
+    header = next(line for line in code.split('\n') if
+        re.search(r'(?:__kernel(__)?)?\s*void', line))
+    return header
 
 def get_code(knl):
     code, _ = lp.generate_code(knl)

@@ -35,7 +35,7 @@ header_ext = dict(c='.h', cuda='.cuh', opencl='.oh')
 """dict: header extensions based on language"""
 
 line_end = dict(c=';\n', cuda=';\n',
-                fortran='\n', matlab=';\n'
+                opencl=';\n'
                 )
 """dict: line endings dependent on language"""
 

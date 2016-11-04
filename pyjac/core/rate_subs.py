@@ -1628,7 +1628,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     out_lp = lp.GlobalArg(nicename, shape=lp.auto, dtype=np.float64)
     #correct indexing
-    nicename = nicename + ('[k, i]' if loopy_opt.order == 'gpu' else '[i, k]')
+    indexed = nicename + ('[k, i]' if loopy_opt.order == 'gpu' else '[i, k]')
 
     #first we generate the kernel
     knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns, 
@@ -1646,9 +1646,10 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
                 end
             end
         end
-        """.format(nicename, eq_lo, eq_hi),
+        """.format(indexed, eq_lo, eq_hi),
         target=target,
-        kernel_data=[a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
+        kernel_data=[a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp],
+        name='eval_{}'.format(nicename)
         )
 
     if loopy_opt.depth is not None:
@@ -1720,6 +1721,7 @@ def write_chem_utils(path, specs, auto_diff, eqs,
 
     lines = []
     kernels = {}
+    headers = {}
     for varname, nicename in [('{C_p}[k]', 'cp'),
         ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
         ('U[k]', 'u')]:
@@ -1728,8 +1730,8 @@ def write_chem_utils(path, specs, auto_diff, eqs,
             eq, specs, opts)
 
     for nicename in kernels:
-        kernels[nicename] = lp_utils.get_code(kernels[nicename])
-        print(kernels[nicename])
+        headers[nicename] = lp_utils.get_header(kernels[nicename]) + utils.line_end[opts.lang]
+        print(headers[nicename])
 
     num_s = len(specs)
 

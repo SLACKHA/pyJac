@@ -3,6 +3,7 @@ from builtins import range
 
 #system
 import os
+import filecmp
 
 #local imports
 from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
@@ -91,3 +92,8 @@ def test_write_chem_utils():
             loopy_options(lang='opencl',
                 width=None, depth=None, ilp=False,
                 unr=None, order='cpu'))
+
+    assert filecmp(os.path.join(build_dir, 'chem_utils.oh'),
+                    os.path.join(script_dir, 'blessed', 'chem_utils.oh'))
+    assert filecmp(os.path.join(build_dir, 'chem_utils.co'),
+                    os.path.join(script_dir, 'blessed', 'chem_utils.co'))

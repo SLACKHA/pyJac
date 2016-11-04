@@ -13,6 +13,7 @@ from __future__ import print_function
 import sys
 import math
 import os
+import re
 
 # Non-standard librarys
 import sympy as sp
@@ -29,6 +30,7 @@ from . import CUDAParams
 from . import cache_optimizer as cache
 from . import mech_auxiliary as aux
 from . import shared_memory as shared
+from . import file_writers as filew
 
 
 def rxn_rate_const(A, b, E):
@@ -1652,6 +1654,8 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
         name='eval_{}'.format(nicename)
         )
 
+    knl = lp.prioritize_loops(knl, ['i', 'k'])
+
     if loopy_opt.depth is not None:
         #and assign the l0 axis to 'k'
         knl = lp.split_iname(knl, 'k', loopy_opt.depth, inner_tag='l.0')
@@ -1719,9 +1723,9 @@ def write_chem_utils(path, specs, auto_diff, eqs,
     conv_eqs = eqs['conv']
 
 
-    lines = []
     kernels = {}
-    headers = {}
+    headers = []
+    code = []
     for varname, nicename in [('{C_p}[k]', 'cp'),
         ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
         ('U[k]', 'u')]:
@@ -1729,524 +1733,40 @@ def write_chem_utils(path, specs, auto_diff, eqs,
         kernels[nicename] = polyfit_kernel_gen(varname, nicename,
             eq, specs, opts)
 
+    #get headers
     for nicename in kernels:
-        headers[nicename] = lp_utils.get_header(kernels[nicename]) + utils.line_end[opts.lang]
-        print(headers[nicename])
+        headers.append(lp_utils.get_header(kernels[nicename]) + utils.line_end[opts.lang])
+    
+    #and code
+    for nicename in kernels:
+        code.append(lp_utils.get_code(kernels[nicename]))
 
-    num_s = len(specs)
+    #need to filter out double definitions of constants in code
+    preamble = []
+    inkernel = False
+    for line in code[0].split('\n'):
+        if not re.search(r'eval_\w+', line):
+            preamble.append(line)
+        else:
+            break
+    code = [line for line in '\n'.join(code).split('\n') if line not in preamble]
 
-    file = open(os.path.join(path, file_prefix + 'chem_utils'
-                             + utils.header_ext[opts.lang]), 'w')
-    file.write('#ifndef CHEM_UTILS_HEAD\n'
-               '#define CHEM_UTILS_HEAD\n'
-               '\n'
-               '#include "header{}"\n'.format(utils.header_ext[opts.lang]) +
-               '\n'
-               )
-    if auto_diff:
-        file.write('#include "adept.h"\n'
-                   'using adept::adouble;\n')
-    if opts.lang == 'cuda':
-        file.write('#include "gpu_memory.cuh"\n')
 
-    return True
-
-    file.write(
-               '{0}void eval_conc (const {1}{2}, const {1}{2}, '
-               'const {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3});\n'
-               '{0}void eval_conc_rho (const {1}{2}, const {1}{2}, '
-               'const {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3}, {1} * {3});\n'
-               '{0}void eval_h (const {1}{2}, {1} * {3});\n'
-               '{0}void eval_u (const {1}{2}, {1} * {3});\n'
-               '{0}void eval_cv (const {1}{2}, {1} * {3});\n'
-               '{0}void eval_cp (const {1}{2}, {1} * {3});\n'
-               '\n'
-               '#endif\n'.format(pre, double_type, pres_ref,
-                                 utils.restrict[lang])
-               )
-    file.close()
-
-    filename = file_prefix + 'chem_utils' + utils.file_ext[lang]
-    file = open(os.path.join(path, filename), 'w')
-
-    if lang in ['c', 'cuda']:
-        file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
-        file.write('#include "{}chem_utils{}"\n'.format(file_prefix, utils.header_ext[lang]))
+    #now write
+    with filew.get_header_file(os.path.join(path, file_prefix + 'chem_utils'
+                             + utils.header_ext[opts.lang]), opts.lang) as file:
+        
         if auto_diff:
-            file.write('#include "adept.h"\n'
-                       'using adept::adouble;\n')
-        file.write('\n')
+            file.add_headers('adept.h')
+            file.add_lines('using adept::adouble;\n')
+
+        lines = '\n'.join(headers).split('\n')
+        file.add_lines(lines)
 
 
-    ###################################
-    # species concentrations subroutine
-    ###################################
-    line = pre
-    if lang in ['c', 'cuda']:
-        line += ('void eval_conc (const {0}{1} T, const {0}{1} pres, '
-                 'const {0} * {2} y, {0} * {2} y_N, {0} * {2} mw_avg, '
-                 '{0} * {2} rho, {0} * {2} conc) {{\n\n'.format(
-                 double_type, pres_ref, utils.restrict[lang])
-                 )
-    elif lang == 'fortran':
-        line += (
-            # fortran needs type declarations
-            'subroutine eval_conc (T, pres, y, y_N, '
-            'mw_avg, rho, conc)\n\n'
-            '  implicit none\n'
-            '  double precision, intent(in) :: T, pres, '
-            'mass_frac\n'.format(num_s) +
-            '  double precision, intent(out) :: y_N, mw_avg, '
-            'rho, conc({})\n'.format(num_s) +
-            '\n'
-        )
-    elif lang == 'matlab':
-        line += ('function conc = eval_conc (T, pres, y, y_N, '
-                 'mw_avg, rho, conc)\n\n'
-                 )
-    file.write(line)
-
-    isfirst = True
-    # Get mass fraction of last species
-    file.write('  // mass fraction of final species\n')
-    line = '  *y_N = 1.0 - ('
-    for isp in range(len(specs[:-1])):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst: line += ' + '
-
-        line += utils.get_array(lang, 'y', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # calculation of mw avg
-    line = '  *mw_avg = '
-    isfirst = True
-    for isp, sp in enumerate(specs[:-1]):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '     '
-
-        if not isfirst: line += ' + '
-        line += '(' + utils.get_array(lang, 'y', isp) + ' * {:.16e})'.format(1.0 / sp.mw)
-
-        isfirst = False
-    line += ' + ((*y_N) * {:.16e})'.format(1.0 / specs[-1].mw)
-    line += utils.line_end[lang]
-    file.write(line)
-    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
-
-    # calculation of density
-    file.write('  // mass-averaged density\n')
-    line = '  *rho = pres * (*mw_avg) / ({:.8e} * T)'.format(chem.RU)
-    file.write(line + utils.line_end[lang])
-
-    # calculation of species molar concentrations
-
-    # loop through species
-    for isp, sp in enumerate(specs[:-1]):
-        line = utils.line_start + utils.get_array(lang, 'conc', isp)
-        line += ' = '
-        line += '(*rho) * ' + utils.get_array(lang, 'y', isp)
-        line += ' * {:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
-        file.write(line)
-    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
-    line += ' = (*rho) * (*y_N) * '.format(len(specs) - 1)
-    line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
-    file.write(line + '\n')
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_conc\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_conc\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    #######################################################################
-
-    line = pre
-    if lang in ['c', 'cuda']:
-        line += ('void eval_conc_rho (const {0}{1} T, const {0}{1} rho, '
-                 'const {0} * {2} y, {0} * {2} y_N, {0} * {2} mw_avg, '
-                 '{0} * {2} pres, {0} * {2} conc) {{\n\n'.format(
-                 double_type, pres_ref, utils.restrict[lang])
-                 )
-    elif lang == 'fortran':
-        line += (
-            # fortran needs type declarations
-            'subroutine eval_conc_rho (temp, rho, mass_frac, y_N, '
-            'mw_avg, pres, conc)\n'
-            '  implicit none\n'
-            '  double precision, intent(in) :: '
-            'T, rho, mass_frac({})\n'.format(num_s) +
-            '  double precision, intent(out) :: '
-            'conc({}), y_N, mw_avg, pres\n'.format(num_s) +
-            '\n'
-            )
-    elif lang == 'matlab':
-        line += ('function conc = eval_conc_rho (temp, rho, mass_frac, y_N, '
-                 'mw_avg, pres, conc)\n\n'
-                 )
-    file.write(line)
-
-    # Get mass fraction of last species
-    file.write('  // mass fraction of final species\n')
-    line = '  *y_N = 1.0 - ('
-    isfirst = True
-    for isp in range(len(specs[:-1])):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst: line += ' + '
-
-        line += utils.get_array(lang, 'y', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # calculation of mw avg
-    line = '  *mw_avg = '
-    isfirst = True
-    for isp, sp in enumerate(specs[:-1]):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '     '
-
-        if not isfirst: line += ' + '
-        line += '(' + utils.get_array(lang, 'y', isp) + ' * {:.16e})'.format(1.0 / sp.mw)
-
-        isfirst = False
-    line += ' + ((*y_N) * {:.16e})'.format(1.0 / specs[-1].mw)
-    line += utils.line_end[lang]
-    file.write(line)
-    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
-
-    # calculation of pressure
-    file.write('  // pressure\n')
-    line = '  *pres = rho * {:.8e} * T / (*mw_avg)'.format(chem.RU)
-    file.write(line + utils.line_end[lang])
-
-    # calculation of species molar concentrations
-
-    # loop through species
-    for isp, sp in enumerate(specs[:-1]):
-        line = utils.line_start + utils.get_array(lang, 'conc', isp)
-        line += ' = '
-        line += 'rho * ' + utils.get_array(lang, 'y', isp)
-        line += ' * {:.16e}'.format(1.0 / sp.mw) + utils.line_end[lang]
-        file.write(line)
-    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
-    line += ' = rho * (*y_N) * '.format(len(specs) - 1)
-    line += '{:.16e}'.format(1.0 / specs[-1].mw) + utils.line_end[lang]
-    file.write(line)
-
-    file.write('\n')
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_conc\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_conc\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    ######################
-    # enthalpy subroutine
-    ######################
-    line = pre
-    if lang in ['c', 'cuda']:
-        line += 'void eval_h (const {0}{1} T, {0} * {2} h) {{\n\n'.format(
-            double_type, pres_ref, utils.restrict[lang])
-    elif lang == 'fortran':
-        line += ('subroutine eval_h (T, h)\n\n'
-                 # fortran needs type declarations
-                 '  implicit none\n'
-                 '  double precision, intent(in) :: T\n'
-                 '  double precision, intent(out) :: h({})\n'.format(num_s) +
-                 '\n'
-                 )
-    elif lang == 'matlab':
-        line += 'function h = eval_h (T)\n\n'
-    file.write(line)
-
-    # loop through species
-    for isp, sp in enumerate(specs):
-        line = '  if (T <= {:})'.format(sp.Trange[1])
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'h', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} + T * ('.format(sp.lo[5]) +
-                 '{:.16e} + T * ('.format(sp.lo[0]) +
-                 '{:.16e} + T * ('.format(sp.lo[1] / 2.0) +
-                 '{:.16e} + T * ('.format(sp.lo[2] / 3.0) +
-                 '{:.16e} + '.format(sp.lo[3] / 4.0) +
-                 '{:.16e} * T)))))'.format(sp.lo[4] / 5.0) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'h', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} + T * ('.format(sp.hi[5]) +
-                 '{:.16e} + T * ('.format(sp.hi[0]) +
-                 '{:.16e} + T * ('.format(sp.hi[1] / 2.0) +
-                 '{:.16e} + T * ('.format(sp.hi[2] / 3.0) +
-                 '{:.16e} + '.format(sp.hi[3] / 4.0) +
-                 '{:.16e} * T)))))'.format(sp.hi[4] / 5.0) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_h\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_h\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    #################################
-    # internal energy subroutine
-    #################################
-    line = pre
-    if lang in ['c', 'cuda']:
-        line += 'void eval_u (const {0}{1} T, {0} * {2} u) {{\n\n'.format(
-            double_type, pres_ref, utils.restrict[lang])
-    elif lang == 'fortran':
-        line += ('subroutine eval_u (T, u)\n\n'
-                 # fortran needs type declarations
-                 '  implicit none\n'
-                 '  double precision, intent(in) :: T\n'
-                 '  double precision, intent(out) :: u({})\n'.format(num_s) +
-                 '\n')
-    elif lang == 'matlab':
-        line += 'function u = eval_u (T)\n\n'
-    file.write(line)
-
-    # loop through species
-    for isp, sp in enumerate(specs):
-        line = '  if (T <= {:})'.format(sp.Trange[1])
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'u', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} + T * ('.format(sp.lo[5]) +
-                 '{:.16e} - 1.0 + T * ('.format(sp.lo[0]) +
-                 '{:.16e} + T * ('.format(sp.lo[1] / 2.0) +
-                 '{:.16e} + T * ('.format(sp.lo[2] / 3.0) +
-                 '{:.16e} + '.format(sp.lo[3] / 4.0) +
-                 '{:.16e} * T)))))'.format(sp.lo[4] / 5.0) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'u', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} + T * ('.format(sp.hi[5]) +
-                 '{:.16e} - 1.0 + T * ('.format(sp.hi[0]) +
-                 '{:.16e} + T * ('.format(sp.hi[1] / 2.0) +
-                 '{:.16e} + T * ('.format(sp.hi[2] / 3.0) +
-                 '{:.16e} + '.format(sp.hi[3] / 4.0) +
-                 '{:.16e} * T)))))'.format(sp.hi[4] / 5.0) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_u\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_u\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    ##################################
-    # cv subroutine
-    ##################################
-    if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cv (const {0}{1} T, {0} * {2} cv) {{\n\n'.format(
-                        double_type, pres_ref, utils.restrict[lang])
-    elif lang == 'fortran':
-        line = ('subroutine eval_cv (T, cv)\n\n'
-                # fortran needs type declarations
-                '  implicit none\n'
-                '  double precision, intent(in) :: T\n'
-                '  double precision, intent(out) :: cv({})\n'.format(num_s) +
-                '\n'
-                )
-    elif lang == 'matlab':
-        line = 'function cv = eval_cv (T)\n\n'
-    file.write(line)
-
-    # loop through species
-    for isp, sp in enumerate(specs):
-        line = '  if (T <= {:})'.format(sp.Trange[1])
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'cv', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} - 1.0 + T * ('.format(sp.lo[0]) +
-                 '{:.16e} + T * ('.format(sp.lo[1]) +
-                 '{:.16e} + T * ('.format(sp.lo[2]) +
-                 '{:.16e} + '.format(sp.lo[3]) +
-                 '{:.16e} * T))))'.format(sp.lo[4]) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'cv', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} - 1.0 + T * ('.format(sp.hi[0]) +
-                 '{:.16e} + T * ('.format(sp.hi[1]) +
-                 '{:.16e} + T * ('.format(sp.hi[2]) +
-                 '{:.16e} + '.format(sp.hi[3]) +
-                 '{:.16e} * T))))'.format(sp.hi[4]) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_cv\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_cv\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    ###############################
-    # cp subroutine
-    ###############################
-    if lang in ['c', 'cuda']:
-        line = pre + 'void eval_cp (const {0}{1} T, {0} * {2} cp) {{\n\n'.format(
-                        double_type, pres_ref, utils.restrict[lang])
-    elif lang == 'fortran':
-        line = ('subroutine eval_cp (T, cp)\n\n'
-                # fortran needs type declarations
-                '  implicit none\n'
-                '  double precision, intent(in) :: T\n'
-                '  double precision, intent(out) :: cp({})\n'.format(num_s) +
-                '\n'
-                )
-    elif lang == 'matlab':
-        line = 'function cp = eval_cp (T)\n\n'
-    file.write(line)
-
-    # loop through species
-    for isp, sp in enumerate(specs):
-        line = '  if (T <= {:})'.format(sp.Trange[1])
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'cp', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} + T * ('.format(sp.lo[0]) +
-                 '{:.16e} + T * ('.format(sp.lo[1]) +
-                 '{:.16e} + T * ('.format(sp.lo[2]) +
-                 '{:.16e} + '.format(sp.lo[3]) +
-                 '{:.16e} * T))))'.format(sp.lo[4]) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'cp', isp)
-        line += (' = {:.16e} * '.format(chem.RU / sp.mw) +
-                 '({:.16e} + T * ('.format(sp.hi[0]) +
-                 '{:.16e} + T * ('.format(sp.hi[1]) +
-                 '{:.16e} + T * ('.format(sp.hi[2]) +
-                 '{:.16e} + '.format(sp.hi[3]) +
-                 '{:.16e} * T))))'.format(sp.hi[4]) +
-                 utils.line_end[lang]
-                 )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_cp\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_cp\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    file.close()
-
-    return
+    with filew.get_file(os.path.join(path, file_prefix + 'chem_utils'
+                             + utils.file_ext[opts.lang]), opts.lang) as file:
+        file.add_lines(preamble + code)
 
 
 def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):

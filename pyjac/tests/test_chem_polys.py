@@ -93,7 +93,7 @@ def test_write_chem_utils():
                 width=None, depth=None, ilp=False,
                 unr=None, order='cpu'))
 
-    assert filecmp(os.path.join(build_dir, 'chem_utils.oh'),
+    assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oh'),
                     os.path.join(script_dir, 'blessed', 'chem_utils.oh'))
-    assert filecmp(os.path.join(build_dir, 'chem_utils.co'),
+    assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.co'),
                     os.path.join(script_dir, 'blessed', 'chem_utils.co'))

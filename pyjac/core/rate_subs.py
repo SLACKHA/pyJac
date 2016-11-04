@@ -19,6 +19,7 @@ import sympy as sp
 import loopy as lp
 import numpy as np
 from loopy.kernel.data import temp_var_scope as scopes
+from . import loopy_utils as lp_utils
 
 # Local imports
 from .. import utils
@@ -1674,8 +1675,8 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     return knl
 
 
-def write_chem_utils(path, lang, specs, auto_diff, eqs,
-                        loopy_optimizer):
+def write_chem_utils(path, specs, auto_diff, eqs,
+                        opts):
     """Write subroutine to evaluate species thermodynamic properties.
 
     Notes
@@ -1687,15 +1688,13 @@ def write_chem_utils(path, lang, specs, auto_diff, eqs,
     ----------
     path : str
         Path to build directory for file.
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
-        Programming language.
     specs : list of `SpecInfo`
         List of species in the mechanism.
     auto_diff : bool
         If ``True``, generate files for Adept autodifferention library.
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_optimizer : `loopy_options` object
+    opts : `loopy_options` object
         A object containing all the loopy options to execute
 
     Returns
@@ -1712,37 +1711,43 @@ def write_chem_utils(path, lang, specs, auto_diff, eqs,
         double_type = 'adouble'
         pres_ref = '&'
 
-    target = utils.get_target(lang)
+    target = utils.get_target(opts.lang)
 
     #generate the kernels
     conp_eqs = eqs['conp']
     conv_eqs = eqs['conv']
 
 
+    lines = []
     kernels = {}
     for varname, nicename in [('{C_p}[k]', 'cp'),
         ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
         ('U[k]', 'u')]:
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
         kernels[nicename] = polyfit_kernel_gen(varname, nicename,
-            eq, specs, opt)
+            eq, specs, opts)
 
+    for nicename in kernels:
+        kernels[nicename] = lp_utils.get_code(kernels[nicename])
+        print(kernels[nicename])
 
     num_s = len(specs)
 
     file = open(os.path.join(path, file_prefix + 'chem_utils'
-                             + utils.header_ext[lang]), 'w')
+                             + utils.header_ext[opts.lang]), 'w')
     file.write('#ifndef CHEM_UTILS_HEAD\n'
                '#define CHEM_UTILS_HEAD\n'
                '\n'
-               '#include "header{}"\n'.format(utils.header_ext[lang]) +
+               '#include "header{}"\n'.format(utils.header_ext[opts.lang]) +
                '\n'
                )
     if auto_diff:
         file.write('#include "adept.h"\n'
                    'using adept::adouble;\n')
-    if lang == 'cuda':
+    if opts.lang == 'cuda':
         file.write('#include "gpu_memory.cuh"\n')
+
+    return True
 
     file.write(
                '{0}void eval_conc (const {1}{2}, const {1}{2}, '

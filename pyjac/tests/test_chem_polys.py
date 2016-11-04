@@ -1,11 +1,15 @@
 #compatibility
 from builtins import range
 
+#system
+import os
+
 #local imports
-from ..core.rate_subs import polyfit_kernel_gen
+from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
 from ..sympy.sympy_interpreter import load_equations
 from ..core.mech_interpret import read_mech_ct
 from ..core.loopy_utils import auto_run, loopy_options
+from ..utils import create_dir
 
 #modules
 from optionloop import OptionLoop
@@ -52,12 +56,13 @@ def __populate(func):
     ref_ans_T = ref_ans.T.copy()
     return T, ref_ans, ref_ans_T
 
-
+@attr('long')
 def test_cp():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.cp(T[i]))
     __subtest(T, ref_ans, ref_ans_T, '{C_p}[k]',
         'cp', conp_eqs)
 
+@attr('long')
 def test_cv():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.cp(T[i]) - ct.gas_constant)
     ref_ans_T = ref_ans.T.copy()
@@ -65,12 +70,24 @@ def test_cv():
     __subtest(T, ref_ans, ref_ans_T, '{C_v}[k]',
         'cv', conp_eqs)
 
+@attr('long')
 def test_h():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.h(T[i]))
     __subtest(T, ref_ans, ref_ans_T, 'H[k]',
         'h', conp_eqs)
 
+@attr('long')
 def test_u():
     T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.h(T[i]) - T[i] * ct.gas_constant)
     __subtest(T, ref_ans, ref_ans_T, 'U[k]',
         'u', conv_eqs)
+
+def test_write_chem_utils():
+    script_dir = os.path.abspath(os.path.dirname(__file__))
+    build_dir = os.path.join(script_dir, 'out')
+    create_dir(build_dir)
+    write_chem_utils(build_dir, specs, False,
+        {'conp' : conp_eqs, 'conv' : conv_eqs},
+            loopy_options(lang='opencl',
+                width=None, depth=None, ilp=False,
+                unr=None, order='cpu'))

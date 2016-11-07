@@ -246,6 +246,8 @@ class ReacInfo(CommonEqualityMixin):
             self.type.append(reaction_type.chem)
         elif self.plog:
             self.type.append(reaction_type.plog)
+        elif self.cheb:
+            self.type.append(reaction_type.cheb)
         else:
             self.type.append(reaction_type.elementary)
 

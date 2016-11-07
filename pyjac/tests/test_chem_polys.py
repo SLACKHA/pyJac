@@ -20,8 +20,8 @@ from nose.plugins.attrib import attr
 
 conp_vars, conp_eqs = load_equations(True)
 conv_vars, conv_eqs = load_equations(False)
-gas = ct.Solution('h2o2.cti')
-elems, specs, reacs = read_mech_ct('h2o2.cti')
+gas = ct.Solution('test.cti')
+elems, specs, reacs = read_mech_ct('test.cti')
 
 test_size=10000
 

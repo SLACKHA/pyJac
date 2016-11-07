@@ -140,7 +140,6 @@ def load_equations(conp=True, check=False):
             assert all(x in eqn_list for x in var_list)
         except AssertionError as e:
             missing = next(x for x in var_list if x not in eqn_list)
-            print(type(missing), missing)
             raise Exception('On check, missing equation for variable {}.'.format(missing))
 
     return var_list, eqn_list

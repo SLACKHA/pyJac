@@ -274,12 +274,12 @@ class ReacInfo(CommonEqualityMixin):
 
     def match(self, reac_types):
         """
-        Given a list of `reaction_types` enums, for conditional equations
+        Given a tuple of `reaction_types` enums, for conditional equations
         this method returns true / false if the reaction falls under this equation
 
         Parameters
         ----------
-        reac_types : list of `reaction_types`
+        reac_types : tuple of `reaction_types`
             the conditions to check
 
         Notes
@@ -295,8 +295,8 @@ class ReacInfo(CommonEqualityMixin):
         
         """
 
-        if not isinstance(reac_types, list):
-            reac_types = [reac_types]
+        if not isinstance(reac_types, tuple):
+            reac_types = tuple(reac_types)
 
         #get the types to a more managable form
         enum_types = set([type(rtype) for rtype in reac_types])

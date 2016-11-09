@@ -64,8 +64,16 @@ def load_equations(conp=True, check=False):
         'p' if conp else 'v')), 'r') as file:
         lines = [line.strip() for line in file.readlines()]
 
+    #first we read the variables
+    for i, line in lines:
+        if not line: #reached the end of the var list
+            break
+        var_list.append(sp.sympify(lines[i]), locals=local_dict)
+
+    #increment to next good line
+    i += 1
+
     #now we must parse the equations
-    i = 0
     while i < len(lines):
         try:
             sym = sp.sympify(lines[i], locals=local_dict)

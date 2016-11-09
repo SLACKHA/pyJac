@@ -65,10 +65,10 @@ def load_equations(conp=True, check=False):
         lines = [line.strip() for line in file.readlines()]
 
     #first we read the variables
-    for i, line in lines:
+    for i, line in enumerate(lines):
         if not line: #reached the end of the var list
             break
-        var_list.append(sp.sympify(lines[i]), locals=local_dict)
+        var_list.append(sp.sympify(lines[i], locals=local_dict))
 
     #increment to next good line
     i += 1

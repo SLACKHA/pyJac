@@ -1,98 +1,99 @@
+#compatibility
+from builtins import range
+
+#system
+import os
+import filecmp
+
+#local imports
+from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
 from ..sympy.sympy_interpreter import load_equations
-from ..core.mech_interpret import read_mech
-from ..core.reaction_types import *
+from ..core.mech_interpret import read_mech_ct
+from ..core.loopy_utils import auto_run, loopy_options
+from ..utils import create_dir
 
-#load some equations
+#modules
+from optionloop import OptionLoop
+import cantera as ct
+import numpy as np
+from nose.plugins.attrib import attr
+
 conp_vars, conp_eqs = load_equations(True)
+conv_vars, conv_eqs = load_equations(False)
+gas = ct.Solution('test.cti')
+elems, specs, reacs = read_mech_ct('test.cti')
 
-#read the test mech
-elems, specs, reacs = read_mech('test.inp', 'test.inp')
+test_size=10000
 
-def test_match():
-    #get the kf equations
-    kf = next(x for x in conp_vars if str(x) == '{k_f}[i]')
-    kf_eqs = [x for x in conp_eqs if x.has(kf)]
-    kf_eqs = {key: (x, conp_eqs[x][key]) for x in kf_eqs for key in conp_eqs[x]}
-    for i, reac in enumerate(reacs):
-        #test that it matches
-        key = next(x for x in kf_eqs if reac.match(x))
-        #test that the match is correct
-        if reac.pdep:
-            assert reaction_type.fall in key or reaction_type.chem in key
-        elif reac.thd_body:
-            assert reaction_type.thd in key
-        elif reac.plog:
-            assert reaction_type.plog in key
-        elif reac.cheb:
-            assert reaction_type.cheb in key
-        else:
-            assert reaction_type.elementary in key
+def __subtest(T, ref_ans, ref_ans_T,
+    varname, nicename, eqs):
+    oploop = OptionLoop({'lang': ['opencl'],
+        'width' : [4, None],
+        'depth' : [4, None],
+        'ilp' : [True, False],
+        'unr' : [None, 4],
+        'order' : ['cpu', 'gpu'],
+        'device' : ['0:0', '1']})
 
-def test_finalize():
-    for i, reac in enumerate(reacs):
-        #for each reaction, test that we have the correct enums
+    for state in oploop:
+        try:
+            opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
+            knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
+                                        opt, test_size=test_size)
+            ref = ref_ans if state['order'] == 'gpu' else ref_ans_T
+            assert auto_run(knl, ref, device=state['device'],
+                T_arr=T)
+        except Exception as e:
+            if not(state['width'] and state['depth']):
+                raise e
 
-        #test the reaction type
-        if reac.pdep:
-            #for falloff/chemically activated
-            #also test the falloff form
-            if reac.low:
-                assert reaction_type.fall in reac.type
-                assert all(x not in reac.type for x in reaction_type
-                    if x != reaction_type.fall)
-            else:
-                assert reaction_type.chem in reac.type
-                assert all(x not in reac.type for x in reaction_type
-                    if x != reaction_type.chem)
-            if reac.sri:
-                assert falloff_form.sri in reac.type
-            elif reac.troe:
-                assert falloff_form.troe in reac.type
-            else:
-                assert falloff_form.lind in reac.type
-        elif reac.thd_body:
-            assert reaction_type.thd in reac.type
-            assert all(x not in reac.type for x in reaction_type
-                    if x != reaction_type.thd)
-        elif reac.plog:
-            assert reaction_type.plog in reac.type
-            assert all(x not in reac.type for x in reaction_type
-                    if x != reaction_type.plog)
-        elif reac.cheb:
-            assert reaction_type.cheb in reac.type
-            assert all(x not in reac.type for x in reaction_type
-                    if x != reaction_type.cheb)
-        else:
-            assert reaction_type.elementary in reac.type
-            assert all(x not in reac.type for x in reaction_type
-                    if x != reaction_type.elementary)
+def __populate(func):
+    T = np.random.uniform(600, 2200, size=test_size)
+    ref_ans = np.zeros((len(specs), test_size))
+    for i in range(test_size):
+        for j in range(len(specs)):
+            ref_ans[j, i] = func(j, i, T)
 
-        #test the reversible type
-        if reac.rev:
-            if reac.rev_par:
-                assert reversible_type.explicit in reac.type
-                assert all(x not in reac.type for x in reversible_type
-                    if x != reversible_type.explicit)
-            else:
-                assert reversible_type.non_explicit in reac.type
-                assert all(x not in reac.type for x in reversible_type
-                    if x != reversible_type.non_explicit)
-        else:
-            assert reversible_type.non_reversible in reac.type
-            assert all(x not in reac.type for x in reversible_type
-                if x != reversible_type.non_reversible)
+    ref_ans_T = ref_ans.T.copy()
+    return T, ref_ans, ref_ans_T
 
-        #finally test the third body types
-        if reac.pdep or reac.thd_body:
-            if reac.pdep_sp:
-                assert thd_body_type.species in reac.type
-                assert all(x not in reac.type for x in thd_body_type
-                    if x != thd_body_type.species)
-            elif not reac.thd_body_eff:
-                assert thd_body_type.unity in reac.type
-                assert all(x not in reac.type for x in thd_body_type
-                    if x != thd_body_type.unity)
-            else:
-                assert thd_body_type.mix in reac.type
-                assert all(x not in reac.type for x in thd_body_type
-                    if x != thd_body_type.mix)
+@attr('long')
+def test_cp():
+    T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.cp(T[i]))
+    __subtest(T, ref_ans, ref_ans_T, '{C_p}[k]',
+        'cp', conp_eqs)
+
+@attr('long')
+def test_cv():
+    T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.cp(T[i]) - ct.gas_constant)
+    ref_ans_T = ref_ans.T.copy()
+
+    __subtest(T, ref_ans, ref_ans_T, '{C_v}[k]',
+        'cv', conp_eqs)
+
+@attr('long')
+def test_h():
+    T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.h(T[i]))
+    __subtest(T, ref_ans, ref_ans_T, 'H[k]',
+        'h', conp_eqs)
+
+@attr('long')
+def test_u():
+    T, ref_ans, ref_ans_T = __populate(lambda j, i, T: gas.species(j).thermo.h(T[i]) - T[i] * ct.gas_constant)
+    __subtest(T, ref_ans, ref_ans_T, 'U[k]',
+        'u', conv_eqs)
+
+def test_write_chem_utils():
+    script_dir = os.path.abspath(os.path.dirname(__file__))
+    build_dir = os.path.join(script_dir, 'out')
+    create_dir(build_dir)
+    write_chem_utils(build_dir, specs,
+        {'conp' : conp_eqs, 'conv' : conv_eqs},
+            loopy_options(lang='opencl',
+                width=None, depth=None, ilp=False,
+                unr=None, order='cpu'))
+
+    assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oh'),
+                    os.path.join(script_dir, 'blessed', 'chem_utils.oh'))
+    assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.co'),
+                    os.path.join(script_dir, 'blessed', 'chem_utils.co'))

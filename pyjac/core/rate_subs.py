@@ -24,7 +24,7 @@ from . import loopy_utils as lp_utils
 
 # Local imports
 from .. import utils
-from . import chem_utilities as chem
+from . import chem_model as chem
 from . import mech_interpret as mech
 from . import CUDAParams
 from . import cache_optimizer as cache
@@ -1680,8 +1680,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     return knl
 
 
-def write_chem_utils(path, specs, auto_diff, eqs,
-                        opts):
+def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     """Write subroutine to evaluate species thermodynamic properties.
 
     Notes
@@ -1695,13 +1694,12 @@ def write_chem_utils(path, specs, auto_diff, eqs,
         Path to build directory for file.
     specs : list of `SpecInfo`
         List of species in the mechanism.
-    auto_diff : bool
-        If ``True``, generate files for Adept autodifferention library.
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
     opts : `loopy_options` object
         A object containing all the loopy options to execute
-
+    auto_diff : bool
+        If ``True``, generate files for Adept autodifferention library.
     Returns
     -------
     None

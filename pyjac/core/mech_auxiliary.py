@@ -12,7 +12,7 @@ import itertools
 
 # Local imports
 from .. import utils
-from . import chem_utilities as chem
+from . import chem_model as chem
 
 def write_mechanism_initializers(path, lang, specs, reacs,
                                  fwd_spec_mapping, back_spec_mapping,

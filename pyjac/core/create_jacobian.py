@@ -13,7 +13,7 @@ import os
 
 # Local imports
 from .. import utils
-from . import chem_utilities as chem
+from . import chem_model as chem
 from . import mech_interpret as mech
 from . import rate_subs as rate
 from . import mech_auxiliary as aux

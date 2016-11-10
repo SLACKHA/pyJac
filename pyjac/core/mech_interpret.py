@@ -15,7 +15,7 @@ import numpy as np
 
 # Local imports
 from .. import utils
-from . import chem_utilities as chem
+from . import chem_model as chem
 
 # Related module
 CANTERA_FLAG = False

@@ -36,10 +36,25 @@ class storage(object):
 
 class TestClass(unittest.TestCase):
     #global setup var
-    is_setup = False
-    store = None
+    _is_setup = False
+    _store = None
+    @property
+    def store(self):
+        return self._store
+    @store.setter
+    def store(self, val):
+        self._store = val
+    @property
+    def is_setup(self):
+        return self._is_setup
+    @is_setup.setter
+    def is_setup(self, val):
+        self._is_setup = val
+
     def setUp(self):
-        if not self.is_setup:
+        if not TestClass.is_setup:
+            import pdb
+            pdb.set_trace()
             #load equations
             conp_vars, conp_eqs = load_equations(True)
             conv_vars, conv_eqs = load_equations(False)
@@ -47,6 +62,6 @@ class TestClass(unittest.TestCase):
             gas = ct.Solution('test.cti')
             #the mechanism
             elems, specs, reacs = read_mech_ct('test.cti')
-            self.store = storage(conp_vars, conp_eqs, conv_vars,
+            TestClass.store = storage(conp_vars, conp_eqs, conv_vars,
                 conv_eqs, gas, specs, reacs)
-            self.__class__.is_setup=True
+            TestClass.is_setup = True

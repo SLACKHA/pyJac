@@ -44,6 +44,8 @@ class SubTest(TestClass):
 
     def __populate(self, func):
         T = self.store.T
+        specs = self.store.specs
+        test_size = self.store.test_size
         ref_ans = np.zeros((len(specs), test_size))
         for i in range(test_size):
             for j in range(len(specs)):
@@ -54,40 +56,40 @@ class SubTest(TestClass):
 
     @attr('long')
     def test_cp(self):
-        T, ref_ans, ref_ans_T = __populate(lambda j, i, T: self.store.gas.species(
+        T, ref_ans, ref_ans_T = self.__populate(lambda j, i, T: self.store.gas.species(
             j).thermo.cp(T[i]))
-        __subtest(T, ref_ans, ref_ans_T, '{C_p}[k]',
+        self.__subtest(T, ref_ans, ref_ans_T, '{C_p}[k]',
             'cp', self.store.conp_eqs)
 
     @attr('long')
     def test_cv(self):
-        T, ref_ans, ref_ans_T = __populate(lambda j, i, T: self.store.gas.species(
+        T, ref_ans, ref_ans_T = self.__populate(lambda j, i, T: self.store.gas.species(
             j).thermo.cp(T[i]) - ct.gas_constant)
         ref_ans_T = ref_ans.T.copy()
 
-        __subtest(T, ref_ans, ref_ans_T, '{C_v}[k]',
+        self.__subtest(T, ref_ans, ref_ans_T, '{C_v}[k]',
             'cv', self.store.conp_eqs)
 
     @attr('long')
     def test_h(self):
-        T, ref_ans, ref_ans_T = __populate(lambda j, i, T: self.store.gas.species(
+        T, ref_ans, ref_ans_T = self.__populate(lambda j, i, T: self.store.gas.species(
             j).thermo.h(T[i]))
-        __subtest(T, ref_ans, ref_ans_T, 'H[k]',
+        self.__subtest(T, ref_ans, ref_ans_T, 'H[k]',
             'h', self.store.conp_eqs)
 
     @attr('long')
     def test_u(self):
-        T, ref_ans, ref_ans_T = __populate(lambda j, i, T: self.store.gas.species(
+        T, ref_ans, ref_ans_T = self.__populate(lambda j, i, T: self.store.gas.species(
             j).thermo.h(T[i]) - T[i] * ct.gas_constant)
-        __subtest(T, ref_ans, ref_ans_T, 'U[k]',
+        self.__subtest(T, ref_ans, ref_ans_T, 'U[k]',
             'u', self.store.conv_eqs)
 
     def test_write_chem_utils(self):
         script_dir = os.path.abspath(os.path.dirname(__file__))
         build_dir = os.path.join(script_dir, 'out')
         create_dir(build_dir)
-        write_chem_utils(build_dir, specs,
-            {'conp' : conp_eqs, 'conv' : conv_eqs},
+        write_chem_utils(build_dir, self.store.specs,
+            {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
                     unr=None, order='cpu'))

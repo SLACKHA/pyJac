@@ -1,10 +1,19 @@
+#package imports
+from enum import Enum
 import loopy as lp
 import numpy as np
 import pyopencl as cl
 import re
+import os
+
+#local imports
 from ..utils import check_lang
 
-import os
+class RateSpecialization(Enum):
+    fixed = 0,
+    hybrid = 1,
+    full = 2
+
 
 class loopy_options(object):
     """
@@ -24,9 +33,16 @@ class loopy_options(object):
         The memory layout of the arrays
     lang : {'opencl', 'c', 'cuda'}
         One of the supported languages
+    ratespec : RateSpecialization
+        Controls the level to which Arrenhius rate evaluations are specialized
+    ratespec_kernels : bool
+        If True, break different Arrenhius rate specializations into different kernels
+
     """
     def __init__(self, width=None, depth=None, ilp=False,
-                    unr=None, order='cpu', lang='opencl'):
+                    unr=None, order='cpu', lang='opencl',
+                    ratespec=RateSpecialization.fixed,
+                    ratespec_kernels=False):
         self.width = width
         self.depth = depth
         self.ilp = ilp
@@ -34,6 +50,8 @@ class loopy_options(object):
         self.order = order
         check_lang(lang)
         self.lang = lang
+        self.ratespec = ratespec
+        self.ratespec_kernels = ratespec_kernels
 
 
 def get_context(device='0'):
@@ -54,12 +72,44 @@ def get_context(device='0'):
     return ctx, queue
 
 def get_header(knl):
+    """
+    Returns header definition code for a `loopy.kernel`
+
+    Parameters
+    ----------
+    knl : `loopy.kernel`
+        The kernel to generate a header definition for
+
+    Returns
+    -------
+    Generated device header code
+
+    Notes
+    -----
+    The kernel's Target and name should be set for proper functioning
+    """
     code, _ = lp.generate_code(knl)
     header = next(line for line in code.split('\n') if
         re.search(r'(?:__kernel(__)?)?\s*void', line))
     return header
 
 def get_code(knl):
+    """
+    Returns the device code for a `loopy.kernel`
+
+    Parameters
+    ----------
+    knl : `loopy.kernel`
+        The kernel to generate code for
+
+    Returns
+    -------
+    Generated device code
+
+    Notes
+    -----
+    The kernel's Target and name should be set for proper functioning
+    """
     code, _ = lp.generate_code(knl)
     return code
 
@@ -89,7 +139,13 @@ def auto_run(knl, ref_answer, device='0', **input_args):
     ctx, queue = get_context(device)
 
     #run kernel
-    evt, (out,) = knl(queue, **input_args)
+    if isinstance(knl, list):
+        raise NotImplementedError
+        out_ref = np.empty_like(ref_answer)
+        for k in knl:
+            evt, (out,) = knl(queue, **input_args)
+    else:
+        evt, (out,) = knl(queue, **input_args)
 
     #check against supplied answer
     return np.allclose(out, ref_answer)

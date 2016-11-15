@@ -31,6 +31,8 @@ from . import cache_optimizer as cache
 from . import mech_auxiliary as aux
 from . import shared_memory as shared
 from . import file_writers as filew
+from ..sympy import sympy_utils as sp_utils
+from . reaction_types import reaction_type
 
 
 def rxn_rate_const(A, b, E):
@@ -259,95 +261,297 @@ def get_cheb_rate(lang, rxn, write_defns=True):
 
     return ''.join(line_list)
 
+def rate_const_kernel_gen(rate_eqn, reacs,
+                            loopy_opt, test_size=None):
+    """Helper function that generates kernels for
+       evaluation of various arrhenius rate forms
 
-def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
-                    smm=None, auto_diff=False):
-    """Write reaction rate subroutine.
+    Parameters
+    ----------
+    rate_eqn : `sympy.Expr`
+        The base expression for the arrenhius rate
+    reacs : list of `ReacInfo`
+        List of species in the mechanism.
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    test_size : int
+        If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
 
-    Includes conditionals for reversible reactions.
+    Returns
+    -------
+    knl_list : list of `loopy.kernel`
+        The generated loopy kernel(s) for code generation / testing
+
+    """
+
+    Nr = len(reacs)
+    test_size = 1 if test_size is None else test_size
+
+    #first assign the reac types, parameters
+    
+    full = loopy_opt.ratespec == lp_utils.RateSpecialization.full
+    hybrid = loopy_opt.ratespec == lp_utils.RateSpecialization.hybrid
+    fixed = loopy_opt.ratespec == lp_utils.RateSpecialization.fixed
+    separated_kernels = loopy_opt.ratespec_kernels
+    
+    #rate type keys
+    #full
+    # 0 -> kf = A
+    # 1 -> kf = A * T * T * T ...
+    # 2 -> kf = exp(logA + b * logT)
+    # 3 -> kf = exp(logA - Ta / T)
+    # 4 -> kf = exp(logA + b * logT - Ta / T)
+
+    #hybrid
+    # 0 -> kf = A
+    # 1 -> kf = A * T * T * T ...
+    # 2 -> kf = exp(logA + b * logT - Ta / T)
+
+    #fixed
+    # 0 -> kf = exp(logA + b * logT - Ta / T)
+
+    rate_type = np.zeros((len(reacs),), dtype=np.int32)
+    #reaction parameters
+    A = np.zeros((num_nonpdep,), dtype=np.float64)
+    b = np.zeros((num_nonpdep,), dtype=np.float64)
+    Ta = np.zeros((num_nonpdep,), dtype=np.float64)
+
+    for i, reac in enumerate(reacs):
+        #assign rate params
+        A[i] = np.log(reac.A)
+        b[i] = reac.b
+        Ta[i] = reac.E
+        #assign rate types
+        if reac.b == 0 and reac.E == 0:
+            A[i] = reac.A
+            rate_type[i] = 0
+        elif reac.b == int(reac.b) and reac.b and reac.E == 0:
+            mixedA[i] = reac.A
+            rate_type[i] = 1
+        elif reac.E == 0 and reac.b != 0:
+            rate_type[i] = 2
+        elif reac.b == 0 and reac.E != 0:
+            rate_type[i] = 3
+        else:
+            rate_type[i] = 4
+        if not full:
+            rate_type = rate_type[i] if rate_type[i] <= 1 else 2
+    maxb = np.max(np.abs(b[rate_type == 1]))
+
+    #make loopy args
+    #loopy arrays
+    A_lp = lp.TemporaryVariable('A', shape=lp.auto, initializer=A.squeeze(), read_only=True,
+                                    scope=scopes.GLOBAL)
+    b_lp = lp.TemporaryVariable('beta', shape=lp.auto, initializer=b.squeeze(), read_only=True,
+                                    scope=scopes.GLOBAL)
+    Ta_lp = lp.TemporaryVariable('Ta', shape=lp.auto, initializer=Ta.squeeze(), read_only=True,
+                                    scope=scopes.GLOBAL)
+    rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto, initializer=rate_type.squeeze(), read_only=True,
+                                    scope=scopes.GLOBAL)
+    T_arr = lp.GlobalArg('T_arr', shape=T.shape, dtype=T.dtype)
+    kf_arr = lp.GlobalArg('kf', shape=lp.auto, dtype=T.dtype)
+
+    #define the instruction lists here
+    #so they can be reused by various kernels
+    pre_inst = """
+               <> T_inv = 1 / T_arr[j]
+               <> logT = log(T_arr[j])
+               """.split('\n')
+    full_inst = "kf[i, j] = {}".format(str(rate_eqn))
+    no_beta_inst = "kf[i, j] = {}".format(str(rate_eqn.subs('beta[i]', 0)))
+    no_Ta_inst = "kf[i, j] = {}".format(str(rate_eqn.subs('Ta[i]', 0)))
+    A_only_inst = "kf[i, j] = A[i]"
+    beta_integer_noTa_inst = """
+    kf[i, j] = A[i] {id=a0}
+    <> T_val = T_arr[j] {id=a1, dep=a0}
+    <> negval = beta[i] < 0
+    if negval
+        T_val = T_inv {id=a2, dep=a1}
+    end
+    <> btest = abs(beta[i])
+    for k
+        <>inbounds = k < btest
+        if inbounds
+            kf[i, j] = kf[i, j] * T_val {dep=a2}
+        end
+    end  
+    """
+
+    #and the skeleton kernel
+    skeleton ="""
+    for j
+        {}
+        for i
+           {}
+        end
+    end
+    """
+
+    #make the specializations into a list we can iterate over
+    #to simplify code
+    specializations = [(0, 'a_only', [], A_only_inst),
+    (1, 'beta_int', [x for x in pre_inst if 'T_inv' in x], beta_integer_noTa_inst)]
+    if full:
+        specializations.extend([(2, 'beta_exp', pre_inst, no_Ta_inst),
+            (3, 'ta_exp', pre_inst, no_beta_inst), (4, 'full', pre_inst, full_inst)])
+    else:
+        specializations.extend([(2, 'full', pre_inst, full_inst)])
+
+    knl_list = []
+    if fixed:
+        fixed_knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{}}}'.format(Nr, test_size),
+        skeleton.format('\n'.join(pre_inst), full_inst),
+        kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr],
+        name='kf_fixed')
+        fixed_knl = lp.prioritize_loops(fixed_knl, 'i,j')
+        knl_list.append(fixed_knl)
+    elif separated_kernels:
+        for rtype, name, pre_instructions, instruction_list in specializations:
+            #find the number of this specialization
+            inds = np.where(rate_type == 0)[0]
+            num = inds.size
+            #if non-zero
+            if num:
+                #create the index array
+                inds_lp = lp.TemporaryVariable('{}_ind'.format(name),
+                    shape=lp.auto, initializer=inds.squeeze(),
+                    read_only=True, scope=scopes.GLOBAL)
+                #need to add a mapping of ind -> i
+                instruction_list = '<>i = {}_ind[ind]\n'.format(name) + instruction_list 
+                #create the specialized kernels
+                knl = lp.make_kernel('{{[ind, j, k]: 0<=ind<{} and 0<=j<{} and 0<=k<{}}}'.format(
+                    num, test_size, int(maxb) if name == 'beta_int' else 0),
+                  skeleton.format('\n'.join(pre_instructions), instruction_list),
+                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp],
+                 name='kf_{}'.format(name))
+                knl_list.append(knl)
+    else:
+        #do with if statements
+        #first, make the rate types array
+        rtype_lp = lp.TemporaryVariable('rtype',
+                    shape=lp.auto, initializer=rate_type.squeeze(),
+                    read_only=True, scope=scopes.GLOBAL)
+        instruction_list = []
+        for i in range(len(specializations)):
+            instruction_list.append('<>test_{0} = rtype[i] == {0} {{id=d{0}}}'.format(i))
+            instruction_list.append('if test_{0}'.format(i))
+            instruction_list.extend(['\t' + x for x in specializations[i][3].split('\n')])
+            instruction_list.append('end')
+        knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{} and 0<=k<{}}}'.format(
+                    num, test_size, int(maxb)),
+                  skeleton.format('\n'.join(pre_instructions), '\n'.join(instruction_list)),
+                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp],
+                 name='kf_{}'.format(name))
+        knl_list.append(knl)
+
+    for i, knl in enumerate(knl_list):
+        #now apply specified optimizations
+        if loopy_opt.depth is not None:
+            #and assign the l0 axis to 'i'
+            knl = lp.split_iname(knl, 'i', loopy_opt.depth, inner_tag='l.0')
+            #assign g0 to 'j'
+            knl = lp.tag_inames(knl, [('j', 'g.0')])
+        elif loopy_opt.width is not None:
+            #make the kernel a block of specifed width
+            knl = lp.split_iname(knl, 'j', loopy_opt.width, inner_tag='l.0')
+            #assign g0 to 'i'
+            knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
+
+        #now do unr / ilp
+        i_tag = 'i_outer' if loopy_opt.depth is not None else 'i'
+        if loopy_opt.unr is not None:
+            knl = lp.split_iname(knl, k_tag, loopy_opt.unr, inner_tag='unr')
+        elif loopy_opt.ilp:
+            knl = lp.tag_inames(knl, [(k_tag, 'ilp')])
+
+        knl_list[i] = knl
+
+    return knl_list
+
+def get_rate_eqn(eqs):
+    """Helper routine that returns the Arrenhius rate constant in exponential
+    form.
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    Returns
+    -------
+    rate_eqn_pre : `sympy.Expr`
+        The rate constant before taking the exponential (sympy does odd things upon doing so)
+        This is used for various simplifications
+    rate_eqn : str
+        A stringified form of exponential rate constant
+
+    """
+
+    conp_eqs = eqs['conp']
+
+    #define some dummy symbols for loopy writing
+    E_sym = sp.Symbol('Ta[i]', real=True)
+    A_sym = sp.Symbol('A[i]', real=True, positive=True, nonnegative=True)
+    T_sym = sp.Symbol('T', real=True, positive=True, nonnegative=True)
+    Tinv_sym = sp.Symbol('T_inv', real=True, positive=True, nonnegative=True)
+    b_sym = sp.Symbol('beta[i]', real=True)
+    logA_sym = sp.Symbol('logA[i]', real=True)
+    logT_sym = sp.Symbol('logT', real=True)
+
+    #the rate constant is indep. of conp/conv, so just use conp for simplicity
+    kf_eqs = [x for x in conp_eqs if str(x) == '{k_f}[i]']
+
+    #do some surgery on the equations
+    kf_eqs = {key: (x, conp_eqs[x][key]) for x in kf_eqs for key in conp_eqs[x]}
+
+    #first load the arrenhius rate equation
+    rate_const = next(kf_eqs[x] for x in kf_eqs if reaction_type.elementary in x)[1]
+    rate_const = sp_utils.sanitize(rate_const,
+                        subs={sp.Symbol('{E_{a}}[i]') / sp.Symbol('R_u') : E_sym,
+                            E_sym / T_sym : E_sym * Tinv_sym})
+
+    #finally, alter to exponential form:
+    rate_eqn_pre = sp.log(A_sym) + sp.log(T_sym) * b_sym - E_sym * Tinv_sym
+    assert sp.simplify(sp.exp(rate_eqn_pre) - rate_eqn) == 0
+    rate_eqn_pre = rate_eqn_pre.subs([(sp.log(A_sym), logA_sym),
+                                      (sp.log(T_sym), logT_sym)])
+    rate_eqn = 'exp({})'.format(str(rate_eqn_pre))
+
+    return rate_eqn_pre, rate_eqn
+
+def write_rate_constants(path, specs, reacs, eqs, opts, auto_diff=False):
+    """Write subroutine(s) to evaluate reaction rates constants.
 
     Parameters
     ----------
     path : str
         Path to build directory for file.
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
-        Programming language.
     specs : list of `SpecInfo`
         List of species in the mechanism.
     reacs : list of `ReacInfo`
         List of reactions in the mechanism.
-    fwd_rxn_mapping : List of integers
-        The index of the reaction in the original mechanism
-    smm : `shared_memory_manager`, optional
-        If not ``None`` (default), `shared_memory_manager` for CUDA optimizations
-    auto_diff : Optional[bool]
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    opts : `loopy_options` object
+        A object containing all the loopy options to execute
+    auto_diff : bool
         If ``True``, generate files for Adept autodifferention library.
-
     Returns
     -------
     None
 
     """
 
-    num_s = len(specs)
-    num_r = len(reacs)
-    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
-    num_rev = len(rev_reacs)
-    pdep_reacs = [i for i, rxn in enumerate(reacs) if rxn.thd_body or rxn.pdep]
-
-    pre = '__device__ ' if lang == 'cuda' else ''
-    file_prefix = 'ad_' if auto_diff else ''
-    pres_ref = '&' if auto_diff else ''
-    file = open(os.path.join(path, '{}rates'.format(file_prefix)
-                                + utils.header_ext[lang]), 'w')
-    file.write('#ifndef RATES_HEAD\n'
-               '#define RATES_HEAD\n'
-               '\n'
-               '#include "header{}"\n'.format(utils.header_ext[lang]) +
-               '\n'
-               )
-    if lang == 'cuda':
-        file.write('#include "gpu_memory.cuh"\n')
+    file_prefix = ''
     double_type = 'double'
+    pres_ref = ''
     if auto_diff:
+        file_prefix = 'ad_'
         double_type = 'adouble'
-        file.write('#include "adept.h"\n'
-                   'using adept::adouble;\n')
-    cuda_cheb = any(rxn.cheb for rxn in reacs) and lang == 'cuda'
-    line = ('{0}void eval_rxn_rates (const {1},'
-               ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3}'
-               + (', {1} * {3}' if cuda_cheb else '') +');\n'
-               '{0}void eval_spec_rates (const {1} * {3},'
-               ' const {1} * {3}, const {1} * {3}, {1} * {3}, {1} * {3});\n')
-    file.write(line.format(pre, double_type, pres_ref, utils.restrict[lang]))
+        pres_ref = '&'
 
-    if pdep_reacs:
-        file.write('{0}void get_rxn_pres_mod (const {1}, const '
-                   '{1}{2}, const {1} * {3}, {1} * {3});\n'.format(
-                   pre, double_type, pres_ref, utils.restrict[lang])
-                   )
+    target = utils.get_target(opts.lang)
 
-    file.write('\n')
-    file.write('#endif\n')
-    file.close()
-
-    filename = file_prefix + 'rxn_rates' + utils.file_ext[lang]
-    file = open(os.path.join(path, filename), 'w')
-
-    do_unroll = False
-    if lang == 'cuda' and len(reacs) > CUDAParams.Rates_Unroll:
-        # make paths for separate rate files
-        utils.create_dir(os.path.join(path, 'rates'))
-        rate_count = 0
-        do_unroll = True
-        next_file = 0
-
-    get_array = utils.get_array
-    if lang == 'cuda' and smm is not None:
-        smm.reset()
-        get_array = smm.get_array
-        if not do_unroll:
-            smm.write_init(file, indent=2)
+    raise NotImplementedError
 
     def write_header(lang, rate_count):
         """Writes reaction rate header file.

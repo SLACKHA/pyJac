@@ -52,9 +52,7 @@ class TestClass(unittest.TestCase):
         self._is_setup = val
 
     def setUp(self):
-        if not TestClass.is_setup:
-            import pdb
-            pdb.set_trace()
+        if not self.is_setup:
             #load equations
             conp_vars, conp_eqs = load_equations(True)
             conv_vars, conv_eqs = load_equations(False)
@@ -62,6 +60,6 @@ class TestClass(unittest.TestCase):
             gas = ct.Solution('test.cti')
             #the mechanism
             elems, specs, reacs = read_mech_ct('test.cti')
-            TestClass.store = storage(conp_vars, conp_eqs, conv_vars,
+            self.store = storage(conp_vars, conp_eqs, conv_vars,
                 conv_eqs, gas, specs, reacs)
-            TestClass.is_setup = True
+            self.is_setup = True

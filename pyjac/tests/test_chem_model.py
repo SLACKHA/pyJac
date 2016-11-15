@@ -1,4 +1,5 @@
 from ..core.reaction_types import *
+from . import TestClass
 
 class SubTest(TestClass):
     def test_match(self):

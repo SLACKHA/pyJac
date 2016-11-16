@@ -24,7 +24,7 @@ class SubTest(TestClass):
         return T, ref_const, ref_const.T.copy()
 
     def test_get_rate_eqs(self):
-        eqs = {'conp' : self.store.conp_eqs, 
+        eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
         pre, eq = get_rate_eqn(eqs)
 
@@ -32,7 +32,7 @@ class SubTest(TestClass):
         assert 'exp(' + str(pre) + ')' == eq
 
         #second check the form
-        assert eq == 'exp(logA + beta[i] * T_inv - Ta[i] * Ea[i])'
+        assert eq == 'exp(-T_inv*Ta[i] + beta[i]*logT + logA[i])'
 
     @attr('long')
     def test_rate_constants(self):

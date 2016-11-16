@@ -492,8 +492,10 @@ def get_rate_eqn(eqs):
     E_sym = sp.Symbol('Ta[i]', real=True)
     A_sym = sp.Symbol('A[i]', real=True, positive=True, nonnegative=True)
     T_sym = sp.Symbol('T', real=True, positive=True, nonnegative=True)
-    Tinv_sym = sp.Symbol('T_inv', real=True, positive=True, nonnegative=True)
     b_sym = sp.Symbol('beta[i]', real=True)
+    symlist = [E_sym, A_sym, T_sym, b_sym]
+    symlist = {str(x) : x for x in symlist}
+    Tinv_sym = sp.Symbol('T_inv', real=True, positive=True, nonnegative=True)
     logA_sym = sp.Symbol('logA[i]', real=True)
     logT_sym = sp.Symbol('logT', real=True)
 
@@ -504,10 +506,11 @@ def get_rate_eqn(eqs):
     kf_eqs = {key: (x, conp_eqs[x][key]) for x in kf_eqs for key in conp_eqs[x]}
 
     #first load the arrenhius rate equation
-    rate_const = next(kf_eqs[x] for x in kf_eqs if reaction_type.elementary in x)[1]
-    rate_const = sp_utils.sanitize(rate_const,
-                        subs={sp.Symbol('{E_{a}}[i]') / sp.Symbol('R_u') : E_sym,
-                            E_sym / T_sym : E_sym * Tinv_sym})
+    rate_eqn = next(kf_eqs[x] for x in kf_eqs if reaction_type.elementary in x)[1]
+    rate_eqn = sp_utils.sanitize(rate_eqn,
+                        symlist=symlist,
+                        subs={sp.Symbol('{E_{a}}[i]') / (sp.Symbol('R_u') * T_sym) :
+                            E_sym * Tinv_sym})
 
     #finally, alter to exponential form:
     rate_eqn_pre = sp.log(A_sym) + sp.log(T_sym) * b_sym - E_sym * Tinv_sym

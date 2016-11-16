@@ -3,7 +3,7 @@ from . import TestClass
 
 class SubTest(TestClass):
     def test_match(self):
-        conp_eqs, conp_vars = self.store.conp_vars, self.store.conp_eqs
+        conp_eqs, conp_vars = self.store.conp_eqs, self.store.conp_vars
         #get the kf equations
         kf = next(x for x in conp_vars if str(x) == '{k_f}[i]')
         kf_eqs = [x for x in conp_eqs if x.has(kf)]

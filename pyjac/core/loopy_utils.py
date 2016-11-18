@@ -29,7 +29,7 @@ class loopy_options(object):
         If True, use the ILP tag on the species loop.  Cannot be specified along with unr
     unr : int
         If not None, the unroll length to apply to the species loop. Cannot be specified along with ilp
-    layout : {'cpu', 'gpu'}
+    order : {'C', 'F'}
         The memory layout of the arrays
     lang : {'opencl', 'c', 'cuda'}
         One of the supported languages

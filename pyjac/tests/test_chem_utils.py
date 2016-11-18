@@ -25,7 +25,7 @@ class SubTest(TestClass):
             'depth' : [4, None],
             'ilp' : [True, False],
             'unr' : [None, 4],
-            'order' : ['cpu', 'gpu'],
+            'order' : ['C', 'F'],
             'device' : ['0:0', '1']})
 
         specs = self.store.specs

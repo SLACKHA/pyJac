@@ -261,15 +261,17 @@ def get_cheb_rate(lang, rxn, write_defns=True):
 
     return ''.join(line_list)
 
-def rate_const_kernel_gen(rate_eqn, reacs,
+def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
                             loopy_opt, test_size=None):
     """Helper function that generates kernels for
        evaluation of various arrhenius rate forms
 
     Parameters
     ----------
-    rate_eqn : `sympy.Expr`
-        The base expression for the arrenhius rate
+    rate_eqn : str
+        A string form of the full arrenhius rate
+    rate_eqn_pre : `sympy.Expr`
+        The exponential part of the arrenhius rate, for simplification purposes
     reacs : list of `ReacInfo`
         List of species in the mechanism.
     loopy_opt : `loopy_options` object
@@ -310,23 +312,34 @@ def rate_const_kernel_gen(rate_eqn, reacs,
     #fixed
     # 0 -> kf = exp(logA + b * logT - Ta / T)
 
-    rate_type = np.zeros((len(reacs),), dtype=np.int32)
+    #count the number of reactions with simple arrhenius rates
+    non_pdep = [(i, x) for i, x in enumerate(reacs) if not
+        (x.match((reaction_type.cheb,)) or x.match((reaction_type.plog,)))]
+    out_mask, non_pdep = zip(*non_pdep)
+    out_mask = np.array(out_mask, dtype=np.int32)
+    non_pdep = list(non_pdep)
+    num_nonpdep = len(non_pdep)
+    rate_type = np.zeros((len(non_pdep),), dtype=np.int32)
     #reaction parameters
     A = np.zeros((num_nonpdep,), dtype=np.float64)
     b = np.zeros((num_nonpdep,), dtype=np.float64)
     Ta = np.zeros((num_nonpdep,), dtype=np.float64)
 
-    for i, reac in enumerate(reacs):
+    i = 0
+    for i, reac in enumerate(non_pdep):
         #assign rate params
         A[i] = np.log(reac.A)
         b[i] = reac.b
         Ta[i] = reac.E
+        if fixed:
+            rate_type[i] = 0
+            continue
         #assign rate types
         if reac.b == 0 and reac.E == 0:
             A[i] = reac.A
             rate_type[i] = 0
         elif reac.b == int(reac.b) and reac.b and reac.E == 0:
-            mixedA[i] = reac.A
+            A[i] = reac.A
             rate_type[i] = 1
         elif reac.E == 0 and reac.b != 0:
             rate_type[i] = 2
@@ -335,8 +348,10 @@ def rate_const_kernel_gen(rate_eqn, reacs,
         else:
             rate_type[i] = 4
         if not full:
-            rate_type = rate_type[i] if rate_type[i] <= 1 else 2
-    maxb = np.max(np.abs(b[rate_type == 1]))
+            rate_type[i] = rate_type[i] if rate_type[i] <= 1 else 2
+
+    if not fixed:
+        maxb = np.max(np.abs(b[rate_type == 1]))
 
     #make loopy args
     #loopy arrays
@@ -348,21 +363,20 @@ def rate_const_kernel_gen(rate_eqn, reacs,
                                     scope=scopes.GLOBAL)
     rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto, initializer=rate_type.squeeze(), read_only=True,
                                     scope=scopes.GLOBAL)
-    T_arr = lp.GlobalArg('T_arr', shape=T.shape, dtype=T.dtype)
-    kf_arr = lp.GlobalArg('kf', shape=lp.auto, dtype=T.dtype)
+    out_mask_lp = lp.TemporaryVariable('out', shape=lp.auto, initializer=out_mask.squeeze(), read_only=True,
+                                  scope=scopes.GLOBAL)
+    T_arr = lp.GlobalArg('T_arr', shape=lp.auto, dtype=np.float64)
+    kf_arr = lp.GlobalArg('kf', shape=(len(reacs), test_size), dtype=np.float64)
 
     #define the instruction lists here
     #so they can be reused by various kernels
-    pre_inst = """
-               <> T_inv = 1 / T_arr[j]
-               <> logT = log(T_arr[j])
-               """.split('\n')
-    full_inst = "kf[i, j] = {}".format(str(rate_eqn))
-    no_beta_inst = "kf[i, j] = {}".format(str(rate_eqn.subs('beta[i]', 0)))
-    no_Ta_inst = "kf[i, j] = {}".format(str(rate_eqn.subs('Ta[i]', 0)))
-    A_only_inst = "kf[i, j] = A[i]"
+    pre_inst = ['<> T_inv = 1 / T_arr[j]', '<> logT = log(T_arr[j])']
+    full_inst = "kf[oid, j] = {}".format(rate_eqn)
+    no_beta_inst = "kf[oid, j] = {}".format(str(rate_eqn_pre.subs('beta[i]', 0)))
+    no_Ta_inst = "kf[oid, j] = {}".format(str(rate_eqn_pre.subs('Ta[i]', 0)))
+    A_only_inst = "kf[oid, j] = A[i]"
     beta_integer_noTa_inst = """
-    kf[i, j] = A[i] {id=a0}
+    kf[oid, j] = A[i] {id=a0}
     <> T_val = T_arr[j] {id=a1, dep=a0}
     <> negval = beta[i] < 0
     if negval
@@ -372,17 +386,18 @@ def rate_const_kernel_gen(rate_eqn, reacs,
     for k
         <>inbounds = k < btest
         if inbounds
-            kf[i, j] = kf[i, j] * T_val {dep=a2}
+            kf[oid, j] = kf[oid, j] * T_val {dep=a2}
         end
     end  
     """
 
+    base_instruction_list = ['<>oid = out[i]\n']
     #and the skeleton kernel
     skeleton ="""
     for j
         {}
         for i
-           {}
+            {}
         end
     end
     """
@@ -399,9 +414,9 @@ def rate_const_kernel_gen(rate_eqn, reacs,
 
     knl_list = []
     if fixed:
-        fixed_knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{}}}'.format(Nr, test_size),
-        skeleton.format('\n'.join(pre_inst), full_inst),
-        kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr],
+        fixed_knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{}}}'.format(num_nonpdep, test_size),
+        skeleton.format('\n'.join(pre_inst), '\n'.join(base_instruction_list + [full_inst])),
+        kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, out_mask_lp],
         name='kf_fixed')
         fixed_knl = lp.prioritize_loops(fixed_knl, 'i,j')
         knl_list.append(fixed_knl)
@@ -417,12 +432,12 @@ def rate_const_kernel_gen(rate_eqn, reacs,
                     shape=lp.auto, initializer=inds.squeeze(),
                     read_only=True, scope=scopes.GLOBAL)
                 #need to add a mapping of ind -> i
-                instruction_list = '<>i = {}_ind[ind]\n'.format(name) + instruction_list 
+                instruction_list = ['<>i = {}_ind[ind]\n'.format(name)] + base_instruction_list + instruction_list 
                 #create the specialized kernels
                 knl = lp.make_kernel('{{[ind, j, k]: 0<=ind<{} and 0<=j<{} and 0<=k<{}}}'.format(
                     num, test_size, int(maxb) if name == 'beta_int' else 0),
                   skeleton.format('\n'.join(pre_instructions), instruction_list),
-                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp],
+                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp, out_mask_lp],
                  name='kf_{}'.format(name))
                 knl_list.append(knl)
     else:
@@ -431,7 +446,7 @@ def rate_const_kernel_gen(rate_eqn, reacs,
         rtype_lp = lp.TemporaryVariable('rtype',
                     shape=lp.auto, initializer=rate_type.squeeze(),
                     read_only=True, scope=scopes.GLOBAL)
-        instruction_list = []
+        instruction_list = base_instruction_list[:]
         for i in range(len(specializations)):
             instruction_list.append('<>test_{0} = rtype[i] == {0} {{id=d{0}}}'.format(i))
             instruction_list.append('if test_{0}'.format(i))
@@ -440,7 +455,7 @@ def rate_const_kernel_gen(rate_eqn, reacs,
         knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{} and 0<=k<{}}}'.format(
                     num, test_size, int(maxb)),
                   skeleton.format('\n'.join(pre_instructions), '\n'.join(instruction_list)),
-                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp],
+                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp, out_mask_lp],
                  name='kf_{}'.format(name))
         knl_list.append(knl)
 
@@ -460,9 +475,9 @@ def rate_const_kernel_gen(rate_eqn, reacs,
         #now do unr / ilp
         i_tag = 'i_outer' if loopy_opt.depth is not None else 'i'
         if loopy_opt.unr is not None:
-            knl = lp.split_iname(knl, k_tag, loopy_opt.unr, inner_tag='unr')
+            knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
         elif loopy_opt.ilp:
-            knl = lp.tag_inames(knl, [(k_tag, 'ilp')])
+            knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
 
         knl_list[i] = knl
 
@@ -496,7 +511,7 @@ def get_rate_eqn(eqs):
     symlist = [E_sym, A_sym, T_sym, b_sym]
     symlist = {str(x) : x for x in symlist}
     Tinv_sym = sp.Symbol('T_inv', real=True, positive=True, nonnegative=True)
-    logA_sym = sp.Symbol('logA[i]', real=True)
+    logA_sym = sp.Symbol('A[i]', real=True)
     logT_sym = sp.Symbol('logT', real=True)
 
     #the rate constant is indep. of conp/conv, so just use conp for simplicity

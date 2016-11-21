@@ -33,16 +33,16 @@ class loopy_options(object):
         The memory layout of the arrays, C (row major) or Fortran (column major)
     lang : {'opencl', 'c', 'cuda'}
         One of the supported languages
-    ratespec : RateSpecialization
+    rate_spec : RateSpecialization
         Controls the level to which Arrenhius rate evaluations are specialized
-    ratespec_kernels : bool
+    rrate_spec_kernels : bool
         If True, break different Arrenhius rate specializations into different kernels
 
     """
     def __init__(self, width=None, depth=None, ilp=False,
                     unr=None, order='cpu', lang='opencl',
-                    ratespec=RateSpecialization.fixed,
-                    ratespec_kernels=False):
+                    rate_spec=RateSpecialization.fixed,
+                    rate_spec_kernels=False):
         self.width = width
         self.depth = depth
         self.ilp = ilp
@@ -50,8 +50,8 @@ class loopy_options(object):
         self.order = order
         check_lang(lang)
         self.lang = lang
-        self.ratespec = ratespec
-        self.ratespec_kernels = ratespec_kernels
+        self.rate_spec = rate_spec
+        self.rate_spec_kernels = rate_spec
 
 
 def get_context(device='0'):

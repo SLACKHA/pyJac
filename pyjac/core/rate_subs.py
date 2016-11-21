@@ -261,7 +261,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
 
     return ''.join(line_list)
 
-def assign_rates(reacs, ratespec):
+def assign_rates(reacs, rate_spec):
     """
     From a given set of reactions, determine the rate types for evaluation
 
@@ -269,7 +269,7 @@ def assign_rates(reacs, ratespec):
     ----------
     reacs : list of `ReacInfo`
         The reactions in the mechanism
-    ratespec : `RateSpecialization` enum
+    rate_spec : `RateSpecialization` enum
         The specialization option specified
 
     Notes
@@ -277,19 +277,19 @@ def assign_rates(reacs, ratespec):
 
     For simple Arrhenius evaluations, the rate type keys are:
     
-    if ratespec == RateSpecialization.full
+    if rate_spec == RateSpecialization.full
         0 -> kf = A
         1 -> kf = A * T * T * T ...
         2 -> kf = exp(logA + b * logT)
         3 -> kf = exp(logA - Ta / T)
         4 -> kf = exp(logA + b * logT - Ta / T)
 
-    if ratespec = RateSpecialization.hybrid
+    if rate_spec = RateSpecialization.hybrid
         0 -> kf = A
         1 -> kf = A * T * T * T ...
         2 -> kf = exp(logA + b * logT - Ta / T)
 
-    if ratespec == lp_utils.RateSpecialization.full
+    if rate_spec == lp_utils.rate_specialization.full
         0 -> kf = exp(logA + b * logT - Ta / T)
 
     Returns
@@ -303,9 +303,9 @@ def assign_rates(reacs, ratespec):
     """
 
     #determine specialization
-    full = ratespec == lp_utils.RateSpecialization.full
-    hybrid = ratespec == lp_utils.RateSpecialization.hybrid
-    fixed = ratespec == lp_utils.RateSpecialization.fixed
+    full = rate_spec == lp_utils.rate_specialization.full
+    hybrid = rate_spec == lp_utils.rate_specialization.hybrid
+    fixed = rate_spec == lp_utils.rate_specialization.fixed
 
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset
@@ -412,11 +412,13 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         test_size = 'n'
 
     #first assign the reac types, parameters
-    full = loopy_opt.ratespec == lp_utils.RateSpecialization.full
-    hybrid = loopy_opt.ratespec == lp_utils.RateSpecialization.hybrid
-    fixed = loopy_opt.ratespec == lp_utils.RateSpecialization.fixed
-    separated_kernels = loopy_opt.ratespec_kernels
-    
+    full = loopy_opt.rate_spec == lp_utils.rate_specialization.full
+    hybrid = loopy_opt.rate_spec == lp_utils.rate_specialization.hybrid
+    fixed = loopy_opt.rate_spec == lp_utils.rate_specialization.fixed
+    separated_kernels = loopy_opt.rate_spec_kernels
+
+    rate_info = assign_rates(reacs, loopy_opt.rate_spec)
+   
     #make loopy args
     #loopy arrays
     A_lp = lp.TemporaryVariable('A', shape=lp.auto, initializer=A.squeeze(), read_only=True,

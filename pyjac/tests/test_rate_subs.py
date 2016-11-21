@@ -146,8 +146,8 @@ class SubTest(TestClass):
             'unr' : [None, 4],
             'order' : ['C', 'F'],
             'device' : ['0:0', '1'],
-            'ratespec' : [x for x in RateSpecialization],
-            'ratespec_kernels' : [True, False]
+            'rate_spec' : [x for x in RateSpecialization],
+            'rate_spec_kernels' : [True, False]
             })
 
         reacs = self.store.reacs

@@ -261,6 +261,123 @@ def get_cheb_rate(lang, rxn, write_defns=True):
 
     return ''.join(line_list)
 
+def assign_rates(reacs, ratespec):
+    """
+    From a given set of reactions, determine the rate types for evaluation
+
+    Parameters
+    ----------
+    reacs : list of `ReacInfo`
+        The reactions in the mechanism
+    ratespec : `RateSpecialization` enum
+        The specialization option specified
+
+    Notes
+    -----
+
+    For simple Arrhenius evaluations, the rate type keys are:
+    
+    if ratespec == RateSpecialization.full
+        0 -> kf = A
+        1 -> kf = A * T * T * T ...
+        2 -> kf = exp(logA + b * logT)
+        3 -> kf = exp(logA - Ta / T)
+        4 -> kf = exp(logA + b * logT - Ta / T)
+
+    if ratespec = RateSpecialization.hybrid
+        0 -> kf = A
+        1 -> kf = A * T * T * T ...
+        2 -> kf = exp(logA + b * logT - Ta / T)
+
+    if ratespec == lp_utils.RateSpecialization.full
+        0 -> kf = exp(logA + b * logT - Ta / T)
+
+    Returns
+    -------
+    rate_info : dict of parameters
+        Keys are 'simple', 'plog', 'cheb'
+        Values are further dictionaries including addtional rate info, including
+            number, offset, masks, and (in the case of simple) additional rate
+            info (i.e. A, Ta, b, rate type and maximum b-value)
+
+    """
+
+    #determine specialization
+    full = loopy_opt.ratespec == lp_utils.RateSpecialization.full
+    hybrid = loopy_opt.ratespec == lp_utils.RateSpecialization.hybrid
+    fixed = loopy_opt.ratespec == lp_utils.RateSpecialization.fixed
+
+    def __seperate(reacs, matchers):
+        #find all reactions / indicies that match this offset
+        rate = [(i, x) for i, x in enumerate(reacs) if any(x.match(y) for y in match)]
+        mask = []
+        num = 0
+        if rate:
+            mask, rate = zip(*rate)
+            mask = np.array(mask, dtype=np.int32)
+            rate = list(rate)
+            num = len(rate)
+
+        #determine sorted / offset
+        offset = None
+        if mask and mask == np.arange(mask[0], mask[0] + num + 1, dtype=np.int32):
+            offset = mask[0]
+
+        return rate, mask, num, offset
+
+    #count / seperate reactions with simple arrhenius rates
+    simple_rate, simple_mask, num_simple, simple_rate_offset = __seperate(
+        reacs, [reaction_type.elementary, reaction_type.thd,
+                    reaction_type.falloff, reaction_type.chem])
+
+    simple_rate_type = np.zeros((len(num_simple),), dtype=np.int32)
+    #reaction parameters
+    A = np.zeros((num_nonpdep,), dtype=np.float64)
+    b = np.zeros((num_nonpdep,), dtype=np.float64)
+    Ta = np.zeros((num_nonpdep,), dtype=np.float64)
+
+    i = 0
+    for i, reac in enumerate(simple_rate):
+        #assign rate params
+        A[i] = np.log(reac.A)
+        b[i] = reac.b
+        Ta[i] = reac.E
+        if fixed:
+            simple_rate_type[i] = 0
+            continue
+        #assign rate types
+        if reac.b == 0 and reac.E == 0:
+            A[i] = reac.A
+            simple_rate_type[i] = 0
+        elif reac.b == int(reac.b) and reac.b and reac.E == 0:
+            A[i] = reac.A
+            simple_rate_type[i] = 1
+        elif reac.E == 0 and reac.b != 0:
+            simple_rate_type[i] = 2
+        elif reac.b == 0 and reac.E != 0:
+            simple_rate_type[i] = 3
+        else:
+            simple_rate_type[i] = 4
+        if not full:
+            simple_rate_type[i] = simple_rate_type[i] if simple_rate_type[i] <= 1 else 2
+
+    maxb = None
+    if not fixed:
+        maxb = np.max(np.abs(b[simple_rate_type == 1]))
+
+    #finally determine the advanced rate evaulation types
+    _, plog_mask, num_plog, plog_offset = __seperate(
+        reacs, [reaction_type.plog])
+
+    _, cheb_mask, num_cheb, cheb_offset = __seperate(
+        reacs, [reaction_type.cheb])
+
+    return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'types' : simple_rate_type,
+                'maxb' : maxb, 'offset' : simple_rate_offset,
+                'num' : num_simple, 'mask' : simple_mask},
+            'plog' : {'mask', plog_mask, 'num', num_plog, 'offset', plog_offset},
+            'cheb' : {'mask', cheb_mask, 'num', num_cheb, 'offset', cheb_offset}}
+
 def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
                             loopy_opt, test_size=None):
     """Helper function that generates kernels for
@@ -286,73 +403,19 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
 
     """
 
+    #find language, options, sizes, etc.
+    lang = loopy_opt.lang
+
     Nr = len(reacs)
-    test_size = 1 if test_size is None else test_size
+    if test_size is None:
+        test_size = 'n'
 
     #first assign the reac types, parameters
-    
     full = loopy_opt.ratespec == lp_utils.RateSpecialization.full
     hybrid = loopy_opt.ratespec == lp_utils.RateSpecialization.hybrid
     fixed = loopy_opt.ratespec == lp_utils.RateSpecialization.fixed
     separated_kernels = loopy_opt.ratespec_kernels
     
-    #rate type keys
-    #full
-    # 0 -> kf = A
-    # 1 -> kf = A * T * T * T ...
-    # 2 -> kf = exp(logA + b * logT)
-    # 3 -> kf = exp(logA - Ta / T)
-    # 4 -> kf = exp(logA + b * logT - Ta / T)
-
-    #hybrid
-    # 0 -> kf = A
-    # 1 -> kf = A * T * T * T ...
-    # 2 -> kf = exp(logA + b * logT - Ta / T)
-
-    #fixed
-    # 0 -> kf = exp(logA + b * logT - Ta / T)
-
-    #count the number of reactions with simple arrhenius rates
-    non_pdep = [(i, x) for i, x in enumerate(reacs) if not
-        (x.match((reaction_type.cheb,)) or x.match((reaction_type.plog,)))]
-    out_mask, non_pdep = zip(*non_pdep)
-    out_mask = np.array(out_mask, dtype=np.int32)
-    non_pdep = list(non_pdep)
-    num_nonpdep = len(non_pdep)
-    rate_type = np.zeros((len(non_pdep),), dtype=np.int32)
-    #reaction parameters
-    A = np.zeros((num_nonpdep,), dtype=np.float64)
-    b = np.zeros((num_nonpdep,), dtype=np.float64)
-    Ta = np.zeros((num_nonpdep,), dtype=np.float64)
-
-    i = 0
-    for i, reac in enumerate(non_pdep):
-        #assign rate params
-        A[i] = np.log(reac.A)
-        b[i] = reac.b
-        Ta[i] = reac.E
-        if fixed:
-            rate_type[i] = 0
-            continue
-        #assign rate types
-        if reac.b == 0 and reac.E == 0:
-            A[i] = reac.A
-            rate_type[i] = 0
-        elif reac.b == int(reac.b) and reac.b and reac.E == 0:
-            A[i] = reac.A
-            rate_type[i] = 1
-        elif reac.E == 0 and reac.b != 0:
-            rate_type[i] = 2
-        elif reac.b == 0 and reac.E != 0:
-            rate_type[i] = 3
-        else:
-            rate_type[i] = 4
-        if not full:
-            rate_type[i] = rate_type[i] if rate_type[i] <= 1 else 2
-
-    if not fixed:
-        maxb = np.max(np.abs(b[rate_type == 1]))
-
     #make loopy args
     #loopy arrays
     A_lp = lp.TemporaryVariable('A', shape=lp.auto, initializer=A.squeeze(), read_only=True,

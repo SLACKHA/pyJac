@@ -6,7 +6,7 @@ import os
 import filecmp
 
 #local imports
-from ..core.rate_subs import rate_const_kernel_gen, get_rate_eqn
+from ..core.rate_subs import rate_const_kernel_gen, get_rate_eqn, assign_rates
 from ..core.loopy_utils import auto_run, loopy_options, RateSpecialization
 from ..utils import create_dir
 from . import TestClass
@@ -34,6 +34,88 @@ class SubTest(TestClass):
 
         #second check the form
         assert eq == 'exp(-T_inv*Ta[i] + beta[i]*logT + logA[i])'
+
+    def test_assign_rates(self):
+        reacs = self.store.reacs
+        result = assign_rates(reacs, RateSpecialization.full)
+
+        #test rate type
+        assert np.all(result['simple']['type'] == 0)
+
+        #import gas in cantera for testing
+        gas = ct.Solution('test.cti')
+
+        def __tester(result):
+            #test return value
+            assert 'simple' in result and 'cheb' in result and 'plog' in result
+
+            #test num, mask, and offset
+            plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
+                    if isinstance(x, ct.PlogReaction)])
+            assert result['plog']['num'] = len(plog_inds)
+            assert result['plog']['mask'] = np.array(np.sorted(plog_inds, dtype=np.int32))
+            if np.all(np.diff(result['plog']['mask']) == 1):
+                assert result['plog']['offset'] == result['plog']['mask'][0]
+            else:
+                assert result['plog']['offset'] is None
+
+            cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
+                    if isinstance(x, ct.ChebyshevReaction)])
+            assert result['cheb']['num'] = len(cheb_inds)
+            assert result['cheb']['mask'] = np.array(np.sorted(cheb_inds, dtype=np.int32))
+            if np.all(np.diff(result['cheb']['mask']) == 1):
+                assert result['cheb']['offset'] == result['cheb']['mask'][0]
+            else:
+                assert result['cheb']['offset'] is None
+
+            elem_inds = sort(list(set(plog_inds).union(set(cheb_inds))))
+            assert result['simple']['num'] = len(cheb_inds)
+            assert result['simple']['mask'] = np.array(np.sorted(cheb_inds, dtype=np.int32))
+            if np.all(np.diff(result['simple']['mask']) == 1):
+                assert result['simple']['offset'] == result['simple']['mask'][0]
+            else:
+                assert result['simple']['offset'] is None
+
+        __tester()
+
+        result = assign_rates(reacs, RateSpecialization.hybrid)
+
+        #test rate type
+        rtypes = []
+        for reac in gas.reactions():
+            if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
+                Ea = reac.rate.activation_energy
+                b = reac.rate.temperature_exponent
+                if Ea == 0 and b == 0:
+                    rtypes[i].append(0)
+                elif Ea == 0 and int(b) == b:
+                    rtypes.append(1)
+                else:
+                    rtypes.append(2)
+        assert result['simple']['type'] == np.array(rtypes)
+        __tester()
+
+        result = assign_rates(reacs, RateSpecialization.full)
+
+        #test rate type
+        rtypes = []
+        for reac in gas.reactions():
+            if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
+                Ea = reac.rate.activation_energy
+                b = reac.rate.temperature_exponent
+                if Ea == 0 and b == 0:
+                    rtypes[i].append(0)
+                elif Ea == 0 and int(b) == b:
+                    rtypes.append(1)
+                elif Ea == 0:
+                    rtypes.append(2)
+                elif b == 0:
+                    rtypes.append(3)
+                else:
+                    rtypes.append(4)
+        assert result['simple']['type'] == np.array(rtypes)
+        __tester()
+
 
     @attr('long')
     def test_rate_constants(self):

@@ -33,7 +33,7 @@ class SubTest(TestClass):
         assert 'exp(' + str(pre) + ')' == eq
 
         #second check the form
-        assert eq == 'exp(-T_inv*Ta[i] + beta[i]*logT + logA[i])'
+        assert eq == 'exp(A[i] - T_inv*Ta[i] + beta[i]*logT)'
 
     def test_assign_rates(self):
         reacs = self.store.reacs

@@ -113,17 +113,21 @@ def get_code(knl):
     code, _ = lp.generate_code(knl)
     return code
 
-def auto_run(knl, ref_answer, device='0', **input_args):
+def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **input_args):
     """
-    This method tests the supplied `loopy.kernel` against a reference answer
-    and a reference `loopy.kernel` if supplied
+    This method tests the supplied `loopy.kernel` (or list thereof) against a reference answer
 
     Parameters
     ----------
-    knl : `loopy.kernel`
-        The kernel to test
+    knl : `loopy.kernel` or list of `loopy.kernel`
+        The kernel to test, if a list of kernels they will be successively applied and the
+        end result compared
     ref_answer : `numpy.array`
         The numpy array to test against, should be the same shape as the kernel output
+    compare_mask : `numpy.array`
+        A list of indexes to compare, useful when the kernel only computes partial results
+    compare_axis = int
+        An axis to apply the compare_mask along, unused if compare_mask is none
     device : str
         The pyopencl string denoting the device to use, defaults to '0'
     input_args : dict of `numpy.array`s

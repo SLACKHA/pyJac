@@ -146,13 +146,24 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
 
     #run kernel
     if isinstance(knl, list):
-        raise NotImplementedError
-        out_ref = np.empty_like(ref_answer)
+        out_ref = np.zeros_like(ref_answer)
         for k in knl:
-            evt, (out,) = knl(queue, **input_args)
+            try:
+                evt, (out,) = k(queue, **input_args)
+            except Exception as e:
+                print(k)
+                raise e
+            out_ref[out != 0] = out[out != 0]
+        out = out_ref
     else:
-        evt, (out,) = knl(queue, **input_args)
+        try:
+            evt, (out,) = knl(queue, **input_args)
+        except Exception as e:
+            print(knl)
+            raise e
 
+    if compare_mask:
+        return np.allclose(np.take(out, compare_mask, compare_axis),
+            np.take(ref_answer, compare_mask, compare_axis))
     #check against supplied answer
     return np.allclose(out, ref_answer)
-

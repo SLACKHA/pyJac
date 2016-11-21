@@ -4,6 +4,7 @@ from builtins import range
 #system
 import os
 import filecmp
+from collections import OrderedDict
 
 #local imports
 from ..core.rate_subs import rate_const_kernel_gen, get_rate_eqn, assign_rates
@@ -139,30 +140,29 @@ class SubTest(TestClass):
                 'conv' : self.store.conv_eqs}
         pre, eq = get_rate_eqn(eqs)
 
-        oploop = OptionLoop({'lang': ['opencl'],
-            'width' : [4, None],
-            'depth' : [4, None],
-            'ilp' : [True, False],
-            'unr' : [None, 4],
-            'order' : ['C', 'F'],
-            'device' : ['0:0', '1'],
-            'rate_spec' : [x for x in RateSpecialization],
-            'rate_spec_kernels' : [True, False]
-            })
+        oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
+            ('width', [4, None]),
+            ('depth', [4, None]),
+            ('ilp', [True, False]),
+            ('unr', [None, 4]),
+            ('order', ['C', 'F']),
+            ('device', ['0:0', '1']),
+            ('rate_spec', [x for x in RateSpecialization]),
+            ('rate_spec_kernels', [True, False])
+            ]))
 
         reacs = self.store.reacs
         compare_mask = [i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))]
 
-        for state in oploop:
-            try:
-                opt = loopy_options(**{x : state[x] for x in
-                    state if x != 'device'})
-                knl = rate_const_kernel_gen(eq, pre, reacs, opt,
-                    test_size=self.store.test_size)
+        for i, state in enumerate(oploop):
+            if state['width'] is not None and state['depth'] is not None:
+                continue
+            opt = loopy_options(**{x : state[x] for x in
+                state if x != 'device'})
+            knl = rate_const_kernel_gen(eq, pre, reacs, opt,
+                test_size=self.store.test_size)
 
-                ref = ref_const if state['order'] == 'F' else ref_const_T
-                assert auto_run(knl, ref, device=state['device'],
-                    T_arr=T, compare_mask=compare_mask)
-            except Exception as e:
-                if not(state['width'] and state['depth']):
-                    raise e
+            ref = ref_const if state['order'] == 'F' else ref_const_T
+            assert auto_run(knl, ref, device=state['device'],
+                T_arr=T, compare_mask=compare_mask,
+                compare_axis=1 if state['order'] == 'C' else 0)

@@ -153,7 +153,8 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
             except Exception as e:
                 print(k)
                 raise e
-            out_ref[out != 0] = out[out != 0]
+            copy_inds = np.where(np.logical_not(np.isinf(out)))
+            out_ref[copy_inds] = out[copy_inds]
         out = out_ref
     else:
         try:

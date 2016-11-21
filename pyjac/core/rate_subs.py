@@ -367,7 +367,7 @@ def assign_rates(reacs, rate_spec):
     if not fixed:
         maxb_test = np.abs(b[simple_rate_type == 1])
         if maxb_test.size:
-            maxb = np.max(maxb_test)
+            maxb = int(np.max(maxb_test))
 
     #finally determine the advanced rate evaulation types
     _, plog_mask, num_plog, plog_offset = __seperate(
@@ -431,30 +431,29 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
 
     #first, define loopy arrays
     A_lp = lp.TemporaryVariable('A', shape=lp.auto,
-        initializer=rate_info['simple']['A'].squeeze(),
+        initializer=rate_info['simple']['A'],
         read_only=True, scope=scopes.GLOBAL)
     b_lp = lp.TemporaryVariable('beta', shape=lp.auto,
-        initializer=rate_info['simple']['b'].squeeze(),
+        initializer=rate_info['simple']['b'],
         read_only=True, scope=scopes.GLOBAL)
     Ta_lp = lp.TemporaryVariable('Ta', shape=lp.auto,
-        initializer=rate_info['simple']['Ta'].squeeze(),
+        initializer=rate_info['simple']['Ta'],
         read_only=True, scope=scopes.GLOBAL)
     rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto,
-        initializer=rate_info['simple']['type'].squeeze(),
+        initializer=rate_info['simple']['type'],
         read_only=True, scope=scopes.PRIVATE)
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
 
     #determine mask / kf indexing
     mask_lp = None
-    mask_inst = '<>oid = ind[i]\n'
+    inmap_inst = '<>i = iind[i_dummy]'
+    outmap_inst = '<>oid = oind[i]'
     kf_str = ['i', 'j']
-    if not separated_kernels and rate_info['simple']['offset'] is None:
+    if rate_info['simple']['offset'] is None:
         #we need a mask for writing output
-        mask_lp = lp.TemporaryVariable('ind', shape=lp.auto,
-            initializer=rate_info['simple']['mask'].squeeze(),
+        mask_lp = lp.TemporaryVariable('oind', shape=lp.auto,
+            initializer=rate_info['simple']['mask'],
             read_only=True, scope=scopes.PRIVATE)
-        kf_str = ['oid', 'j']
-    elif separated_kernels:
         kf_str = ['oid', 'j']
 
     #the ordering / indexing of the kf array depends on the loopy order parameter
@@ -471,7 +470,10 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
 
     #define the instruction lists here
     #so they can be reused by various kernels
+
+    #generic kf assigment str w/ correct indexing
     kf_assign = "{kf_str} = {{rate}}".format(kf_str=kf_str)
+
     #various instruction sets
     full_inst = kf_assign.format(rate=rate_eqn)
     no_beta_inst = kf_assign.format(rate=str(rate_eqn_pre.subs('beta[i]', 0)))
@@ -479,24 +481,35 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     A_only_inst = kf_assign.format(rate='A[i]')
     beta_integer_noTa_inst = """
     {kf_str} = A[i] {{id=a0}}
+    <> T_val = T_arr[j] {{id=a1}}
     <> negval = beta[i] < 0
     if negval
         T_val = T_inv {{id=a2, dep=a1}}
     end
+    {{k_iter}}  
+    """.format(kf_str=kf_str, **pre_inst)
+    #various k_iter forms for beta iteration
+
+    #if beta max > 1
+    k_iter_bmax_nonunity = """
     <> btest = abs(beta[i])
     for k
         <>inbounds = k < btest
         if inbounds
             {kf_str} = {kf_str} * T_val {{dep=a2}}
         end
-    end  
-    """.format(kf_str=kf_str, **pre_inst)
+    end
+    """.format(kf_str=kf_str)
+    #if beta max == 1
+    k_iter_bmax_unity = """
+    {kf_str} = {kf_str} * T_val {{dep=a2}}
+    """.format(kf_str=kf_str)
 
     #and the skeleton kernel
     skeleton ="""
     for j
         {}
-        for i
+        for {}
             {}
         end
     end
@@ -519,43 +532,62 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     def __make_kernel(name, num, pre_instructions, instructions,
         extra_args=None, inds=None, maxb=None):
         if isinstance(instructions, str):
-            if '\n' in instructions:
-                instructions = '\n'.split(instructions)
-            else:
-                instructions = [instructions]
+            instructions = [x for x in instructions.split('\n') if x.strip()]
+
         #find all the args to pass to the kernel
         kernel_data = [A_lp, b_lp, Ta_lp, T_arr, kf_arr]
+
+        #figure out inames, and additional args
+        iname_tmp = inames[:]
+        iname_range = []
+        i_name = 'i'
         if mask_lp is not None:
             kernel_data.append(mask_lp)
-            instructions = [mask_inst] + instructions
-        elif inds is not None:
+            instructions = [outmap_inst] + instructions
+        if inds is not None:
             kernel_data.append(inds)
-            instructions = [mask_inst] + instructions
+            instructions = [inmap_inst] + instructions
+            #note, we replace the iname 'i' with 'i_dummy' so as not to hack into the
+            #sympy eqn's
+            iname_tmp = [x if x != 'i' else 'i_dummy' for x in inames]
+            i_name = 'i_dummy'
         if extra_args is not None:
             kernel_data.extend(extra_args)
 
-        iname_range = []
         #find the start index for 'i'
         i_start = 0
         if mask_lp is None and inds is None and rate_info['simple']['offset'] is not None:
             i_start = rate_info['simple']['offset']
+        
         #add to ranges
-        iname_range.append('{}<=i<{}'.format(i_start, num))
+        iname_range.append('{}<={}<{}'.format(i_start, i_name, num))
         iname_range.append('{}<=j<{}'.format(0, test_size))
-        if maxb:
-           iname_range.append('{}<=k<{}'.format(0, maxb)) 
 
+        #if we have the beta loop we need to put the correct form in
+        #depending on the magnitude of beta max
+        if maxb:
+            if maxb > 1:
+                repl = k_iter_bmax_nonunity
+                iname_tmp.append('k')
+                iname_range.append('{}<=k<{}'.format(0, maxb)) 
+            else:
+                repl = k_iter_bmax_unity
+            instructions = [x.format(k_iter=repl) if '{k_iter}' in x else x for x in instructions]
+
+        #construct the kernel args
         pre_instructions = [pre_inst[k] for k in pre_instructions]
-        kernel_str = skeleton.format('\n'.join(pre_instructions),
+        kernel_str = skeleton.format('\n'.join(pre_instructions), i_name,
             '\n'.join(instructions))
 
-        knl = lp.make_kernel('{[' + ','.join(inames) + ']:' + 
+        #make the kernel
+        knl = lp.make_kernel('{[' + ','.join(iname_tmp) + ']:' + 
             ' and '.join(iname_range) + '}',
             kernel_str,
             kernel_data=kernel_data,
             name=name
         )
-        knl = lp.prioritize_loops(knl, inames)
+        #prioritize and return
+        knl = lp.prioritize_loops(knl, iname_tmp)
         return knl
 
     knl_list = []
@@ -563,37 +595,43 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         knl_list.append(__make_kernel('kf_fixed', rate_info['simple']['num'],
             pre_inst.keys(), full_inst))
     elif separated_kernels:
+        #if each rate evaluation is in separate kernels..
         for rtype, name, pre_instructions, instruction_list in specializations:
             #find the number of this specialization
-            inds = np.where(rate_type == rtype)[0]
+            inds = np.where(rate_info['simple']['type'] == rtype)[0].astype(np.int32)
             num = inds.size
             #if non-zero
             if num:
                 #create the index array
-                inds_lp = lp.TemporaryVariable('ind',
-                    shape=lp.auto, initializer=inds.squeeze(),
+                inds_lp = lp.TemporaryVariable('iind',
+                    shape=lp.auto, initializer=inds,
                     read_only=True, scope=scopes.PRIVATE)
+                #figure out whether we need the beta loop
+                maxb = rate_info['simple']['maxb'] if 'beta_int' in name else None
                 #and the kernel
-                knl_list.append(__make_kernel('kf_{}'.format_name, pre_instructions,
-                    instruction_list, inds=inds_lp, maxb=rate_info['simple']['maxb']))
+                knl_list.append(__make_kernel('kf_{}'.format(name), num, pre_instructions,
+                    instruction_list, inds=inds_lp, maxb=maxb))
     else:
         #do with if statements
-        #first, make the rate types array
+        
+        #enclose each rate type in it's own if statement
         instruction_list = []
         for i in range(len(specializations)):
             instruction_list.append('<>test_{0} = rtype[i] == {0} {{id=d{0}}}'.format(i))
             instruction_list.append('if test_{0}'.format(i))
             instruction_list.extend(['\t' + x for x in specializations[i][3].split('\n')])
             instruction_list.append('end')
-        knl_list.append(__make_kernel('kf_full', pre_instructions.keys(),
-                    instruction_list, inds=inds_lp, maxb=rate_info['simple']['maxb']),
-                    extra_args=rtype_lp)
+        knl_list.append(__make_kernel('kf_full', rate_info['simple']['num'],
+                    pre_inst.keys(), instruction_list,
+                    maxb=rate_info['simple']['maxb'], extra_args=[rtype_lp]))
 
+    #apply other optimizations
     for i, knl in enumerate(knl_list):
+        i_name = 'i_dummy' if 'i_dummy' in str(knl.domains) else 'i'
         #now apply specified optimizations
         if loopy_opt.depth is not None:
             #and assign the l0 axis to 'i'
-            knl = lp.split_iname(knl, 'i', loopy_opt.depth, inner_tag='l.0')
+            knl = lp.split_iname(knl, i_name, loopy_opt.depth, inner_tag='l.0')
             #assign g0 to 'j'
             knl = lp.tag_inames(knl, [('j', 'g.0')])
         elif loopy_opt.width is not None:
@@ -603,7 +641,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
 
         #now do unr / ilp
-        i_tag = 'i_outer' if loopy_opt.depth is not None else 'i'
+        i_tag = i_name + '_outer' if loopy_opt.depth is not None else i_name
         if loopy_opt.unr is not None:
             knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
         elif loopy_opt.ilp:
@@ -1955,8 +1993,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     #pick out a values and T_mid
     a_lo = np.zeros((Ns, poly_dim), dtype=np.float64)
     a_hi = np.zeros((Ns, poly_dim), dtype=np.float64)
-    T_mid = np.zeros((Ns, 1), dtype=np.float64)
-    T_mid = T_mid.squeeze()
+    T_mid = np.zeros((Ns,), dtype=np.float64)
     for ind, spec in enumerate(specs):
         a_lo[ind, :] = spec.lo[:]
         a_hi[ind, :] = spec.hi[:]

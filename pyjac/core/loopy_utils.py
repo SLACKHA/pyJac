@@ -30,7 +30,7 @@ class loopy_options(object):
     unr : int
         If not None, the unroll length to apply to the species loop. Cannot be specified along with ilp
     order : {'C', 'F'}
-        The memory layout of the arrays
+        The memory layout of the arrays, C (row major) or Fortran (column major)
     lang : {'opencl', 'c', 'cuda'}
         One of the supported languages
     ratespec : RateSpecialization

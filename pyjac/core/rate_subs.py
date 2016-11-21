@@ -303,9 +303,9 @@ def assign_rates(reacs, rate_spec):
     """
 
     #determine specialization
-    full = rate_spec == lp_utils.rate_specialization.full
-    hybrid = rate_spec == lp_utils.rate_specialization.hybrid
-    fixed = rate_spec == lp_utils.rate_specialization.fixed
+    full = rate_spec == lp_utils.RateSpecialization.full
+    hybrid = rate_spec == lp_utils.RateSpecialization.hybrid
+    fixed = rate_spec == lp_utils.RateSpecialization.fixed
 
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset

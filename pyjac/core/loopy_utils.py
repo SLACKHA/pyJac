@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 #package imports
 from enum import Enum
 import loopy as lp
@@ -35,7 +37,7 @@ class loopy_options(object):
         One of the supported languages
     rate_spec : RateSpecialization
         Controls the level to which Arrenhius rate evaluations are specialized
-    rrate_spec_kernels : bool
+    rate_spec_kernels : bool
         If True, break different Arrenhius rate specializations into different kernels
 
     """
@@ -51,7 +53,7 @@ class loopy_options(object):
         check_lang(lang)
         self.lang = lang
         self.rate_spec = rate_spec
-        self.rate_spec_kernels = rate_spec
+        self.rate_spec_kernels = rate_spec_kernels
 
 
 def get_context(device='0'):

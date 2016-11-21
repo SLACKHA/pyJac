@@ -160,7 +160,7 @@ class SubTest(TestClass):
                 knl = rate_const_kernel_gen(eq, pre, reacs, opt,
                     test_size=self.store.test_size)
 
-                ref = ref_const#ref_const if state['order'] == 'gpu' else ref_const_T
+                ref = ref_const if state['order'] == 'F' else ref_const_T
                 assert auto_run(knl, ref, device=state['device'],
                     T_arr=T, compare_mask=compare_mask)
             except Exception as e:

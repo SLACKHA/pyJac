@@ -14,6 +14,7 @@ import sys
 import math
 import os
 import re
+import logging
 
 # Non-standard librarys
 import sympy as sp
@@ -364,7 +365,9 @@ def assign_rates(reacs, rate_spec):
 
     maxb = None
     if not fixed:
-        maxb = np.max(np.abs(b[simple_rate_type == 1]))
+        maxb_test = np.abs(b[simple_rate_type == 1])
+        if maxb_test.size:
+            maxb = np.max(maxb_test)
 
     #finally determine the advanced rate evaulation types
     _, plog_mask, num_plog, plog_offset = __seperate(
@@ -412,52 +415,83 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         test_size = 'n'
 
     #first assign the reac types, parameters
-    full = loopy_opt.rate_spec == lp_utils.rate_specialization.full
-    hybrid = loopy_opt.rate_spec == lp_utils.rate_specialization.hybrid
-    fixed = loopy_opt.rate_spec == lp_utils.rate_specialization.fixed
+    full = loopy_opt.rate_spec == lp_utils.RateSpecialization.full
+    hybrid = loopy_opt.rate_spec == lp_utils.RateSpecialization.hybrid
+    fixed = loopy_opt.rate_spec == lp_utils.RateSpecialization.fixed
     separated_kernels = loopy_opt.rate_spec_kernels
+    if fixed and separated_kernels:
+        separated_kernels = False
+        logging.info('Cannot use separated kernels with a fixed ratespec, '
+            'disabling...')
+
 
     rate_info = assign_rates(reacs, loopy_opt.rate_spec)
    
-    #make loopy args
-    #loopy arrays
-    A_lp = lp.TemporaryVariable('A', shape=lp.auto, initializer=A.squeeze(), read_only=True,
-                                    scope=scopes.GLOBAL)
-    b_lp = lp.TemporaryVariable('beta', shape=lp.auto, initializer=b.squeeze(), read_only=True,
-                                    scope=scopes.GLOBAL)
-    Ta_lp = lp.TemporaryVariable('Ta', shape=lp.auto, initializer=Ta.squeeze(), read_only=True,
-                                    scope=scopes.GLOBAL)
-    rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto, initializer=rate_type.squeeze(), read_only=True,
-                                    scope=scopes.GLOBAL)
-    out_mask_lp = lp.TemporaryVariable('out', shape=lp.auto, initializer=out_mask.squeeze(), read_only=True,
-                                  scope=scopes.GLOBAL)
-    T_arr = lp.GlobalArg('T_arr', shape=lp.auto, dtype=np.float64)
-    kf_arr = lp.GlobalArg('kf', shape=(len(reacs), test_size), dtype=np.float64)
+    #write the simple arrenhius rate evaluation kernel
+
+    #first, define loopy arrays
+    A_lp = lp.TemporaryVariable('A', shape=lp.auto,
+        initializer=rate_info['simple']['A'].squeeze(),
+        read_only=True, scope=scopes.GLOBAL)
+    b_lp = lp.TemporaryVariable('beta', shape=lp.auto,
+        initializer=rate_info['simple']['b'].squeeze(),
+        read_only=True, scope=scopes.GLOBAL)
+    Ta_lp = lp.TemporaryVariable('Ta', shape=lp.auto,
+        initializer=rate_info['simple']['Ta'].squeeze(),
+        read_only=True, scope=scopes.GLOBAL)
+    rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto,
+        initializer=rate_info['simple']['type'].squeeze(),
+        read_only=True, scope=scopes.PRIVATE)
+    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+
+    #determine mask / kf indexing
+    mask_lp = None
+    mask_inst = '<>oid = ind[i]\n'
+    kf_str = ['i', 'j']
+    if not separated_kernels and rate_info['simple']['offset'] is None:
+        #we need a mask for writing output
+        mask_lp = lp.TemporaryVariable('ind', shape=lp.auto,
+            initializer=rate_info['simple']['mask'].squeeze(),
+            read_only=True, scope=scopes.PRIVATE)
+        kf_str = ['oid', 'j']
+    elif separated_kernels:
+        kf_str = ['oid', 'j']
+
+    #the ordering / indexing of the kf array depends on the loopy order parameter
+    if loopy_opt.order == 'C':
+        kf_shape = (test_size, Nr)
+        kf_str = kf_str[::-1]
+    else:
+        kf_shape = (Nr, test_size)
+    kf_arr = lp.GlobalArg('kf', shape=kf_shape, dtype=np.float64)
+    kf_str = 'kf[{}]'.format(','.join(kf_str))
+    
+    #various precomputes
+    pre_inst = {'Tinv' : '<> T_inv = 1 / T_arr[j]', 'logT' : '<> logT = log(T_arr[j])'}
 
     #define the instruction lists here
     #so they can be reused by various kernels
-    pre_inst = ['<> T_inv = 1 / T_arr[j]', '<> logT = log(T_arr[j])']
-    full_inst = "kf[oid, j] = {}".format(rate_eqn)
-    no_beta_inst = "kf[oid, j] = {}".format(str(rate_eqn_pre.subs('beta[i]', 0)))
-    no_Ta_inst = "kf[oid, j] = {}".format(str(rate_eqn_pre.subs('Ta[i]', 0)))
-    A_only_inst = "kf[oid, j] = A[i]"
+    kf_assign = "{kf_str} = {{rate}}".format(kf_str=kf_str)
+    #various instruction sets
+    full_inst = kf_assign.format(rate=rate_eqn)
+    no_beta_inst = kf_assign.format(rate=str(rate_eqn_pre.subs('beta[i]', 0)))
+    no_Ta_inst = kf_assign.format(rate=str(rate_eqn_pre.subs('Ta[i]', 0)))
+    A_only_inst = kf_assign.format(rate='A[i]')
     beta_integer_noTa_inst = """
-    kf[oid, j] = A[i] {id=a0}
-    <> T_val = T_arr[j] {id=a1, dep=a0}
+    {kf_str} = A[i] {{id=a0}}
     <> negval = beta[i] < 0
     if negval
-        T_val = T_inv {id=a2, dep=a1}
+        T_val = T_inv {{id=a2, dep=a1}}
     end
     <> btest = abs(beta[i])
     for k
         <>inbounds = k < btest
         if inbounds
-            kf[oid, j] = kf[oid, j] * T_val {dep=a2}
+            {kf_str} = {kf_str} * T_val {{dep=a2}}
         end
     end  
-    """
+    """.format(kf_str=kf_str, **pre_inst)
 
-    base_instruction_list = ['<>oid = out[i]\n']
     #and the skeleton kernel
     skeleton ="""
     for j
@@ -468,62 +502,92 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     end
     """
 
+    #and the inames
+    inames = ['i', 'j']
+
     #make the specializations into a list we can iterate over
     #to simplify code
     specializations = [(0, 'a_only', [], A_only_inst),
-    (1, 'beta_int', [x for x in pre_inst if 'T_inv' in x], beta_integer_noTa_inst)]
+    (1, 'beta_int', ['Tinv'], beta_integer_noTa_inst)]
     if full:
-        specializations.extend([(2, 'beta_exp', pre_inst, no_Ta_inst),
-            (3, 'ta_exp', pre_inst, no_beta_inst), (4, 'full', pre_inst, full_inst)])
+        specializations.extend([(2, 'beta_exp', pre_inst.keys(), no_Ta_inst),
+            (3, 'ta_exp', pre_inst.keys(), no_beta_inst), (4, 'full', pre_inst.keys(), full_inst)])
     else:
-        specializations.extend([(2, 'full', pre_inst, full_inst)])
+        specializations.extend([(2, 'full', pre_inst.keys(), full_inst)])
+
+    #convience method to create kernel
+    def __make_kernel(name, num, pre_instructions, instructions,
+        extra_args=None, inds=None, maxb=None):
+        if isinstance(instructions, str):
+            if '\n' in instructions:
+                instructions = '\n'.split(instructions)
+            else:
+                instructions = [instructions]
+        #find all the args to pass to the kernel
+        kernel_data = [A_lp, b_lp, Ta_lp, T_arr, kf_arr]
+        if mask_lp is not None:
+            kernel_data.append(mask_lp)
+            instructions = [mask_inst] + instructions
+        elif inds is not None:
+            kernel_data.append(inds)
+            instructions = [mask_inst] + instructions
+        if extra_args is not None:
+            kernel_data.extend(extra_args)
+
+        iname_range = []
+        #find the start index for 'i'
+        i_start = 0
+        if mask_lp is None and inds is None and rate_info['simple']['offset'] is not None:
+            i_start = rate_info['simple']['offset']
+        #add to ranges
+        iname_range.append('{}<=i<{}'.format(i_start, num))
+        iname_range.append('{}<=j<{}'.format(0, test_size))
+        if maxb:
+           iname_range.append('{}<=k<{}'.format(0, maxb)) 
+
+        pre_instructions = [pre_inst[k] for k in pre_instructions]
+        kernel_str = skeleton.format('\n'.join(pre_instructions),
+            '\n'.join(instructions))
+
+        knl = lp.make_kernel('{[' + ','.join(inames) + ']:' + 
+            ' and '.join(iname_range) + '}',
+            kernel_str,
+            kernel_data=kernel_data,
+            name=name
+        )
+        knl = lp.prioritize_loops(knl, inames)
+        return knl
 
     knl_list = []
     if fixed:
-        fixed_knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{}}}'.format(num_nonpdep, test_size),
-        skeleton.format('\n'.join(pre_inst), '\n'.join(base_instruction_list + [full_inst])),
-        kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, out_mask_lp],
-        name='kf_fixed')
-        fixed_knl = lp.prioritize_loops(fixed_knl, 'i,j')
-        knl_list.append(fixed_knl)
+        knl_list.append(__make_kernel('kf_fixed', rate_info['simple']['num'],
+            pre_inst.keys(), full_inst))
     elif separated_kernels:
         for rtype, name, pre_instructions, instruction_list in specializations:
             #find the number of this specialization
-            inds = np.where(rate_type == 0)[0]
+            inds = np.where(rate_type == rtype)[0]
             num = inds.size
             #if non-zero
             if num:
                 #create the index array
-                inds_lp = lp.TemporaryVariable('{}_ind'.format(name),
+                inds_lp = lp.TemporaryVariable('ind',
                     shape=lp.auto, initializer=inds.squeeze(),
-                    read_only=True, scope=scopes.GLOBAL)
-                #need to add a mapping of ind -> i
-                instruction_list = ['<>i = {}_ind[ind]\n'.format(name)] + base_instruction_list + instruction_list 
-                #create the specialized kernels
-                knl = lp.make_kernel('{{[ind, j, k]: 0<=ind<{} and 0<=j<{} and 0<=k<{}}}'.format(
-                    num, test_size, int(maxb) if name == 'beta_int' else 0),
-                  skeleton.format('\n'.join(pre_instructions), instruction_list),
-                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp, out_mask_lp],
-                 name='kf_{}'.format(name))
-                knl_list.append(knl)
+                    read_only=True, scope=scopes.PRIVATE)
+                #and the kernel
+                knl_list.append(__make_kernel('kf_{}'.format_name, pre_instructions,
+                    instruction_list, inds=inds_lp, maxb=rate_info['simple']['maxb']))
     else:
         #do with if statements
         #first, make the rate types array
-        rtype_lp = lp.TemporaryVariable('rtype',
-                    shape=lp.auto, initializer=rate_type.squeeze(),
-                    read_only=True, scope=scopes.GLOBAL)
-        instruction_list = base_instruction_list[:]
+        instruction_list = []
         for i in range(len(specializations)):
             instruction_list.append('<>test_{0} = rtype[i] == {0} {{id=d{0}}}'.format(i))
             instruction_list.append('if test_{0}'.format(i))
             instruction_list.extend(['\t' + x for x in specializations[i][3].split('\n')])
             instruction_list.append('end')
-        knl = lp.make_kernel('{{[i, j]: 0<=i<{} and 0<=j<{} and 0<=k<{}}}'.format(
-                    num, test_size, int(maxb)),
-                  skeleton.format('\n'.join(pre_instructions), '\n'.join(instruction_list)),
-                 kernel_data=[A_lp, b_lp, Ta_lp, T_arr, kf_arr, inds_lp, out_mask_lp],
-                 name='kf_{}'.format(name))
-        knl_list.append(knl)
+        knl_list.append(__make_kernel('kf_full', pre_instructions.keys(),
+                    instruction_list, inds=inds_lp, maxb=rate_info['simple']['maxb']),
+                    extra_args=rtype_lp)
 
     for i, knl in enumerate(knl_list):
         #now apply specified optimizations

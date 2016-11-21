@@ -254,7 +254,7 @@ class ReacInfo(CommonEqualityMixin):
         if reaction_type.fall in self.type or \
             reaction_type.chem in self.type or\
             reaction_type.thd in self.type:
-            
+
             #figure out the third body type
             if self.pdep_sp: #single species
                 self.type.append(thd_body_type.species)
@@ -294,11 +294,14 @@ class ReacInfo(CommonEqualityMixin):
 
         A match is made if this reaction matches all `reaction types` given
             with the repeat rule given above
-        
+
         """
 
         if not isinstance(reac_types, tuple):
-            reac_types = tuple(reac_types)
+            try:
+                reac_types = tuple(reac_types)
+            except:
+                reac_types = (reac_types,)
 
         #get the types to a more managable form
         enum_types = set([type(rtype) for rtype in reac_types])

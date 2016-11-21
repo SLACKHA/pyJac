@@ -303,13 +303,13 @@ def assign_rates(reacs, ratespec):
     """
 
     #determine specialization
-    full = loopy_opt.ratespec == lp_utils.RateSpecialization.full
-    hybrid = loopy_opt.ratespec == lp_utils.RateSpecialization.hybrid
-    fixed = loopy_opt.ratespec == lp_utils.RateSpecialization.fixed
+    full = ratespec == lp_utils.RateSpecialization.full
+    hybrid = ratespec == lp_utils.RateSpecialization.hybrid
+    fixed = ratespec == lp_utils.RateSpecialization.fixed
 
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset
-        rate = [(i, x) for i, x in enumerate(reacs) if any(x.match(y) for y in match)]
+        rate = [(i, x) for i, x in enumerate(reacs) if any(x.match(y) for y in matchers)]
         mask = []
         num = 0
         if rate:
@@ -320,7 +320,8 @@ def assign_rates(reacs, ratespec):
 
         #determine sorted / offset
         offset = None
-        if mask and mask == np.arange(mask[0], mask[0] + num + 1, dtype=np.int32):
+        if mask.size and np.array_equal(mask,
+                np.arange(mask[0], mask[0] + num, dtype=np.int32)):
             offset = mask[0]
 
         return rate, mask, num, offset
@@ -328,13 +329,13 @@ def assign_rates(reacs, ratespec):
     #count / seperate reactions with simple arrhenius rates
     simple_rate, simple_mask, num_simple, simple_rate_offset = __seperate(
         reacs, [reaction_type.elementary, reaction_type.thd,
-                    reaction_type.falloff, reaction_type.chem])
+                    reaction_type.fall, reaction_type.chem])
 
-    simple_rate_type = np.zeros((len(num_simple),), dtype=np.int32)
+    simple_rate_type = np.zeros((num_simple,), dtype=np.int32)
     #reaction parameters
-    A = np.zeros((num_nonpdep,), dtype=np.float64)
-    b = np.zeros((num_nonpdep,), dtype=np.float64)
-    Ta = np.zeros((num_nonpdep,), dtype=np.float64)
+    A = np.zeros((num_simple,), dtype=np.float64)
+    b = np.zeros((num_simple,), dtype=np.float64)
+    Ta = np.zeros((num_simple,), dtype=np.float64)
 
     i = 0
     for i, reac in enumerate(simple_rate):
@@ -372,11 +373,11 @@ def assign_rates(reacs, ratespec):
     _, cheb_mask, num_cheb, cheb_offset = __seperate(
         reacs, [reaction_type.cheb])
 
-    return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'types' : simple_rate_type,
+    return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'type' : simple_rate_type,
                 'maxb' : maxb, 'offset' : simple_rate_offset,
                 'num' : num_simple, 'mask' : simple_mask},
-            'plog' : {'mask', plog_mask, 'num', num_plog, 'offset', plog_offset},
-            'cheb' : {'mask', cheb_mask, 'num', num_cheb, 'offset', cheb_offset}}
+            'plog' : {'mask' : plog_mask, 'num' : num_plog, 'offset' : plog_offset},
+            'cheb' : {'mask' : cheb_mask, 'num' : num_cheb, 'offset' : cheb_offset}}
 
 def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
                             loopy_opt, test_size=None):

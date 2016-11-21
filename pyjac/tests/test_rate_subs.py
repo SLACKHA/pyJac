@@ -37,7 +37,7 @@ class SubTest(TestClass):
 
     def test_assign_rates(self):
         reacs = self.store.reacs
-        result = assign_rates(reacs, RateSpecialization.full)
+        result = assign_rates(reacs, RateSpecialization.fixed)
 
         #test rate type
         assert np.all(result['simple']['type'] == 0)
@@ -52,8 +52,8 @@ class SubTest(TestClass):
             #test num, mask, and offset
             plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.PlogReaction)])
-            assert result['plog']['num'] = len(plog_inds)
-            assert result['plog']['mask'] = np.array(np.sorted(plog_inds, dtype=np.int32))
+            assert result['plog']['num'] == len(plog_inds)
+            assert np.array_equal(result['plog']['mask'], np.array(plog_inds))
             if np.all(np.diff(result['plog']['mask']) == 1):
                 assert result['plog']['offset'] == result['plog']['mask'][0]
             else:
@@ -61,39 +61,52 @@ class SubTest(TestClass):
 
             cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.ChebyshevReaction)])
-            assert result['cheb']['num'] = len(cheb_inds)
-            assert result['cheb']['mask'] = np.array(np.sorted(cheb_inds, dtype=np.int32))
+            assert result['cheb']['num'] == len(cheb_inds)
+            assert np.array_equal(result['cheb']['mask'], np.array(cheb_inds))
             if np.all(np.diff(result['cheb']['mask']) == 1):
                 assert result['cheb']['offset'] == result['cheb']['mask'][0]
             else:
                 assert result['cheb']['offset'] is None
 
-            elem_inds = sort(list(set(plog_inds).union(set(cheb_inds))))
-            assert result['simple']['num'] = len(cheb_inds)
-            assert result['simple']['mask'] = np.array(np.sorted(cheb_inds, dtype=np.int32))
+            simple_inds = sorted(list(set(range(gas.n_reactions)).difference(
+                set(plog_inds).union(set(cheb_inds)))))
+            assert result['simple']['num'] == len(simple_inds)
+            assert np.array_equal(result['simple']['mask'], np.array(simple_inds))
             if np.all(np.diff(result['simple']['mask']) == 1):
                 assert result['simple']['offset'] == result['simple']['mask'][0]
             else:
                 assert result['simple']['offset'] is None
 
-        __tester()
+        __tester(result)
 
         result = assign_rates(reacs, RateSpecialization.hybrid)
+
+        def __get_vals(reac):
+            try:
+                Ea = reac.rate.activation_energy
+                b = reac.rate.temperature_exponent
+            except:
+                if isinstance(reac, ct.FalloffReaction) and not isinstance(reac, ct.ChemicallyActivatedReaction):
+                    Ea = reac.high_rate.activation_energy
+                    b = reac.high_rate.temperature_exponent
+                else:
+                    Ea = reac.low_rate.activation_energy
+                    b = reac.low_rate.temperature_exponent
+            return Ea, b
 
         #test rate type
         rtypes = []
         for reac in gas.reactions():
             if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
-                Ea = reac.rate.activation_energy
-                b = reac.rate.temperature_exponent
+                Ea, b = __get_vals(reac)
                 if Ea == 0 and b == 0:
-                    rtypes[i].append(0)
+                    rtypes.append(0)
                 elif Ea == 0 and int(b) == b:
                     rtypes.append(1)
                 else:
                     rtypes.append(2)
-        assert result['simple']['type'] == np.array(rtypes)
-        __tester()
+        assert np.array_equal(result['simple']['type'], np.array(rtypes))
+        __tester(result)
 
         result = assign_rates(reacs, RateSpecialization.full)
 
@@ -101,10 +114,9 @@ class SubTest(TestClass):
         rtypes = []
         for reac in gas.reactions():
             if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
-                Ea = reac.rate.activation_energy
-                b = reac.rate.temperature_exponent
+                Ea, b = __get_vals(reac)
                 if Ea == 0 and b == 0:
-                    rtypes[i].append(0)
+                    rtypes.append(0)
                 elif Ea == 0 and int(b) == b:
                     rtypes.append(1)
                 elif Ea == 0:
@@ -113,8 +125,8 @@ class SubTest(TestClass):
                     rtypes.append(3)
                 else:
                     rtypes.append(4)
-        assert result['simple']['type'] == np.array(rtypes)
-        __tester()
+        assert np.array_equal(result['simple']['type'], np.array(rtypes))
+        __tester(result)
 
 
     @attr('long')

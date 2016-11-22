@@ -60,15 +60,15 @@ class SubTest(TestClass):
             else:
                 assert result['plog']['offset'] is None
             #check values
-            assert result['plog']['num_P'] == [len(p.rates) for p in plog_reacs]
-            assert np.allclose(result['plog']['P'],
+            assert np.array_equal(result['plog']['num_P'], [len(p.rates) for p in plog_reacs])
+            assert np.allclose(result['plog']['params'][0::4],
                 np.array([r[0] for p in plog_reacs for r in p.rates]).squeeze())
-            assert np.allclose(result['plog']['A'],
+            assert np.allclose(result['plog']['params'][1::4],
                 np.array([r[1].pre_exponential_factor for p in plog_reacs for r in p.rates]).squeeze())
-            assert np.allclose(result['plog']['b'],
+            assert np.allclose(result['plog']['params'][2::4],
                 np.array([r[1].temperature_exponent for p in plog_reacs for r in p.rates]).squeeze())
             #for the activation energies, we simply check that the ratios are the same
-            r = result['plog']['Ta'] / np.array(
+            r = result['plog']['params'][3::4] / np.array(
                 [r[1].activation_energy for p in plog_reacs for r in p.rates]).squeeze()
             assert np.all(np.isclose(r, r[0]))
 

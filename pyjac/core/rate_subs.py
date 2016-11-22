@@ -379,7 +379,8 @@ def assign_rates(reacs, rate_spec):
     for p in plog_reacs:
         num_pressures.append(len(p.plog_par))
         plog_rate_vals.extend(p.plog_par)
-    plog_P, plog_A, plog_b, plog_Ta = [np.array(r, dtype=np.float64) for r in zip(*plog_rate_vals)]
+    num_pressures = np.array(num_pressures, dtype=np.int32)
+    plog_params = np.vstack(tuple(np.array(r, dtype=np.float64) for r in zip(*plog_rate_vals)))
 
     _, cheb_mask, num_cheb, cheb_offset = __seperate(
         reacs, [reaction_type.cheb])
@@ -388,8 +389,7 @@ def assign_rates(reacs, rate_spec):
                 'maxb' : maxb, 'offset' : simple_rate_offset,
                 'num' : num_simple, 'mask' : simple_mask},
             'plog' : {'mask' : plog_mask, 'num' : num_plog, 'offset' : plog_offset,
-            'num_P' : num_pressures, 'P' : plog_P, 'A' : plog_A, 'b' : plog_b,
-            'Ta' : plog_Ta},
+            'num_P' : num_pressures, 'params' : plog_params},
             'cheb' : {'mask' : cheb_mask, 'num' : num_cheb, 'offset' : cheb_offset}}
 
 def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,

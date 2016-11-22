@@ -7,7 +7,7 @@ import filecmp
 from collections import OrderedDict
 
 #local imports
-from ..core.rate_subs import rate_const_kernel_gen, get_rate_eqn, assign_rates
+from ..core.rate_subs import rate_const_simple_kernel_gen, get_rate_eqn, assign_rates
 from ..core.loopy_utils import auto_run, loopy_options, RateSpecialization
 from ..utils import create_dir
 from . import TestClass
@@ -54,16 +54,28 @@ class SubTest(TestClass):
             plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.PlogReaction)])
             assert result['plog']['num'] == len(plog_inds)
-            assert np.array_equal(result['plog']['mask'], np.array(plog_inds))
+            assert np.allclose(result['plog']['mask'], np.array(plog_inds))
             if np.all(np.diff(result['plog']['mask']) == 1):
                 assert result['plog']['offset'] == result['plog']['mask'][0]
             else:
                 assert result['plog']['offset'] is None
+            #check values
+            assert result['plog']['num_P'] == [len(p.rates) for p in plog_reacs]
+            assert np.allclose(result['plog']['P'],
+                np.array([r[0] for p in plog_reacs for r in p.rates]).squeeze())
+            assert np.allclose(result['plog']['A'],
+                np.array([r[1].pre_exponential_factor for p in plog_reacs for r in p.rates]).squeeze())
+            assert np.allclose(result['plog']['b'],
+                np.array([r[1].temperature_exponent for p in plog_reacs for r in p.rates]).squeeze())
+            #for the activation energies, we simply check that the ratios are the same
+            r = result['plog']['Ta'] / np.array(
+                [r[1].activation_energy for p in plog_reacs for r in p.rates]).squeeze()
+            assert np.all(np.isclose(r, r[0]))
 
             cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.ChebyshevReaction)])
             assert result['cheb']['num'] == len(cheb_inds)
-            assert np.array_equal(result['cheb']['mask'], np.array(cheb_inds))
+            assert np.allclose(result['cheb']['mask'], np.array(cheb_inds))
             if np.all(np.diff(result['cheb']['mask']) == 1):
                 assert result['cheb']['offset'] == result['cheb']['mask'][0]
             else:
@@ -72,7 +84,7 @@ class SubTest(TestClass):
             simple_inds = sorted(list(set(range(gas.n_reactions)).difference(
                 set(plog_inds).union(set(cheb_inds)))))
             assert result['simple']['num'] == len(simple_inds)
-            assert np.array_equal(result['simple']['mask'], np.array(simple_inds))
+            assert np.allclose(result['simple']['mask'], np.array(simple_inds))
             if np.all(np.diff(result['simple']['mask']) == 1):
                 assert result['simple']['offset'] == result['simple']['mask'][0]
             else:
@@ -106,7 +118,7 @@ class SubTest(TestClass):
                     rtypes.append(1)
                 else:
                     rtypes.append(2)
-        assert np.array_equal(result['simple']['type'], np.array(rtypes))
+        assert np.allclose(result['simple']['type'], np.array(rtypes))
         __tester(result)
 
         result = assign_rates(reacs, RateSpecialization.full)
@@ -126,7 +138,7 @@ class SubTest(TestClass):
                     rtypes.append(3)
                 else:
                     rtypes.append(4)
-        assert np.array_equal(result['simple']['type'], np.array(rtypes))
+        assert np.allclose(result['simple']['type'], np.array(rtypes))
         __tester(result)
 
 

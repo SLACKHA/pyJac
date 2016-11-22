@@ -321,7 +321,7 @@ def assign_rates(reacs, rate_spec):
 
         #determine sorted / offset
         offset = None
-        if mask.size and np.array_equal(mask,
+        if mask.size and np.allclose(mask,
                 np.arange(mask[0], mask[0] + num, dtype=np.int32)):
             offset = mask[0]
 
@@ -379,7 +379,7 @@ def assign_rates(reacs, rate_spec):
     for p in plog_reacs:
         num_pressures.append(len(p.plog_par))
         plog_rate_vals.extend(p.plog_par)
-    plog_P, plog_A, plog_b, plog_Ta = zip(*rate_vals)
+    plog_P, plog_A, plog_b, plog_Ta = [np.array(r, dtype=np.float64) for r in zip(*plog_rate_vals)]
 
     _, cheb_mask, num_cheb, cheb_offset = __seperate(
         reacs, [reaction_type.cheb])

@@ -34,7 +34,7 @@ class CommonEqualityMixin(object):
                 if not key in other.__dict__:
                     return False
                 if isinstance(value, np.ndarray):
-                    if not np.array_equal(value, other.__dict__[key]):
+                    if not np.allclose(value, other.__dict__[key]):
                         return False
                 elif isinstance(value, list):
                     if not all([any(x == y for y in other.__dict__[key]) for x in value]):

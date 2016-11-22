@@ -159,7 +159,7 @@ class SubTest(TestClass):
                 continue
             opt = loopy_options(**{x : state[x] for x in
                 state if x != 'device'})
-            knl = rate_const_kernel_gen(eq, pre, reacs, opt,
+            knl = rate_const_simple_kernel_gen(eq, pre, reacs, opt,
                 test_size=self.store.test_size)
 
             ref = ref_const if state['order'] == 'F' else ref_const_T

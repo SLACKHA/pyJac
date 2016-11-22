@@ -277,7 +277,7 @@ def assign_rates(reacs, rate_spec):
     -----
 
     For simple Arrhenius evaluations, the rate type keys are:
-    
+
     if rate_spec == RateSpecialization.full
         0 -> kf = A
         1 -> kf = A * T * T * T ...
@@ -370,8 +370,16 @@ def assign_rates(reacs, rate_spec):
             maxb = int(np.max(maxb_test))
 
     #finally determine the advanced rate evaulation types
-    _, plog_mask, num_plog, plog_offset = __seperate(
+    plog_reacs, plog_mask, num_plog, plog_offset = __seperate(
         reacs, [reaction_type.plog])
+
+    #create the plog arrays
+    num_pressures = []
+    plog_rate_vals = []
+    for p in plog_reacs:
+        num_pressures.append(len(p.plog_par))
+        plog_rate_vals.extend(p.plog_par)
+    plog_P, plog_A, plog_b, plog_Ta = zip(*rate_vals)
 
     _, cheb_mask, num_cheb, cheb_offset = __seperate(
         reacs, [reaction_type.cheb])
@@ -379,13 +387,15 @@ def assign_rates(reacs, rate_spec):
     return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'type' : simple_rate_type,
                 'maxb' : maxb, 'offset' : simple_rate_offset,
                 'num' : num_simple, 'mask' : simple_mask},
-            'plog' : {'mask' : plog_mask, 'num' : num_plog, 'offset' : plog_offset},
+            'plog' : {'mask' : plog_mask, 'num' : num_plog, 'offset' : plog_offset,
+            'num_P' : num_pressures, 'P' : plog_P, 'A' : plog_A, 'b' : plog_b,
+            'Ta' : plog_Ta},
             'cheb' : {'mask' : cheb_mask, 'num' : num_cheb, 'offset' : cheb_offset}}
 
-def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
+def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
                             loopy_opt, test_size=None):
     """Helper function that generates kernels for
-       evaluation of various arrhenius rate forms
+       evaluation of simple arrhenius rate forms
 
     Parameters
     ----------
@@ -426,7 +436,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
 
 
     rate_info = assign_rates(reacs, loopy_opt.rate_spec)
-   
+
     #write the simple arrenhius rate evaluation kernel
 
     #first, define loopy arrays
@@ -464,7 +474,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         kf_shape = (Nr, test_size)
     kf_arr = lp.GlobalArg('kf', shape=kf_shape, dtype=np.float64)
     kf_str = 'kf[{}]'.format(','.join(kf_str))
-    
+
     #various precomputes
     pre_inst = {'Tinv' : '<> T_inv = 1 / T_arr[j]', 'logT' : '<> logT = log(T_arr[j])'}
 
@@ -486,7 +496,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     if negval
         T_val = T_inv {{id=a2, dep=a1}}
     end
-    {{k_iter}}  
+    {{k_iter}}
     """.format(kf_str=kf_str, **pre_inst)
     #various k_iter forms for beta iteration
 
@@ -558,7 +568,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         i_start = 0
         if mask_lp is None and inds is None and rate_info['simple']['offset'] is not None:
             i_start = rate_info['simple']['offset']
-        
+
         #add to ranges
         iname_range.append('{}<={}<{}'.format(i_start, i_name, num))
         iname_range.append('{}<=j<{}'.format(0, test_size))
@@ -569,7 +579,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             if maxb > 1:
                 repl = k_iter_bmax_nonunity
                 iname_tmp.append('k')
-                iname_range.append('{}<=k<{}'.format(0, maxb)) 
+                iname_range.append('{}<=k<{}'.format(0, maxb))
             else:
                 repl = k_iter_bmax_unity
             instructions = [x.format(k_iter=repl) if '{k_iter}' in x else x for x in instructions]
@@ -580,7 +590,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             '\n'.join(instructions))
 
         #make the kernel
-        knl = lp.make_kernel('{[' + ','.join(iname_tmp) + ']:' + 
+        knl = lp.make_kernel('{[' + ','.join(iname_tmp) + ']:' +
             ' and '.join(iname_range) + '}',
             kernel_str,
             kernel_data=kernel_data,
@@ -613,7 +623,7 @@ def rate_const_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
                     instruction_list, inds=inds_lp, maxb=maxb))
     else:
         #do with if statements
-        
+
         #enclose each rate type in it's own if statement
         instruction_list = []
         for i in range(len(specializations)):
@@ -704,6 +714,30 @@ def get_rate_eqn(eqs):
 
     return rate_eqn_pre, rate_eqn
 
+def rate_const_plog_kernel_gen(rate_eqn, reacs, loopy_opt, test_size=None):
+    """Helper function that generates kernels for
+       evaluation of simple arrhenius rate forms
+
+    Parameters
+    ----------
+    rate_eqn : str
+        A string form of the full arrenhius rate
+    reacs : list of `ReacInfo`
+        List of species in the mechanism.
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    test_size : int
+        If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    knl_list : list of `loopy.kernel`
+        The generated loopy kernel(s) for code generation / testing
+
+    """
+
+    raise NotImplementedError
+
 def write_rate_constants(path, specs, reacs, eqs, opts, auto_diff=False):
     """Write subroutine(s) to evaluate reaction rates constants.
 
@@ -737,542 +771,12 @@ def write_rate_constants(path, specs, reacs, eqs, opts, auto_diff=False):
 
     target = utils.get_target(opts.lang)
 
-    raise NotImplementedError
+    #get rate equations
+    rate_eqn, rate_eqn_pre = get_rate_eqn(eqs)
 
-    def write_header(lang, rate_count):
-        """Writes reaction rate header file.
+    #generate the rate kernels
+    knl_list = rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs, opts)
 
-        Parameters
-        ----------
-        lang : str
-            Programming language
-        rate_count : int
-            Number of reaction rate files.
-
-        Returns
-        -------
-        None
-
-        """
-        with open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
-                        rate_count, utils.header_ext[lang])), 'w') as file:
-            line = ('#ifndef RATES_HEAD_{0}\n'
-                   '#define RATES_HEAD_{0}\n'
-                   '\n'
-                   '#include "header{1}"\n'
-                   '\n'
-                   ).format(rate_count, utils.header_ext[lang])
-            file.write(line)
-            pre = '  ' if lang == 'c' else '__device__ '
-            line = ('{0}void eval_rxn_rates_{4}(const {1},'
-                   ' const {1}{2}, const {1} * {3}, {1} * {3}, {1} * {3}'
-                   )
-            if cuda_cheb:
-                line +=  ', {1} * {3}'
-            line += ');\n'
-            file.write(line.format(
-                    pre, double_type, pres_ref, utils.restrict[lang], rate_count))
-            file.write('#endif\n')
-
-    def write_sub_intro(file, defines, start, end, rate_count=None):
-        """Write introduction to reaction rate subroutine.
-
-        Parameters
-        ----------
-        file : file
-            Open file for reaction rate subroutines
-        defines : bool
-            If ``True``, write variable definitions
-        start : int
-            Index of initial reaction for this subroutine
-        end : int
-            Index of final reaction for this subroutine
-        rate_count : int, optional
-            Number of reaction rate files.
-
-        Returns
-        -------
-        None
-
-        """
-
-        pre = '  '
-        line = ''
-        if lang == 'cuda': line = '__device__ '
-
-        my_reacs = reacs[start:end]
-
-        if not defines:
-            file.write('#include "rates/rates_include{}"\n'.format(utils.header_ext[lang]))
-
-        if lang in ['c', 'cuda']:
-            file.write('#include "{}rates'.format(
-                            file_prefix)
-                        + utils.header_ext[lang] + '"\n')
-            if auto_diff:
-                file.write('#include "adept.h"\n'
-                            'using adept::adouble;\n')
-            line += ('void eval_rxn_rates{0} (const {1} T, const {1}{2} pres,'
-                     ' const {1} * {3} C, {1} * {3} fwd_rxn_rates, '
-                     '{1} * {3} rev_rxn_rates{4}) {{\n'.format(
-                     '_{}'.format(rate_count) if rate_count is not None else '',
-                     double_type, pres_ref, utils.restrict[lang],
-                     ', {} * {} dot_prod'.format(double_type, utils.restrict[lang]) if cuda_cheb else ''
-                     )
-                     )
-        elif lang == 'fortran':
-            line += ('subroutine eval_rxn_rates(T, pres, C, fwd_rxn_rates,'
-                     ' rev_rxn_rates)\n\n'
-                     )
-
-            # fortran needs type declarations
-            line += ('  implicit none\n'
-                     '  double precision, intent(in) :: '
-                     'T, pres, C({})\n'.format(num_s)
-                     )
-            line += ('  double precision, intent(out) :: '
-                     'fwd_rxn_rates({}), '.format(num_r) +
-                     'rev_rxn_rates({})\n'.format(num_rev)
-                     )
-            line += ('  \n'
-                     '  double precision :: logT\n'
-                     )
-
-            kf_flag = True
-            if rev_reacs and any([not r.rev_par for r in my_reacs]):
-                line += '  double precision :: kf, Kc\n'
-                kf_flag = False
-
-            if any([rxn.cheb for rxn in my_reacs]):
-                if kf_flag:
-                    line += '  double precision :: kf, Tred, Pred\n'
-                    kf_flag = False
-                else:
-                    line += '  double precision :: Tred, Pred\n'
-            if any([rxn.plog for rxn in my_reacs]):
-                if kf_flag:
-                    line += '  double precision :: kf, kf2\n'
-                    kf_flag = False
-                else:
-                    line += '  double precision :: kf2\n'
-            line += '\n'
-        elif lang == 'matlab':
-            line += ('function [fwd_rxn_rates, rev_rxn_rates] = '
-                     'eval_rxn_rates (T, pres, C)\n\n'
-                     '  fwd_rxn_rates = zeros({},1);\n'.format(num_r) +
-                     '  rev_rxn_rates = fwd_rxn_rates;\n'
-                     )
-        file.write(line)
-
-        if smm is not None:
-            smm.reset()
-            if defines:
-                smm.write_init(file, indent=2)
-
-        if defines:
-            if lang == 'c':
-                pre += double_type + ' '
-            elif lang == 'cuda':
-                pre += 'register {} '.format(double_type)
-            line = (pre + 'logT = log(T)' +
-                    utils.line_end[lang]
-                    )
-            file.write(line)
-            file.write('\n')
-
-            kf_flag = True
-            if rev_reacs and any([not r.rev_par for r in my_reacs]):
-                kf_flag = False
-
-                if lang == 'c':
-                    file.write('  {0} kf;\n'
-                               '  {0} Kc;\n'.format(double_type)
-                               )
-                elif lang == 'cuda':
-                    file.write('  register double kf;\n'
-                               '  register double Kc;\n'
-                               )
-
-            if any([rxn.cheb for rxn in my_reacs]):
-                # Other variables needed for Chebyshev
-                if lang == 'c':
-                    if kf_flag:
-                        file.write('  {0} kf;\n'.format(double_type))
-                        kf_flag = False
-                    file.write('  {0} Tred;\n'
-                               '  {0} Pred;\n'.format(double_type))
-                    file.write(utils.line_start + '{0} cheb_temp_0, cheb_temp_1'.format(
-                                double_type) + utils.line_end[lang]
-                               )
-                    dim = max(rxn.cheb_n_temp for rxn in my_reacs if rxn.cheb)
-                    file.write(utils.line_start + '{0} dot_prod[{1}]'.format(double_type, dim) +
-                               utils.line_end[lang])
-
-
-                elif lang == 'cuda':
-                    if kf_flag:
-                        file.write('  register double kf;\n')
-                        kf_flag = False
-                    file.write('  register double Tred;\n'
-                               '  register double Pred;\n')
-                    file.write(utils.line_start + 'double cheb_temp_0, cheb_temp_1' +
-                               utils.line_end[lang]
-                               )
-
-
-            if any([rxn.plog for rxn in my_reacs]):
-                # Variables needed for Plog
-                if lang == 'c':
-                    if kf_flag:
-                        file.write('  {0} kf;\n'.format(double_type))
-                    file.write('  {0} kf2;\n'.format(double_type))
-                if lang == 'cuda':
-                    if kf_flag:
-                        file.write('  register double kf;\n')
-                    file.write('  register double kf2;\n')
-
-            file.write('\n')
-
-    rrange = (0, len(reacs)) if not do_unroll else (0, CUDAParams.Rates_Unroll)
-    write_sub_intro(file, not do_unroll, rrange[0], rrange[1])
-
-    def __get_arrays(sp, factor=1.0):
-        # put together all our coeffs
-        lo_array = [nu * factor] + [
-            sp.lo[6], sp.lo[0], sp.lo[0] - 1.0, sp.lo[1] / 2.0,
-            sp.lo[2] / 6.0, sp.lo[3] / 12.0, sp.lo[4] / 20.0,
-            sp.lo[5]
-            ]
-
-        lo_array = [x * lo_array[0] for x in
-                    [lo_array[1] - lo_array[2]] + lo_array[3:]
-                    ]
-
-        hi_array = [nu * factor] + [
-            sp.hi[6], sp.hi[0], sp.hi[0] - 1.0, sp.hi[1] / 2.0,
-            sp.hi[2] / 6.0, sp.hi[3] / 12.0, sp.hi[4] / 20.0,
-            sp.hi[5]
-            ]
-
-        hi_array = [x * hi_array[0] for x in
-                    [hi_array[1] - hi_array[2]] + hi_array[3:]
-                    ]
-        return lo_array, hi_array
-
-    for i_rxn in range(len(reacs)):
-        if do_unroll and i_rxn == next_file:
-            file_store = file
-            file = open(os.path.join(path, 'rates', 'rxn_rates_{}{}'.format(
-                rate_count, utils.file_ext[lang])), 'w')
-            next_file = min(len(reacs), i_rxn + CUDAParams.Rates_Unroll)
-            write_sub_intro(file, True, i_rxn + 1, next_file, rate_count)
-            rate_count += 1
-        file.write(utils.line_start + utils.comment[lang] +
-                    'rxn {}'.format(fwd_rxn_mapping[i_rxn]) + '\n')
-        rxn = reacs[i_rxn]
-
-        if lang == 'cuda' and smm is not None:
-            indexes = sorted(list(set(rxn.reac + rxn.prod)))
-            the_vars = [shared.variable('C', index) for index in indexes]
-            # estimate usages as the number of consequitive reactions
-            usages = []
-            for sp_i in indexes:
-                temp = i_rxn + 1
-                while (temp < len(reacs) and
-                       sp_i in set(reacs[temp].reac +
-                                   reacs[temp].prod)
-                       ):
-                    temp += 1
-                usages.append(temp - i_rxn - 1)
-            smm.load_into_shared(file, the_vars, usages)
-
-        # if reversible, save forward rate constant for use
-        if rxn.rev and not rxn.rev_par and not (rxn.cheb or rxn.plog):
-            line = ('  kf = ' + rxn_rate_const(rxn.A, rxn.b, rxn.E) +
-                    utils.line_end[lang]
-                    )
-            file.write(line)
-        elif rxn.cheb:
-            file.write(get_cheb_rate(lang, rxn))
-        elif rxn.plog:
-            # Special forward rate evaluation for Plog reacions
-            vals = rxn.plog_par[0]
-            file.write('  if (pres <= {:.4e}) {{\n'.format(vals[0]))
-            line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
-            file.write(line + utils.line_end[lang])
-
-            for idx, vals in enumerate(rxn.plog_par[:-1]):
-                vals2 = rxn.plog_par[idx + 1]
-
-                line = ('  }} else if ((pres > {:.4e}) '.format(vals[0]) +
-                        '&& (pres <= {:.4e})) {{\n'.format(vals2[0]))
-                file.write(line)
-
-                line = ('    kf = log(' +
-                        rxn_rate_const(vals[1], vals[2], vals[3]) + ')'
-                        )
-                file.write(line + utils.line_end[lang])
-                line = ('    kf2 = log(' +
-                        rxn_rate_const(vals2[1], vals2[2], vals2[3]) + ')'
-                        )
-                file.write(line + utils.line_end[lang])
-
-                pres_log_diff = math.log(vals2[0]) - math.log(vals[0])
-                line = ('    kf = exp(kf + (kf2 - kf) * (log(pres) - ' +
-                        '{:.16e}) / '.format(math.log(vals[0])) +
-                        '{:.16e})'.format(pres_log_diff)
-                        )
-                file.write(line + utils.line_end[lang])
-
-            vals = rxn.plog_par[-1]
-            file.write('  }} else if (pres > {:.4e}) {{\n'.format(vals[0]))
-            line = ('    kf = ' + rxn_rate_const(vals[1], vals[2], vals[3]))
-            file.write(line + utils.line_end[lang])
-            file.write('  }\n')
-
-        line = '  ' + get_array(lang, 'fwd_rxn_rates', i_rxn) + ' = '
-
-        # reactants
-        for i, isp in enumerate(rxn.reac):
-            nu = rxn.reac_nu[i]
-
-            # check if stoichiometric coefficient is double or integer
-            if utils.is_integer(nu):
-                # integer, so just use multiplication
-                for i in range(int(nu)):
-                    line += '' + get_array(lang, 'C', isp) + ' * '
-            else:
-                line += ('pow(' + get_array(lang, 'C', isp) +
-                         ', {}) *'.format(nu)
-                         )
-
-        # Rate constant: print if not reversible, or reversible but
-        # with explicit reverse parameters.
-        if (rxn.rev and not rxn.rev_par) or rxn.plog or rxn.cheb:
-            line += 'kf'
-        else:
-            line += rxn_rate_const(rxn.A, rxn.b, rxn.E)
-
-        line += utils.line_end[lang]
-        file.write(line)
-
-        if rxn.rev:
-
-            if not rxn.rev_par:
-
-                # line = '  Kc = 0.0' + utils.line_end[lang]
-                # file.write(line)
-
-                # sum of stoichiometric coefficients
-                sum_nu = 0
-
-                coeffs = {}
-                # go through product species
-                for isp, prod_sp in enumerate(rxn.prod):
-                    # check if species also in reactants
-                    if prod_sp in rxn.reac:
-                        isp2 = rxn.reac.index(prod_sp)
-                        nu = rxn.prod_nu[isp] - rxn.reac_nu[isp2]
-                    else:
-                        nu = rxn.prod_nu[isp]
-
-                    # Skip species with zero overall
-                    # stoichiometric coefficient.
-                    if (nu == 0):
-                        continue
-
-                    sum_nu += nu
-
-                    # get species object
-                    sp = specs[prod_sp]
-                    if not sp:
-                        print('Error: species ' + prod_sp + ' in reaction '
-                              '{} not found.\n'.format(i_rxn)
-                              )
-                        sys.exit()
-
-                    lo_array, hi_array = __get_arrays(sp)
-
-                    if not sp.Trange[1] in coeffs:
-                        coeffs[sp.Trange[1]] = lo_array, hi_array
-                    else:
-                        coeffs[sp.Trange[1]] = [
-                            lo_array[i] + coeffs[sp.Trange[1]][0][i]
-                            for i in range(len(lo_array))
-                            ], [
-                            hi_array[i] + coeffs[sp.Trange[1]][1][i]
-                            for i in range(len(hi_array))
-                            ]
-
-                # now loop through reactants
-                for isp, reac_sp in enumerate(rxn.reac):
-                    # Check if species also in products;
-                    # if so, already considered).
-                    if reac_sp in rxn.prod: continue
-
-                    nu = rxn.reac_nu[isp]
-                    sum_nu -= nu
-
-                    # get species object
-                    sp = specs[reac_sp]
-                    if not sp:
-                        print('Error: species ' + reac_sp + ' in reaction '
-                              '{} not found.\n'.format(i_rxn)
-                              )
-                        sys.exit()
-
-                    lo_array, hi_array = __get_arrays(sp, factor=-1.0)
-
-                    if not sp.Trange[1] in coeffs:
-                        coeffs[sp.Trange[1]] = lo_array, hi_array
-                    else:
-                        coeffs[sp.Trange[1]] = [
-                            lo_array[i] +
-                            coeffs[sp.Trange[1]][0][i]
-                            for i in range(len(lo_array))
-                            ], [hi_array[i] +
-                            coeffs[sp.Trange[1]][1][i]
-                            for i in range(len(hi_array))
-                            ]
-
-                isFirst = True
-                for T_mid in coeffs:
-                    # need temperature conditional for equilibrium constants
-                    line = '  if (T <= {:})'.format(T_mid)
-                    if lang in ['c', 'cuda']:
-                        line += ' {\n'
-                    elif lang == 'fortran':
-                        line += ' then\n'
-                    elif lang == 'matlab':
-                        line += '\n'
-                    file.write(line)
-
-                    lo_array, hi_array = coeffs[T_mid]
-
-                    if isFirst:
-                        line = '    Kc = '
-                    else:
-                        if lang in ['cuda', 'c']:
-                            line = '    Kc += '
-                        else:
-                            line = '    Kc = Kc + '
-                    line += ('({:.16e} + '.format(lo_array[0]) +
-                             '{:.16e} * '.format(lo_array[1]) +
-                             'logT + T * ('
-                             '{:.16e} + T * ('.format(lo_array[2]) +
-                             '{:.16e} + T * ('.format(lo_array[3]) +
-                             '{:.16e} + '.format(lo_array[4]) +
-                             '{:.16e} * T))) - '.format(lo_array[5]) +
-                             '{:.16e} / T)'.format(lo_array[6]) +
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
-
-                    if lang in ['c', 'cuda']:
-                        file.write('  } else {\n')
-                    elif lang in ['fortran', 'matlab']:
-                        file.write('  else\n')
-
-                    if isFirst:
-                        line = '    Kc = '
-                    else:
-                        if lang in ['cuda', 'c']:
-                            line = '    Kc += '
-                        else:
-                            line = '    Kc = Kc + '
-                    line += ('({:.16e} + '.format(hi_array[0]) +
-                             '{:.16e} * '.format(hi_array[1]) +
-                             'logT + T * ('
-                             '{:.16e} + T * ('.format(hi_array[2]) +
-                             '{:.16e} + T * ('.format(hi_array[3]) +
-                             '{:.16e} + '.format(hi_array[4]) +
-                             '{:.16e} * T))) - '.format(hi_array[5]) +
-                             '{:.16e} / T)'.format(hi_array[6]) +
-                             utils.line_end[lang]
-                             )
-                    file.write(line)
-
-                    if lang in ['c', 'cuda']:
-                        file.write('  }\n\n')
-                    elif lang == 'fortran':
-                        file.write('  end if\n\n')
-                    elif lang == 'matlab':
-                        file.write('  end\n\n')
-                    isFirst = False
-
-                line = ('  Kc = '
-                        '{:.16e}'.format((chem.PA / chem.RU) ** sum_nu) +
-                        ' * exp(Kc)' +
-                        utils.line_end[lang]
-                        )
-                file.write(line)
-
-            line = '  ' + get_array(lang, 'rev_rxn_rates',
-                                    rev_reacs.index(i_rxn)
-                                    ) + ' = '
-
-            # reactants (products from forward reaction)
-            for isp in rxn.prod:
-                nu = rxn.prod_nu[rxn.prod.index(isp)]
-
-                # check if stoichiometric coefficient is double or integer
-                if utils.is_integer(nu):
-                    # integer, so just use multiplication
-                    for i in range(int(nu)):
-                        line += '' + get_array(lang, 'C', isp) + ' * '
-                else:
-                    line += ('pow(' + get_array(lang, 'C', isp) +
-                             ', {}) * '.format(nu)
-                             )
-
-            # rate constant
-            if rxn.rev_par:
-                # explicit reverse Arrhenius parameters
-                line += rxn_rate_const(rxn.rev_par[0],
-                                       rxn.rev_par[1],
-                                       rxn.rev_par[2]
-                                       )
-            else:
-                # use equilibrium constant
-                line += 'kf / Kc'
-            line += utils.line_end[lang]
-            file.write(line)
-
-            file.write('\n')
-
-        if do_unroll and (i_rxn == next_file - 1 or i_rxn == len(reacs) - 1):
-            file.write('}\n\n')
-            file.close()
-            file = file_store
-            file.write('  eval_rxn_rates_{}(T, pres, C, fwd_rxn_rates, rev_rxn_rates{})'.format(
-                rate_count - 1, ', dot_prod' if cuda_cheb else '') + utils.line_end[lang])
-
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end eval_rxn_rates\n\n')
-    elif lang == 'fortran':
-        file.write('end subroutine eval_rxn_rates\n\n')
-    elif lang == 'matlab':
-        file.write('end\n\n')
-
-    if do_unroll:
-        with open(os.path.join(path, 'rates', 'rates_include' + utils.header_ext[lang]), 'w') as file:
-            file.write('#ifndef RATES_INCLUDE_{}\n'.format(lang))
-            file.write('#define RATES_INCLUDE_{}\n'.format(lang))
-            for i in range(rate_count):
-                file.write('#include "rxn_rates_{}{}"\n'.format(i, utils.header_ext[lang]))
-            file.write('\n')
-            file.write('#endif\n')
-        for i in range(rate_count):
-            write_header(lang, i)
-        with open(os.path.join(path, 'rates', 'rate_list_{}'.format(lang)), 'w') as file:
-            file.write(' '.join(['rxn_rates_{}{}'.format(i,
-               utils.file_ext[lang]) for i in range(rate_count)])
-               )
-
-    file.close()
-
-    return
 
 
 def write_rxn_pressure_mod(path, lang, specs, reacs,
@@ -2022,7 +1526,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     indexed = nicename + ('[k, i]' if loopy_opt.order == 'gpu' else '[i, k]')
 
     #first we generate the kernel
-    knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns, 
+    knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns,
         test_size),
         """
         for i
@@ -2096,12 +1600,8 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     """
 
     file_prefix = ''
-    double_type = 'double'
-    pres_ref = ''
     if auto_diff:
         file_prefix = 'ad_'
-        double_type = 'adouble'
-        pres_ref = '&'
 
     target = utils.get_target(opts.lang)
 
@@ -2124,7 +1624,7 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     #get headers
     for i in range(len(namelist)):
         headers.append(lp_utils.get_header(kernels[i]) + utils.line_end[opts.lang])
-    
+
     #and code
     for i in range(len(namelist)):
         code.append(lp_utils.get_code(kernels[i]))
@@ -2143,10 +1643,11 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     #now write
     with filew.get_header_file(os.path.join(path, file_prefix + 'chem_utils'
                              + utils.header_ext[opts.lang]), opts.lang) as file:
-        
+
         if auto_diff:
             file.add_headers('adept.h')
             file.add_lines('using adept::adouble;\n')
+            lines = [x.replace('double', 'adouble') for x in lines]
 
         lines = '\n'.join(headers).split('\n')
         file.add_lines(lines)

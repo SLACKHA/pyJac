@@ -11,6 +11,8 @@ import os
 #local imports
 from ..utils import check_lang
 
+edit_script = os.path.join(os.path.abspath(__FILE__), 'loopy_edit_script.py')
+
 class RateSpecialization(Enum):
     fixed = 0,
     hybrid = 1,
@@ -112,7 +114,16 @@ def get_code(knl):
     -----
     The kernel's Target and name should be set for proper functioning
     """
-    code, _ = lp.generate_code(knl)
+
+    #set the edit script as the 'editor'
+    if not 'EDITOR' in os.environ:
+        os.environ['EDITOR'] = edit_script
+
+    #turn on code editing
+    temp_knl = lp.set_options(knl, edit_code=True)
+
+    #and return the edited code
+    code, _ = lp.generate_code(temp_knl)
     return code
 
 def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **input_args):

@@ -7,7 +7,7 @@ import filecmp
 
 #local imports
 from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
-from ..core.loopy_utils import auto_run, loopy_options
+from ..loopy.loopy_utils import auto_run, loopy_options
 from ..utils import create_dir
 from . import TestClass
 

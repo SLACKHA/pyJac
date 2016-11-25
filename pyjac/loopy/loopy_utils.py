@@ -66,7 +66,7 @@ def get_context(device='0'):
         The pyopencl string denoting the device to use, defaults to '0'
     """
     os.environ['PYOPENCL_CTX'] = device
-    #os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+    os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
 
     lp.set_caching_enabled(False)
     ctx = cl.create_some_context(interactive=False)

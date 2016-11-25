@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 #local imports
 from ..core.rate_subs import rate_const_simple_kernel_gen, get_rate_eqn, assign_rates
-from ..core.loopy_utils import auto_run, loopy_options, RateSpecialization
+from ..loopy.loopy_utils import auto_run, loopy_options, RateSpecialization
 from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type

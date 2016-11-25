@@ -21,7 +21,7 @@ import sympy as sp
 import loopy as lp
 import numpy as np
 from loopy.kernel.data import temp_var_scope as scopes
-from . import loopy_utils as lp_utils
+from ..loopy import loopy_utils as lp_utils
 
 # Local imports
 from .. import utils

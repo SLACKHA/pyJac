@@ -392,17 +392,15 @@ def assign_rates(reacs, rate_spec):
             'num_P' : num_pressures, 'params' : plog_params},
             'cheb' : {'mask' : cheb_mask, 'num' : num_cheb, 'offset' : cheb_offset}}
 
-def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
+def rate_const_simple_kernel_gen(eqs, reacs,
                             loopy_opt, test_size=None):
     """Helper function that generates kernels for
        evaluation of simple arrhenius rate forms
 
     Parameters
     ----------
-    rate_eqn : str
-        A string form of the full arrenhius rate
-    rate_eqn_pre : `sympy.Expr`
-        The exponential part of the arrenhius rate, for simplification purposes
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
     reacs : list of `ReacInfo`
         List of species in the mechanism.
     loopy_opt : `loopy_options` object
@@ -431,11 +429,32 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     separated_kernels = loopy_opt.rate_spec_kernels
     if fixed and separated_kernels:
         separated_kernels = False
-        logging.info('Cannot use separated kernels with a fixed ratespec, '
+        logging.info('Cannot use separated kernels with a fixed RateSpecialization, '
             'disabling...')
 
 
+    #determine rate evaluation types, indicies etc.
     rate_info = assign_rates(reacs, loopy_opt.rate_spec)
+
+    from collections import defaultdict
+    masks = defaultdict()
+
+    #the reaction index variable
+    reac_ind = 'i'
+
+    #figure out if we need to do any mapping of the input variable
+    inmap_name = 'in_mask'
+    inmap_inst = None
+    if separated_kernels:
+        reac_ind = 'i_mask'
+        masks['i'] = 'i_dummy'
+        inmap_inst = lp_utils.generate_map_instruction(
+                                            newname=reac_ind,
+                                            mapper=inmap_name,
+                                            oldname='i')
+
+    #get rate equations
+    rate_eqn, rate_eqn_pre = get_rate_eqn(eqs, index=reac_ind)
 
     #write the simple arrenhius rate evaluation kernel
 
@@ -454,26 +473,22 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         read_only=True, scope=scopes.PRIVATE)
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
 
-    #determine mask / kf indexing
-    mask_lp = None
-    inmap_inst = '<>i = iind[i_dummy]'
-    outmap_inst = '<>oid = oind[i]'
-    kf_str = ['i', 'j']
+
+    #do we need a mask for writing output?
     if rate_info['simple']['offset'] is None:
-        #we need a mask for writing output
-        mask_lp = lp.TemporaryVariable('oind', shape=lp.auto,
+        mask_lp = lp.TemporaryVariable('out_mask', shape=lp.auto,
             initializer=rate_info['simple']['mask'],
             read_only=True, scope=scopes.PRIVATE)
-        kf_str = ['oid', 'j']
+        mask_name['i'] = 'out_mask'
 
-    #the ordering / indexing of the kf array depends on the loopy order parameter
-    if loopy_opt.order == 'C':
-        kf_shape = (test_size, Nr)
-        kf_str = kf_str[::-1]
-    else:
-        kf_shape = (Nr, test_size)
-    kf_arr = lp.GlobalArg('kf', shape=kf_shape, dtype=np.float64)
-    kf_str = 'kf[{}]'.format(','.join(kf_str))
+    #get the kf arguement
+    result = lp_utils.get_loopy_arg('kf', ['i', 'j'], [Nr, test_size],
+                    order=loopy_opt.order, mask_name=masks)
+    kf_arr = result['arg']
+    kf_str = result['arg_str']
+    outmap_inst = None
+    if mask_name:
+        outmap_inst = result['mask_instructs']['i']
 
     #various precomputes
     pre_inst = {'Tinv' : '<> T_inv = 1 / T_arr[j]', 'logT' : '<> logT = log(T_arr[j])'}
@@ -490,29 +505,29 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     no_Ta_inst = kf_assign.format(rate=str(rate_eqn_pre.subs('Ta[i]', 0)))
     A_only_inst = kf_assign.format(rate='A[i]')
     beta_integer_noTa_inst = """
-    {kf_str} = A[i] {{id=a0}}
-    <> T_val = T_arr[j] {{id=a1}}
-    <> negval = beta[i] < 0
-    if negval
-        T_val = T_inv {{id=a2, dep=a1}}
-    end
-    {{k_iter}}
+        {kf_str} = A[i] {{id=a0}}
+        <> T_val = T_arr[j] {{id=a1}}
+        <> negval = beta[i] < 0
+        if negval
+            T_val = T_inv {{id=a2, dep=a1}}
+        end
+        {{k_iter}}
     """.format(kf_str=kf_str, **pre_inst)
     #various k_iter forms for beta iteration
 
     #if beta max > 1
     k_iter_bmax_nonunity = """
-    <> btest = abs(beta[i])
-    for k
-        <>inbounds = k < btest
-        if inbounds
-            {kf_str} = {kf_str} * T_val {{dep=a2}}
+        <> btest = abs(beta[i])
+        for k
+            <>inbounds = k < btest
+            if inbounds
+                {kf_str} = {kf_str} * T_val {{dep=a2}}
+            end
         end
-    end
     """.format(kf_str=kf_str)
     #if beta max == 1
     k_iter_bmax_unity = """
-    {kf_str} = {kf_str} * T_val {{dep=a2}}
+        {kf_str} = {kf_str} * T_val {{dep=a2}}
     """.format(kf_str=kf_str)
 
     #and the skeleton kernel
@@ -525,13 +540,10 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
     end
     """
 
-    #and the inames
-    inames = ['i', 'j']
-
     #make the specializations into a list we can iterate over
     #to simplify code
     specializations = [(0, 'a_only', [], A_only_inst),
-    (1, 'beta_int', ['Tinv'], beta_integer_noTa_inst)]
+        (1, 'beta_int', ['Tinv'], beta_integer_noTa_inst)]
     if full:
         specializations.extend([(2, 'beta_exp', pre_inst.keys(), no_Ta_inst),
             (3, 'ta_exp', pre_inst.keys(), no_beta_inst), (4, 'full', pre_inst.keys(), full_inst)])
@@ -548,19 +560,14 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         kernel_data = [A_lp, b_lp, Ta_lp, T_arr, kf_arr]
 
         #figure out inames, and additional args
-        iname_tmp = inames[:]
+        inames = [reac_ind, 'j']
         iname_range = []
-        i_name = 'i'
-        if mask_lp is not None:
+        if outmap_inst is not None:
             kernel_data.append(mask_lp)
             instructions = [outmap_inst] + instructions
         if inds is not None:
             kernel_data.append(inds)
             instructions = [inmap_inst] + instructions
-            #note, we replace the iname 'i' with 'i_dummy' so as not to hack into the
-            #sympy eqn's
-            iname_tmp = [x if x != 'i' else 'i_dummy' for x in inames]
-            i_name = 'i_dummy'
         if extra_args is not None:
             kernel_data.extend(extra_args)
 
@@ -570,7 +577,7 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             i_start = rate_info['simple']['offset']
 
         #add to ranges
-        iname_range.append('{}<={}<{}'.format(i_start, i_name, num))
+        iname_range.append('{}<={}<{}'.format(i_start, reac_ind, num))
         iname_range.append('{}<=j<{}'.format(0, test_size))
 
         #if we have the beta loop we need to put the correct form in
@@ -578,7 +585,7 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
         if maxb:
             if maxb > 1:
                 repl = k_iter_bmax_nonunity
-                iname_tmp.append('k')
+                inames.append('k')
                 iname_range.append('{}<=k<{}'.format(0, maxb))
             else:
                 repl = k_iter_bmax_unity
@@ -590,14 +597,14 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             '\n'.join(instructions))
 
         #make the kernel
-        knl = lp.make_kernel('{[' + ','.join(iname_tmp) + ']:' +
+        knl = lp.make_kernel('{[' + ','.join(inames) + ']:' +
             ' and '.join(iname_range) + '}',
             kernel_str,
             kernel_data=kernel_data,
             name=name
         )
         #prioritize and return
-        knl = lp.prioritize_loops(knl, iname_tmp)
+        knl = lp.prioritize_loops(knl, inames)
         return knl
 
     knl_list = []
@@ -613,7 +620,7 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             #if non-zero
             if num:
                 #create the index array
-                inds_lp = lp.TemporaryVariable('iind',
+                inds_lp = lp.TemporaryVariable(inmap_name,
                     shape=lp.auto, initializer=inds,
                     read_only=True, scope=scopes.PRIVATE)
                 #figure out whether we need the beta loop
@@ -637,11 +644,10 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
 
     #apply other optimizations
     for i, knl in enumerate(knl_list):
-        i_name = 'i_dummy' if 'i_dummy' in str(knl.domains) else 'i'
         #now apply specified optimizations
         if loopy_opt.depth is not None:
             #and assign the l0 axis to 'i'
-            knl = lp.split_iname(knl, i_name, loopy_opt.depth, inner_tag='l.0')
+            knl = lp.split_iname(knl, reac_ind, loopy_opt.depth, inner_tag='l.0')
             #assign g0 to 'j'
             knl = lp.tag_inames(knl, [('j', 'g.0')])
         elif loopy_opt.width is not None:
@@ -651,7 +657,7 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
             knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
 
         #now do unr / ilp
-        i_tag = i_name + '_outer' if loopy_opt.depth is not None else i_name
+        i_tag = reac_ind + '_outer' if loopy_opt.depth is not None else reac_ind
         if loopy_opt.unr is not None:
             knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
         elif loopy_opt.ilp:
@@ -661,7 +667,7 @@ def rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs,
 
     return knl_list
 
-def get_rate_eqn(eqs):
+def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential
     form.
 
@@ -669,6 +675,8 @@ def get_rate_eqn(eqs):
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
+    index : str
+        The index to generate the equations for, 'i' by default
     Returns
     -------
     rate_eqn_pre : `sympy.Expr`
@@ -681,15 +689,17 @@ def get_rate_eqn(eqs):
 
     conp_eqs = eqs['conp']
 
+    ind_str = '[{ind}]'.format(index)
     #define some dummy symbols for loopy writing
-    E_sym = sp.Symbol('Ta[i]', real=True)
-    A_sym = sp.Symbol('A[i]', real=True, positive=True, nonnegative=True)
+    E_sym = sp.Symbol('Ta[{ind}]'.format(ind=index), real=True)
+    A_sym = sp.Symbol('A[{ind}]'.format(ind=index), real=True,
+        positive=True, nonnegative=True)
     T_sym = sp.Symbol('T', real=True, positive=True, nonnegative=True)
-    b_sym = sp.Symbol('beta[i]', real=True)
+    b_sym = sp.Symbol('beta[{ind}]'.format(ind=index), real=True)
     symlist = [E_sym, A_sym, T_sym, b_sym]
     symlist = {str(x) : x for x in symlist}
     Tinv_sym = sp.Symbol('T_inv', real=True, positive=True, nonnegative=True)
-    logA_sym = sp.Symbol('A[i]', real=True)
+    logA_sym = sp.Symbol('A[{ind}]'.format(ind=index), real=True)
     logT_sym = sp.Symbol('logT', real=True)
 
     #the rate constant is indep. of conp/conv, so just use conp for simplicity
@@ -771,11 +781,8 @@ def write_rate_constants(path, specs, reacs, eqs, opts, auto_diff=False):
 
     target = utils.get_target(opts.lang)
 
-    #get rate equations
-    rate_eqn, rate_eqn_pre = get_rate_eqn(eqs)
-
     #generate the rate kernels
-    knl_list = rate_const_simple_kernel_gen(rate_eqn, rate_eqn_pre, reacs, opts)
+    knl_list = rate_const_simple_kernel_gen(eqs, reacs, opts)
 
 
 

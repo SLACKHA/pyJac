@@ -36,6 +36,13 @@ class SubTest(TestClass):
         #second check the form
         assert eq == 'exp(A[i] - T_inv*Ta[i] + beta[i]*logT)'
 
+        pre, eq = get_rate_eqn(eqs, index='j')
+
+        assert 'exp(' + str(pre) + ')' == eq
+
+        #second check the form
+        assert eq == 'exp(A[j] - T_inv*Ta[j] + beta[j]*logT)'
+
     def test_assign_rates(self):
         reacs = self.store.reacs
         result = assign_rates(reacs, RateSpecialization.fixed)

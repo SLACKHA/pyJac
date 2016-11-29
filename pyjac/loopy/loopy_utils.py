@@ -199,3 +199,93 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
             np.take(ref_answer, compare_mask, compare_axis))
     #check against supplied answer
     return np.allclose(out, ref_answer)
+
+def generate_map_instruction(oldname, newname, map_arr):
+    """
+    Generates a loopy instruction that maps oldname -> newname via the
+    mapping array
+
+    Parameters
+    ----------
+    oldname : str
+        The old index to map from
+    newname : str
+        The new temporary variable to map to
+    map_arr : str
+        The array that holds the mappings
+
+    Returns
+    -------
+    map_inst : str
+        A strings to be used `loopy.Instruction`'s) for
+                given mapping
+    """
+
+    return  '<>{newname} = {mapper}[{oldname}]'.format(
+            newname=newname,
+            mapper=map_arr,
+            oldname=oldname)
+
+
+
+def get_loopy_arg(arg_name, indicies, dimensions,
+                    order='F', mask_name=None):
+    """
+    Convience method that generates a loopy GlobalArg with correct indicies
+    and sizes.
+
+    Parameters
+    ----------
+    arg_name : str
+        The name of the array
+    indicies : list of str
+        The `loopy.inames` in :param:`default_order`
+    dimensions : list of str/int
+        The dimensions of the `loopy.inames` in :param:`default_order`
+    order : {'C', 'F'}
+        The memory layout of the arrays, C (row major) or Fortran
+        (column major)
+    mask_name : dict
+        If not None, contains replacements for various indicies
+
+    Returns
+    -------
+    arg_dict : dict
+        A dictionary with the following keys:
+            * arg : `loopy.GlobalArg`
+                The generated loopy arg
+            * arg_str : str
+                A string form of the argument
+            * mask_instructs : list of str
+                A list of strings to be used `loopy.Instruction`'s for
+                given mappings
+    """
+
+    string_inds = indicies[:]
+    mask_instructs = {}
+    for mask in mask_name:
+        #make a new name off the replaced iname
+        masked_name = '{}_mask'.format(mask)
+        #add a mapping instruction
+        map_instructs[masked_name] = generate_map_instruction(
+                                            newname=masked_name,
+                                            mapper=mask_name[mask],
+                                            oldname=mask)
+        #and replace the index
+        string_inds[string_inds.index(mask)] = newname
+
+    #the ordering / indexing of the array depends on the memory layout
+    #if it's row-major, we must reverse the indicies / dimensions
+    #as we assume column-major in pyJac
+    if order == 'C':
+        string_inds = string_inds[::-1]
+        dimensions = dimensions[::-1]
+
+    #finally make the arguement
+    arg = lp.GlobalArg(arg_name)
+
+    #and return
+    return {'arg' : arg,
+            'arg_str' : '{name}[{inds}]'.format(name=arg_name,
+                inds=','.join(indicies)),
+            'mask_instructs' : mask_instructs}

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.libgen.libgen module &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.libgen.libgen module &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -24,9 +24,12 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -75,7 +78,7 @@ language and options specified</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>success</strong> &#8211; 0 if the compilation process was sucessful, -1 otherwise</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)">int</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)">int</a></td>
 </tr>
 </tbody>
 </table>
@@ -95,7 +98,7 @@ language and options specified</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>cuda_path</strong> &#8211; Path where CUDA (nvcc) is found on the system.</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)">str</a></td>
 </tr>
 </tbody>
 </table>
@@ -110,10 +113,10 @@ language and options specified</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>obj_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path with object files</li>
-<li><strong>out_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to place the library in</li>
+<li><strong>obj_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path with object files</li>
+<li><strong>out_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to place the library in</li>
 <li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
-<li><strong>filelist</strong> (List of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; The list of object files to include in the library</li>
+<li><strong>filelist</strong> (List of <a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; The list of object files to include in the library</li>
 <li><strong>auto_diff</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
 </ul>
 </td>
@@ -125,21 +128,21 @@ language and options specified</p>
 <dl class="class">
 <dt id="pyjac.libgen.libgen.file_struct">
 <em class="property">class </em><code class="descclassname">pyjac.libgen.libgen.</code><code class="descname">file_struct</code><span class="sig-paren">(</span><em>lang</em>, <em>build_lang</em>, <em>filename</em>, <em>i_dirs</em>, <em>args</em>, <em>source_dir</em>, <em>obj_dir</em>, <em>shared</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/libgen/libgen.html#file_struct"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.libgen.libgen.file_struct" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>A simple structure designed to enable multiprocess compilation</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Compiler to use</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Compiler to use</li>
 <li><strong>build_lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
-<li><strong>file_name</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The file to compile</li>
+<li><strong>file_name</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The file to compile</li>
 <li><strong>i_dirs</strong> (<em>List of str</em>) &#8211; List of include directorys for compilation</li>
 <li><strong>args</strong> (<em>List of str</em>) &#8211; List of additional arguements</li>
-<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory the file is located in</li>
-<li><strong>obj_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory to place the compiled object file in</li>
-<li><strong>shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this is creating a shared library</li>
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory the file is located in</li>
+<li><strong>obj_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory to place the compiled object file in</li>
+<li><strong>shared</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If true, this is creating a shared library</li>
 </ul>
 </td>
 </tr>
@@ -155,8 +158,8 @@ language and options specified</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path with source files</li>
-<li><strong>pmod</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; <code class="docutils literal"><span class="pre">True</span></code> if pressure dependent reactions present in mechanism</li>
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path with source files</li>
+<li><strong>pmod</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; <code class="docutils literal"><span class="pre">True</span></code> if pressure dependent reactions present in mechanism</li>
 <li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
 <li><strong>FD</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, include finite difference</li>
 <li><strong>AD</strong> (<em>Optional[bool]</em>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
@@ -164,8 +167,8 @@ language and options specified</p>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><strong>i_dirs</strong> (list of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of include directories</li>
-<li><strong>files</strong> (list of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of files</li>
+<li><strong>i_dirs</strong> (list of <a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of include directories</li>
+<li><strong>files</strong> (list of <a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of files</li>
 </ul>
 </p>
 </td>
@@ -184,11 +187,11 @@ language and options specified</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
-<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of folder with pyJac files</li>
+<li><strong>source_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of folder with pyJac files</li>
 <li><strong>obj_dir</strong> (<em>Optional[str]</em>) &#8211; Optional; path of folder to store generated object files</li>
-<li><strong>shared</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate shared library (vs. static)</li>
+<li><strong>shared</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate shared library (vs. static)</li>
 <li><strong>finite_difference</strong> (<em>Optional[bool]</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, include finite differences</li>
-<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
+<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, include autodifferentiation</li>
 </ul>
 </td>
 </tr>
@@ -240,8 +243,8 @@ language and options specified</p>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -255,8 +258,8 @@ language and options specified</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
       <a href="../_sources/src/pyjac.libgen.libgen.txt"

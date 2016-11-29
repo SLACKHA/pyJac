@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>Examples &mdash; pyJac 1.0.0 documentation</title>
+    <title>Examples &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -24,11 +24,14 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="index.html" />
     <link rel="next" title="Installation" href="installing.html" />
     <link rel="prev" title="Overview" href="overview.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -108,6 +111,37 @@ files ending with <code class="docutils literal"><span class="pre">*.npy</span><
 </pre></div>
 </div>
 </div>
+<div class="section" id="library-generation">
+<h2>Library Generation<a class="headerlink" href="#library-generation" title="Permalink to this headline">¶</a></h2>
+<p>pyJac also has the ability to generate shared / static libraries for
+linkage to external programs.  This functionality is available via the
+<a href="#id1"><span class="problematic" id="id2">:module:`libgen`</span></a> submodule, and requires a gcc/nvcc installation available
+on the path.  It can be called as:</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>python -m pyjac.libgen &#8211;source_dir /path/to/generated/pyjac/output </dt>
+<dd>&#8211;lang cuda &#8211;static</dd>
+</dl>
+</div></blockquote>
+<p>Note that for linkage into an external program, CUDA requires use of a
+static library.</p>
+</div>
+<div class="section" id="python-wrapper-generation">
+<h2>Python Wrapper Generation<a class="headerlink" href="#python-wrapper-generation" title="Permalink to this headline">¶</a></h2>
+<p>In addition to the library generation described above, pyJac can directly
+generate a python wrapper for chemical source term / Jacobian evaluation
+(among others) directly from python.  This functionality can be called
+via (e.g.,):</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>python -m pyjac.pywrap &#8211;source_dir /path/to/generated/pyjac/output </dt>
+<dd>&#8211;lang cuda</dd>
+</dl>
+</div></blockquote>
+<p>For details of the functions included in the python wrapper, look at the
+.pyx files in <a href="#id3"><span class="problematic" id="id4">:module:`pyjac.pywrap`</span></a>, or the calls in
+<code class="xref py py-class docutils literal"><span class="pre">cpyjac_evaluator</span></code></p>
+</div>
 </div>
 
 
@@ -146,8 +180,8 @@ files ending with <code class="docutils literal"><span class="pre">*.npy</span><
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -161,8 +195,8 @@ files ending with <code class="docutils literal"><span class="pre">*.npy</span><
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
       <a href="_sources/examples.txt"

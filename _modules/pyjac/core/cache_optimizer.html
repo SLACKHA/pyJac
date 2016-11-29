@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.cache_optimizer &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.core.cache_optimizer &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -24,10 +24,13 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -45,8 +48,8 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Python 2 compatibility</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
 <span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">multiprocessing</span>
@@ -54,20 +57,20 @@
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">itertools</span>
 
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 <span class="kn">import</span> <span class="nn">time</span>
 <span class="kn">import</span> <span class="nn">datetime</span>
 
 <span class="c1"># Local imports</span>
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">utils</span>
 
 <span class="c1">#dependencies</span>
-<span class="n">have_bitarray</span> <span class="o">=</span> <span class="bp">False</span>
+<span class="n">have_bitarray</span> <span class="o">=</span> <span class="kc">False</span>
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">from</span> <span class="nn">bitarray</span> <span class="kn">import</span> <span class="n">bitarray</span>
-    <span class="n">have_bitarray</span> <span class="o">=</span> <span class="bp">True</span>
+    <span class="kn">from</span> <span class="nn">bitarray</span> <span class="k">import</span> <span class="n">bitarray</span>
+    <span class="n">have_bitarray</span> <span class="o">=</span> <span class="kc">True</span>
 <span class="k">except</span><span class="p">:</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;bitarray not found, turning off cache-optimization&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;bitarray not found, turning off cache-optimization&#39;</span><span class="p">)</span>
 
 
 <div class="viewcode-block" id="plot"><a class="viewcode-back" href="../../../src/pyjac.core.cache_optimizer.html#pyjac.core.cache_optimizer.plot">[docs]</a><span class="k">def</span> <span class="nf">plot</span><span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">consider_thd</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">):</span>
@@ -78,7 +81,7 @@
     <span class="c1">#plot for visibility</span>
     <span class="kn">import</span> <span class="nn">matplotlib</span>
     <span class="n">matplotlib</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s1">&#39;agg&#39;</span><span class="p">)</span>
-    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+    <span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
     <span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
     <span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">)</span>
     <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">nr</span><span class="p">,</span> <span class="n">nsp</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
@@ -198,22 +201,22 @@
     <span class="k">for</span> <span class="n">bottom_outs</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">random_tries</span><span class="p">):</span>
         <span class="n">last_improvement</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="k">while</span> <span class="n">last_improvement</span> <span class="o">&lt;</span> <span class="n">improve_cutoff</span><span class="p">:</span>
-            <span class="n">mincount</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="n">mininds</span> <span class="o">=</span> <span class="bp">None</span>
+            <span class="n">mincount</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">mininds</span> <span class="o">=</span> <span class="kc">None</span>
             <span class="c1">#first scan to see the &#39;worst&#39; placed reaction</span>
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nvar</span><span class="p">):</span>
                 <span class="n">count</span> <span class="o">=</span> <span class="n">__get_score</span><span class="p">(</span><span class="n">mapping</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">i</span><span class="p">]],</span> <span class="n">i</span><span class="p">)</span>
 
-                <span class="k">if</span> <span class="n">mincount</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="n">mincount</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">mincount</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">count</span> <span class="o">&lt;</span> <span class="n">mincount</span><span class="p">:</span>
                     <span class="n">mincount</span> <span class="o">=</span> <span class="n">count</span>
                     <span class="n">mininds</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span>
-                <span class="k">elif</span> <span class="n">mincount</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">count</span> <span class="o">==</span> <span class="n">mincount</span><span class="p">:</span>
+                <span class="k">elif</span> <span class="n">mincount</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">count</span> <span class="o">==</span> <span class="n">mincount</span><span class="p">:</span>
                     <span class="n">mininds</span> <span class="o">+=</span> <span class="p">[</span><span class="n">i</span><span class="p">]</span>
 
             <span class="n">moves</span> <span class="o">=</span> <span class="p">[]</span>
             <span class="k">for</span> <span class="n">min_ind</span> <span class="ow">in</span> <span class="n">mininds</span><span class="p">:</span>
-                <span class="n">maxcount</span> <span class="o">=</span> <span class="bp">None</span>
-                <span class="n">maxind</span> <span class="o">=</span> <span class="bp">None</span>
+                <span class="n">maxcount</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="n">maxind</span> <span class="o">=</span> <span class="kc">None</span>
                 <span class="c1">#we now have the &#39;worst&#39; location selected</span>
                 <span class="c1">#let&#39;s find the &#39;best place to put it&#39;</span>
 
@@ -224,7 +227,7 @@
                      <span class="c1">#get the score</span>
                     <span class="n">count</span> <span class="o">=</span> <span class="n">__get_score</span><span class="p">(</span><span class="n">mapping</span><span class="p">[</span><span class="n">order</span><span class="p">[</span><span class="n">min_ind</span><span class="p">]],</span> <span class="n">i</span><span class="p">)</span>
 
-                    <span class="k">if</span> <span class="n">maxcount</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">or</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="n">maxcount</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">maxcount</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">count</span> <span class="o">&gt;</span> <span class="n">maxcount</span><span class="p">:</span>
                         <span class="n">maxcount</span> <span class="o">=</span> <span class="n">count</span>
                         <span class="n">maxind</span> <span class="o">=</span> <span class="n">i</span>
 
@@ -258,7 +261,7 @@
 
 <div class="viewcode-block" id="optimize_cache"><a class="viewcode-back" href="../../../src/pyjac.core.cache_optimizer.html#pyjac.core.cache_optimizer.optimize_cache">[docs]</a><span class="k">def</span> <span class="nf">optimize_cache</span><span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">multi_thread</span><span class="p">,</span>
                    <span class="n">force_optimize</span><span class="p">,</span> <span class="n">build_path</span><span class="p">,</span>
-                   <span class="n">last_spec</span><span class="p">,</span> <span class="n">consider_thd</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                   <span class="n">last_spec</span><span class="p">,</span> <span class="n">consider_thd</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                    <span class="n">improve_cutoff</span><span class="o">=</span><span class="mi">20</span><span class="p">,</span>
                    <span class="n">rand_init_tries</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
                    <span class="n">lookback_max</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
@@ -311,19 +314,19 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Beginning Cache-optimization process...&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Beginning Cache-optimization process...&#39;</span><span class="p">)</span>
     <span class="c1"># first try to load past data</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">force_optimize</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Checking for old optimization&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Checking for old optimization&#39;</span><span class="p">)</span>
         <span class="k">try</span><span class="p">:</span>
-            <span class="n">same_mech</span> <span class="o">=</span> <span class="bp">False</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_path</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-                <span class="n">old_specs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="n">old_reacs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="n">fwd_spec_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="n">fwd_rxn_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="n">reverse_spec_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="n">reverse_rxn_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+            <span class="n">same_mech</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_path</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">old_specs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="n">old_reacs</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="n">fwd_spec_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="n">fwd_rxn_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="n">reverse_spec_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="n">reverse_rxn_mapping</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
             <span class="n">same_mech</span> <span class="o">=</span> <span class="p">(</span>
                 <span class="nb">all</span><span class="p">(</span><span class="nb">any</span><span class="p">(</span><span class="n">s</span> <span class="o">==</span> <span class="n">sp</span> <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">old_specs</span><span class="p">)</span> <span class="ow">and</span>
                 <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_specs</span><span class="p">)</span> <span class="ow">and</span>
@@ -331,20 +334,20 @@
                 <span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">old_reacs</span><span class="p">)</span>
                 <span class="p">)</span>
             <span class="k">if</span> <span class="n">reverse_spec_mapping</span><span class="p">[</span><span class="n">last_spec</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">specs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Different last species detected, &#39;</span>
-                      <span class="s1">&#39;old species was {} and new species is {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Different last species detected, &#39;</span>
+                      <span class="s1">&#39;old species was </span><span class="si">{}</span><span class="s1"> and new species is </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
                       <span class="n">specs</span><span class="p">[</span><span class="n">fwd_spec_mapping</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">specs</span><span class="p">[</span><span class="n">last_spec</span><span class="p">]</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
                       <span class="p">)</span>
-                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Forcing reoptimization...&#39;</span><span class="p">)</span>
-                <span class="n">same_mech</span> <span class="o">=</span> <span class="bp">False</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Forcing reoptimization...&#39;</span><span class="p">)</span>
+                <span class="n">same_mech</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Old optimization file not found, or does not match &#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Old optimization file not found, or does not match &#39;</span>
                   <span class="s1">&#39;current mechanism... forcing optimization&#39;</span>
                   <span class="p">)</span>
-            <span class="n">same_mech</span> <span class="o">=</span> <span class="bp">False</span>
+            <span class="n">same_mech</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="k">if</span> <span class="n">same_mech</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Old optimization file matching current mechanism found...&#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Old optimization file matching current mechanism found...&#39;</span>
                   <span class="s1">&#39; returning previous optimization&#39;</span>
                   <span class="p">)</span>
             <span class="c1"># we have to do the spec_rate_order each time</span>
@@ -358,21 +361,21 @@
     <span class="n">last_name</span> <span class="o">=</span> <span class="n">specs</span><span class="p">[</span><span class="n">last_spec</span><span class="p">]</span><span class="o">.</span><span class="n">name</span>
 
     <span class="c1">#now generate our mappings</span>
-    <span class="n">spec_mapping</span> <span class="o">=</span> <span class="p">[</span><span class="n">bitarray</span><span class="p">([</span><span class="bp">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nsp</span><span class="p">)]</span>
+    <span class="n">spec_mapping</span> <span class="o">=</span> <span class="p">[</span><span class="n">bitarray</span><span class="p">([</span><span class="kc">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nsp</span><span class="p">)]</span>
 
-    <span class="n">reac_mapping</span> <span class="o">=</span> <span class="p">[</span><span class="n">bitarray</span><span class="p">([</span><span class="bp">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nsp</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr</span><span class="p">)]</span>
+    <span class="n">reac_mapping</span> <span class="o">=</span> <span class="p">[</span><span class="n">bitarray</span><span class="p">([</span><span class="kc">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nsp</span><span class="p">)])</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr</span><span class="p">)]</span>
 
     <span class="n">eff_map</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nsp</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">nr</span><span class="p">)]</span>
     <span class="n">name_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">sp</span><span class="o">.</span><span class="n">name</span><span class="p">:</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">sp</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">specs</span><span class="p">)}</span>
     <span class="k">for</span> <span class="n">rind</span><span class="p">,</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reacs</span><span class="p">):</span>
         <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">reac</span><span class="p">:</span>
             <span class="n">spind</span> <span class="o">=</span> <span class="n">name_map</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span>
-            <span class="n">spec_mapping</span><span class="p">[</span><span class="n">spind</span><span class="p">][</span><span class="n">rind</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
-            <span class="n">reac_mapping</span><span class="p">[</span><span class="n">rind</span><span class="p">][</span><span class="n">spind</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">spec_mapping</span><span class="p">[</span><span class="n">spind</span><span class="p">][</span><span class="n">rind</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">reac_mapping</span><span class="p">[</span><span class="n">rind</span><span class="p">][</span><span class="n">spind</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">prod</span><span class="p">:</span>
             <span class="n">spind</span> <span class="o">=</span> <span class="n">name_map</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span>
-            <span class="n">spec_mapping</span><span class="p">[</span><span class="n">spind</span><span class="p">][</span><span class="n">rind</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
-            <span class="n">reac_mapping</span><span class="p">[</span><span class="n">rind</span><span class="p">][</span><span class="n">spind</span><span class="p">]</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="n">spec_mapping</span><span class="p">[</span><span class="n">spind</span><span class="p">][</span><span class="n">rind</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="n">reac_mapping</span><span class="p">[</span><span class="n">rind</span><span class="p">][</span><span class="n">spind</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
         <span class="k">if</span> <span class="n">consider_thd</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">sp</span><span class="p">,</span> <span class="n">eff</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="p">:</span>
                 <span class="n">spind</span> <span class="o">=</span> <span class="n">name_map</span><span class="p">[</span><span class="n">sp</span><span class="p">]</span>
@@ -413,14 +416,14 @@
                 <span class="p">)</span>
 
     <span class="n">time_start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-    <span class="n">complete</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">complete</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">while</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_start</span> <span class="o">&lt;</span>
            <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">max_time</span><span class="p">)</span>
            <span class="ow">and</span> <span class="ow">not</span> <span class="n">complete</span>
            <span class="p">):</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
         <span class="n">complete</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">ready</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">result_list</span><span class="p">)</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Reaction Optimization {}</span><span class="si">% c</span><span class="s1">omplete...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Reaction Optimization </span><span class="si">{}% c</span><span class="s1">omplete...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
               <span class="mf">100.</span> <span class="o">*</span> <span class="n">complete</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result_list</span><span class="p">)))</span>
               <span class="p">)</span>
         <span class="n">complete</span> <span class="o">=</span> <span class="n">complete</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">result_list</span><span class="p">)</span>
@@ -457,14 +460,14 @@
                 <span class="p">)</span>
 
     <span class="n">time_start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span>
-    <span class="n">complete</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">complete</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="k">while</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">datetime</span><span class="o">.</span><span class="n">now</span><span class="p">()</span> <span class="o">-</span> <span class="n">time_start</span> <span class="o">&lt;</span>
            <span class="n">datetime</span><span class="o">.</span><span class="n">timedelta</span><span class="p">(</span><span class="n">seconds</span><span class="o">=</span><span class="n">max_time</span><span class="p">)</span>
            <span class="ow">and</span> <span class="ow">not</span> <span class="n">complete</span>
            <span class="p">):</span>
         <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mi">30</span><span class="p">)</span>
         <span class="n">complete</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">x</span><span class="o">.</span><span class="n">ready</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">result_list</span><span class="p">)</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Species Optimization {}</span><span class="si">% c</span><span class="s1">omplete...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Species Optimization </span><span class="si">{}% c</span><span class="s1">omplete...&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
               <span class="mf">100.</span> <span class="o">*</span> <span class="n">complete</span> <span class="o">/</span> <span class="nb">float</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">result_list</span><span class="p">)))</span>
               <span class="p">)</span>
         <span class="n">complete</span> <span class="o">=</span> <span class="n">complete</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">result_list</span><span class="p">)</span>
@@ -496,13 +499,13 @@
     <span class="n">reacs</span> <span class="o">=</span> <span class="p">[</span><span class="n">reacs</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">fwd_rxn_mapping</span><span class="p">]</span>
 
     <span class="c1"># save to avoid reoptimization if possible</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_path</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
-        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reacs</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
-        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
-        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fwd_rxn_mapping</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
-        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reverse_spec_mapping</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
-        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reverse_rxn_mapping</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_path</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reacs</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">fwd_rxn_mapping</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reverse_spec_mapping</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
+        <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">reverse_rxn_mapping</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
 
     <span class="c1"># complete, so now return</span>
     <span class="k">return</span> <span class="p">(</span><span class="n">specs</span><span class="p">,</span> <span class="n">reacs</span><span class="p">,</span> <span class="n">fwd_spec_mapping</span><span class="p">,</span> <span class="n">fwd_rxn_mapping</span><span class="p">,</span>
@@ -545,8 +548,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -560,8 +563,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
     </div>
 

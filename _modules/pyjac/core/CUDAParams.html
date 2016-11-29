@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.CUDAParams &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.core.CUDAParams &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -24,10 +24,13 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -63,7 +66,7 @@
 
 <span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">math</span> <span class="kn">import</span> <span class="n">floor</span>
+<span class="kn">from</span> <span class="nn">math</span> <span class="k">import</span> <span class="n">floor</span>
 
 <span class="n">Jacob_Unroll</span> <span class="o">=</span> <span class="mi">40</span>
 <span class="n">Jacob_Spec_Unroll</span> <span class="o">=</span> <span class="mi">40</span>
@@ -117,7 +120,7 @@
 
 
 <div class="viewcode-block" id="write_launch_bounds"><a class="viewcode-back" href="../../../src/pyjac.core.CUDAParams.html#pyjac.core.CUDAParams.write_launch_bounds">[docs]</a><span class="k">def</span> <span class="nf">write_launch_bounds</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="n">blocks_per_sm</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span> <span class="n">num_threads</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span>
-                        <span class="n">L1_PREFERRED</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="bp">False</span>
+                        <span class="n">L1_PREFERRED</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="kc">False</span>
                         <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Creates the launch_bounds.cuh file that may be included by CUDA solvers</span>
 
@@ -144,20 +147,20 @@
                         <span class="k">if</span> <span class="ow">not</span> <span class="n">no_shared</span>
                         <span class="k">else</span> <span class="mi">0</span>
                         <span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="s1">&#39;launch_bounds.cuh&#39;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef LAUNCH_BOUNDS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="s1">&#39;launch_bounds.cuh&#39;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;#ifndef LAUNCH_BOUNDS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="s1">&#39;#define LAUNCH_BOUNDS_CUH</span><span class="se">\n</span><span class="s1">&#39;</span>
-                   <span class="s1">&#39;#define TARGET_BLOCK_SIZE ({})</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span> <span class="o">+</span>
-                   <span class="s1">&#39;#define TARGET_BLOCKS ({})</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blocks_per_sm</span><span class="p">)</span> <span class="o">+</span>
+                   <span class="s1">&#39;#define TARGET_BLOCK_SIZE (</span><span class="si">{}</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)</span> <span class="o">+</span>
+                   <span class="s1">&#39;#define TARGET_BLOCKS (</span><span class="si">{}</span><span class="s1">)</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">blocks_per_sm</span><span class="p">)</span> <span class="o">+</span>
                    <span class="p">(</span><span class="s1">&#39;&#39;</span> <span class="k">if</span> <span class="n">no_shared</span> <span class="k">else</span> <span class="s1">&#39;//shared memory active</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span> <span class="o">+</span>
-                   <span class="s1">&#39;#define SHARED_SIZE ({}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shared_per_block</span><span class="p">)</span> <span class="o">+</span>
+                   <span class="s1">&#39;#define SHARED_SIZE (</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">shared_per_block</span><span class="p">)</span> <span class="o">+</span>
                    <span class="s1">&#39; * sizeof(double))</span><span class="se">\n</span><span class="s1">&#39;</span> <span class="o">+</span>
                    <span class="p">(</span><span class="s1">&#39;//Large L1 cache active</span><span class="se">\n</span><span class="s1">#define PREFERL1</span><span class="se">\n</span><span class="s1">&#39;</span>
                     <span class="k">if</span> <span class="n">L1_PREFERRED</span> <span class="k">else</span> <span class="s1">&#39;//Large shared memory active</span><span class="se">\n</span><span class="s1">&#39;</span>
                     <span class="p">)</span> <span class="o">+</span> <span class="s1">&#39;#endif</span><span class="se">\n</span><span class="s1">&#39;</span>
                    <span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="s1">&#39;regcount&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">get_register_count</span><span class="p">(</span><span class="n">blocks_per_sm</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">)))</span></div>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">builddir</span><span class="p">,</span> <span class="s1">&#39;regcount&#39;</span><span class="p">),</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">get_register_count</span><span class="p">(</span><span class="n">blocks_per_sm</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">)))</span></div>
 </pre></div>
 
           </div>
@@ -195,8 +198,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -210,8 +213,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
     </div>
 

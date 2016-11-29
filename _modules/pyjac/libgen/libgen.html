@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.libgen.libgen &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.libgen.libgen &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -24,10 +24,13 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -43,7 +46,7 @@
   <h1>Source code for pyjac.libgen.libgen</h1><div class="highlight"><pre>
 <span></span><span class="sd">&quot;&quot;&quot;Module used to create a shared/static library from pyJac files.</span>
 <span class="sd">&quot;&quot;&quot;</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
 <span class="kn">import</span> <span class="nn">shutil</span>
 <span class="kn">import</span> <span class="nn">re</span>
@@ -53,7 +56,7 @@
 <span class="kn">import</span> <span class="nn">multiprocessing</span>
 <span class="kn">import</span> <span class="nn">platform</span>
 
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">utils</span>
 
 <div class="viewcode-block" id="lib_ext"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.lib_ext">[docs]</a><span class="k">def</span> <span class="nf">lib_ext</span><span class="p">(</span><span class="n">shared</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Returns the appropriate library extension based on the shared flag&quot;&quot;&quot;</span>
@@ -99,14 +102,14 @@
             <span class="p">)</span>
 
 
-<div class="viewcode-block" id="which"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.which">[docs]</a><span class="k">def</span> <span class="nf">which</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+<div class="viewcode-block" id="which"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.which">[docs]</a><span class="k">def</span> <span class="nf">which</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;A substitute for the `which` command, searches the PATH for</span>
 <span class="sd">    a given file&quot;&quot;&quot;</span>
     <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;PATH&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">pathsep</span><span class="p">):</span>
-        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">file</span><span class="p">)):</span>
-                <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">file</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">file</span><span class="p">)):</span>
+                <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">file</span><span class="p">)</span>
 
-    <span class="k">return</span> <span class="bp">None</span></div>
+    <span class="k">return</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="compiler"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.compiler">[docs]</a><span class="k">def</span> <span class="nf">compiler</span><span class="p">(</span><span class="n">fstruct</span><span class="p">):</span>
@@ -137,12 +140,12 @@
     <span class="c1">#always use fPIC in case we&#39;re building wrapper</span>
     <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">shared_flags</span><span class="p">[</span><span class="n">fstruct</span><span class="o">.</span><span class="n">build_lang</span><span class="p">])</span>
     <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">fstruct</span><span class="o">.</span><span class="n">args</span><span class="p">)</span>
-    <span class="n">include</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;-I{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">i_dirs</span> <span class="o">+</span>
+    <span class="n">include</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;-I</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">i_dirs</span> <span class="o">+</span>
                <span class="n">includes</span><span class="p">[</span><span class="n">fstruct</span><span class="o">.</span><span class="n">build_lang</span><span class="p">]</span>
                <span class="p">]</span>
     <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">include</span><span class="p">)</span>
     <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span>
-        <span class="s1">&#39;-{}c&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;d&#39;</span> <span class="k">if</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
+        <span class="s1">&#39;-</span><span class="si">{}</span><span class="s1">c&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;d&#39;</span> <span class="k">if</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">),</span>
         <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">fstruct</span><span class="o">.</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">filename</span> <span class="o">+</span>
                      <span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">fstruct</span><span class="o">.</span><span class="n">build_lang</span><span class="p">]</span>
                      <span class="p">),</span>
@@ -150,10 +153,13 @@
         <span class="p">])</span>
     <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="n">val</span> <span class="k">for</span> <span class="n">val</span> <span class="ow">in</span> <span class="n">args</span> <span class="k">if</span> <span class="n">val</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">args</span><span class="p">))</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="n">args</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Compiler </span><span class="si">{}</span><span class="s1"> not found, generation of pyjac library failed.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: compilation failed for &#39;</span> <span class="o">+</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">filename</span> <span class="o">+</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: compilation failed for &#39;</span> <span class="o">+</span> <span class="n">fstruct</span><span class="o">.</span><span class="n">filename</span> <span class="o">+</span>
               <span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">fstruct</span><span class="o">.</span><span class="n">build_lang</span><span class="p">]</span>
               <span class="p">)</span>
         <span class="k">return</span> <span class="o">-</span><span class="mi">1</span>
@@ -174,14 +180,14 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">cuda_path</span> <span class="o">=</span> <span class="n">which</span><span class="p">(</span><span class="s1">&#39;nvcc&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">cuda_path</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;nvcc not found!&#39;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">cuda_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;nvcc not found!&#39;</span><span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="n">sixtyfourbit</span> <span class="o">=</span> <span class="n">platform</span><span class="o">.</span><span class="n">architecture</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;64bit&#39;</span>
     <span class="n">cuda_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">cuda_path</span><span class="p">))</span>
     <span class="n">cuda_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cuda_path</span><span class="p">,</span>
-                             <span class="s1">&#39;lib{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;64&#39;</span> <span class="k">if</span> <span class="n">sixtyfourbit</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+                             <span class="s1">&#39;lib</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="s1">&#39;64&#39;</span> <span class="k">if</span> <span class="n">sixtyfourbit</span> <span class="k">else</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
                              <span class="p">)</span>
     <span class="k">return</span> <span class="n">cuda_path</span></div>
 
@@ -215,7 +221,7 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">desc</span> <span class="o">=</span> <span class="s1">&#39;c&#39;</span>
 
-    <span class="n">libname</span> <span class="o">=</span> <span class="s1">&#39;lib{}_pyjac&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
+    <span class="n">libname</span> <span class="o">=</span> <span class="s1">&#39;lib</span><span class="si">{}</span><span class="s1">_pyjac&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">desc</span><span class="p">)</span>
 
     <span class="c1">#remove the old library</span>
     <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">libname</span> <span class="o">+</span> <span class="n">lib_ext</span><span class="p">(</span><span class="n">shared</span><span class="p">))):</span>
@@ -239,14 +245,17 @@
         <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">out_dir</span><span class="p">,</span> <span class="n">libname</span><span class="p">)]</span>
 
         <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
-            <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;-L{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">get_cuda_path</span><span class="p">())]</span>
+            <span class="n">command</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;-L</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">get_cuda_path</span><span class="p">())]</span>
         <span class="n">command</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">libs</span><span class="p">[</span><span class="n">lang</span><span class="p">])</span>
 
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">command</span><span class="p">))</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Compiler </span><span class="si">{}</span><span class="s1"> not found, generation of pyjac library failed.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">args</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
     <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: Generation of pyjac library failed.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Generation of pyjac library failed.&#39;</span><span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">libname</span></div>
@@ -287,10 +296,10 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">source_dir</span> <span class="o">=</span> <span class="n">source_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">obj_dir</span> <span class="o">=</span> <span class="n">obj_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">auto_diff</span><span class="o">=</span><span class="kc">False</span></div>
 
 
-<div class="viewcode-block" id="get_file_list"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.get_file_list">[docs]</a><span class="k">def</span> <span class="nf">get_file_list</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">pmod</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">FD</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">AD</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="get_file_list"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.get_file_list">[docs]</a><span class="k">def</span> <span class="nf">get_file_list</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span> <span class="n">pmod</span><span class="p">,</span> <span class="n">lang</span><span class="p">,</span> <span class="n">FD</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">AD</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="sd">    Parameters</span>
@@ -334,15 +343,15 @@
         <span class="n">flists</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">files</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;jacob&#39;</span><span class="p">]</span>
-        <span class="n">flists</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;jac_list_{}&#39;</span><span class="p">)]</span>
+        <span class="n">flists</span> <span class="o">=</span> <span class="p">[(</span><span class="s1">&#39;jacobs&#39;</span><span class="p">,</span> <span class="s1">&#39;jac_list_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)]</span>
 
-    <span class="n">flists</span> <span class="o">+=</span> <span class="p">[(</span><span class="s1">&#39;rates&#39;</span><span class="p">,</span> <span class="s1">&#39;rate_list_{}&#39;</span><span class="p">)]</span>
+    <span class="n">flists</span> <span class="o">+=</span> <span class="p">[(</span><span class="s1">&#39;rates&#39;</span><span class="p">,</span> <span class="s1">&#39;rate_list_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="p">)]</span>
     <span class="k">for</span> <span class="n">flist</span> <span class="ow">in</span> <span class="n">flists</span><span class="p">:</span>
         <span class="k">try</span><span class="p">:</span>
             <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span>
                       <span class="n">flist</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">flist</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">))</span>
-                      <span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-                <span class="n">vals</span> <span class="o">=</span> <span class="nb">file</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
+                      <span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">vals</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39; &#39;</span><span class="p">)</span>
                 <span class="n">vals</span> <span class="o">=</span> <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">flist</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
                         <span class="n">f</span><span class="p">[:</span><span class="n">f</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">file_ext</span><span class="p">[</span><span class="n">lang</span><span class="p">])])</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">vals</span>
                         <span class="p">]</span>
@@ -356,9 +365,9 @@
     <span class="k">return</span> <span class="n">i_dirs</span><span class="p">,</span> <span class="n">files</span></div>
 
 
-<div class="viewcode-block" id="generate_library"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.generate_library">[docs]</a><span class="k">def</span> <span class="nf">generate_library</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span> <span class="n">obj_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                     <span class="n">out_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-                     <span class="n">finite_difference</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span>
+<div class="viewcode-block" id="generate_library"><a class="viewcode-back" href="../../../src/pyjac.libgen.libgen.html#pyjac.libgen.libgen.generate_library">[docs]</a><span class="k">def</span> <span class="nf">generate_library</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span> <span class="n">obj_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">out_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shared</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                     <span class="n">finite_difference</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="kc">False</span>
                      <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Generate shared/static library for pyJac files.</span>
 
@@ -384,26 +393,25 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="c1">#check lang</span>
     <span class="k">if</span> <span class="n">lang</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">flags</span><span class="o">.</span><span class="n">keys</span><span class="p">():</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Cannot generate library for unknown language {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Cannot generate library for unknown language </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">))</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">shared</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
-        <span class="n">shared</span> <span class="o">=</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;cuda&#39;</span>
+    <span class="n">shared</span> <span class="o">=</span> <span class="n">shared</span> <span class="ow">and</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;cuda&#39;</span>
 
     <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span> <span class="ow">and</span> <span class="n">shared</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;CUDA does not support linking of shared device libraries.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;CUDA does not support linking of shared device libraries.&#39;</span><span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="n">build_lang</span> <span class="o">=</span> <span class="n">lang</span> <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;icc&#39;</span> <span class="k">else</span> <span class="s1">&#39;c&#39;</span>
 
     <span class="n">source_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">source_dir</span><span class="p">))</span>
-    <span class="k">if</span> <span class="n">obj_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">obj_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">obj_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">(),</span> <span class="s1">&#39;obj&#39;</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">obj_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">obj_dir</span><span class="p">))</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">obj_dir</span><span class="p">):</span>
         <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">obj_dir</span><span class="p">)</span>
-    <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">out_dir</span><span class="p">))</span>
@@ -413,15 +421,15 @@
     <span class="n">obj_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">obj_dir</span><span class="p">)</span>
     <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">out_dir</span><span class="p">)</span>
 
-    <span class="n">pmod</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">pmod</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="c1">#figure out whether there&#39;s pressure mod reactions or not</span>
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">source_dir</span><span class="p">,</span>
-              <span class="s1">&#39;mechanism{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">build_lang</span><span class="p">])),</span> <span class="s1">&#39;r&#39;</span>
-              <span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+              <span class="s1">&#39;mechanism</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">utils</span><span class="o">.</span><span class="n">header_ext</span><span class="p">[</span><span class="n">build_lang</span><span class="p">])),</span> <span class="s1">&#39;r&#39;</span>
+              <span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
             <span class="n">line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
             <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">r&#39;\s*#define PRES_MOD_RATES (\d+)&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">match</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">pmod</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mi">0</span>
                 <span class="k">break</span>
 
@@ -484,8 +492,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -499,8 +507,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
     </div>
 

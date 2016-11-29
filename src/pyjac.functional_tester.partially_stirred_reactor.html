@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.functional_tester.partially_stirred_reactor module &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.functional_tester.partially_stirred_reactor module &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -24,9 +24,12 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -45,7 +48,7 @@
 <dl class="class">
 <dt id="pyjac.functional_tester.partially_stirred_reactor.Stream">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">Stream</code><span class="sig-paren">(</span><em>gas</em>, <em>flow</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#Stream"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Stream" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Class for inlet flow stream into reactor.</p>
 <p>Initializes stream object.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -54,7 +57,7 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; Constant thermochemical state of this stream.</li>
-<li><strong>flow</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Flow rate of this stream.</li>
+<li><strong>flow</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Flow rate of this stream.</li>
 </ul>
 </td>
 </tr>
@@ -71,7 +74,7 @@
 <dl class="class">
 <dt id="pyjac.functional_tester.partially_stirred_reactor.Particle">
 <em class="property">class </em><code class="descclassname">pyjac.functional_tester.partially_stirred_reactor.</code><code class="descname">Particle</code><span class="sig-paren">(</span><em>gas</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#Particle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Class for particle in reactor.</p>
 <p>Initialize particle object with thermochemical state.</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -86,6 +89,11 @@
 </tr>
 </tbody>
 </table>
+<dl class="attribute">
+<dt id="pyjac.functional_tester.partially_stirred_reactor.Particle.particle_mass">
+<code class="descname">particle_mass</code><em class="property"> = 0.1</em><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Particle.particle_mass" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
 <dl class="method">
 <dt id="pyjac.functional_tester.partially_stirred_reactor.Particle.react">
 <code class="descname">react</code><span class="sig-paren">(</span><em>dt</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/functional_tester/partially_stirred_reactor.html#Particle.react"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.functional_tester.partially_stirred_reactor.Particle.react" title="Permalink to this definition">¶</a></dt>
@@ -94,7 +102,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Reaction timestep [seconds]</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Reaction timestep [seconds]</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -120,17 +128,17 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.ThermoPhase</span></code>) &#8211; Cantera ThermoPhase object containing the desired species.</li>
-<li><strong>eq_ratio</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Equivalence ratio</li>
-<li><strong>fuel</strong> (<a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the fuel mixture and the fraction of         each molecule in the fuel mixture.</li>
-<li><strong>oxidizer</strong> (<a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the oxidizer mixture and the         fraction of each molecule in the oxidizer mixture.</li>
-<li><strong>complete_products</strong> (list of <a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of species in the products of complete combustion.</li>
+<li><strong>eq_ratio</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Equivalence ratio</li>
+<li><strong>fuel</strong> (<a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the fuel mixture and the fraction of         each molecule in the fuel mixture.</li>
+<li><strong>oxidizer</strong> (<a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the oxidizer mixture and the         fraction of each molecule in the oxidizer mixture.</li>
+<li><strong>complete_products</strong> (list of <a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; List of species in the products of complete combustion.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>reactants</strong> &#8211; String with reactants and mole fractions (e.g., <code class="docutils literal"><span class="pre">'H2:2.0,O2:1.0'</span></code>).</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)">str</a></p>
 </td>
 </tr>
 </tbody>
@@ -146,11 +154,11 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterable</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; List of objects.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterable</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; List of objects.</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>zipped</strong> &#8211; Zip with pairs of objects from <a class="reference external" href="https://docs.python.org/glossary.html#term-iterable" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">iterable</span></code></a>.</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>zipped</strong> &#8211; Zip with pairs of objects from <a class="reference external" href="https://docs.python.org/2/glossary.html#term-iterable" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">iterable</span></code></a>.</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#zip" title="(in Python v2.7)">zip</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2/library/functions.html#zip" title="(in Python v2.7)">zip</a></td>
 </tr>
 </tbody>
 </table>
@@ -166,8 +174,8 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>particles</strong> (list of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a>) &#8211; List of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a> objects.</li>
-<li><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time step [s] to increment particles.</li>
-<li><strong>tau_mix</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Mixing timescale [s].</li>
+<li><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time step [s] to increment particles.</li>
+<li><strong>tau_mix</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Mixing timescale [s].</li>
 </ul>
 </td>
 </tr>
@@ -189,7 +197,7 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>part_tup</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#tuple" title="(in Python v2.7)"><em>tuple</em></a>) &#8211; Tuple with mechanism file, temperature, pressure, mass fractions, and time step.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>part_tup</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#tuple" title="(in Python v2.7)"><em>tuple</em></a>) &#8211; Tuple with mechanism file, temperature, pressure, mass fractions, and time step.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>p</strong> &#8211; Thermochemical composition of particle following reaction.</td>
 </tr>
@@ -209,8 +217,8 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>particles</strong> (list of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a>) &#8211; List of Particle objects to be reacted.</li>
-<li><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time step [s] to increment particles.</li>
-<li><strong>mech</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Mechanism filename.</li>
+<li><strong>dt</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time step [s] to increment particles.</li>
+<li><strong>mech</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Mechanism filename.</li>
 </ul>
 </td>
 </tr>
@@ -234,7 +242,7 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>particles</strong> (list of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a>) &#8211; List of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a> objects.</li>
-<li><strong>num_pairs</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of pairs to be selected and moved.</li>
+<li><strong>num_pairs</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of pairs to be selected and moved.</li>
 <li><strong>num_skip</strong> (<em>Optional[int]</em>) &#8211; Number of pairs at end of list to be skipped. Optional, default 0.</li>
 </ul>
 </td>
@@ -261,7 +269,7 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>i_inflow</strong> &#8211; Index of stream for next inflowing particle.</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)">int</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)">int</a></td>
 </tr>
 </tbody>
 </table>
@@ -276,8 +284,8 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>idx</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of timestep.</li>
-<li><strong>time</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Current time [s].</li>
+<li><strong>idx</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of timestep.</li>
+<li><strong>time</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Current time [s].</li>
 <li><strong>particles</strong> (list of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a>) &#8211; List of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a> objects.</li>
 <li><strong>data</strong> (<code class="xref any docutils literal"><span class="pre">numpy.ndarray</span></code>) &#8211; ndarray of particle data for all timesteps.</li>
 </ul>
@@ -302,13 +310,13 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>mech</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Mechanism filename (in Cantera format).</li>
+<li><strong>mech</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Mechanism filename (in Cantera format).</li>
 <li><strong>case</strong> (<em>{'Premixed','Non-premixed'}</em>) &#8211; Case of PaSR simulation; {&#8216;Premixed&#8217;, &#8216;Non-premixed&#8217;}.</li>
-<li><strong>init_temp</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Initial temperature [K].</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure [atm].</li>
-<li><strong>eq_ratio</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Equivalence ratio.</li>
-<li><strong>fuel</strong> (<a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the fuel mixture and the fraction of         each molecule in the fuel mixture.</li>
-<li><strong>oxidizer</strong> (<a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the oxidizer mixture and the         fraction of each molecule in the oxidizer mixture.</li>
+<li><strong>init_temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Initial temperature [K].</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure [atm].</li>
+<li><strong>eq_ratio</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Equivalence ratio.</li>
+<li><strong>fuel</strong> (<a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the fuel mixture and the fraction of         each molecule in the fuel mixture.</li>
+<li><strong>oxidizer</strong> (<a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the oxidizer mixture and the         fraction of each molecule in the oxidizer mixture.</li>
 <li><strong>complete_products</strong> (<em>Optional[list]</em>) &#8211; List of species in the products of complete combustion.         Optional, default [&#8216;CO2&#8217;, &#8216;H2O&#8217;, &#8216;N2&#8217;].</li>
 <li><strong>num_part</strong> (<em>Optional[int]</em>) &#8211; Number of particles. Optional, default 100.</li>
 <li><strong>tau_res</strong> (<em>Optional[float]</em>) &#8211; Residence time [s]. Optional, default 10 [ms].</li>
@@ -336,11 +344,11 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_file</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename with YAML-format input file.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>input_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename with YAML-format input file.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>pars</strong> &#8211; Dictionary with input parameters extracted from YAML file.</td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
 </tr>
 </tbody>
 </table>
@@ -384,8 +392,8 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -399,8 +407,8 @@ species, suitable for setting the state of the input ThermoPhase.</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
       <a href="../_sources/src/pyjac.functional_tester.partially_stirred_reactor.txt"

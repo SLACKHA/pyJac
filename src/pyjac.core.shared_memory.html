@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.shared_memory module &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.core.shared_memory module &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -24,9 +24,12 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -45,7 +48,7 @@
 <dl class="class">
 <dt id="pyjac.core.shared_memory.variable">
 <em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">variable</code><span class="sig-paren">(</span><em>base</em>, <em>index</em>, <em>lang='cuda'</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#variable"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.variable" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Class that represents an array/index pair.  Used for in the internal
 dicitonary of the <a class="reference internal" href="#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> for identification and
 tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a> usage for eviction.</p>
@@ -55,8 +58,8 @@ tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variab
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>base</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The name of the array</li>
-<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index in the array</li>
+<li><strong>base</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The name of the array</li>
+<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index in the array</li>
 </ul>
 </td>
 </tr>
@@ -85,7 +88,7 @@ tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variab
 <dl class="class">
 <dt id="pyjac.core.shared_memory.shared_memory_manager">
 <em class="property">class </em><code class="descclassname">pyjac.core.shared_memory.</code><code class="descname">shared_memory_manager</code><span class="sig-paren">(</span><em>blocks_per_sm=8</em>, <em>num_threads=64</em>, <em>L1_PREFERRED=True</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/pyjac/core/shared_memory.html#shared_memory_manager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyjac.core.shared_memory.shared_memory_manager" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/2/library/functions.html#object" title="(in Python v2.7)"><code class="xref py py-class docutils literal"><span class="pre">object</span></code></a></p>
 <p>Manager for GPU shared memory.</p>
 <p>Creates a shared memory manager</p>
 <table class="docutils field-list" frame="void" rules="none">
@@ -129,7 +132,7 @@ Thus this class has methods for setting the state/behaviour
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shared_index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The key to remove from the internal dictionary</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shared_index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The key to remove from the internal dictionary</td>
 </tr>
 </tbody>
 </table>
@@ -162,7 +165,7 @@ Thus this class has methods for setting the state/behaviour
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<a class="reference external" href="https://docs.python.org/glossary.html#term-function" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">function</span></code></a>) &#8211; Function that takes one arguement (the evicted variable)</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>func</strong> (<a class="reference external" href="https://docs.python.org/2/glossary.html#term-function" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">function</span></code></a>) &#8211; Function that takes one arguement (the evicted variable)</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -235,7 +238,7 @@ the calling routine.</li>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List of <a class="reference external" href="https://docs.python.org/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a> to indicate if variables are loaded in shared memory.</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">List of <a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a> to indicate if variables are loaded in shared memory.</p>
 </td>
 </tr>
 </tbody>
@@ -290,15 +293,15 @@ address, otherwise calls <a class="reference internal" href="pyjac.utils.html#py
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language.</li>
 <li><strong>thevar</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; Variable of interest.</li>
-<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index in the array.</li>
-<li><strong>twod</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Not used in this function.</li>
+<li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index in the array.</li>
+<li><strong>twod</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Not used in this function.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>name</strong> &#8211; String with indexed array.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)">str</a></p>
 </td>
 </tr>
 </tbody>
@@ -345,8 +348,8 @@ address, otherwise calls <a class="reference internal" href="pyjac.utils.html#py
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -360,8 +363,8 @@ address, otherwise calls <a class="reference internal" href="pyjac.utils.html#py
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
       <a href="../_sources/src/pyjac.core.shared_memory.txt"

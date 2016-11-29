@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.chem_utilities &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.core.chem_utilities &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -24,10 +24,13 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -46,11 +49,11 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Python 2 compatibility</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
 
 <span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">math</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="n">__all__</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;RU&#39;</span><span class="p">,</span> <span class="s1">&#39;RUC&#39;</span><span class="p">,</span> <span class="s1">&#39;RU_JOUL&#39;</span><span class="p">,</span> <span class="s1">&#39;PA&#39;</span><span class="p">,</span> <span class="s1">&#39;get_elem_wt&#39;</span><span class="p">,</span>
            <span class="s1">&#39;ReacInfo&#39;</span><span class="p">,</span> <span class="s1">&#39;SpecInfo&#39;</span><span class="p">,</span> <span class="s1">&#39;calc_spec_smh&#39;</span><span class="p">]</span>
@@ -74,18 +77,18 @@
         <span class="k">try</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">__dict__</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
                 <span class="k">if</span> <span class="ow">not</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">:</span>
-                    <span class="k">return</span> <span class="bp">False</span>
+                    <span class="k">return</span> <span class="kc">False</span>
                 <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">array_equal</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]):</span>
-                        <span class="k">return</span> <span class="bp">False</span>
+                        <span class="k">return</span> <span class="kc">False</span>
                 <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">value</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
                     <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="nb">any</span><span class="p">(</span><span class="n">x</span> <span class="o">==</span> <span class="n">y</span> <span class="k">for</span> <span class="n">y</span> <span class="ow">in</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">])</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]):</span>
-                        <span class="k">return</span> <span class="bp">False</span>
+                        <span class="k">return</span> <span class="kc">False</span>
                 <span class="k">elif</span> <span class="n">value</span> <span class="o">!=</span> <span class="n">other</span><span class="o">.</span><span class="n">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]:</span>
-                    <span class="k">return</span> <span class="bp">False</span>
-            <span class="k">return</span> <span class="bp">True</span>
+                    <span class="k">return</span> <span class="kc">False</span>
+            <span class="k">return</span> <span class="kc">True</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-            <span class="k">return</span> <span class="bp">False</span>
+            <span class="k">return</span> <span class="kc">False</span>
 
     <span class="k">def</span> <span class="nf">__ne__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">return</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">__eq__</span><span class="p">(</span><span class="n">other</span><span class="p">)</span>
@@ -219,27 +222,27 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">rev_par</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># reverse A, b, E</span>
 
         <span class="c1"># duplicate reaction</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">dup</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dup</span> <span class="o">=</span> <span class="kc">False</span>
 
         <span class="c1"># third-body efficiencies</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">thd_body</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">thd_body</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">thd_body_eff</span> <span class="o">=</span> <span class="p">[]</span>  <span class="c1"># in pairs with species and efficiency</span>
 
         <span class="c1"># pressure dependence</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">troe</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">troe</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">troe_par</span> <span class="o">=</span> <span class="p">[]</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">sri</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sri</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">sri_par</span> <span class="o">=</span> <span class="p">[]</span>
 
         <span class="c1"># Parameters for pressure-dependent reaction parameterized by</span>
         <span class="c1"># bivariate Chebyshev polynomial in temperature and pressure.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cheb</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="c1"># Number of temperature values over which fit computed.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cheb_n_temp</span> <span class="o">=</span> <span class="mi">0</span>
         <span class="c1"># Number of pressure values over which fit computed.</span>
@@ -249,14 +252,14 @@
         <span class="c1"># Temperature limits for Chebyshev fit [K]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">cheb_tlim</span> <span class="o">=</span> <span class="p">[</span><span class="mf">300.</span><span class="p">,</span> <span class="mf">2500.</span><span class="p">]</span>
         <span class="c1"># 2D array of Chebyshev fit coefficients</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_par</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cheb_par</span> <span class="o">=</span> <span class="kc">None</span>
 
         <span class="c1"># Parameters for pressure-dependent reaction parameterized by</span>
         <span class="c1"># logarithmically interpolating between Arrhenius rate expressions at</span>
         <span class="c1"># various pressures.</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">plog</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plog</span> <span class="o">=</span> <span class="kc">False</span>
         <span class="c1"># List of arrays with [pressure [Pa], A, b, E]</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">plog_par</span> <span class="o">=</span> <span class="bp">None</span></div>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plog_par</span> <span class="o">=</span> <span class="kc">None</span></div>
 
 
 <div class="viewcode-block" id="SpecInfo"><a class="viewcode-back" href="../../../src/pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo">[docs]</a><span class="k">class</span> <span class="nc">SpecInfo</span><span class="p">(</span><span class="n">CommonEqualityMixin</span><span class="p">):</span>
@@ -378,8 +381,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -393,8 +396,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
     </div>
 

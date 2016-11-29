@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.functional_tester.test &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.functional_tester.test &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -24,10 +24,13 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -45,8 +48,8 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 <span class="c1"># Python 2 compatibility</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">division</span>
-<span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">print_function</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">division</span>
+<span class="kn">from</span> <span class="nn">__future__</span> <span class="k">import</span> <span class="n">print_function</span>
 
 <span class="c1"># Standard libraries</span>
 <span class="kn">import</span> <span class="nn">os</span>
@@ -54,25 +57,25 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">pickle</span>
-<span class="kn">from</span> <span class="nn">argparse</span> <span class="kn">import</span> <span class="n">ArgumentParser</span>
+<span class="kn">from</span> <span class="nn">argparse</span> <span class="k">import</span> <span class="n">ArgumentParser</span>
 <span class="kn">import</span> <span class="nn">multiprocessing</span>
 <span class="kn">import</span> <span class="nn">glob</span>
 
 <span class="c1"># Related modules</span>
-<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
-    <span class="kn">from</span> <span class="nn">cantera</span> <span class="kn">import</span> <span class="n">ck2cti</span>
+    <span class="kn">import</span> <span class="nn">cantera</span> <span class="k">as</span> <span class="nn">ct</span>
+    <span class="kn">from</span> <span class="nn">cantera</span> <span class="k">import</span> <span class="n">ck2cti</span>
 <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: Cantera must be installed.&#39;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: Cantera must be installed.&#39;</span><span class="p">)</span>
     <span class="k">raise</span>
 
 <span class="c1"># Local imports</span>
-<span class="kn">from</span> <span class="nn">..</span> <span class="kn">import</span> <span class="n">utils</span>
-<span class="kn">from</span> <span class="nn">..core.create_jacobian</span> <span class="kn">import</span> <span class="n">create_jacobian</span>
-<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">partially_stirred_reactor</span> <span class="k">as</span> <span class="n">pasr</span>
-<span class="kn">from</span> <span class="nn">..pywrap</span> <span class="kn">import</span> <span class="n">generate_wrapper</span>
+<span class="kn">from</span> <span class="nn">..</span> <span class="k">import</span> <span class="n">utils</span>
+<span class="kn">from</span> <span class="nn">..core.create_jacobian</span> <span class="k">import</span> <span class="n">create_jacobian</span>
+<span class="kn">from</span> <span class="nn">.</span> <span class="k">import</span> <span class="n">partially_stirred_reactor</span> <span class="k">as</span> <span class="n">pasr</span>
+<span class="kn">from</span> <span class="nn">..pywrap</span> <span class="k">import</span> <span class="n">generate_wrapper</span>
 
 <span class="c1"># Compiler based on language</span>
 <span class="n">cmd_compile</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">c</span><span class="o">=</span><span class="s1">&#39;gcc&#39;</span><span class="p">,</span>
@@ -177,7 +180,7 @@
         <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">dTdt</span><span class="p">,</span> <span class="n">dYdt</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="convert_mech"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.convert_mech">[docs]</a><span class="k">def</span> <span class="nf">convert_mech</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="convert_mech"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.convert_mech">[docs]</a><span class="k">def</span> <span class="nf">convert_mech</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Convert a mechanism and return a string with the filename.</span>
 
 <span class="sd">    Convert a CHEMKIN format mechanism to the Cantera CTI format using</span>
@@ -200,15 +203,15 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="n">arg</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;--input=&#39;</span> <span class="o">+</span> <span class="n">mech_filename</span><span class="p">]</span>
-    <span class="k">if</span> <span class="n">therm_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">therm_filename</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">arg</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;--thermo=&#39;</span> <span class="o">+</span> <span class="n">therm_filename</span><span class="p">)</span>
     <span class="n">arg</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;--permissive&#39;</span><span class="p">)</span>
 
     <span class="c1"># Convert the mechanism</span>
     <span class="n">ck2cti</span><span class="o">.</span><span class="n">main</span><span class="p">(</span><span class="n">arg</span><span class="p">)</span>
     <span class="n">mech_filename</span> <span class="o">=</span> <span class="n">mech_filename</span><span class="p">[:</span><span class="o">-</span><span class="mi">4</span><span class="p">]</span> <span class="o">+</span> <span class="s1">&#39;.cti&#39;</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Mechanism conversion successful, written to &#39;</span>
-          <span class="s1">&#39;{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Mechanism conversion successful, written to &#39;</span>
+          <span class="s1">&#39;</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">)</span>
           <span class="p">)</span>
     <span class="k">return</span> <span class="n">mech_filename</span></div>
 
@@ -278,7 +281,7 @@
             <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="run_pasr"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.run_pasr">[docs]</a><span class="k">def</span> <span class="nf">run_pasr</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="run_pasr"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.run_pasr">[docs]</a><span class="k">def</span> <span class="nf">run_pasr</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Run PaSR simulation to get thermochemical data for testing.</span>
 
 <span class="sd">    Parameters</span>
@@ -346,30 +349,30 @@
 <span class="sd">        None</span>
 
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-            <span class="n">n_spec</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="n">n_reac</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
-                <span class="k">if</span> <span class="n">n_spec</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">n_spec</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">n_reac</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">n_spec</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">r&#39;^#define NSP (\d+)$&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
                         <span class="n">n_spec</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
 
-                <span class="k">if</span> <span class="n">n_reac</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n_reac</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">r&#39;^#define FWD_RATES (\d+)$&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
                     <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
                         <span class="n">n_reac</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
 
-                <span class="k">if</span> <span class="n">n_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">n_reac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">n_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">n_reac</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">break</span>
 
         <span class="k">if</span> <span class="n">n_spec</span> <span class="o">!=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: species counts do not match between &#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: species counts do not match between &#39;</span>
                   <span class="s1">&#39;mechanism.h and Cantera.&#39;</span>
                   <span class="p">)</span>
             <span class="k">raise</span>
         <span class="k">if</span> <span class="n">n_reac</span> <span class="o">!=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">:</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: forward reaction counts do not match between &#39;</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: forward reaction counts do not match between &#39;</span>
                   <span class="s1">&#39;mechanism.h and Cantera.&#39;</span>
                   <span class="p">)</span>
             <span class="k">raise</span></div>
@@ -392,16 +395,16 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-            <span class="n">opt</span> <span class="o">=</span> <span class="bp">False</span>
-            <span class="n">last_spec</span> <span class="o">=</span> <span class="bp">None</span>
-            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">filename</span><span class="p">),</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">opt</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">last_spec</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">file</span><span class="o">.</span><span class="n">readlines</span><span class="p">():</span>
                 <span class="k">if</span> <span class="s1">&#39;Cache Optimized&#39;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
-                    <span class="n">opt</span> <span class="o">=</span> <span class="bp">True</span>
+                    <span class="n">opt</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">match</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="s1">r&#39;^//last_spec (\d+)$&#39;</span><span class="p">,</span> <span class="n">line</span><span class="p">)</span>
                 <span class="k">if</span> <span class="n">match</span><span class="p">:</span>
                     <span class="n">last_spec</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">match</span><span class="o">.</span><span class="n">group</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
-                <span class="k">if</span> <span class="n">opt</span> <span class="ow">and</span> <span class="n">last_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">opt</span> <span class="ow">and</span> <span class="n">last_spec</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                     <span class="k">break</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">last_spec</span> <span class="o">=</span> <span class="n">last_spec</span>
@@ -410,16 +413,16 @@
                                   <span class="k">if</span> <span class="n">x</span> <span class="o">!=</span> <span class="n">last_spec</span><span class="p">]</span>
                                   <span class="p">)</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span><span class="p">:</span>
-            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-                <span class="n">dummy</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="n">dummy</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">))</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">back_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="nb">file</span><span class="p">))</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="s1">&#39;optimized.pickle&#39;</span><span class="p">),</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">dummy</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="n">dummy</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">fwd_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">back_rxn_map</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">))</span>
         <span class="k">elif</span> <span class="n">last_spec</span> <span class="o">!=</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
             <span class="c1">#still need to treat it as a cache optimized</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span> <span class="o">=</span> <span class="bp">True</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">cache_opt</span> <span class="o">=</span> <span class="kc">True</span>
 
             <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fwd_spec_map</span><span class="p">,</span>
              <span class="bp">self</span><span class="o">.</span><span class="n">back_spec_map</span>
@@ -772,9 +775,9 @@
         <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="cupyjac_evaluator.reshaper"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.reshaper">[docs]</a>    <span class="k">def</span> <span class="nf">reshaper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">reorder</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+<div class="viewcode-block" id="cupyjac_evaluator.reshaper"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cupyjac_evaluator.reshaper">[docs]</a>    <span class="k">def</span> <span class="nf">reshaper</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">arr</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">reorder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
         <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="k">if</span> <span class="n">reorder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">reorder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="n">reorder</span><span class="p">]</span>
         <span class="k">return</span> <span class="n">arr</span></div>
 
@@ -941,7 +944,7 @@
                  <span class="p">):</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">tchem</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="n">module_name</span><span class="p">)</span>
 
-        <span class="k">if</span> <span class="n">thermofile</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">thermofile</span> <span class="o">==</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">thermofile</span> <span class="o">=</span> <span class="n">mechfile</span>
 
         <span class="c1"># TChem needs array of full species mass fractions</span>
@@ -949,9 +952,9 @@
         <span class="k">def</span> <span class="nf">czeros</span><span class="p">(</span><span class="n">shape</span><span class="p">):</span>
             <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
-        <span class="k">def</span> <span class="nf">reshaper</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">reorder</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">def</span> <span class="nf">reshaper</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">shape</span><span class="p">,</span> <span class="n">reorder</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
             <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
-            <span class="k">if</span> <span class="n">reorder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">reorder</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
                 <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[:,</span> <span class="n">reorder</span><span class="p">]</span>
             <span class="k">return</span> <span class="n">arr</span>
 
@@ -1071,7 +1074,7 @@
         <span class="n">jacob</span><span class="p">[:]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">test_jacob</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="p">:]</span></div></div>
 
 
-<div class="viewcode-block" id="safe_remove"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.safe_remove">[docs]</a><span class="k">def</span> <span class="nf">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">):</span>
+<div class="viewcode-block" id="safe_remove"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.safe_remove">[docs]</a><span class="k">def</span> <span class="nf">safe_remove</span><span class="p">(</span><span class="n">file</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Try to safely remove a file</span>
 
 <span class="sd">    Parameters</span>
@@ -1085,16 +1088,16 @@
 
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
     <span class="k">except</span><span class="p">:</span>
         <span class="k">pass</span></div>
 
 
-<div class="viewcode-block" id="test"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.test">[docs]</a><span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">home_dir</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-         <span class="n">pasr_input_file</span><span class="o">=</span><span class="s1">&#39;pasr_input.yaml&#39;</span><span class="p">,</span> <span class="n">generate_jacob</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
-         <span class="n">compile_jacob</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span>
-         <span class="n">cache_optimization</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">tchem_flag</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
-         <span class="n">only_rxn</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">do_not_remove</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">condition_numbers</span><span class="o">=</span><span class="bp">None</span>
+<div class="viewcode-block" id="test"><a class="viewcode-back" href="../../../src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.test">[docs]</a><span class="k">def</span> <span class="nf">test</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">home_dir</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+         <span class="n">pasr_input_file</span><span class="o">=</span><span class="s1">&#39;pasr_input.yaml&#39;</span><span class="p">,</span> <span class="n">generate_jacob</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+         <span class="n">compile_jacob</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pasr_output_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">last_spec</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+         <span class="n">cache_optimization</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">no_shared</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">tchem_flag</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+         <span class="n">only_rxn</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">do_not_remove</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">condition_numbers</span><span class="o">=</span><span class="kc">None</span>
          <span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Compares pyJac results against Cantera (and optionally TChem) using</span>
 <span class="sd">    state data from PaSR simulations.</span>
@@ -1148,7 +1151,7 @@
     <span class="n">build_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">build_dir</span><span class="p">))</span>
     <span class="n">home_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">home_dir</span><span class="p">))</span>
 
-    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">seed</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="n">seed</span><span class="p">)</span>
     <span class="k">else</span><span class="p">:</span>
         <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">()</span>
@@ -1157,29 +1160,29 @@
     <span class="k">try</span><span class="p">:</span>
         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="s1">&#39;which&#39;</span><span class="p">,</span> <span class="n">cmd_compile</span><span class="p">[</span><span class="n">lang</span><span class="p">]])</span>
     <span class="k">except</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">CalledProcessError</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Error: appropriate compiler for language not found.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Error: appropriate compiler for language not found.&#39;</span><span class="p">)</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="k">if</span> <span class="n">generate_jacob</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">compile_jacob</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Warning: Jacobian files being generated but not compiled.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Warning: Jacobian files being generated but not compiled.&#39;</span><span class="p">)</span>
 
     <span class="c1"># Interpret reaction mechanism file, depending on Cantera or</span>
     <span class="c1"># Chemkin format.</span>
-    <span class="n">ck_mech_filename</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">ck_mech_filename</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">mech_filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="nb">tuple</span><span class="p">([</span><span class="s1">&#39;.cti&#39;</span><span class="p">,</span> <span class="s1">&#39;.xml&#39;</span><span class="p">])):</span>
         <span class="c1"># Chemkin format; need to convert first.</span>
         <span class="n">ck_mech_filename</span> <span class="o">=</span> <span class="n">mech_filename</span>
         <span class="n">mech_filename</span> <span class="o">=</span> <span class="n">convert_mech</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span><span class="p">)</span>
     <span class="k">elif</span> <span class="n">tchem_flag</span><span class="p">:</span>
-        <span class="n">tchem_flag</span> <span class="o">=</span> <span class="bp">False</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;TChem validation disabled; &#39;</span>
+        <span class="n">tchem_flag</span> <span class="o">=</span> <span class="kc">False</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;TChem validation disabled; &#39;</span>
               <span class="s1">&#39;not compatible with Cantera mechanism.&#39;</span>
               <span class="p">)</span>
 
     <span class="c1"># get the cantera object</span>
     <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">)</span>
 
-    <span class="k">if</span> <span class="n">only_rxn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">only_rxn</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">reacs</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">only_rxn</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)]</span>
         <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">thermo</span><span class="o">=</span><span class="s1">&#39;IdealGas&#39;</span><span class="p">,</span> <span class="n">kinetics</span><span class="o">=</span><span class="s1">&#39;GasKinetics&#39;</span><span class="p">,</span>
                           <span class="n">species</span><span class="o">=</span><span class="n">gas</span><span class="o">.</span><span class="n">species</span><span class="p">(),</span>
@@ -1199,7 +1202,7 @@
                         <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
                         <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span>
                         <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span>
-                        <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+                        <span class="n">auto_diff</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
                         <span class="n">multi_thread</span><span class="o">=</span><span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
                         <span class="p">)</span>
         <span class="c1">#We&#39;re going to need the c autodiff interface for testing the jacobian</span>
@@ -1208,7 +1211,7 @@
                         <span class="n">build_path</span><span class="o">=</span><span class="n">build_dir</span><span class="p">,</span>
                         <span class="n">no_shared</span><span class="o">=</span><span class="n">no_shared</span><span class="p">,</span>
                         <span class="n">last_spec</span><span class="o">=</span><span class="n">last_spec</span><span class="p">,</span>
-                        <span class="n">auto_diff</span><span class="o">=</span><span class="bp">True</span>
+                        <span class="n">auto_diff</span><span class="o">=</span><span class="kc">True</span>
                         <span class="p">)</span>
 
     <span class="k">if</span> <span class="n">compile_jacob</span><span class="p">:</span>
@@ -1218,7 +1221,7 @@
             <span class="n">generate_wrapper</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">)</span>
 
         <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;adjacob.so&#39;</span><span class="p">)</span>
-        <span class="n">generate_wrapper</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="n">generate_wrapper</span><span class="p">(</span><span class="s1">&#39;c&#39;</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
 
         <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;cuda&#39;</span><span class="p">:</span>
             <span class="n">safe_remove</span><span class="p">(</span><span class="s1">&#39;cu_pyjacob.so&#39;</span><span class="p">)</span>
@@ -1255,10 +1258,10 @@
     <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">PlogReaction</span><span class="p">)</span> <span class="ow">or</span>
             <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChebyshevReaction</span><span class="p">)</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()</span>
             <span class="p">]):</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;TChem comparison disabled; &#39;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;TChem comparison disabled; &#39;</span>
               <span class="s1">&#39;not compatible with Plog or Chebyshev reactions.&#39;</span>
               <span class="p">)</span>
-        <span class="n">tchem_flag</span> <span class="o">=</span> <span class="bp">False</span>
+        <span class="n">tchem_flag</span> <span class="o">=</span> <span class="kc">False</span>
 
     <span class="k">if</span> <span class="n">pasr_output_file</span><span class="p">:</span>
         <span class="c1">#load old test data</span>
@@ -1266,7 +1269,7 @@
             <span class="n">state_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">pasr_output_file</span><span class="p">)</span>
         <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
             <span class="c1"># Run PaSR to get data</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Could not load saved pasr data... re-running&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Could not load saved pasr data... re-running&#39;</span><span class="p">)</span>
             <span class="n">state_data</span> <span class="o">=</span> <span class="n">run_pasr</span><span class="p">(</span><span class="n">pasr_input_file</span><span class="p">,</span> <span class="n">mech_filename</span><span class="p">,</span>
                                   <span class="n">pasr_output_file</span>
                                   <span class="p">)</span>
@@ -1300,11 +1303,11 @@
         <span class="n">state_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">ls</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">state_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">3</span><span class="p">:</span><span class="n">ls</span><span class="p">])</span> <span class="o">-</span> \
                                  <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">state_data</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">ls</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:])</span>
 
-    <span class="k">if</span> <span class="n">condition_numbers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">condition_numbers</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">condition_numbers</span> <span class="o">=</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span>  <span class="n">condition_numbers</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;,&#39;</span><span class="p">)]</span>
         <span class="n">state_data</span> <span class="o">=</span> <span class="n">state_data</span><span class="p">[[</span><span class="n">x</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">condition_numbers</span><span class="p">],</span> <span class="p">:]</span>
 
-    <span class="n">tchem_jac</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">tchem_jac</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">tchem_flag</span><span class="p">:</span>
         <span class="n">tchem_jac</span> <span class="o">=</span> <span class="n">tchem_evaluator</span><span class="p">(</span><span class="n">build_dir</span><span class="p">,</span> <span class="n">gas</span><span class="p">,</span> <span class="n">state_data</span><span class="p">,</span>
                                     <span class="n">ck_mech_filename</span><span class="p">,</span> <span class="n">therm_filename</span>
@@ -1323,7 +1326,7 @@
     <span class="n">err_jac_tchem</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">num_trials</span><span class="p">)</span>
 
     <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">state</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">state_data</span><span class="p">):</span>
-        <span class="n">cn</span> <span class="o">=</span> <span class="n">i</span> <span class="k">if</span> <span class="n">condition_numbers</span> <span class="ow">is</span> <span class="bp">None</span> <span class="k">else</span> <span class="n">condition_numbers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">cn</span> <span class="o">=</span> <span class="n">i</span> <span class="k">if</span> <span class="n">condition_numbers</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="n">condition_numbers</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
         <span class="c1">#update index in case we&#39;re using cuda</span>
         <span class="n">pyjacob</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">cn</span><span class="p">)</span>
 
@@ -1371,8 +1374,8 @@
         <span class="n">jacob</span> <span class="o">=</span> <span class="n">ajac</span><span class="o">.</span><span class="n">eval_jacobian</span><span class="p">(</span><span class="n">gas</span><span class="p">)</span>
 
 
-        <span class="k">print</span><span class="p">()</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Testing condition {} / {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_trials</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Testing condition </span><span class="si">{}</span><span class="s1"> / </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">num_trials</span><span class="p">))</span>
 
         <span class="c1"># Calculate error in concentrations</span>
         <span class="n">non_zero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">test_conc</span> <span class="o">&gt;</span> <span class="mf">0.</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
@@ -1382,8 +1385,8 @@
         <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
         <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error in non-zero concentration: {:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero concentration: {:.2e} % @ species {}&#39;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error in non-zero concentration: </span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero concentration: </span><span class="si">{:.2e}</span><span class="s1"> % @ species </span><span class="si">{}</span><span class="s1">&#39;</span>
             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
 
         <span class="c1"># Modify forward and reverse rates with pressure modification</span>
@@ -1400,11 +1403,11 @@
         <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
         <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error in non-zero forward reaction rates: &#39;</span>
-              <span class="s1">&#39;{:.2e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error in non-zero forward reaction rates: &#39;</span>
+              <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
               <span class="p">)</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero forward reaction rates: &#39;</span>
-              <span class="s1">&#39;{:.2e}% @ reaction {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero forward reaction rates: &#39;</span>
+              <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">% @ reaction </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
               <span class="p">)</span>
 
         <span class="k">if</span> <span class="n">idx_rev</span><span class="p">:</span>
@@ -1416,11 +1419,11 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error in non-zero reverse reaction rates: &#39;</span>
-                  <span class="s1">&#39;{:.2e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error in non-zero reverse reaction rates: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                   <span class="p">)</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero reverse reaction rates: &#39;</span>
-                  <span class="s1">&#39;{:.2e}% @ reaction {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero reverse reaction rates: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">% @ reaction </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
                   <span class="p">)</span>
 
         <span class="c1"># Calculate error in species net production rates</span>
@@ -1433,16 +1436,16 @@
         <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
         <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative error of non-zero net production rates: &#39;</span>
-              <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative error of non-zero net production rates: &#39;</span>
+              <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
               <span class="p">)</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero net production rates: {:.2e}% &#39;</span>
-              <span class="s1">&#39;@ species {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero net production rates: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+              <span class="s1">&#39;@ species </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
               <span class="p">)</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span>
             <span class="n">test_spec_rates</span><span class="p">[</span><span class="n">zero</span><span class="p">]</span> <span class="o">-</span> <span class="n">gas</span><span class="o">.</span><span class="n">net_production_rates</span><span class="p">[</span><span class="n">zero</span><span class="p">])</span>
-        <span class="k">print</span><span class="p">(</span>
-            <span class="s1">&#39;L2 norm difference of &quot;zero&quot; net production rates: {:.2e}&#39;</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s1">&#39;L2 norm difference of &quot;zero&quot; net production rates: </span><span class="si">{:.2e}</span><span class="s1">&#39;</span>
             <span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
 
         <span class="c1"># Calculate error in derivative source terms</span>
@@ -1461,13 +1464,13 @@
         <span class="n">loc</span> <span class="o">=</span> <span class="n">pyjacob</span><span class="o">.</span><span class="n">dydt_mask</span><span class="p">[</span><span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]]</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
         <span class="n">err_dydt</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative error of non-zero dydt: {:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero dydt: {:.2e}% &#39;</span>
-              <span class="s1">&#39;@ index {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative error of non-zero dydt: </span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero dydt: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+              <span class="s1">&#39;@ index </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
               <span class="p">)</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">t_dydt</span><span class="p">[</span><span class="n">zero</span><span class="p">]</span> <span class="o">-</span> <span class="n">ode_dydt</span><span class="p">[</span><span class="n">zero</span><span class="p">])</span>
         <span class="n">err_dydt_zero</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference of &quot;zero&quot; dydt: {:.2e}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference of &quot;zero&quot; dydt: </span><span class="si">{:.2e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
 
         <span class="c1"># Calculate error in Jacobian matrix</span>
         <span class="n">non_zero</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">test_jacob</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mf">1.e-30</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
@@ -1478,10 +1481,10 @@
         <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
         <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero Jacobian: {:.2e}% &#39;</span>
-              <span class="s1">&#39;@ index {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm of relative error of Jacobian: &#39;</span>
-              <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max error in non-zero Jacobian: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+              <span class="s1">&#39;@ index </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm of relative error of Jacobian: &#39;</span>
+              <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
         <span class="n">err_jac_max</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_err</span>
         <span class="n">err_jac</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
 
@@ -1498,21 +1501,21 @@
         <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
         <span class="n">err_jac_thr</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm of thresholded relative error of Jacobian: &#39;</span>
-              <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm of thresholded relative error of Jacobian: &#39;</span>
+              <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
 
         <span class="n">err_jac_thr_max</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">max_err</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max thresholded relative error of Jacobian: {:.2e}% &#39;</span>
-              <span class="s1">&#39;@ index {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max thresholded relative error of Jacobian: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+              <span class="s1">&#39;@ index </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
 
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">test_jacob</span> <span class="o">-</span> <span class="n">jacob</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">jacob</span><span class="p">)</span>
         <span class="n">err_jac_norm</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error of Jacobian: {:.2e}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm error of Jacobian: </span><span class="si">{:.2e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
 
         <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">test_jacob</span><span class="p">[</span><span class="n">zero</span><span class="p">]</span> <span class="o">-</span> <span class="n">jacob</span><span class="p">[</span><span class="n">zero</span><span class="p">])</span>
         <span class="n">err_jac_zero</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference of &quot;zero&quot; Jacobian: &#39;</span>
-              <span class="s1">&#39;{:.2e}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference of &quot;zero&quot; Jacobian: &#39;</span>
+              <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
 
         <span class="c1"># Compare against TChem, if enabled</span>
         <span class="k">if</span> <span class="n">tchem_flag</span><span class="p">:</span>
@@ -1525,11 +1528,11 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem concentration: &#39;</span>
-                  <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem concentration: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                   <span class="p">)</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem concentration: &#39;</span>
-                  <span class="s1">&#39;{:.2e} % @ species {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem concentration: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> % @ species </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
                   <span class="p">)</span>
 
             <span class="n">tchem_fwd_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">)</span>
@@ -1542,11 +1545,11 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem forward reaction rates: &#39;</span>
-                  <span class="s1">&#39;{:.2e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem forward reaction rates: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                   <span class="p">)</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem forward reaction rates: &#39;</span>
-                  <span class="s1">&#39;{:.2e}% @ reaction {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem forward reaction rates: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">% @ reaction </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
                   <span class="p">)</span>
 
             <span class="k">if</span> <span class="n">idx_rev</span><span class="p">:</span>
@@ -1558,11 +1561,11 @@
                 <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                 <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
                 <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem reverse reaction rates: &#39;</span>
-                      <span class="s1">&#39;{:.2e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm difference with TChem reverse reaction rates: &#39;</span>
+                      <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                       <span class="p">)</span>
-                <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem reverse reaction rates: &#39;</span>
-                      <span class="s1">&#39;{:.2e}% @ reaction {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem reverse reaction rates: &#39;</span>
+                      <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1">% @ reaction </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
                       <span class="p">)</span>
 
             <span class="n">tchem_spec_rates</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
@@ -1574,11 +1577,11 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative difference with TChem net production&#39;</span>
-                  <span class="s1">&#39; rates: {:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative difference with TChem net production&#39;</span>
+                  <span class="s1">&#39; rates: </span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                   <span class="p">)</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem net production rates: {:.2e}% &#39;</span>
-                  <span class="s1">&#39;@ species {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem net production rates: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+                  <span class="s1">&#39;@ species </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
                   <span class="p">)</span>
 
             <span class="n">tchem_dydt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
@@ -1590,11 +1593,11 @@
             <span class="n">max_err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative difference with TChem dydt: &#39;</span>
-                  <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm relative difference with TChem dydt: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
                   <span class="p">)</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem dydt: {:.2e}% &#39;</span>
-                  <span class="s1">&#39;@ species {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max difference with TChem dydt: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+                  <span class="s1">&#39;@ species </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">max_err</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">)</span>
                   <span class="p">)</span>
 
             <span class="n">tchem_jacob</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">*</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
@@ -1605,11 +1608,11 @@
                       <span class="n">tchem_jacob</span><span class="p">[</span><span class="n">non_zero</span><span class="p">]</span>
                       <span class="p">)</span>
             <span class="n">loc</span> <span class="o">=</span> <span class="n">non_zero</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">err</span><span class="p">)]</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Max difference with non-zero TChem Jacobian: {:.2e}% &#39;</span>
-                  <span class="s1">&#39;@ index {}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Max difference with non-zero TChem Jacobian: </span><span class="si">{:.2e}</span><span class="s1">% &#39;</span>
+                  <span class="s1">&#39;@ index </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span><span class="p">,</span> <span class="n">loc</span><span class="p">))</span>
             <span class="n">err</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">err</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.</span>
-            <span class="k">print</span><span class="p">(</span><span class="s1">&#39;L2 norm of relative difference with TChem Jacobian: &#39;</span>
-                  <span class="s1">&#39;{:.2e} %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;L2 norm of relative difference with TChem Jacobian: &#39;</span>
+                  <span class="s1">&#39;</span><span class="si">{:.2e}</span><span class="s1"> %&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">err</span><span class="p">))</span>
             <span class="n">err_jac_tchem</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">err</span>
 
 
@@ -1622,26 +1625,26 @@
              <span class="p">)</span>
 
     <span class="c1"># Report overall error statistics</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Maximum of thresholded L2 norm relative error: &#39;</span>
-          <span class="s1">&#39;{:.3e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err_jac_thr</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Maximum of thresholded L2 norm relative error: &#39;</span>
+          <span class="s1">&#39;</span><span class="si">{:.3e}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">err_jac_thr</span><span class="p">))</span>
           <span class="p">)</span>
-    <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Standard deviation of thresholded L2 norm relative error: &#39;</span>
-          <span class="s1">&#39;{:.3e}%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">err_jac_thr</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Standard deviation of thresholded L2 norm relative error: &#39;</span>
+          <span class="s1">&#39;</span><span class="si">{:.3e}</span><span class="s1">%&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">err_jac_thr</span><span class="p">))</span>
           <span class="p">)</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">do_not_remove</span><span class="p">:</span>
         <span class="c1"># Cleanup all compiled files.</span>
-        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;adjacob*.so&#39;</span><span class="p">):</span>
-            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;cu_pyjacob*.so&#39;</span><span class="p">):</span>
-            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;pyjacob*.so&#39;</span><span class="p">):</span>
-            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
-        <span class="k">for</span> <span class="nb">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;py_tchem*.so&#39;</span><span class="p">):</span>
-            <span class="n">safe_remove</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;adjacob*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;cu_pyjacob*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;pyjacob*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="s1">&#39;py_tchem*.so&#39;</span><span class="p">):</span>
+            <span class="n">safe_remove</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
 
         <span class="c1"># Now clean build directory</span>
-        <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s1">&#39;./build&#39;</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">root</span><span class="p">,</span> <span class="n">dirs</span><span class="p">,</span> <span class="n">files</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">walk</span><span class="p">(</span><span class="s1">&#39;./build&#39;</span><span class="p">,</span> <span class="n">topdown</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
                 <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
             <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dirs</span><span class="p">:</span>
@@ -1693,8 +1696,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -1708,8 +1711,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
     </div>
 

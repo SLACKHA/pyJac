@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.pywrap.pywrap_gen &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.pywrap.pywrap_gen &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
@@ -24,10 +24,13 @@
     <script type="text/javascript" src="../../../_static/underscore.js"></script>
     <script type="text/javascript" src="../../../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../../../index.html" />
     <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -46,9 +49,9 @@
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">subprocess</span>
-<span class="kn">from</span> <span class="nn">string</span> <span class="kn">import</span> <span class="n">Template</span>
+<span class="kn">from</span> <span class="nn">string</span> <span class="k">import</span> <span class="n">Template</span>
 
-<span class="kn">from</span> <span class="nn">..libgen</span> <span class="kn">import</span> <span class="n">generate_library</span>
+<span class="kn">from</span> <span class="nn">..libgen</span> <span class="k">import</span> <span class="n">generate_library</span>
 
 <div class="viewcode-block" id="generate_setup"><a class="viewcode-back" href="../../../src/pyjac.pywrap.pywrap_gen.html#pyjac.pywrap.pywrap_gen.generate_setup">[docs]</a><span class="k">def</span> <span class="nf">generate_setup</span><span class="p">(</span><span class="n">setupfile</span><span class="p">,</span> <span class="n">home_dir</span><span class="p">,</span> <span class="n">build_dir</span><span class="p">,</span> <span class="n">out_dir</span><span class="p">,</span> <span class="n">libname</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Helper method to fill in the template .in files</span>
@@ -71,8 +74,8 @@
 <span class="sd">    None</span>
 
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">setupfile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="n">src</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="nb">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">setupfile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">src</span> <span class="o">=</span> <span class="n">Template</span><span class="p">(</span><span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">())</span>
 
     <span class="n">file_data</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;homepath&#39;</span> <span class="p">:</span> <span class="n">home_dir</span><span class="p">,</span>
                  <span class="s1">&#39;buildpath&#39;</span> <span class="p">:</span> <span class="n">build_dir</span><span class="p">,</span>
@@ -80,8 +83,8 @@
                  <span class="s1">&#39;outpath&#39;</span> <span class="p">:</span> <span class="n">out_dir</span>
                  <span class="p">}</span>
     <span class="n">src</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">safe_substitute</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
-    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">setupfile</span><span class="p">[:</span><span class="n">setupfile</span><span class="o">.</span><span class="n">rindex</span><span class="p">(</span><span class="s1">&#39;.in&#39;</span><span class="p">)],</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-        <span class="nb">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">src</span><span class="p">)</span></div>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">setupfile</span><span class="p">[:</span><span class="n">setupfile</span><span class="o">.</span><span class="n">rindex</span><span class="p">(</span><span class="s1">&#39;.in&#39;</span><span class="p">)],</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+        <span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">src</span><span class="p">)</span></div>
 
 
 <div class="viewcode-block" id="distutils_dir_name"><a class="viewcode-back" href="../../../src/pyjac.pywrap.pywrap_gen.html#pyjac.pywrap.pywrap_gen.distutils_dir_name">[docs]</a><span class="k">def</span> <span class="nf">distutils_dir_name</span><span class="p">(</span><span class="n">dname</span><span class="p">):</span>
@@ -99,14 +102,14 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span> <span class="nn">sys</span>
     <span class="kn">import</span> <span class="nn">sysconfig</span>
-    <span class="n">f</span> <span class="o">=</span> <span class="s2">&quot;{dirname}.{platform}-{version[0]}.{version[1]}&quot;</span>
+    <span class="n">f</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{dirname}</span><span class="s2">.</span><span class="si">{platform}</span><span class="s2">-</span><span class="si">{version[0]}</span><span class="s2">.</span><span class="si">{version[1]}</span><span class="s2">&quot;</span>
     <span class="k">return</span> <span class="n">f</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">dirname</span><span class="o">=</span><span class="n">dname</span><span class="p">,</span>
                     <span class="n">platform</span><span class="o">=</span><span class="n">sysconfig</span><span class="o">.</span><span class="n">get_platform</span><span class="p">(),</span>
                     <span class="n">version</span><span class="o">=</span><span class="n">sys</span><span class="o">.</span><span class="n">version_info</span>
                     <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="generate_wrapper"><a class="viewcode-back" href="../../../src/pyjac.pywrap.pywrap_gen.html#pyjac.pywrap.pywrap_gen.generate_wrapper">[docs]</a><span class="k">def</span> <span class="nf">generate_wrapper</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="bp">False</span><span class="p">):</span>
+<div class="viewcode-block" id="generate_wrapper"><a class="viewcode-back" href="../../../src/pyjac.pywrap.pywrap_gen.html#pyjac.pywrap.pywrap_gen.generate_wrapper">[docs]</a><span class="k">def</span> <span class="nf">generate_wrapper</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">auto_diff</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Generates a Python wrapper for the given language and source files</span>
 
 <span class="sd">    Parameters</span>
@@ -129,14 +132,14 @@
     <span class="n">source_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">source_dir</span><span class="p">)</span>
     <span class="n">home_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
 
-    <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+    <span class="k">if</span> <span class="n">out_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="n">out_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
 
     <span class="n">distutils_build</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s1">&#39;build&#39;</span><span class="p">,</span> <span class="n">distutils_dir_name</span><span class="p">(</span><span class="s1">&#39;temp&#39;</span><span class="p">))</span>
 
-    <span class="n">shared</span> <span class="o">=</span> <span class="bp">False</span>
+    <span class="n">shared</span> <span class="o">=</span> <span class="kc">False</span>
     <span class="n">ext</span> <span class="o">=</span> <span class="s1">&#39;.so&#39;</span> <span class="k">if</span> <span class="n">shared</span> <span class="k">else</span> <span class="s1">&#39;.a&#39;</span>
-    <span class="n">lib</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">lib</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">lang</span> <span class="o">!=</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
         <span class="c1">#first generate the library</span>
         <span class="n">lib</span> <span class="o">=</span> <span class="n">generate_library</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span> <span class="n">out_dir</span><span class="o">=</span><span class="n">distutils_build</span><span class="p">,</span>
@@ -146,7 +149,7 @@
         <span class="k">if</span> <span class="n">shared</span><span class="p">:</span>
             <span class="n">lib</span> <span class="o">=</span> <span class="n">lib</span><span class="p">[</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">)</span> <span class="o">+</span> <span class="nb">len</span><span class="p">(</span><span class="s1">&#39;lib&#39;</span><span class="p">):</span><span class="n">lib</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">ext</span><span class="p">)]</span>
 
-    <span class="n">setupfile</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="n">setupfile</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="k">if</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;c&#39;</span><span class="p">:</span>
         <span class="n">setupfile</span> <span class="o">=</span> <span class="s1">&#39;pyjacob_setup.py.in&#39;</span>
         <span class="k">if</span> <span class="n">auto_diff</span><span class="p">:</span>
@@ -156,14 +159,14 @@
     <span class="k">elif</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
         <span class="n">setupfile</span> <span class="o">=</span> <span class="s1">&#39;pytchem_setup.py.in&#39;</span>
     <span class="k">else</span><span class="p">:</span>
-        <span class="k">print</span><span class="p">(</span><span class="s1">&#39;Language {} not recognized&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Language </span><span class="si">{}</span><span class="s1"> not recognized&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">))</span>
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="n">generate_setup</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home_dir</span><span class="p">,</span> <span class="n">setupfile</span><span class="p">),</span> <span class="n">home_dir</span><span class="p">,</span> <span class="n">source_dir</span><span class="p">,</span>
                    <span class="n">distutils_build</span><span class="p">,</span> <span class="n">lib</span>
                    <span class="p">)</span>
 
-    <span class="n">python_str</span> <span class="o">=</span> <span class="s1">&#39;python{}.{}&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">python_str</span> <span class="o">=</span> <span class="s1">&#39;python</span><span class="si">{}</span><span class="s1">.</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
 
     <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">([</span><span class="n">python_str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">home_dir</span><span class="p">,</span>
                            <span class="n">setupfile</span><span class="p">[:</span><span class="n">setupfile</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s1">&#39;.in&#39;</span><span class="p">)]),</span>
@@ -206,8 +209,8 @@
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../../../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -221,8 +224,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
     </div>
 

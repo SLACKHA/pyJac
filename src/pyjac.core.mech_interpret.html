@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.mech_interpret module &mdash; pyJac 1.0.0 documentation</title>
+    <title>pyjac.core.mech_interpret module &#8212; pyJac 1.0.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -24,9 +24,12 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
     <link rel="top" title="pyJac 1.0.0 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
@@ -45,13 +48,13 @@
 <dl class="data">
 <dt id="pyjac.core.mech_interpret.pre_units">
 <code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">pre_units</code><em class="property"> = ['moles', 'molecules']</em><a class="headerlink" href="#pyjac.core.mech_interpret.pre_units" title="Permalink to this definition">¶</a></dt>
-<dd><p>list(<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; Supported units list for pre-exponential factor</p>
+<dd><p>list(<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; Supported units list for pre-exponential factor</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyjac.core.mech_interpret.act_energy_units">
 <code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">act_energy_units</code><em class="property"> = ['kelvins', 'evolts', 'cal/mole', 'joules/kmole', 'kcal/mole', 'joules/mole', 'kjoules/mole']</em><a class="headerlink" href="#pyjac.core.mech_interpret.act_energy_units" title="Permalink to this definition">¶</a></dt>
-<dd><p>list(<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; Supported units list for activation energy</p>
+<dd><p>list(<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a>) &#8211; Supported units list for activation energy</p>
 </dd></dl>
 
 <dl class="data">
@@ -69,7 +72,7 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;)</li>
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;)</li>
 <li><strong>therm_filename</strong> (<em>str, optional</em>) &#8211; Thermodynamic database filename (e.g., &#8216;therm.dat&#8217;)</li>
 </ul>
 </td>
@@ -101,7 +104,7 @@ values (if given).</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of thermo database file.</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of thermo database file.</li>
 <li><strong>elems</strong> (<em>list of str</em>) &#8211; List of element names in mechanism.</li>
 <li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in mechanism.</li>
 </ul>
@@ -126,7 +129,7 @@ values (if given).</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.cti&#8217;). Optional.</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.cti&#8217;). Optional.</li>
 <li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object) &#8211; Existing Cantera Solution object to be used. Optional.</li>
 </ul>
 </td>
@@ -182,8 +185,8 @@ values (if given).</p>
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
     <form class="search" action="../search.html" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
@@ -197,8 +200,8 @@ values (if given).</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.1</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.8</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
       <a href="../_sources/src/pyjac.core.mech_interpret.txt"

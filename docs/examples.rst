@@ -69,3 +69,34 @@ Note that all ``*.npy`` files in a directory will be used for testing purposes.
 The performance tester can be called using::
 
     python -m pyjac.performance_tester -w data/ -nt 12
+
+==================
+Library Generation
+==================
+
+pyJac also has the ability to generate shared / static libraries for
+linkage to external programs.  This functionality is available via the
+pyjac.libgen submodule, and requires a gcc/nvcc installation available
+on the path.  It can be called as:
+
+    python -m pyjac.libgen --source_dir /path/to/generated/pyjac/output \
+           --lang cuda --static
+
+Note that for linkage into an external program, CUDA requires use of a
+static library.
+
+=========================
+Python Wrapper Generation
+=========================
+
+In addition to the library generation described above, pyJac can directly
+generate a python wrapper for chemical source term / Jacobian evaluation
+(among others) directly from python.  This functionality can be called
+via (e.g.,):
+
+    python -m pyjac.pywrap --source_dir /path/to/generated/pyjac/output \
+           --lang cuda
+
+For details of the functions included in the python wrapper, look at the
+.pyx files in :submodule:`pyjac.pywrap`, or the calls in
+:class:`cpyjac_evaluator`

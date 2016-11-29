@@ -76,7 +76,7 @@ Library Generation
 
 pyJac also has the ability to generate shared / static libraries for
 linkage to external programs.  This functionality is available via the
-:module:`libgen` submodule, and requires a gcc/nvcc installation available
+:py:mod:`pyjac.libgen` submodule, and requires a gcc/nvcc installation available
 on the path.  It can be called as:
 
     python -m pyjac.libgen --source_dir /path/to/generated/pyjac/output \
@@ -98,5 +98,5 @@ via (e.g.,):
            --lang cuda
 
 For details of the functions included in the python wrapper, look at the
-.pyx files in :module:`pyjac.pywrap`, or the calls in
-:class:`cpyjac_evaluator`
+.pyx files in :py:mod:`pyjac.pywrap`, or the calls in
+:py:class:`pyjac.functional_tester.test.cpyjac_evaluator`

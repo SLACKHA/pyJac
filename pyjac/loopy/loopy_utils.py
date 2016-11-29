@@ -10,8 +10,10 @@ import os
 
 #local imports
 from ..utils import check_lang
+from .loopy_edit_script import substitute as codefix
 
-edit_script = os.path.join(os.path.abspath(__FILE__), 'loopy_edit_script.py')
+edit_script = os.path.join(os.path.abspath(os.path.dirname(__file__)),
+    'loopy_edit_script.py')
 
 class RateSpecialization(Enum):
     fixed = 0,
@@ -97,6 +99,30 @@ def get_header(knl):
         re.search(r'(?:__kernel(__)?)?\s*void', line))
     return header
 
+def set_editor(knl):
+    """
+    Returns a copy of knl set up for various automated bug-fixes
+
+    Parameters
+    ----------
+    knl : `loopy.kernel`
+        The kernel to generate code for
+
+    Returns
+    -------
+    edit_knl : `loopy.kernel`
+        The kernel set up for editing
+    """
+
+    #set the edit script as the 'editor'
+    if not 'EDITOR' in os.environ:
+        os.environ['EDITOR'] = edit_script
+
+    #turn on code editing
+    edit_knl = lp.set_options(knl, edit_code=True)
+
+    return edit_knl
+
 def get_code(knl):
     """
     Returns the device code for a `loopy.kernel`
@@ -115,16 +141,8 @@ def get_code(knl):
     The kernel's Target and name should be set for proper functioning
     """
 
-    #set the edit script as the 'editor'
-    if not 'EDITOR' in os.environ:
-        os.environ['EDITOR'] = edit_script
-
-    #turn on code editing
-    temp_knl = lp.set_options(knl, edit_code=True)
-
-    #and return the edited code
-    code, _ = lp.generate_code(temp_knl)
-    return code
+    code, _ = lp.generate_code(knl)
+    return codefix('stdin', text_in=code)
 
 def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **input_args):
     """
@@ -159,19 +177,21 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
     if isinstance(knl, list):
         out_ref = np.zeros_like(ref_answer)
         for k in knl:
+            test_knl = set_editor(k)
             try:
-                evt, (out,) = k(queue, **input_args)
+                evt, (out,) = test_knl(queue, **input_args)
             except Exception as e:
-                print(k)
+                print(test_knl)
                 raise e
             copy_inds = np.where(np.logical_not(np.isinf(out)))
             out_ref[copy_inds] = out[copy_inds]
         out = out_ref
     else:
         try:
-            evt, (out,) = knl(queue, **input_args)
+            test_knl = set_editor(knl)
+            evt, (out,) = test_knl(queue, **input_args)
         except Exception as e:
-            print(knl)
+            print(test_knl)
             raise e
 
     if compare_mask:

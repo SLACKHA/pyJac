@@ -12,7 +12,7 @@ import re
 swaps = {
     #replace "bad" lid()/gid() subtractions in for loop clauses
     #re: https://software.intel.com/en-us/forums/opencl/topic/704155
-    r'\+\s*-1\s*\*\s*((?:lid|gid)\((?:\d+)\))([^;]+)' : r'\2 - \1'
+    r'for.+\+\s*-1\s*\*\s*((?:lid|gid)\((?:\d+)\))([^;]+)' : r'\2 - \1'
     }
 
 def __get_file(filename, text_in=None):

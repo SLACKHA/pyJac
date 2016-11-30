@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 #local imports
 from ..core.rate_subs import rate_const_simple_kernel_gen, get_rate_eqn, assign_rates
-from ..loopy.loopy_utils import auto_run, loopy_options, RateSpecialization
+from ..loopy.loopy_utils import auto_run, loopy_options, RateSpecialization, get_code
 from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type
@@ -157,7 +157,6 @@ class SubTest(TestClass):
 
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
-        pre, eq = get_rate_eqn(eqs)
 
         oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
             ('width', [4, None]),
@@ -178,8 +177,8 @@ class SubTest(TestClass):
                 continue
             opt = loopy_options(**{x : state[x] for x in
                 state if x != 'device'})
-            knl = rate_const_simple_kernel_gen(eq, pre, reacs, opt,
-                test_size=self.store.test_size)
+            knl = rate_const_simple_kernel_gen(eqs, reacs, opt,
+                        test_size=self.store.test_size)
 
             ref = ref_const if state['order'] == 'F' else ref_const_T
             assert auto_run(knl, ref, device=state['device'],

@@ -267,12 +267,12 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         #make a new name off the replaced iname
         masked_name = '{}_mask'.format(mask)
         #add a mapping instruction
-        map_instructs[masked_name] = generate_map_instruction(
+        mask_instructs[mask] = generate_map_instruction(
                                             newname=masked_name,
-                                            mapper=mask_name[mask],
+                                            map_arr=mask_name[mask],
                                             oldname=mask)
         #and replace the index
-        string_inds[string_inds.index(mask)] = newname
+        string_inds[string_inds.index(mask)] = masked_name
 
     #the ordering / indexing of the array depends on the memory layout
     #if it's row-major, we must reverse the indicies / dimensions
@@ -282,10 +282,10 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         dimensions = dimensions[::-1]
 
     #finally make the arguement
-    arg = lp.GlobalArg(arg_name)
+    arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=np.float64)
 
     #and return
     return {'arg' : arg,
             'arg_str' : '{name}[{inds}]'.format(name=arg_name,
-                inds=','.join(indicies)),
+                inds=','.join(string_inds)),
             'mask_instructs' : mask_instructs}

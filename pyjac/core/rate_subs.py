@@ -436,9 +436,6 @@ def rate_const_simple_kernel_gen(eqs, reacs,
     #determine rate evaluation types, indicies etc.
     rate_info = assign_rates(reacs, loopy_opt.rate_spec)
 
-    from collections import defaultdict
-    masks = defaultdict()
-
     #the reaction index variable
     reac_ind = 'i'
 
@@ -447,14 +444,13 @@ def rate_const_simple_kernel_gen(eqs, reacs,
     inmap_inst = None
     if separated_kernels:
         reac_ind = 'i_mask'
-        masks['i'] = 'i_dummy'
         inmap_inst = lp_utils.generate_map_instruction(
                                             newname=reac_ind,
                                             mapper=inmap_name,
                                             oldname='i')
 
     #get rate equations
-    rate_eqn, rate_eqn_pre = get_rate_eqn(eqs, index=reac_ind)
+    rate_eqn_pre, rate_eqn = get_rate_eqn(eqs, index=reac_ind)
 
     #write the simple arrenhius rate evaluation kernel
 
@@ -475,11 +471,12 @@ def rate_const_simple_kernel_gen(eqs, reacs,
 
 
     #do we need a mask for writing output?
+    masks={}
     if rate_info['simple']['offset'] is None:
         mask_lp = lp.TemporaryVariable('out_mask', shape=lp.auto,
             initializer=rate_info['simple']['mask'],
             read_only=True, scope=scopes.PRIVATE)
-        mask_name['i'] = 'out_mask'
+        masks['i'] = 'out_mask'
 
     #get the kf arguement
     result = lp_utils.get_loopy_arg('kf', ['i', 'j'], [Nr, test_size],
@@ -487,7 +484,7 @@ def rate_const_simple_kernel_gen(eqs, reacs,
     kf_arr = result['arg']
     kf_str = result['arg_str']
     outmap_inst = None
-    if mask_name:
+    if 'i' in masks:
         outmap_inst = result['mask_instructs']['i']
 
     #various precomputes
@@ -533,12 +530,12 @@ def rate_const_simple_kernel_gen(eqs, reacs,
     #and the skeleton kernel
     skeleton ="""
     for j
-        {}
+        {{pre}}
         for {}
-            {}
+            {{main}}
         end
     end
-    """
+    """.format(reac_ind)
 
     #make the specializations into a list we can iterate over
     #to simplify code
@@ -593,8 +590,8 @@ def rate_const_simple_kernel_gen(eqs, reacs,
 
         #construct the kernel args
         pre_instructions = [pre_inst[k] for k in pre_instructions]
-        kernel_str = skeleton.format('\n'.join(pre_instructions), i_name,
-            '\n'.join(instructions))
+        kernel_str = skeleton.format(pre='\n'.join(pre_instructions),
+            main='\n'.join(instructions))
 
         #make the kernel
         knl = lp.make_kernel('{[' + ','.join(inames) + ']:' +
@@ -689,15 +686,16 @@ def get_rate_eqn(eqs, index='i'):
 
     conp_eqs = eqs['conp']
 
-    ind_str = '[{ind}]'.format(index)
     #define some dummy symbols for loopy writing
     E_sym = sp.Symbol('Ta[{ind}]'.format(ind=index), real=True)
     A_sym = sp.Symbol('A[{ind}]'.format(ind=index), real=True,
         positive=True, nonnegative=True)
     T_sym = sp.Symbol('T', real=True, positive=True, nonnegative=True)
     b_sym = sp.Symbol('beta[{ind}]'.format(ind=index), real=True)
-    symlist = [E_sym, A_sym, T_sym, b_sym]
-    symlist = {str(x) : x for x in symlist}
+    symlist = {'Ta[i]' : E_sym,
+               'A[i]' : A_sym,
+               'T' : T_sym,
+               'beta[i]' : b_sym}
     Tinv_sym = sp.Symbol('T_inv', real=True, positive=True, nonnegative=True)
     logA_sym = sp.Symbol('A[{ind}]'.format(ind=index), real=True)
     logT_sym = sp.Symbol('logT', real=True)

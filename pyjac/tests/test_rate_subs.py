@@ -28,19 +28,14 @@ class SubTest(TestClass):
     def test_get_rate_eqs(self):
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
-        pre, eq = get_rate_eqn(eqs)
+        preget_rate_eqn(eqs)
 
-        #first check they are equal
-        assert 'exp(' + str(pre) + ')' == eq
-
-        #second check the form
+        #check the form
         assert eq == 'exp(A[i] - T_inv*Ta[i] + beta[i]*logT)'
 
         pre, eq = get_rate_eqn(eqs, index='j')
 
-        assert 'exp(' + str(pre) + ')' == eq
-
-        #second check the form
+        #check the form
         assert eq == 'exp(A[j] - T_inv*Ta[j] + beta[j]*logT)'
 
     def test_assign_rates(self):
@@ -57,15 +52,11 @@ class SubTest(TestClass):
             #test return value
             assert 'simple' in result and 'cheb' in result and 'plog' in result
 
-            #test num, mask, and offset
+            #test num, map
             plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.PlogReaction)])
             assert result['plog']['num'] == len(plog_inds)
-            assert np.allclose(result['plog']['mask'], np.array(plog_inds))
-            if np.all(np.diff(result['plog']['mask']) == 1):
-                assert result['plog']['offset'] == result['plog']['mask'][0]
-            else:
-                assert result['plog']['offset'] is None
+            assert np.allclose(result['plog']['map'], np.array(plog_inds))
             #check values
             assert np.array_equal(result['plog']['num_P'], [len(p.rates) for p in plog_reacs])
             assert np.allclose(result['plog']['params'][0::4],
@@ -82,20 +73,12 @@ class SubTest(TestClass):
             cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.ChebyshevReaction)])
             assert result['cheb']['num'] == len(cheb_inds)
-            assert np.allclose(result['cheb']['mask'], np.array(cheb_inds))
-            if np.all(np.diff(result['cheb']['mask']) == 1):
-                assert result['cheb']['offset'] == result['cheb']['mask'][0]
-            else:
-                assert result['cheb']['offset'] is None
+            assert np.allclose(result['cheb']['map'], np.array(cheb_inds))
 
             simple_inds = sorted(list(set(range(gas.n_reactions)).difference(
                 set(plog_inds).union(set(cheb_inds)))))
             assert result['simple']['num'] == len(simple_inds)
-            assert np.allclose(result['simple']['mask'], np.array(simple_inds))
-            if np.all(np.diff(result['simple']['mask']) == 1):
-                assert result['simple']['offset'] == result['simple']['mask'][0]
-            else:
-                assert result['simple']['offset'] is None
+            assert np.allclose(result['simple']['map'], np.array(simple_inds))
 
         __tester(result)
 
@@ -179,7 +162,6 @@ class SubTest(TestClass):
                 state if x != 'device'})
             knl = rate_const_simple_kernel_gen(eqs, reacs, opt,
                         test_size=self.store.test_size)
-
             ref = ref_const if state['order'] == 'F' else ref_const_T
             assert auto_run(knl, ref, device=state['device'],
                 T_arr=T, compare_mask=compare_mask,

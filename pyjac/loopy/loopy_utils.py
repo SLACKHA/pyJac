@@ -229,7 +229,7 @@ def generate_map_instruction(oldname, newname, map_arr):
 
 
 def get_loopy_arg(arg_name, indicies, dimensions,
-                    order='F', mask_name=None):
+                    order='F', map_name=None):
     """
     Convience method that generates a loopy GlobalArg with correct indicies
     and sizes.
@@ -245,7 +245,7 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     order : {'C', 'F'}
         The memory layout of the arrays, C (row major) or Fortran
         (column major)
-    mask_name : dict
+    map_name : dict
         If not None, contains replacements for various indicies
 
     Returns
@@ -256,23 +256,27 @@ def get_loopy_arg(arg_name, indicies, dimensions,
                 The generated loopy arg
             * arg_str : str
                 A string form of the argument
-            * mask_instructs : list of str
+            * map_instructs : list of str
                 A list of strings to be used `loopy.Instruction`'s for
                 given mappings
     """
 
     string_inds = indicies[:]
-    mask_instructs = {}
-    for mask in mask_name:
+    map_instructs = {}
+    for imap in map_name:
         #make a new name off the replaced iname
-        masked_name = '{}_mask'.format(mask)
+        mapped_name = '{}_map'.format(imap)
+        if map_name[imap].startswith('<>'):
+            #already an instruction
+            map_instructs[imap] = map_name[imap]
+            continue
         #add a mapping instruction
-        mask_instructs[mask] = generate_map_instruction(
-                                            newname=masked_name,
-                                            map_arr=mask_name[mask],
-                                            oldname=mask)
+        map_instructs[imap] = generate_map_instruction(
+                                            newname=mapped_name,
+                                            map_arr=map_name[imap],
+                                            oldname=imap)
         #and replace the index
-        string_inds[string_inds.index(mask)] = masked_name
+        string_inds[string_inds.index(imap)] = mapped_name
 
     #the ordering / indexing of the array depends on the memory layout
     #if it's row-major, we must reverse the indicies / dimensions
@@ -288,4 +292,27 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     return {'arg' : arg,
             'arg_str' : '{name}[{inds}]'.format(name=arg_name,
                 inds=','.join(string_inds)),
-            'mask_instructs' : mask_instructs}
+            'map_instructs' : map_instructs}
+
+def get_target(lang):
+    """
+
+    Parameters
+    ----------
+    lang : str
+        One of the supported languages, {'c', 'cuda', 'opencl'}
+
+    Returns
+    -------
+    The correct loopy target type
+    """
+
+    check_lang(lang)
+
+    #set target
+    if lang == 'opencl':
+        return lp.PyOpenCLTarget()
+    elif lang == 'c':
+        return lp.CTarget()
+    elif lang == 'cuda':
+        return lp.CudaTarget()

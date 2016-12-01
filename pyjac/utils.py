@@ -7,6 +7,8 @@ import os
 import errno
 from math import log10, floor
 from argparse import ArgumentParser
+import string
+import re
 
 #modules
 import loopy as lp
@@ -303,27 +305,20 @@ def is_integer(val):
             return False
 
 def check_lang(lang):
-    if not lang in langs:
-        raise NotImplementedError('Language {} not supported'.format(lang))
-
-def get_target(lang):
     """
+    Checks that 'lang' is a valid identified
 
     Parameters
     ----------
-    lang : str
-        One of the supported languages, {'c', 'cuda', 'opencl'}
+    lang : {'c', 'opencl', 'cuda'}
+        The language to check
+
+    Notes
+    -----
+    Raised NotImplementedError if incorrect lang given
     """
-
-    check_lang(lang)
-
-    #set target
-    if lang == 'opencl':
-        return lp.PyOpenCLTarget()
-    elif lang == 'c':
-        return lp.CTarget()
-    elif lang == 'cuda':
-        return lp.CudaTarget()
+    if not lang in langs:
+        raise NotImplementedError('Language {} not supported'.format(lang))
 
 def get_parser():
     """

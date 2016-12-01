@@ -28,15 +28,15 @@ class SubTest(TestClass):
     def test_get_rate_eqs(self):
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
-        preget_rate_eqn(eqs)
+        pre = get_rate_eqn(eqs)
 
         #check the form
-        assert eq == 'exp(A[i] - T_inv*Ta[i] + beta[i]*logT)'
+        assert 'exp(' + str(pre) + ')' == 'exp(A[i] - T_inv*Ta[i] + beta[i]*logT)'
 
-        pre, eq = get_rate_eqn(eqs, index='j')
+        pre = get_rate_eqn(eqs, index='j')
 
         #check the form
-        assert eq == 'exp(A[j] - T_inv*Ta[j] + beta[j]*logT)'
+        assert 'exp(' + str(pre) + ')' == 'exp(A[j] - T_inv*Ta[j] + beta[j]*logT)'
 
     def test_assign_rates(self):
         reacs = self.store.reacs

@@ -626,8 +626,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
             info.maps.append(result['map_instructs'][reac_ind])
 
         #substitute in whatever beta_iter / kf_str we found
-        info.instructions = Template(info.instructions).safe_substitute(
-                    beta_iter=beta_iter, kf_str=kf_str)
+        info.instructions = Template(
+                        Template(info.instructions).safe_substitute(
+                            beta_iter=beta_iter)
+                    ).safe_substitute(kf_str=kf_str)
 
     return specializations.values()
 

@@ -563,10 +563,11 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         beta_iter = ''
         if (separated_kernels and (info.name == i_beta_int.name)) or \
             (not separated_kernels and not fixed):
-            maxb_test = np.abs(
-                rate_info['simple']['b'][info.indicies])
+            #find max b exponent
+            maxb_test = rate_info['simple']['b'][
+                    np.where(rate_info['simple']['type'] == rtype)]
             if maxb_test.size:
-                maxb = int(np.max(maxb_test))
+                maxb = int(np.max(np.abs(maxb_test)))
                 #if we need to iterate
                 if maxb > 1:
                     #add an extra iname, and the resulting iteraton loop

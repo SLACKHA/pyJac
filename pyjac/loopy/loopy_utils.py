@@ -181,7 +181,7 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
             try:
                 evt, (out,) = test_knl(queue, **input_args)
             except Exception as e:
-                print(test_knl)
+                print(k)
                 raise e
             copy_inds = np.where(np.logical_not(np.isinf(out)))
             out_ref[copy_inds] = out[copy_inds]
@@ -191,10 +191,10 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
             test_knl = set_editor(knl)
             evt, (out,) = test_knl(queue, **input_args)
         except Exception as e:
-            print(test_knl)
+            print(knl)
             raise e
 
-    if compare_mask:
+    if compare_mask is not None:
         return np.allclose(np.take(out, compare_mask, compare_axis),
             np.take(ref_answer, compare_mask, compare_axis))
     #check against supplied answer

@@ -17,6 +17,7 @@ import re
 import logging
 import itertools
 from string import Template
+import textwrap
 
 # Non-standard librarys
 import sympy as sp
@@ -384,12 +385,11 @@ def assign_rates(reacs, rate_spec):
 
 class rateconst_info(object):
     def __init__(self, name, instructions, pre_instructions=[],
-        special_instructions=[], reac_ind='i', kernel_data=None,
+        reac_ind='i', kernel_data=None,
         maps={}, extra_inames=[], indicies=[]):
         self.name = name
         self.instructions = instructions
         self.pre_instructions = pre_instructions[:]
-        self.special_instructions = special_instructions[:]
         self.reac_ind = reac_ind
         self.kernel_data = kernel_data[:]
         self.maps = maps.copy()
@@ -398,6 +398,194 @@ class rateconst_info(object):
 
 __TINV_PREINST_KEY = 'Tinv'
 __TLOG_PREINST_KEY = 'logT'
+__PLOG_PREINST_KEY = 'logP'
+
+def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for p-log rate constants
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+
+    """
+
+    rate_eqn = get_rate_eqn(eqs)
+
+    #find the plog equation
+    plog_eqn = next(x for x in eqs['conp'] if str(x) == 'log({k_f}[i])')
+    plog_form, plog_eqn = plog_eqn, eqs['conp'][plog_eqn][(reaction_type.plog,)]
+
+    #now we do some surgery to obtain a form w/o 'logs' as we'll take them
+    #explicitly in the code
+    logP = sp.Symbol('logP')
+    logP1 = sp.Symbol('low[0]')
+    logP2 = sp.Symbol('hi[0]')
+    logk1 = sp.Symbol('logk1')
+    logk2 = sp.Symbol('logk2')
+    plog_eqn = sp_utils.sanitize(plog_eqn, subs={sp.log(sp.Symbol('k_1')) : logk1,
+                                        sp.log(sp.Symbol('k_2')) : logk2,
+                                        sp.log(sp.Symbol('P')) : logP,
+                                        sp.log(sp.Symbol('P_1')) : logP1,
+                                        sp.log(sp.Symbol('P_2')) : logP2})
+
+    #and specialize the k1 / k2 equations
+    A1 = sp.Symbol('low[1]')
+    b1 = sp.Symbol('low[2]')
+    Ta1 = sp.Symbol('low[3]')
+    k1_eq = sp_utils.sanitize(rate_eqn, subs={sp.Symbol('A[i]') : A1,
+                                         sp.Symbol('beta[i]') : b1,
+                                         sp.Symbol('Ta[i]') : Ta1})
+    A2 = sp.Symbol('hi[1]')
+    b2 = sp.Symbol('hi[2]')
+    Ta2 = sp.Symbol('hi[3]')
+    k2_eq = sp_utils.sanitize(rate_eqn, subs={sp.Symbol('A[i]') : A2,
+                                         sp.Symbol('beta[i]') : b2,
+                                         sp.Symbol('Ta[i]') : Ta2})
+
+    #get the rate info
+    num_plog = rate_info['plog']['num']
+    plog_inds = np.array(rate_info['plog']['map'])
+
+    #create the loopy equivalents
+    params = rate_info['plog']['params']
+
+    #take the log of P and A
+    params[0::4] = np.log(params[0::4])
+    params[1::4] = np.log(params[1::4])
+    plog_params_lp = lp.TemporaryVariable('plog_params', shape=lp.auto,
+        initializer=params,
+        read_only=True, scope=scopes.GLOBAL)
+
+    #create offsets
+    offsets = np.copy(rate_info['plog']['num_P'])
+    offsets = np.cumsum(offsets) - offsets
+    offsets = np.hstack((offsets, [offsets[-1] +
+        rate_info['plog']['num_P'][-1]])).astype(np.int32)
+    param_offsets_lp = lp.TemporaryVariable('plog_param_offsets', shape=lp.auto,
+        initializer=offsets, read_only=True, scope=scopes.GLOBAL)
+
+
+    #create temporary variables
+    low_lp = lp.TemporaryVariable('low', shape=(4,), scope=scopes.PRIVATE, dtype=np.float64)
+    hi_lp = lp.TemporaryVariable('hi', shape=(4,), scope=scopes.PRIVATE, dtype=np.float64)
+    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+    P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
+    plog_inds_lp = lp.TemporaryVariable('plog_inds', scope=scopes.GLOBAL, shape=lp.auto,
+                                       initializer=plog_inds, read_only=True)
+    maxP = np.max(rate_info['plog']['num_P'])
+
+    #start creating the rateconst_info's
+
+    #data
+    kernel_data = [plog_params_lp, param_offsets_lp, T_arr,
+                        P_arr, low_lp, hi_lp, plog_inds_lp]
+
+    #reac ind
+    reac_ind = 'i'
+
+    #extra loops
+    extra_inames = [('k', '0 <= k < {}'.format(maxP - 1)), ('m', '0 <= m < 4')]
+
+    out_map = {}
+    outmap_name = 'out_map'
+    #see if we need an output mask
+    indicies = rate_info['plog']['map'].astype(dtype=np.int32)
+    Nr = rate_info['Nr']
+
+    if indicies[0] + indicies.size == indicies[-1]:
+        #if the indicies are contiguous, we can get away with an
+        #offset
+        indicies = (indicies[0], indicies[-1])
+    else:
+        #need an output map
+        out_map[reac_ind] = outmap_name
+        #add to kernel data
+        outmap_lp = lp.TemporaryVariable(outmap_name,
+            shape=lp.auto,
+            initializer=rate_info['plog']['map'],
+            read_only=True, scope=scopes.PRIVATE)
+        kernel_data.append(outmap_lp)
+
+    #get the proper kf indexing / array
+    result = lp_utils.get_loopy_arg('kf',
+                    [reac_ind, 'j'],
+                    [Nr, test_size],
+                    order=loopy_opt.order,
+                    map_name=out_map)
+
+    #add to kernel data
+    kf_arr = result['arg']
+    kernel_data.append(kf_arr)
+
+    #get correct str for instructions
+    kf_str = result['arg_str']
+
+    #handle map info
+    maps = []
+    if reac_ind in out_map:
+        maps.append(result['map_instructs'][reac_ind])
+
+    #instructions
+    instructions = Template(
+"""
+        <>off_i = plog_param_offsets[${reac_ind}]
+        <>off_iplus = plog_param_offsets[${reac_ind} + 1]
+        <>lower = logP <= plog_params[0, off_i] #check below range
+        if lower
+            <>lo_ind = off_i {id=ind00}
+            <>hi_ind = off_i {id=ind01}
+        end
+        <>upper = logP > plog_params[0, off_iplus - 1] #check above range
+        if upper
+            lo_ind = off_iplus - 1 {id=ind10}
+            hi_ind = off_iplus - 1 {id=ind11}
+        end
+        <>oor = lower or upper
+        for k
+            #check that
+            #1. inside this reactions parameter's still
+            #2. inside pressure range
+            <> midcheck = (off_i + k < off_iplus - 1) and (logP > plog_params[0, off_i + k]) and (logP <= plog_params[0, off_i + k + 1])
+            if midcheck
+                lo_ind = off_i + k {id=ind20}
+                hi_ind = off_i + k + 1 {id=ind21}
+            end
+        end
+        for m
+            low[m] = plog_params[m, lo_ind] {id=lo, dep=ind*}
+            hi[m] = plog_params[m, hi_ind] {id=hi, dep=ind*}
+        end
+        <>logk1 = ${loweq} {id=a1, dep=lo}
+        <>logk2 = ${hieq} {id=a2, dep=hi}
+        <>kf_temp = logk1 {id=a_oor}
+        if not oor
+            kf_temp = ${plog_eqn} {id=a_found, dep=a1:a2}
+        end
+        ${kf_str} = exp(kf_temp) {id=kf, dep=aoor:a_found}
+""").safe_substitute(loweq=k1_eq, hieq=k2_eq, plog_eqn=plog_eqn, reac_ind=reac_ind,
+                    kf_str=kf_str)
+
+    #and return
+    return [rateconst_info(name='plog', instructions=instructions,
+        pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY, __PLOG_PREINST_KEY],
+        reac_ind=reac_ind, kernel_data=kernel_data,
+        maps=maps, extra_inames=extra_inames, indicies=indicies)]
+
+
+
 
 def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for specialized forms
@@ -423,10 +611,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     """
 
     #find options, sizes, etc.
-
     Nr = rate_info['Nr']
-    if test_size is None:
-        test_size = 'n'
 
     #first assign the reac types, parameters
     full = loopy_opt.rate_spec == lp_utils.RateSpecialization.full
@@ -668,28 +853,35 @@ def rate_const_simple_kernel_gen(eqs, reacs,
 
     #various precomputes
     pre_inst = {__TINV_PREINST_KEY : '<> T_inv = 1 / T_arr[j]',
-                __TLOG_PREINST_KEY : '<> logT = log(T_arr[j])'}
+                __TLOG_PREINST_KEY : '<> logT = log(T_arr[j])',
+                __PLOG_PREINST_KEY : '<> logP = log(P_arr[j])'}
 
     #and the skeleton kernel
-    skeleton = Template("""
+    skeleton = """
     for j
         ${pre}
         for ${reac_ind}
             ${main}
         end
     end
-    """)
+    """
 
     kernels = {}
 
     #get the simple arrhenius rateconst_info's
     kernels['simple'] = get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=test_size)
 
+    #check for plog
+    if any(r.plog for r in reacs):
+        #generate the plog kernel
+        kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=test_size)
+
     #convience method to create kernel
     def make_kernel(info):
         #convert instructions into a list for convienence
         if isinstance(info.instructions, str):
-            instructions = [x for x in info.instructions.split('\n') if x.strip()]
+            instructions = textwrap.dedent(info.instructions)
+            instructions = [x for x in instructions.split('\n') if x.strip()]
 
         #load inames
         inames = [info.reac_ind, 'j']
@@ -718,10 +910,23 @@ def rate_const_simple_kernel_gen(eqs, reacs,
 
         #construct the kernel args
         pre_instructions = [pre_inst[k] for k in info.pre_instructions]
-        kernel_str = skeleton.safe_substitute(
+        def subs_preprocess(key, value):
+            #find the instance of ${key} in kernel_str
+            whitespace = None
+            for i, line in enumerate(skeleton.split('\n')):
+                if key in line:
+                    #get whitespace
+                    whitespace = re.match(r'\s*', line).group()
+                    break
+            result = [line if i == 0 else whitespace + line for i, line in
+                        enumerate(textwrap.dedent(value).splitlines())]
+            return '\n'.join(result)
+
+
+        kernel_str = Template(skeleton).safe_substitute(
             reac_ind=info.reac_ind,
-            pre='\n'.join(pre_instructions),
-            main='\n'.join(instructions))
+            pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
+            main=subs_preprocess('${main}', '\n'.join(instructions)))
 
         #make the kernel
         knl = lp.make_kernel('{[' + ','.join(inames) + ']:' +
@@ -743,34 +948,32 @@ def rate_const_simple_kernel_gen(eqs, reacs,
         for info in kernels[eval_type]:
             knl_list[eval_type].append((info.reac_ind, make_kernel(info)))
 
-    #stub for special handling of various evaluation types here
+        #stub for special handling of various evaluation types here
 
-    #flatten dict
-    knls = []
-    #apply other optimizations
-    for reac_ind, knl in itertools.chain(*knl_list.values()):
-        #now apply specified optimizations
-        if loopy_opt.depth is not None:
-            #and assign the l0 axis to 'i'
-            knl = lp.split_iname(knl, reac_ind, loopy_opt.depth, inner_tag='l.0')
-            #assign g0 to 'j'
-            knl = lp.tag_inames(knl, [('j', 'g.0')])
-        elif loopy_opt.width is not None:
-            #make the kernel a block of specifed width
-            knl = lp.split_iname(knl, 'j', loopy_opt.width, inner_tag='l.0')
-            #assign g0 to 'i'
-            knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
+        #apply other optimizations
+        for i, (reac_ind, knl) in enumerate(knl_list[eval_type]):
+            #now apply specified optimizations
+            if loopy_opt.depth is not None:
+                #and assign the l0 axis to 'i'
+                knl = lp.split_iname(knl, reac_ind, loopy_opt.depth, inner_tag='l.0')
+                #assign g0 to 'j'
+                knl = lp.tag_inames(knl, [('j', 'g.0')])
+            elif loopy_opt.width is not None:
+                #make the kernel a block of specifed width
+                knl = lp.split_iname(knl, 'j', loopy_opt.width, inner_tag='l.0')
+                #assign g0 to 'i'
+                knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
 
-        #now do unr / ilp
-        i_tag = reac_ind + '_outer' if loopy_opt.depth is not None else reac_ind
-        if loopy_opt.unr is not None:
-            knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
-        elif loopy_opt.ilp:
-            knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
+            #now do unr / ilp
+            i_tag = reac_ind + '_outer' if loopy_opt.depth is not None else reac_ind
+            if loopy_opt.unr is not None:
+                knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
+            elif loopy_opt.ilp:
+                knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
 
-        knls.append(knl)
+            knl_list[eval_type][i] = knl
 
-    return knls
+    return knl_list
 
 def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential

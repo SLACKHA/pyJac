@@ -135,6 +135,7 @@ class SubTest(TestClass):
     @attr('long')
     def test_rate_constants(self):
         T = self.store.T
+        P = self.store.P
         ref_const = self.store.fwd_rate_constants
         ref_const_T = ref_const.T.copy()
 
@@ -153,7 +154,12 @@ class SubTest(TestClass):
             ]))
 
         reacs = self.store.reacs
-        compare_mask = [i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))]
+        masks = [
+            ('simple',
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))])),
+            ('plog',
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))]))]
+
 
         for i, state in enumerate(oploop):
             if state['width'] is not None and state['depth'] is not None:
@@ -163,6 +169,14 @@ class SubTest(TestClass):
             knl = rate_const_simple_kernel_gen(eqs, reacs, opt,
                         test_size=self.store.test_size)
             ref = ref_const if state['order'] == 'F' else ref_const_T
-            assert auto_run(knl, ref, device=state['device'],
-                T_arr=T, compare_mask=compare_mask,
-                compare_axis=1 if state['order'] == 'C' else 0)
+            args = {'T_arr' : T}
+            for name, compare_mask in masks:
+                my_args = args.copy()
+                kernels = knl[name]
+                if name != 'simple':
+                    my_args['P_arr'] =  P
+                assert auto_run(kernels, ref, device=state['device'],
+                    **my_args,
+                    compare_mask=compare_mask,
+                    compare_axis=1 if state['order'] == 'C' else 0), \
+                    'Evaluate {} rates failed'.format(name)

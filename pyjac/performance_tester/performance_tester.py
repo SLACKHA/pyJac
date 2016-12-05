@@ -282,11 +282,20 @@ def performance_tester(home, work_dir, use_old_opt):
                 'finite_diffs' : [False, True],
                 'num_threads' : num_threads
                 }
-    cuda_params = {'lang' : 'cuda',
+
+    #check that nvcc installed
+    cuda_params = {}
+    try:
+        subprocess.check_call('nvcc --version')
+        #if we have NVCC, assume we can execute CUDA
+        cuda_params = {'lang' : 'cuda',
                    'cache_opt' : [False],
                    'shared' : [False, True],
                    'finite_diffs' : [False, True]
                    }
+    except subprocess.CalledProcessError:
+        #otherwise simply skip cuda
+        pass
     tchem_params = {'lang' : 'tchem'}
 
     for mech_name, mech_info in sorted(mechanism_list.items(),

@@ -210,7 +210,7 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
         sys.exit(1)
 
 
-def performance_tester(home, work_dir, use_old_opt, num_threads):
+def performance_tester(home, work_dir, use_old_opt):
     """Runs performance testing for pyJac, TChem, and finite differences.
 
     Parameters
@@ -221,8 +221,6 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
         Working directory with mechanisms and for data
     use_old_opt : bool
         If ``True``, use old optimization files found
-    num_threads : int
-        Number of OpenMP threads to parallelize performance testing
 
     Returns
     -------
@@ -275,20 +273,16 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
         return False
 
     c_params = {'lang' : 'c',
-                'cache_opt' : [False, True],
+                'cache_opt' : [False],
                 'finite_diffs' : [False, True]
+                'num_threads' : [1, 2, 4, 8, 16, 32, 40]
                 }
     cuda_params = {'lang' : 'cuda',
-                   'cache_opt' : [False, True],
+                   'cache_opt' : [False],
                    'shared' : [False, True],
                    'finite_diffs' : [False, True]
                    }
     tchem_params = {'lang' : 'tchem'}
-
-    #set up testing environment
-    env = os.environ.copy()
-    env['OMP_NUM_THREADS'] = str(1)
-    env['MKL_NUM_THREADS'] = str(1)
 
     for mech_name, mech_info in sorted(mechanism_list.items(),
                                        key=lambda x:x[1]['ns']
@@ -361,6 +355,12 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
             opt = state['cache_opt']
             smem = state['shared']
 
+            #handle threading
+            num_threads = -1
+            if lang == 'c':
+                num_threads = state['num_threads']
+
+
             if any([isinstance(rxn, ct.PlogReaction) or
                 isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
                 ]) and lang == 'tchem':
@@ -369,9 +369,10 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                       )
                 continue
 
-            data_output = ('{}_{}_{}_{}'.format(lang, 'co' if opt else 'nco',
+            data_output = ('{}_{}_{}_{}_{}'.format(lang, 'co' if opt else 'nco',
                                                 'smem' if smem else 'nosmem',
-                                                'fd' if FD else 'ajac'
+                                                'fd' if FD else 'ajac',
+                                                num_threads
                                                 ) +
                            '_output.txt'
                            )
@@ -487,5 +488,5 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                         subprocess.check_call(
                             [os.path.join(the_path,
                             test_dir, 'speedtest'),
-                            str(stepsize), str(num_threads)], stdout=file, env=env
+                            str(stepsize), str(num_threads)], stdout=file
                             )

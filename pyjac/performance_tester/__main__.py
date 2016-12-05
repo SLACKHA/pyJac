@@ -22,17 +22,10 @@ def main(args=None):
                             help='If True, allows performance_tester to use '
                                  'any old optimization files found'
                             )
-        parser.add_argument('-nt', '--num_omp_threads',
-                            type=int,
-                            required=True,
-                            help='Number of threads to use for OpenMP '
-                                 'parallelization of the C codes.'
-                                 )
         args = parser.parse_args()
         pt.performance_tester(os.path.dirname(os.path.abspath(pt.__file__)),
                               args.working_directory,
-                              args.use_old_opt, args.num_omp_threads
-                              )
+                              args.use_old_opt)
 
 if __name__ == '__main__':
     sys.exit(main())

@@ -272,10 +272,15 @@ def performance_tester(home, work_dir, use_old_opt):
     def false_factory():
         return False
 
+    import multiprocessing #for cpu count
+    max_cpu = multiprocessing.cpu_count()
+    num_threads = [1]
+    while num_threads < max_cpu:
+        num_threads.append(min(max_cpu, num_threads[-1] * 2))
     c_params = {'lang' : 'c',
                 'cache_opt' : [False],
-                'finite_diffs' : [False, True]
-                'num_threads' : [1, 2, 4, 8, 16, 32, 40]
+                'finite_diffs' : [False, True],
+                'num_threads' : num_threads
                 }
     cuda_params = {'lang' : 'cuda',
                    'cache_opt' : [False],

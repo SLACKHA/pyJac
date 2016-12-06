@@ -366,15 +366,21 @@ def assign_rates(reacs, rate_spec):
 
     #create the plog arrays
     num_pressures = []
-    plog_rate_vals = []
+    plog_params = []
     for p in plog_reacs:
         num_pressures.append(len(p.plog_par))
-        plog_rate_vals.extend(p.plog_par)
+        plog_params.append(p.plog_par)
     num_pressures = np.array(num_pressures, dtype=np.int32)
-    plog_params = np.vstack(tuple(np.array(r, dtype=np.float64) for r in zip(*plog_rate_vals)))
 
-    _, cheb_map, num_cheb = __seperate(
+    cheb_reacs, cheb_map, num_cheb = __seperate(
         reacs, [reaction_type.cheb])
+
+    #create the chebyshev arrays
+    num_cheb_p = []
+    num_cheb_t = []
+    cheb_coeff = []
+    for cheb in cheb_reacs:
+        cheb_coeff.append(cheb.cheb_par)
 
     return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'type' : simple_rate_type,
                 'num' : num_simple, 'map' : simple_map},
@@ -455,30 +461,61 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                                          sp.Symbol('beta[i]') : b2,
                                          sp.Symbol('Ta[i]') : Ta2})
 
-    #get the rate info
+    # total # of plog reactions
     num_plog = rate_info['plog']['num']
+    # number of parameter sets per reaction
+    num_params = rate_info['plog']['num_P']
+    # incidies of plog reactions
     plog_inds = np.array(rate_info['plog']['map'])
 
     #create the loopy equivalents
     params = rate_info['plog']['params']
+    #create a copy
+    params_temp = [p[:] for p in params]
+    #max # of parameters for sizing
+    maxP = np.max(num_params)
+
+
+    #for simplicity, we're going to use a padded form
+    params = np.zeros((4, num_plog, maxP))
+    for m in range(4):
+        for i, numP in enumerate(num_params):
+            for j in range(numP):
+                params[m, i, j] = params_temp[i][j][m]
 
     #take the log of P and A
-    params[0::4] = np.log(params[0::4])
-    params[1::4] = np.log(params[1::4])
+    params[0, :, :] = np.log(params[0, :, :])
+    params[1, :, :] = np.log(params[1, :, :])
+    params[np.where(np.isinf(params))] = 0
+
+    #default indexing order
+    inds = ['${m}', '${reac_ind}', '${param_ind}']
+
+    if loopy_opt.order == 'C':
+        #in c-continguous mode, we want parameters from
+        #subsequent reactions to be adjacent
+        params = params.swapaxes(1, 2).copy()
+
+        #swap indicies
+        temp = inds[2]
+        inds[2] = inds[1]
+        inds[1] = temp
 
     #make loopy version
-    plog_params_lp = lp.TemporaryVariable('plog_params', shape=lp.auto,
-        initializer=params,
-        read_only=True, scope=scopes.GLOBAL)
+    plog_params_lp = lp_utils.get_loopy_arg('plog_params', indicies=inds,
+                                                dimensions=params.shape,
+                                                order=loopy_opt.order, #order taken care of already
+                                                initializer=params,
+                                                scope=scopes.GLOBAL)
+    #get the param indexing
+    param_str = Template(plog_params_lp['arg_str'])
 
-    #create offsets
-    offsets = np.copy(rate_info['plog']['num_P'])
-    offsets = np.cumsum(offsets) - offsets
-    offsets = np.hstack((offsets, [offsets[-1] +
-        rate_info['plog']['num_P'][-1]])).astype(np.int32)
-    param_offsets_lp = lp.TemporaryVariable('plog_param_offsets', shape=lp.auto,
-        initializer=offsets, read_only=True, scope=scopes.GLOBAL)
+    #and the actual parameter array
+    plog_params_lp = plog_params_lp['arg']
 
+    #and finally the loopy version of num_params
+    num_params_lp = lp.TemporaryVariable('plog_num_params', shape=lp.auto,
+        initializer=num_params, read_only=True, scope=scopes.GLOBAL)
 
     #create temporary variables
     low_lp = lp.TemporaryVariable('low', shape=(4,), scope=scopes.PRIVATE, dtype=np.float64)
@@ -487,12 +524,10 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
     plog_inds_lp = lp.TemporaryVariable('plog_inds', scope=scopes.GLOBAL, shape=lp.auto,
                                        initializer=plog_inds, read_only=True)
-    maxP = np.max(rate_info['plog']['num_P'])
 
     #start creating the rateconst_info's
-
     #data
-    kernel_data = [plog_params_lp, param_offsets_lp, T_arr,
+    kernel_data = [plog_params_lp, num_params_lp, T_arr,
                         P_arr, low_lp, hi_lp, plog_inds_lp]
 
     #reac ind
@@ -541,34 +576,33 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         maps.append(result['map_instructs'][reac_ind])
 
     #instructions
-    instructions = Template(
+    instructions = Template(Template(
 """
-        <>off_i = plog_param_offsets[${reac_ind}]
-        <>off_iplus = plog_param_offsets[${reac_ind} + 1]
-        <>lower = logP <= plog_params[0, off_i] #check below range
+        <>lower = logP <= ${pressure_lo} #check below range
         if lower
-            <>lo_ind = off_i {id=ind00}
-            <>hi_ind = off_i {id=ind01}
+            <>lo_ind = 0 {id=ind00}
+            <>hi_ind = 0 {id=ind01}
         end
-        <>upper = logP > plog_params[0, off_iplus - 1] #check above range
+        <>numP = plog_num_params[${reac_ind}] - 1
+        <>upper = logP > ${pressure_hi} #check above range
         if upper
-            lo_ind = off_iplus - 1 {id=ind10}
-            hi_ind = off_iplus - 1 {id=ind11}
+            lo_ind = numP {id=ind10}
+            hi_ind = numP {id=ind11}
         end
         <>oor = lower or upper
         for k
             #check that
             #1. inside this reactions parameter's still
             #2. inside pressure range
-            <> midcheck = (off_i + k < off_iplus - 1) and (logP > plog_params[0, off_i + k]) and (logP <= plog_params[0, off_i + k + 1])
+            <> midcheck = (k <= numP) and (logP > ${pressure_mid_lo}) and (logP <= ${pressure_mid_hi})
             if midcheck
-                lo_ind = off_i + k {id=ind20}
-                hi_ind = off_i + k + 1 {id=ind21}
+                lo_ind = k {id=ind20}
+                hi_ind = k + 1 {id=ind21}
             end
         end
         for m
-            low[m] = plog_params[m, lo_ind] {id=lo, dep=ind*}
-            hi[m] = plog_params[m, hi_ind] {id=hi, dep=ind*}
+            low[m] = ${pressure_general_lo} {id=lo, dep=ind*}
+            hi[m] = ${pressure_general_hi} {id=hi, dep=ind*}
         end
         <>logk1 = ${loweq} {id=a1, dep=lo}
         <>logk2 = ${hieq} {id=a2, dep=hi}
@@ -577,16 +611,22 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
             kf_temp = ${plog_eqn} {id=a_found, dep=a1:a2}
         end
         ${kf_str} = exp(kf_temp) {id=kf, dep=aoor:a_found}
-""").safe_substitute(loweq=k1_eq, hieq=k2_eq, plog_eqn=plog_eqn, reac_ind=reac_ind,
-                    kf_str=kf_str)
+""").safe_substitute(loweq=k1_eq, hieq=k2_eq, plog_eqn=plog_eqn,
+                    kf_str=kf_str,
+                    pressure_lo=param_str.safe_substitute(m=0, param_ind=0),
+                    pressure_hi=param_str.safe_substitute(m=0, param_ind='numP'),
+                    pressure_mid_lo=param_str.safe_substitute(m=0, param_ind='k'),
+                    pressure_mid_hi=param_str.safe_substitute(m=0, param_ind='k + 1'),
+                    pressure_general_lo=param_str.safe_substitute(m='m', param_ind='lo_ind'),
+                    pressure_general_hi=param_str.safe_substitute(m='m', param_ind='hi_ind')
+                    )
+    ).safe_substitute(reac_ind=reac_ind)
 
     #and return
     return [rateconst_info(name='plog', instructions=instructions,
         pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY, __PLOG_PREINST_KEY],
         reac_ind=reac_ind, kernel_data=kernel_data,
         maps=maps, extra_inames=extra_inames, indicies=indicies)]
-
-
 
 
 def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):

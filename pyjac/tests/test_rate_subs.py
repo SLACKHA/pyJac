@@ -59,16 +59,15 @@ class SubTest(TestClass):
             assert np.allclose(result['plog']['map'], np.array(plog_inds))
             #check values
             assert np.array_equal(result['plog']['num_P'], [len(p.rates) for p in plog_reacs])
-            assert np.allclose(result['plog']['params'][0::4],
-                np.array([r[0] for p in plog_reacs for r in p.rates]).squeeze())
-            assert np.allclose(result['plog']['params'][1::4],
-                np.array([r[1].pre_exponential_factor for p in plog_reacs for r in p.rates]).squeeze())
-            assert np.allclose(result['plog']['params'][2::4],
-                np.array([r[1].temperature_exponent for p in plog_reacs for r in p.rates]).squeeze())
-            #for the activation energies, we simply check that the ratios are the same
-            r = result['plog']['params'][3::4] / np.array(
-                [r[1].activation_energy for p in plog_reacs for r in p.rates]).squeeze()
-            assert np.all(np.isclose(r, r[0]))
+            for i, reac_params in enumerate(result['plog']['params']):
+                act_energy_ratios = []
+                for j, rates in enumerate(plog_reacs[i].rates):
+                    assert np.isclose(reac_params[j][0], rates[0])
+                    assert np.isclose(reac_params[j][1], rates[1].pre_exponential_factor)
+                    assert np.isclose(reac_params[j][2], rates[1].temperature_exponent)
+                    act_energy_ratios.append(reac_params[j][3] / rates[1].activation_energy)
+                #for the activation energies, we simply check that the ratios are the same
+                assert np.all(np.isclose(act_energy_ratios, act_energy_ratios[0]))
 
             cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
                     if isinstance(x, ct.ChebyshevReaction)])

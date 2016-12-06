@@ -429,7 +429,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     plog_form, plog_eqn = plog_eqn, eqs['conp'][plog_eqn][(reaction_type.plog,)]
 
     #now we do some surgery to obtain a form w/o 'logs' as we'll take them
-    #explicitly in the code
+    #explicitly in python
     logP = sp.Symbol('logP')
     logP1 = sp.Symbol('low[0]')
     logP2 = sp.Symbol('hi[0]')
@@ -465,6 +465,8 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #take the log of P and A
     params[0::4] = np.log(params[0::4])
     params[1::4] = np.log(params[1::4])
+
+    #make loopy version
     plog_params_lp = lp.TemporaryVariable('plog_params', shape=lp.auto,
         initializer=params,
         read_only=True, scope=scopes.GLOBAL)

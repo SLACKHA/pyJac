@@ -3,6 +3,7 @@ from __future__ import print_function
 #package imports
 from enum import Enum
 import loopy as lp
+from loopy.kernel.data import temp_var_scope as scopes
 import numpy as np
 import pyopencl as cl
 import re
@@ -227,9 +228,9 @@ def generate_map_instruction(oldname, newname, map_arr):
             oldname=oldname)
 
 
-
 def get_loopy_arg(arg_name, indicies, dimensions,
-                    order='F', map_name=None):
+                    order='F', map_name=None, initializer=None,
+                    scope=scopes.GLOBAL):
     """
     Convience method that generates a loopy GlobalArg with correct indicies
     and sizes.
@@ -247,6 +248,12 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         (column major)
     map_name : dict
         If not None, contains replacements for various indicies
+    initializer : `numpy.array`
+        If not None, the arg is assumed to be a "TemporaryVariable"
+        with :param:`scope`
+    scope : :class:`temp_var_scope`
+        The scope of the temporary variable definition,
+        if initializer is not None, this must be supplied
 
     Returns
     -------
@@ -263,20 +270,21 @@ def get_loopy_arg(arg_name, indicies, dimensions,
 
     string_inds = indicies[:]
     map_instructs = {}
-    for imap in map_name:
-        #make a new name off the replaced iname
-        mapped_name = '{}_map'.format(imap)
-        if map_name[imap].startswith('<>'):
-            #already an instruction
-            map_instructs[imap] = map_name[imap]
-            continue
-        #add a mapping instruction
-        map_instructs[imap] = generate_map_instruction(
-                                            newname=mapped_name,
-                                            map_arr=map_name[imap],
-                                            oldname=imap)
-        #and replace the index
-        string_inds[string_inds.index(imap)] = mapped_name
+    if map_name is not None:
+        for imap in map_name:
+            #make a new name off the replaced iname
+            mapped_name = '{}_map'.format(imap)
+            if map_name[imap].startswith('<>'):
+                #already an instruction
+                map_instructs[imap] = map_name[imap]
+                continue
+            #add a mapping instruction
+            map_instructs[imap] = generate_map_instruction(
+                                                newname=mapped_name,
+                                                map_arr=map_name[imap],
+                                                oldname=imap)
+            #and replace the index
+            string_inds[string_inds.index(imap)] = mapped_name
 
     #the ordering / indexing of the array depends on the memory layout
     #if it's row-major, we must reverse the indicies / dimensions
@@ -285,8 +293,12 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         string_inds = string_inds[::-1]
         dimensions = dimensions[::-1]
 
-    #finally make the arguement
-    arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=np.float64)
+    #finally make the argument
+    if initializer is None:
+        arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=np.float64)
+    else:
+        arg = lp.TemporaryVariable(arg_name, shape=tuple(dimensions),
+            initializer=initializer, scope=scope, read_only=True)
 
     #and return
     return {'arg' : arg,

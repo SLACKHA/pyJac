@@ -289,7 +289,10 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     #the ordering / indexing of the array depends on the memory layout
     #if it's row-major, we must reverse the indicies / dimensions
     #as we assume column-major in pyJac
-    if order == 'C':
+    if (initializer is None and order == 'C') or (initializer is not None
+            and ((order == 'C' and not initializer.flags['C_CONTIGUOUS']) or
+                 (order == 'F' and not initializer.flags['F_CONTIGUOUS'])
+                )):
         string_inds = string_inds[::-1]
         dimensions = dimensions[::-1]
 

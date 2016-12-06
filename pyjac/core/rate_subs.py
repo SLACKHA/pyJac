@@ -477,7 +477,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
 
 
     #for simplicity, we're going to use a padded form
-    params = np.zeros((4, num_plog, maxP))
+    params = np.zeros((4, num_plog, maxP), order=loopy_opt.order)
     for m in range(4):
         for i, numP in enumerate(num_params):
             for j in range(numP):

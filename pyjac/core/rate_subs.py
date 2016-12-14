@@ -376,35 +376,310 @@ def assign_rates(reacs, rate_spec):
         reacs, [reaction_type.cheb])
 
     #create the chebyshev arrays
-    num_cheb_p = []
-    num_cheb_t = []
+    cheb_n_pres = []
+    cheb_n_temp = []
+    cheb_plim = []
+    cheb_tlim = []
     cheb_coeff = []
     for cheb in cheb_reacs:
+        cheb_n_pres.append(cheb.cheb_n_pres)
+        cheb_n_temp.append(cheb.cheb_n_temp)
         cheb_coeff.append(cheb.cheb_par)
+        cheb_plim.append(cheb.cheb_plim)
+        cheb_tlim.append(cheb.cheb_tlim)
 
     return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'type' : simple_rate_type,
                 'num' : num_simple, 'map' : simple_map},
             'plog' : {'map' : plog_map, 'num' : num_plog,
             'num_P' : num_pressures, 'params' : plog_params},
-            'cheb' : {'map' : cheb_map, 'num' : num_cheb},
+            'cheb' : {'map' : cheb_map, 'num' : num_cheb,
+                'num_P' : cheb_n_pres, 'num_T' : cheb_n_temp,
+                'params' : cheb_coeff, 'Tlim' : cheb_tlim,
+                'Plim' : cheb_plim},
             'Nr' : len(reacs)}
 
 class rateconst_info(object):
     def __init__(self, name, instructions, pre_instructions=[],
         reac_ind='i', kernel_data=None,
-        maps={}, extra_inames=[], indicies=[]):
+        maps=[], extra_inames=[], indicies=[],
+        assumptions=[]):
         self.name = name
         self.instructions = instructions
         self.pre_instructions = pre_instructions[:]
         self.reac_ind = reac_ind
         self.kernel_data = kernel_data[:]
-        self.maps = maps.copy()
+        self.maps = maps[:]
         self.extra_inames = extra_inames[:]
         self.indicies = indicies[:]
+        self.assumptions = assumptions[:]
 
 __TINV_PREINST_KEY = 'Tinv'
 __TLOG_PREINST_KEY = 'logT'
 __PLOG_PREINST_KEY = 'logP'
+
+def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
+                        outmap_name='out_map', alternate_indicies=None):
+    """Consolidates the commonly used indicies mapping steps
+
+    Parameters
+    ----------
+    indicies: :class:`numpy.ndarray`
+        The list of indicies
+    reac_ind : str
+        The reaction index variable (used in mapping)
+    out_map : dict
+        The dictionary to store the mapping result in (if any)
+    kernel_data : list of :class:`loopy.KernelArgument`
+        The data to pass to the kernel (may be added to)
+    outmap_name : str, optional
+        The name to use in mapping
+    alternate_indicies : :class:`numpy.ndarray`
+        An alternate list of indicies that can be substituted in to the mapping
+    Returns
+    -------
+    indicies : :class:`numpy.ndarray` OR tuple of int
+        The transformed indicies
+    """
+    if indicies[0] + indicies.size == indicies[-1]:
+        #if the indicies are contiguous, we can get away with an
+        #offset
+        indicies = (indicies[0], indicies[-1])
+    else:
+        #need an output map
+        out_map[reac_ind] = outmap_name
+        #if alternat indicies supplied
+        vals = indicies
+        if alternate_indicies is not None:
+            vals = alternate_indicies
+        #add to kernel data
+        outmap_lp = lp.TemporaryVariable(outmap_name,
+            shape=lp.auto,
+            initializer=vals.astype(dtype=np.int32),
+            read_only=True, scope=scopes.PRIVATE)
+        kernel_data.append(outmap_lp)
+
+    return indicies
+
+def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for p-log rate constants
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+
+    """
+    #control over memory access
+    wide = loopy_opt.width is not None
+    deep = loopy_opt.depth is not None
+
+    rate_eqn_pre = get_rate_eqn({'conp' : conp_eqs})
+    #find the cheb equation
+    cheb_eqn = next(x for x in conp_eqs if str(x) == 'log({k_f}[i])/log(10)')
+    cheb_form, cheb_eqn = cheb_eqn, conp_eqs[cheb_eqn][(reaction_type.cheb,)]
+    cheb_form = sp.Pow(10, sp.Symbol('kf_temp'))
+
+    #make nice symbols
+    Tinv = sp.Symbol('T_inv')
+    logP = sp.Symbol('logP')
+    Pmax, Pmin, Tmax, Tmin = sp.symbols('Pmax Pmin Tmax Tmin')
+    Pred, Tred = sp.symbols('Pred Tred')
+
+    #get tilde{T}, tilde{P}
+    T_red = next(x for x in conp_eqs if str(x) == 'tilde{T}')
+    #print conp_eqs[T_red]
+
+    P_red = next(x for x in conp_eqs if str(x) == 'tilde{P}')
+    #print conp_eqs[P_red]
+
+    Pred_eqn = sanitize(conp_eqs[P_red], subs={sp.log(sp.Symbol('P_{min}')) : Pmin,
+                                               sp.log(sp.Symbol('P_{max}')) : Pmax,
+                                               sp.log(sp.Symbol('P')) : logP})
+
+    Tred_eqn = sanitize(conp_eqs[T_red], subs={sp.S.One / sp.Symbol('T_{min}') : Tmin,
+                                               sp.S.One / sp.Symbol('T_{max}') : Tmax,
+                                               sp.S.One / sp.Symbol('T') : Tinv})
+
+    #number of cheb reactions
+    num_cheb = rate_info['cheb']['num']
+    # degree of pressure polynomial per reaction
+    num_P = np.array(rate_info['cheb']['num_P'], dtype=np.int32)
+    # degree of temperature polynomial per reaction
+    num_T = np.array(rate_info['cheb']['num_T'], dtype=np.int32)
+
+    #max degrees in mechanism
+    maxP = np.max(num_P)
+    maxT = np.max(num_T)
+    minP = np.min(num_P)
+    minT = np.min(num_T)
+    poly_max = np.maximum(maxP, maxT)
+
+    #now we start defining parameters / temporary variable
+
+    #workspace vars
+    pres_poly_lp = lp.TemporaryVariable('pres_poly', shape=(poly_max,), dtype=np.float64,
+                                   scope=scopes.PRIVATE)
+    temp_poly_lp = lp.TemporaryVariable('temp_poly', shape=(poly_max,), dtype=np.float64,
+                                   scope=scopes.PRIVATE)
+
+    #chebyshev parameters
+    params = np.zeros((num_cheb, maxT, maxP), order=lp_opts.order)
+    for i, p in enumerate(rate_info['cheb']['params']):
+        params[i, :num_T[i], :num_P[i]] = p[:, :]
+
+    indicies=['${reac_ind}', '${temp_poly_ind}', '${pres_poly_ind}']
+    pvector_ind = '${pres_poly_ind}'
+    if deep:
+        pvector_ind = '${reac_ind}'
+
+    params_lp, params_str, _ = get_loopy_arg('cheb_params',
+                                      indicies,
+                                      dimensions=params.shape,
+                                      last_ind=pvector_ind,
+                                      additional_ordering=[x for x in indicies if x != pvector_ind],
+                                      initializer=params,
+                                      scope=scopes.GLOBAL
+                                     )
+
+    #finally the min/maxs & param #'s
+    numP_lp = lp.TemporaryVariable('cheb_numP', shape=num_P.shape,
+                                   initializer=num_P,
+                                   scope=scopes.GLOBAL, read_only=True)
+    numT_lp = lp.TemporaryVariable('cheb_numT', shape=num_T.shape,
+                                   initializer=num_T,
+                                   scope=scopes.GLOBAL, read_only=True)
+
+    # limits for cheby polys
+    Plim = np.log(np.array(rate_info['cheb']['Plim'], dtype=np.float64, order=lp_opts.order))
+    Tlim = 1. / np.array(rate_info['cheb']['Tlim'], dtype=np.float64, order=lp_opts.order)
+
+    indicies = ['${reac_ind}', '${lim_ind}']
+    plim_ind = '${lim_ind}'
+    if deep:
+        plim_ind = '${reac_ind}'
+
+    plim_lp, plim_str, _ = get_loopy_arg('cheb_plim',
+                              indicies,
+                              dimensions=Plim.shape,
+                              last_ind=plim_ind,
+                              initializer=Plim,
+                              scope=scopes.GLOBAL
+                             )
+    tlim_lp, tlim_str, _ = get_loopy_arg('cheb_tlim',
+                              indicies,
+                              dimensions=Tlim.shape,
+                              last_ind=plim_ind,
+                              initializer=Tlim,
+                              scope=scopes.GLOBAL
+                             )
+
+    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+    P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
+    kernel_data = [params_lp, numP_lp, numT_lp, plim_lp, tlim_lp,
+                    pres_poly_lp, temp_poly_lp, T_arr, P_arr]
+
+    reac_ind = 'i'
+    out_map = {}
+    outmap_name = 'out_map'
+    indicies = rate_info['cheb']['map'].astype(dtype=np.int32)
+    Nr = rate_info['Nr']
+
+    indicies = __handle_indicies(indicies, reac_ind,
+                      out_map, kernel_data, outmap_name=outmap_name)
+
+    vector_ind = reac_ind
+    if wide:
+        vector_ind = 'j'
+    #get the proper kf indexing / array
+    kf_arr, kf_str, maps = get_loopy_arg('kf',
+                    [reac_ind, 'j'],
+                    [Nr, test_size],
+                    vector_ind,
+                    map_name=out_map)
+
+    #add to kernel data
+    kernel_data.append(kf_arr)
+
+    #preinstructions
+    preinstructs = [__PLOG_PREINST_KEY, __TINV_PREINST_KEY]
+
+    #extra loops
+    pres_poly_ind = 'k'
+    temp_poly_ind = 'm'
+    extra_inames = [('k', '0 <= k < {}'.format(maxP)),
+                    ('m', '0 <= m < {}'.format(maxT)),
+                    ('p', '2 <= p < {}'.format(poly_max))]
+
+    instructions = Template("""
+<>Pmin = ${Pmin_str}
+<>Tmin = ${Tmin_str}
+<>Pmax = ${Pmax_str}
+<>Tmax = ${Tmax_str}
+<>Tred = ${Tred_str}
+<>Pred = ${Pred_str}
+<>numP = cheb_numP[${reac_ind}] {id=plim}
+<>numT = cheb_numT[${reac_ind}] {id=tlim}
+pres_poly[0] = 1
+pres_poly[1] = Pred
+temp_poly[0] = 1
+temp_poly[1] = Tred
+#<> k_end = numP
+#<> m_end = numT
+#<> poly_end = max(numP, numT)
+#compute polynomial terms
+for p
+    if p < numP
+        pres_poly[p] = 2 * Pred * pres_poly[p - 1] - pres_poly[p - 2] {id=ppoly, dep=plim}
+    end
+    if p < numT
+        temp_poly[p] = 2 * Tred * temp_poly[p - 1] - temp_poly[p - 2] {id=tpoly, dep=tlim}
+    end
+end
+<> kf_temp = 0
+for m
+    <>temp = 0
+    for k
+        if k < numP
+            temp = temp + pres_poly[k] * ${chebpar_km} {id=temp, dep=ppoly:tpoly}
+        end
+    end
+    if m < numT
+        kf_temp = kf_temp + temp_poly[m] * temp {id=kf, dep=temp}
+    end
+end
+
+${kf_str} = exp10(kf_temp) {dep=kf}
+""")
+
+    instructions = Template(instructions.safe_substitute(
+                    kf_str=kf_str,
+                    Tred_str=str(Tred_eqn),
+                    Pred_str=str(Pred_eqn),
+                    Pmin_str=plim_str.safe_substitute(lim_ind=0),
+                    Pmax_str=plim_str.safe_substitute(lim_ind=1),
+                    Tmin_str=tlim_str.safe_substitute(lim_ind=0),
+                    Tmax_str=tlim_str.safe_substitute(lim_ind=1),
+                    chebpar_km=params_str.safe_substitute(temp_poly_ind='m', pres_poly_ind='k'),
+                    kf_eval=str(cheb_form),
+                    num_cheb=num_cheb)).safe_substitute(reac_ind=reac_ind)
+
+    return rateconst_info('cheb', instructions=instructions, pre_instructions=preinstructs,
+                     reac_ind=reac_ind, kernel_data=kernel_data, maps=maps,
+                     extra_inames=extra_inames, indicies=indicies,
+                     assumptions=assumptions)
+
 
 def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for p-log rate constants
@@ -465,8 +740,6 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     num_plog = rate_info['plog']['num']
     # number of parameter sets per reaction
     num_params = rate_info['plog']['num_P']
-    # incidies of plog reactions
-    plog_inds = np.array(rate_info['plog']['map'], dtype=np.int32)
 
     #create the loopy equivalents
     params = rate_info['plog']['params']
@@ -518,13 +791,11 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     hi_lp = lp.TemporaryVariable('hi', shape=(4,), scope=scopes.PRIVATE, dtype=np.float64)
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
-    plog_inds_lp = lp.TemporaryVariable('plog_inds', scope=scopes.GLOBAL, shape=lp.auto,
-                                       initializer=plog_inds, read_only=True)
 
     #start creating the rateconst_info's
     #data
     kernel_data = [plog_params_lp, num_params_lp, T_arr,
-                        P_arr, low_lp, hi_lp, plog_inds_lp]
+                        P_arr, low_lp, hi_lp]
 
     #reac ind
     reac_ind = 'i'
@@ -534,19 +805,11 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
 
     #see if we need an output mask
     out_map = {}
-    outmap_name = plog_inds_lp.name
     indicies = rate_info['plog']['map'].astype(dtype=np.int32)
     Nr = rate_info['Nr']
 
-    if indicies[0] + indicies.size == indicies[-1]:
-        #if the indicies are contiguous, we can get away with an
-        #offset
-        indicies = (indicies[0], indicies[-1])
-    else:
-        #need an output map
-        out_map[reac_ind] = outmap_name
-        #add to kernel data
-        kernel_data.append(plog_inds_lp)
+    indicies = __handle_indicies(indicies, reac_ind, out_map,
+                    kernel_data, outmap_name='plog_inds')
 
     vector_ind = reac_ind
     if wide:
@@ -810,20 +1073,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         #check if we need an output map
         out_map = {}
         outmap_name = 'out_map'
-        if info.indicies[0] + info.indicies.size == info.indicies[-1]:
-            #if the indicies are contiguous, we can get away with an
-            #offset
-            info.indicies = (info.indicies[0], info.indicies[-1])
-        else:
-            #need an output map
-            out_map[info.reac_ind] = outmap_name
-            #add to kernel data
-            outmap_lp = lp.TemporaryVariable(outmap_name,
-                shape=lp.auto,
-                initializer=rate_info['simple']['map'][
-                                info.indicies],
-                read_only=True, scope=scopes.PRIVATE)
-            info.kernel_data.append(outmap_lp)
+        info.indicies = __handle_indicies(info.indicies, info.reac_ind,
+                      out_map, info.kernel_data, outmap_name=outmap_name,
+                      alternate_indicies=rate_info['simple']['map'][
+                                info.indicies])
 
         wide = loopy_opt.width is not None
         vector_ind = info.reac_ind
@@ -839,7 +1092,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         info.kernel_data.append(kf_arr)
 
         #handle map info
-        if info.reac_ind in out_map:
+        if info.reac_ind in map_result:
             info.maps.append(map_result[info.reac_ind])
 
         #substitute in whatever beta_iter / kf_str we found
@@ -964,8 +1217,46 @@ def make_rateconst_kernel(info, target, test_size):
     knl = lp.prioritize_loops(knl, inames)
     return knl
 
+def apply_rateconst_vectorization(loopy_opt, reac_ind, knl):
+    """
+    Applies wide / deep vectorization to a generic rateconst kernel
 
-def rate_const_simple_kernel_gen(eqs, reacs,
+    Parameters
+    ----------
+    loopy_opt : :class:`loopy_options` object
+        A object containing all the loopy options to execute
+    reac_ind : str
+        The reaction index variable
+    knl : :class:`loopy.LoopKernel`
+        The kernel to transform
+
+    Returns
+    -------
+    knl : :class:`loopy.LoopKernel`
+        The transformed kernel
+    """
+    #now apply specified optimizations
+    if loopy_opt.depth is not None:
+        #and assign the l0 axis to 'i'
+        knl = lp.split_iname(knl, reac_ind, loopy_opt.depth, inner_tag='l.0')
+        #assign g0 to 'j'
+        knl = lp.tag_inames(knl, [('j', 'g.0')])
+    elif loopy_opt.width is not None:
+        #make the kernel a block of specifed width
+        knl = lp.split_iname(knl, 'j', loopy_opt.width, inner_tag='l.0')
+        #assign g0 to 'i'
+        knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
+
+    #now do unr / ilp
+    i_tag = reac_ind + '_outer' if loopy_opt.depth is not None else reac_ind
+    if loopy_opt.unr is not None:
+        knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
+    elif loopy_opt.ilp:
+        knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
+
+    return knl
+
+def rate_const_kernel_gen(eqs, reacs,
                             loopy_opt, test_size=None):
     """Helper function that generates kernels for
        evaluation of simple arrhenius rate forms
@@ -988,10 +1279,6 @@ def rate_const_simple_kernel_gen(eqs, reacs,
 
     """
 
-    #find language / target
-    lang = loopy_opt.lang
-    target = lp_utils.get_target(lang)
-
     if test_size is None:
         test_size = 'n'
 
@@ -1010,6 +1297,10 @@ def rate_const_simple_kernel_gen(eqs, reacs,
         kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opt,
             rate_info, test_size=test_size)
 
+    if any(r.cheb for r in reacs):
+        kernels['plog'] = get_cheb_arrhenius_rates(eqs, loopy_opt,
+            rate_info, test_size=test_size)
+
 
     knl_list = {}
     #now create the kernels!
@@ -1024,26 +1315,8 @@ def rate_const_simple_kernel_gen(eqs, reacs,
 
         #apply other optimizations
         for i, (reac_ind, knl) in enumerate(knl_list[eval_type]):
-            #now apply specified optimizations
-            if loopy_opt.depth is not None:
-                #and assign the l0 axis to 'i'
-                knl = lp.split_iname(knl, reac_ind, loopy_opt.depth, inner_tag='l.0')
-                #assign g0 to 'j'
-                knl = lp.tag_inames(knl, [('j', 'g.0')])
-            elif loopy_opt.width is not None:
-                #make the kernel a block of specifed width
-                knl = lp.split_iname(knl, 'j', loopy_opt.width, inner_tag='l.0')
-                #assign g0 to 'i'
-                knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
-
-            #now do unr / ilp
-            i_tag = reac_ind + '_outer' if loopy_opt.depth is not None else reac_ind
-            if loopy_opt.unr is not None:
-                knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
-            elif loopy_opt.ilp:
-                knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
-
-            knl_list[eval_type][i] = knl
+            knl_list[eval_type][i] = apply_rateconst_vectorization(loopy_opt,
+                reac_ind, knl)
 
     return knl_list
 

@@ -7,8 +7,11 @@ import filecmp
 from collections import OrderedDict
 
 #local imports
-from ..core.rate_subs import rate_const_simple_kernel_gen, get_rate_eqn, assign_rates
-from ..loopy.loopy_utils import auto_run, loopy_options, RateSpecialization, get_code
+from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
+    get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
+    make_rateconst_kernel, apply_rateconst_vectorization)
+from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
+    get_target)
 from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type
@@ -130,9 +133,16 @@ class SubTest(TestClass):
         assert np.allclose(result['simple']['type'], np.array(rtypes))
         __tester(result)
 
+    def __test_rateconst_type(self, rtype):
+        """
+        Performs tests for a single reaction rate type
 
-    @attr('long')
-    def test_rate_constants(self):
+        Parameters
+        ----------
+        rtype : {'simple', 'plog', 'cheb'}
+            The reaction type to test
+        """
+
         T = self.store.T
         P = self.store.P
         ref_const = self.store.fwd_rate_constants
@@ -140,6 +150,8 @@ class SubTest(TestClass):
 
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
+
+        target = get_target('opencl')
 
         oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
             ('width', [4, None]),
@@ -152,29 +164,60 @@ class SubTest(TestClass):
             ]))
 
         reacs = self.store.reacs
-        masks = [
-            ('simple',
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))])),
-            ('plog',
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))]))]
+        masks = {
+            'simple' : (
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))]),
+                get_simple_arrhenius_rates),
+            'plog' : (
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))]),
+                get_plog_arrhenius_rates),
+            'cheb' : (
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.cheb,))]),
+                get_cheb_arrhenius_rates)}
 
+        compare_mask, rate_func = masks[rtype]
 
         for i, state in enumerate(oploop):
             if state['width'] is not None and state['depth'] is not None:
                 continue
             opt = loopy_options(**{x : state[x] for x in
                 state if x != 'device'})
-            knl = rate_const_simple_kernel_gen(eqs, reacs, opt,
+            #find rate info
+            rate_info = assign_rates(reacs, opt.rate_spec)
+            #create the kernel info
+            infos = rate_func(eqs, opt, rate_info,
                         test_size=self.store.test_size)
+
+            kernels = []
+            for info in infos:
+                #create kernel
+                knl = make_rateconst_kernel(info, target, self.store.test_size)
+
+                #apply vectorization
+                knl = apply_rateconst_vectorization(opt, info.reac_ind, knl)
+
+                kernels.append(knl)
+
             ref = ref_const if state['width'] else ref_const_T
             args = {'T_arr' : T}
-            for name, compare_mask in masks:
-                my_args = args.copy()
-                kernels = knl[name]
-                if name != 'simple':
-                    my_args['P_arr'] =  P
-                assert auto_run(kernels, ref, device=state['device'],
-                    **my_args,
-                    compare_mask=compare_mask,
-                    compare_axis=1 if state['width'] is None else 0), \
-                    'Evaluate {} rates failed'.format(name)
+            if rtype != 'simple':
+                args['P_arr'] =  P
+
+            assert auto_run(kernels, ref, device=state['device'],
+                **args,
+                compare_mask=compare_mask,
+                compare_axis=1 if state['width'] is None else 0), \
+                'Evaluate {} rates failed'.format(name)
+
+
+    @attr('long')
+    def test_simple_rate_constants(self):
+        self.__test_rateconst_type('simple')
+
+    @attr('long')
+    def test_plog_rate_constants(self):
+        self.__test_rateconst_type('plog')
+
+    @attr('long')
+    def test_cheb_rate_constants(self):
+        self.__test_rateconst_type('cheb')

@@ -2,6 +2,7 @@
 import cantera as ct
 import numpy as np
 import unittest
+import loopy as lp
 
 #local imports
 from ..sympy.sympy_interpreter import load_equations
@@ -52,6 +53,7 @@ class TestClass(unittest.TestCase):
         self._is_setup = val
 
     def setUp(self):
+        lp.set_caching_enabled(False)
         if not self.is_setup:
             #load equations
             conp_vars, conp_eqs = load_equations(True)

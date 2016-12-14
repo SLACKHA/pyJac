@@ -4,6 +4,7 @@ from builtins import range
 #system
 import os
 import filecmp
+from collections import OrderedDict
 
 #local imports
 from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
@@ -20,22 +21,21 @@ from nose.plugins.attrib import attr
 class SubTest(TestClass):
     def __subtest(self, T, ref_ans, ref_ans_T,
         varname, nicename, eqs):
-        oploop = OptionLoop({'lang': ['opencl'],
-            'width' : [4, None],
-            'depth' : [4, None],
-            'ilp' : [True, False],
-            'unr' : [None, 4],
-            'order' : ['C', 'F'],
-            'device' : ['0:0', '1']})
+        oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
+            ('width', [4, None]),
+            ('depth', [4, None]),
+            ('ilp', [True, False]),
+            ('unr', [None, 4]),
+            ('device', ['0:0', '1'])]))
 
         specs = self.store.specs
         test_size = self.store.test_size
-        for state in oploop:
+        for i, state in enumerate(oploop):
             try:
                 opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
                 knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
                                             opt, test_size=test_size)
-                ref = ref_ans if state['order'] == 'gpu' else ref_ans_T
+                ref = ref_ans_T if state['depth'] else ref_ans
                 assert auto_run(knl, ref, device=state['device'],
                     T_arr=T)
             except Exception as e:
@@ -92,7 +92,7 @@ class SubTest(TestClass):
             {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
-                    unr=None, order='cpu'))
+                    unr=None))
 
         assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oh'),
                         os.path.join(script_dir, 'blessed', 'chem_utils.oh'))

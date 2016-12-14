@@ -10,6 +10,7 @@ import sys
 import math
 import re
 from copy import deepcopy
+import logging
 
 import numpy as np
 
@@ -550,6 +551,18 @@ def read_mech(mech_filename, therm_filename):
                         par1 = float(line_split[1])
                         par2 = float(line_split[2])
                         par3 = float(line_split[3])
+
+                        do_warn = False
+                        if par2 == 0:
+                            do_warn=True
+                            par2 = 1e-30
+                        if par3 == 0:
+                            do_warn=True
+                            par3 = 1e-30
+                        if do_warn:
+                            logging.warn('Troe parameters in reaction {} modified to avoid'
+                                ' division by zero!.'.format(len(reacs)))
+
                         reacs[-1].troe_par.append(par1)
                         reacs[-1].troe_par.append(par2)
                         reacs[-1].troe_par.append(par3)
@@ -983,6 +996,15 @@ def read_mech_ct(filename=None, gas=None):
             if rxn.falloff.type == 'Troe':
                 reac.troe = True
                 reac.troe_par = rxn.falloff.parameters.tolist()
+                do_warn = False
+                if reac.troe_par[1] == 0:
+                    reac.troe_par[1] = 1e-30
+                    do_warn = True
+                if reac.troe_par[2] == 0:
+                    reac.troe_par[2] = 1e-30
+                    do_warn = True
+                logging.warn('Troe parameters in reaction {} modified to avoid'
+                                ' division by zero!.'.format(len(reacs)))
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True
                 reac.sri_par = rxn.falloff.parameters.tolist()

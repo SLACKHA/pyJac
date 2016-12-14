@@ -47,14 +47,13 @@ class loopy_options(object):
 
     """
     def __init__(self, width=None, depth=None, ilp=False,
-                    unr=None, order='cpu', lang='opencl',
+                    unr=None, lang='opencl',
                     rate_spec=RateSpecialization.fixed,
                     rate_spec_kernels=False):
         self.width = width
         self.depth = depth
         self.ilp = ilp
         self.unr = unr
-        self.order = order
         check_lang(lang)
         self.lang = lang
         self.rate_spec = rate_spec
@@ -227,10 +226,75 @@ def generate_map_instruction(oldname, newname, map_arr):
             mapper=map_arr,
             oldname=oldname)
 
+def get_loopy_order(indicies, dimensions, last_ind, additional_ordering=[],
+    numpy_arg=None):
+    """
+    This method serves to reorder loopy (and optionally corresponding numpy arrays)
+    to ensure proper cache-access patterns
+
+    Parameters
+    ----------
+    indicies : list of str
+        The `loopy.iname`'s in current order
+    last_ind : str
+        The `loopy.iname` that will should be the last array index.
+        Typically this will be the index that is being vectorized
+    dimensions : list of str/int
+        The numerical / string dimensions of the loopy array.
+    additional_ordering : list of str
+        If supplied, the other indicies in the array should be in this order
+        Typically used to accommodate access patterns besides vectorization
+    numpy_arg : :class:`numpy.ndarray`, optional
+        If supplied, the same transformations will be applied to the numpy
+        array as well.
+
+    Returns
+    -------
+    indicies : list of str
+        The `loopy.iname`'s in transformed order
+    dimensions : list of str/int
+        The transformed dimensions
+    numpy_arg : :class:`numpy.ndarray`
+        The transformed numpy array, is None
+    """
+
+    #set up order array
+    if not additional_ordering:
+        additional_ordering = [x for x in indicies if x != last_ind]
+
+    ordering = additional_ordering[:] + [last_ind]
+
+    #check that we have all indicies
+    if any(x for x in ordering if x not in indicies):
+        raise Exception('Index {} not in indicies array'.format(next(
+            x for x in ordering if x not in indicies)))
+
+    #finalize ordering array
+    ordering = [indicies.index(x) for x in ordering]
+
+    #check lengths agree
+    if numpy_arg is not None and len(ordering) != len(numpy_arg.shape):
+        raise Exception('Ordering length does not agree with supplied numpy array')
+    if dimensions is not None and len(ordering) != len(dimensions):
+        raise Exception('Ordering length does not agree with supplied dimensions')
+
+    #and finally reorder
+    if numpy_arg is not None:
+        numpy_arg = np.ascontiguousarray(
+                        numpy_arg.transpose(tuple(ordering))).copy()
+    if dimensions is not None:
+        dimensions = [dimensions[x] for x in ordering]
+    indicies = [indicies[x] for x in ordering]
+
+    return indicies, dimensions, numpy_arg
+
+
 
 def get_loopy_arg(arg_name, indicies, dimensions,
-                    order='F', map_name=None, initializer=None,
-                    scope=scopes.GLOBAL):
+                    last_ind, additional_ordering=[],
+                    map_name=None, initializer=None,
+                    scope=scopes.GLOBAL,
+                    dtype=np.float64):
     """
     Convience method that generates a loopy GlobalArg with correct indicies
     and sizes.
@@ -240,12 +304,13 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     arg_name : str
         The name of the array
     indicies : list of str
-        The `loopy.inames` in :param:`default_order`
-    dimensions : list of str/int
+        See :param:`indicies` in :func:`get_loopy_order`
+    dimensions : list of str or int
         The dimensions of the `loopy.inames` in :param:`default_order`
-    order : {'C', 'F'}
-        The memory layout of the arrays, C (row major) or Fortran
-        (column major)
+    last_ind : str
+        See :param:`last_ind` in :func:`get_loopy_order`
+    additional_ordering : list of str/int
+        See :param:`additional_ordering` in :func:`get_loopy_order`
     map_name : dict
         If not None, contains replacements for various indicies
     initializer : `numpy.array`
@@ -257,17 +322,21 @@ def get_loopy_arg(arg_name, indicies, dimensions,
 
     Returns
     -------
-    arg_dict : dict
-        A dictionary with the following keys:
-            * arg : `loopy.GlobalArg`
-                The generated loopy arg
-            * arg_str : str
-                A string form of the argument
-            * map_instructs : list of str
-                A list of strings to be used `loopy.Instruction`'s for
-                given mappings
+    * arg : `loopy.GlobalArg`
+        The generated loopy arg
+    * arg_str : str
+        A string form of the argument
+    * map_instructs : list of str
+        A list of strings to be used `loopy.Instruction`'s for
+        given mappings
     """
 
+    #first do any reordering
+    indicies, dimensions, initializer = get_loopy_order(indicies, dimensions,
+                                                last_ind, additional_ordering,
+                                                numpy_arg=initializer)
+
+    #next, figure out mappings
     string_inds = indicies[:]
     map_instructs = {}
     if map_name is not None:
@@ -286,28 +355,20 @@ def get_loopy_arg(arg_name, indicies, dimensions,
             #and replace the index
             string_inds[string_inds.index(imap)] = mapped_name
 
-    #the ordering / indexing of the array depends on the memory layout
-    #if it's row-major, we must reverse the indicies / dimensions
-    #as we assume column-major in pyJac
-    if (initializer is None and order == 'C') or (initializer is not None
-            and ((order == 'C' and not initializer.flags['C_CONTIGUOUS']) or
-                 (order == 'F' and not initializer.flags['F_CONTIGUOUS'])
-                )):
-        string_inds = string_inds[::-1]
-        dimensions = dimensions[::-1]
-
     #finally make the argument
     if initializer is None:
-        arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=np.float64)
+        arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=dtype)
     else:
-        arg = lp.TemporaryVariable(arg_name, shape=tuple(dimensions),
-            initializer=initializer, scope=scope, read_only=True)
+        arg = lp.TemporaryVariable(arg_name,
+            shape=tuple(dimensions),
+            initializer=np.ascontiguousarray(initializer),
+            scope=scope,
+            read_only=True,
+            dtype=dtype)
 
     #and return
-    return {'arg' : arg,
-            'arg_str' : '{name}[{inds}]'.format(name=arg_name,
-                inds=','.join(string_inds)),
-            'map_instructs' : map_instructs}
+    return arg, '{name}[{inds}]'.format(name=arg_name,
+                inds=','.join(string_inds)), map_instructs
 
 def get_target(lang):
     """

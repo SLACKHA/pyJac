@@ -189,7 +189,7 @@ class SubTest(TestClass):
                         test_size=self.store.test_size)
 
             if not isinstance(infos, list):
-                infos = [infos]
+                infos = list(infos)
 
             kernels = []
             for info in infos:

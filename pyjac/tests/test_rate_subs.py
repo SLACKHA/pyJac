@@ -188,6 +188,9 @@ class SubTest(TestClass):
             infos = rate_func(eqs, opt, rate_info,
                         test_size=self.store.test_size)
 
+            if not isinstance(infos, list):
+                infos = [infos]
+
             kernels = []
             for info in infos:
                 #create kernel

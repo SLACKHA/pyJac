@@ -485,7 +485,11 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     wide = loopy_opt.width is not None
     deep = loopy_opt.depth is not None
 
-    rate_eqn_pre = get_rate_eqn({'conp' : conp_eqs})
+    #the equation set doesn't matter for this application
+    #just use conp
+    conp_eqs = eqs['conp']
+
+    rate_eqn_pre = get_rate_eqn(eqs)
     #find the cheb equation
     cheb_eqn = next(x for x in conp_eqs if str(x) == 'log({k_f}[i])/log(10)')
     cheb_form, cheb_eqn = cheb_eqn, conp_eqs[cheb_eqn][(reaction_type.cheb,)]
@@ -504,11 +508,11 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     P_red = next(x for x in conp_eqs if str(x) == 'tilde{P}')
     #print conp_eqs[P_red]
 
-    Pred_eqn = sanitize(conp_eqs[P_red], subs={sp.log(sp.Symbol('P_{min}')) : Pmin,
+    Pred_eqn = sp_utils.sanitize(conp_eqs[P_red], subs={sp.log(sp.Symbol('P_{min}')) : Pmin,
                                                sp.log(sp.Symbol('P_{max}')) : Pmax,
                                                sp.log(sp.Symbol('P')) : logP})
 
-    Tred_eqn = sanitize(conp_eqs[T_red], subs={sp.S.One / sp.Symbol('T_{min}') : Tmin,
+    Tred_eqn = sp_utils.sanitize(conp_eqs[T_red], subs={sp.S.One / sp.Symbol('T_{min}') : Tmin,
                                                sp.S.One / sp.Symbol('T_{max}') : Tmax,
                                                sp.S.One / sp.Symbol('T') : Tinv})
 
@@ -535,7 +539,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                                    scope=scopes.PRIVATE)
 
     #chebyshev parameters
-    params = np.zeros((num_cheb, maxT, maxP), order=lp_opts.order)
+    params = np.zeros((num_cheb, maxT, maxP))
     for i, p in enumerate(rate_info['cheb']['params']):
         params[i, :num_T[i], :num_P[i]] = p[:, :]
 
@@ -544,7 +548,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     if deep:
         pvector_ind = '${reac_ind}'
 
-    params_lp, params_str, _ = get_loopy_arg('cheb_params',
+    params_lp, params_str, _ = lp_utils.get_loopy_arg('cheb_params',
                                       indicies,
                                       dimensions=params.shape,
                                       last_ind=pvector_ind,
@@ -552,6 +556,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                                       initializer=params,
                                       scope=scopes.GLOBAL
                                      )
+    params_str = Template(params_str)
 
     #finally the min/maxs & param #'s
     numP_lp = lp.TemporaryVariable('cheb_numP', shape=num_P.shape,
@@ -562,28 +567,30 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                                    scope=scopes.GLOBAL, read_only=True)
 
     # limits for cheby polys
-    Plim = np.log(np.array(rate_info['cheb']['Plim'], dtype=np.float64, order=lp_opts.order))
-    Tlim = 1. / np.array(rate_info['cheb']['Tlim'], dtype=np.float64, order=lp_opts.order)
+    Plim = np.log(np.array(rate_info['cheb']['Plim'], dtype=np.float64))
+    Tlim = 1. / np.array(rate_info['cheb']['Tlim'], dtype=np.float64)
 
     indicies = ['${reac_ind}', '${lim_ind}']
     plim_ind = '${lim_ind}'
     if deep:
         plim_ind = '${reac_ind}'
 
-    plim_lp, plim_str, _ = get_loopy_arg('cheb_plim',
+    plim_lp, plim_str, _ = lp_utils.get_loopy_arg('cheb_plim',
                               indicies,
                               dimensions=Plim.shape,
                               last_ind=plim_ind,
                               initializer=Plim,
                               scope=scopes.GLOBAL
                              )
-    tlim_lp, tlim_str, _ = get_loopy_arg('cheb_tlim',
+    tlim_lp, tlim_str, _ = lp_utils.get_loopy_arg('cheb_tlim',
                               indicies,
                               dimensions=Tlim.shape,
                               last_ind=plim_ind,
                               initializer=Tlim,
                               scope=scopes.GLOBAL
                              )
+    plim_str = Template(plim_str)
+    tlim_str = Template(tlim_str)
 
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
@@ -603,11 +610,13 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     if wide:
         vector_ind = 'j'
     #get the proper kf indexing / array
-    kf_arr, kf_str, maps = get_loopy_arg('kf',
+    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
                     [reac_ind, 'j'],
                     [Nr, test_size],
                     vector_ind,
                     map_name=out_map)
+
+    maps = [map_result[reac_ind]]
 
     #add to kernel data
     kernel_data.append(kf_arr)
@@ -677,8 +686,7 @@ ${kf_str} = exp10(kf_temp) {dep=kf}
 
     return rateconst_info('cheb', instructions=instructions, pre_instructions=preinstructs,
                      reac_ind=reac_ind, kernel_data=kernel_data, maps=maps,
-                     extra_inames=extra_inames, indicies=indicies,
-                     assumptions=assumptions)
+                     extra_inames=extra_inames, indicies=indicies)
 
 
 def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):

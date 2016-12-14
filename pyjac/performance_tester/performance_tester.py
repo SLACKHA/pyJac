@@ -293,10 +293,11 @@ def performance_tester(home, work_dir, use_old_opt):
                    'shared' : [False, True],
                    'finite_diffs' : [False, True]
                    }
-    except subprocess.CalledProcessError:
+    except OSError:
         #otherwise simply skip cuda
         pass
-    tchem_params = {'lang' : 'tchem'}
+    tchem_params = {'lang' : 'tchem',
+                    'num_threads' : num_threads}
 
     for mech_name, mech_info in sorted(mechanism_list.items(),
                                        key=lambda x:x[1]['ns']
@@ -371,7 +372,7 @@ def performance_tester(home, work_dir, use_old_opt):
 
             #handle threading
             num_threads = -1
-            if lang == 'c':
+            if 'num_threads' in state:
                 num_threads = state['num_threads']
 
 

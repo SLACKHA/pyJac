@@ -35,7 +35,7 @@ class SubTest(TestClass):
                 opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
                 knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
                                             opt, test_size=test_size)
-                ref = ref_ans_T if state['depth'] else ref_ans
+                ref = ref_ans if state['width'] else ref_ans_T
                 assert auto_run(knl, ref, device=state['device'],
                     T_arr=T)
             except Exception as e:

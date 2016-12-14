@@ -146,7 +146,6 @@ class SubTest(TestClass):
             ('depth', [4, None]),
             ('ilp', [True, False]),
             ('unr', [None, 4]),
-            ('order', ['C', 'F']),
             ('device', ['0:0', '1']),
             ('rate_spec', [x for x in RateSpecialization]),
             ('rate_spec_kernels', [True, False])
@@ -167,7 +166,7 @@ class SubTest(TestClass):
                 state if x != 'device'})
             knl = rate_const_simple_kernel_gen(eqs, reacs, opt,
                         test_size=self.store.test_size)
-            ref = ref_const if state['order'] == 'F' else ref_const_T
+            ref = ref_const if state['width'] else ref_const_T
             args = {'T_arr' : T}
             for name, compare_mask in masks:
                 my_args = args.copy()
@@ -177,5 +176,5 @@ class SubTest(TestClass):
                 assert auto_run(kernels, ref, device=state['device'],
                     **my_args,
                     compare_mask=compare_mask,
-                    compare_axis=1 if state['order'] == 'C' else 0), \
+                    compare_axis=1 if state['width'] is None else 0), \
                     'Evaluate {} rates failed'.format(name)

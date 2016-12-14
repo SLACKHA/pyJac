@@ -466,7 +466,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     # number of parameter sets per reaction
     num_params = rate_info['plog']['num_P']
     # incidies of plog reactions
-    plog_inds = np.array(rate_info['plog']['map'])
+    plog_inds = np.array(rate_info['plog']['map'], dtype=np.int32)
 
     #create the loopy equivalents
     params = rate_info['plog']['params']
@@ -475,43 +475,39 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #max # of parameters for sizing
     maxP = np.max(num_params)
 
+    #control over memory access
+    wide = loopy_opt.width is not None
+    deep = loopy_opt.depth is not None
 
     #for simplicity, we're going to use a padded form
-    params = np.zeros((4, num_plog, maxP), order=loopy_opt.order)
+    params = np.zeros((4, num_plog, maxP))
     for m in range(4):
         for i, numP in enumerate(num_params):
             for j in range(numP):
                 params[m, i, j] = params_temp[i][j][m]
 
     #take the log of P and A
+    hold = np.seterr(divide='ignore')
     params[0, :, :] = np.log(params[0, :, :])
     params[1, :, :] = np.log(params[1, :, :])
     params[np.where(np.isinf(params))] = 0
+    np.seterr(**hold)
 
-    #default indexing order
+    #default params indexing order
     inds = ['${m}', '${reac_ind}', '${param_ind}']
-
-    if loopy_opt.order == 'C':
-        #in c-continguous mode, we want parameters from
-        #subsequent reactions to be adjacent
-        params = params.swapaxes(1, 2).copy()
-
-        #swap indicies
-        temp = inds[2]
-        inds[2] = inds[1]
-        inds[1] = temp
+    pvector_ind = '${param_ind}'
+    if deep:
+        pvector_ind = '${reac_ind}'
 
     #make loopy version
-    plog_params_lp = lp_utils.get_loopy_arg('plog_params', indicies=inds,
+    plog_params_lp, param_str, _ = lp_utils.get_loopy_arg('plog_params', indicies=inds,
                                                 dimensions=params.shape,
-                                                order=loopy_opt.order, #order taken care of already
+                                                last_ind=pvector_ind,
+                                                additional_ordering=[x for x in inds if x != pvector_ind],
                                                 initializer=params,
                                                 scope=scopes.GLOBAL)
-    #get the param indexing
-    param_str = Template(plog_params_lp['arg_str'])
-
-    #and the actual parameter array
-    plog_params_lp = plog_params_lp['arg']
+    #turn into a template
+    param_str = Template(param_str)
 
     #and finally the loopy version of num_params
     num_params_lp = lp.TemporaryVariable('plog_num_params', shape=lp.auto,
@@ -536,9 +532,9 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #extra loops
     extra_inames = [('k', '0 <= k < {}'.format(maxP - 1)), ('m', '0 <= m < 4')]
 
-    out_map = {}
-    outmap_name = 'out_map'
     #see if we need an output mask
+    out_map = {}
+    outmap_name = plog_inds_lp.name
     indicies = rate_info['plog']['map'].astype(dtype=np.int32)
     Nr = rate_info['Nr']
 
@@ -550,30 +546,24 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         #need an output map
         out_map[reac_ind] = outmap_name
         #add to kernel data
-        outmap_lp = lp.TemporaryVariable(outmap_name,
-            shape=lp.auto,
-            initializer=rate_info['plog']['map'],
-            read_only=True, scope=scopes.PRIVATE)
-        kernel_data.append(outmap_lp)
+        kernel_data.append(plog_inds_lp)
+
+    vector_ind = reac_ind
+    if wide:
+        vector_ind = 'j'
 
     #get the proper kf indexing / array
-    result = lp_utils.get_loopy_arg('kf',
+    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
                     [reac_ind, 'j'],
                     [Nr, test_size],
-                    order=loopy_opt.order,
+                    vector_ind,
                     map_name=out_map)
-
-    #add to kernel data
-    kf_arr = result['arg']
     kernel_data.append(kf_arr)
-
-    #get correct str for instructions
-    kf_str = result['arg_str']
 
     #handle map info
     maps = []
-    if reac_ind in out_map:
-        maps.append(result['map_instructs'][reac_ind])
+    if reac_ind in map_result:
+        maps.append(map_result[reac_ind])
 
     #instructions
     instructions = Template(Template(
@@ -826,7 +816,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
             info.indicies = (info.indicies[0], info.indicies[-1])
         else:
             #need an output map
-            out_map[reac_ind] = outmap_name
+            out_map[info.reac_ind] = outmap_name
             #add to kernel data
             outmap_lp = lp.TemporaryVariable(outmap_name,
                 shape=lp.auto,
@@ -835,22 +825,22 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                 read_only=True, scope=scopes.PRIVATE)
             info.kernel_data.append(outmap_lp)
 
+        wide = loopy_opt.width is not None
+        vector_ind = info.reac_ind
+        if wide:
+            vector_ind = 'j'
+
         #get the proper kf indexing / array
-        result = lp_utils.get_loopy_arg('kf',
-                        [reac_ind, 'j'],
+        kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
+                        [info.reac_ind, 'j'],
                         [Nr, test_size],
-                        order=loopy_opt.order,
+                        vector_ind,
                         map_name=out_map)
-        #add to kernel data
-        kf_arr = result['arg']
         info.kernel_data.append(kf_arr)
 
-        #get correct str for instructions
-        kf_str = result['arg_str']
-
         #handle map info
-        if reac_ind in out_map:
-            info.maps.append(result['map_instructs'][reac_ind])
+        if info.reac_ind in out_map:
+            info.maps.append(map_result[info.reac_ind])
 
         #substitute in whatever beta_iter / kf_str we found
         info.instructions = Template(
@@ -859,6 +849,121 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                     ).safe_substitute(kf_str=kf_str)
 
     return specializations.values()
+
+
+def make_rateconst_kernel(info, target, test_size):
+    """
+    Convience method to create kernels for rate constant evaluation
+
+    Parameters
+    ----------
+    info : :class:`rateconst_info`
+        The rate contstant info to generate the kernel from
+    target : :class:`loopy.TargetBase`
+        The target to generate code for
+    test_size : int/str
+        The integer (or symbolic) problem size
+
+    Returns
+    -------
+    knl : :class:`loopy.Kernel`
+        The generated loopy kernel
+    """
+
+    #various precomputes
+    pre_inst = {__TINV_PREINST_KEY : '<> T_inv = 1 / T_arr[j]',
+                __TLOG_PREINST_KEY : '<> logT = log(T_arr[j])',
+                __PLOG_PREINST_KEY : '<> logP = log(P_arr[j])'}
+
+    #and the skeleton kernel
+    skeleton = """
+    for j
+        ${pre}
+        for ${reac_ind}
+            ${main}
+        end
+    end
+    """
+
+    #convert instructions into a list for convienence
+    instructions = info.instructions
+    if isinstance(instructions, str):
+        instructions = textwrap.dedent(info.instructions)
+        instructions = [x for x in instructions.split('\n') if x.strip()]
+
+    #load inames
+    inames = [info.reac_ind, 'j']
+
+    #add map instructions
+    instructions = info.maps + instructions
+
+    #look for extra inames, ranges
+    iname_range = []
+
+    assumptions = info.assumptions[:]
+
+    #find the start index for 'i'
+    if isinstance(info.indicies, tuple):
+        i_start = info.indicies[0]
+        i_end = info.indicies[1]
+    else:
+        i_start = 0
+        i_end = info.indicies.size
+
+    #add to ranges
+    iname_range.append('{}<={}<{}'.format(i_start, info.reac_ind, i_end))
+    iname_range.append('{}<=j<{}'.format(0, test_size))
+
+    if isinstance(test_size, str):
+        assumptions.append('{0} > 0'.format(test_size))
+
+    for iname, irange in info.extra_inames:
+        inames.append(iname)
+        iname_range.append(irange)
+
+    #construct the kernel args
+    pre_instructions = [pre_inst[k] if k in pre_inst else k
+                            for k in info.pre_instructions]
+
+    def subs_preprocess(key, value):
+        #find the instance of ${key} in kernel_str
+        whitespace = None
+        for i, line in enumerate(skeleton.split('\n')):
+            if key in line:
+                #get whitespace
+                whitespace = re.match(r'\s*', line).group()
+                break
+        result = [line if i == 0 else whitespace + line for i, line in
+                    enumerate(textwrap.dedent(value).splitlines())]
+        return '\n'.join(result)
+
+
+    kernel_str = Template(skeleton).safe_substitute(
+        reac_ind=info.reac_ind,
+        pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
+        main=subs_preprocess('${main}', '\n'.join(instructions)))
+
+    iname_arr = []
+    #generate iname strings
+    for iname, irange in zip(*(inames,iname_range)):
+        iname_arr.append(Template(
+            '{[${iname}]:${irange}}').safe_substitute(
+            iname=iname,
+            irange=irange
+            ))
+
+    #make the kernel
+    knl = lp.make_kernel(iname_arr,
+        kernel_str,
+        kernel_data=info.kernel_data,
+        name='rateconst_' + info.name,
+        target=target,
+        assumptions=' and '.join(assumptions)
+    )
+    #prioritize and return
+    knl = lp.prioritize_loops(knl, inames)
+    return knl
+
 
 def rate_const_simple_kernel_gen(eqs, reacs,
                             loopy_opt, test_size=None):
@@ -893,94 +998,18 @@ def rate_const_simple_kernel_gen(eqs, reacs,
     #determine rate evaluation types, indicies etc.
     rate_info = assign_rates(reacs, loopy_opt.rate_spec)
 
-    #various precomputes
-    pre_inst = {__TINV_PREINST_KEY : '<> T_inv = 1 / T_arr[j]',
-                __TLOG_PREINST_KEY : '<> logT = log(T_arr[j])',
-                __PLOG_PREINST_KEY : '<> logP = log(P_arr[j])'}
-
-    #and the skeleton kernel
-    skeleton = """
-    for j
-        ${pre}
-        for ${reac_ind}
-            ${main}
-        end
-    end
-    """
-
     kernels = {}
 
     #get the simple arrhenius rateconst_info's
-    kernels['simple'] = get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=test_size)
+    kernels['simple'] = get_simple_arrhenius_rates(eqs, loopy_opt,
+        rate_info, test_size=test_size)
 
     #check for plog
     if any(r.plog for r in reacs):
         #generate the plog kernel
-        kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=test_size)
+        kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opt,
+            rate_info, test_size=test_size)
 
-    #convience method to create kernel
-    def make_kernel(info):
-        #convert instructions into a list for convienence
-        if isinstance(info.instructions, str):
-            instructions = textwrap.dedent(info.instructions)
-            instructions = [x for x in instructions.split('\n') if x.strip()]
-
-        #load inames
-        inames = [info.reac_ind, 'j']
-
-        #add map instructions
-        instructions = info.maps + instructions
-
-        #look for extra inames, ranges
-        iname_range = []
-
-        #find the start index for 'i'
-        if isinstance(info.indicies, tuple):
-            i_start = info.indicies[0]
-            i_end = info.indicies[1]
-        else:
-            i_start = 0
-            i_end = info.indicies.size
-
-        #add to ranges
-        iname_range.append('{}<={}<{}'.format(i_start, info.reac_ind, i_end))
-        iname_range.append('{}<=j<{}'.format(0, test_size))
-
-        for iname, irange in info.extra_inames:
-            inames.append(iname)
-            iname_range.append(irange)
-
-        #construct the kernel args
-        pre_instructions = [pre_inst[k] for k in info.pre_instructions]
-        def subs_preprocess(key, value):
-            #find the instance of ${key} in kernel_str
-            whitespace = None
-            for i, line in enumerate(skeleton.split('\n')):
-                if key in line:
-                    #get whitespace
-                    whitespace = re.match(r'\s*', line).group()
-                    break
-            result = [line if i == 0 else whitespace + line for i, line in
-                        enumerate(textwrap.dedent(value).splitlines())]
-            return '\n'.join(result)
-
-
-        kernel_str = Template(skeleton).safe_substitute(
-            reac_ind=info.reac_ind,
-            pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
-            main=subs_preprocess('${main}', '\n'.join(instructions)))
-
-        #make the kernel
-        knl = lp.make_kernel('{[' + ','.join(inames) + ']:' +
-            ' and '.join(iname_range) + '}',
-            kernel_str,
-            kernel_data=info.kernel_data,
-            name='rateconst_' + info.name,
-            target=target
-        )
-        #prioritize and return
-        knl = lp.prioritize_loops(knl, inames)
-        return knl
 
     knl_list = {}
     #now create the kernels!
@@ -988,7 +1017,8 @@ def rate_const_simple_kernel_gen(eqs, reacs,
     for eval_type in kernels:
         knl_list[eval_type] = []
         for info in kernels[eval_type]:
-            knl_list[eval_type].append((info.reac_ind, make_kernel(info)))
+            knl_list[eval_type].append((info.reac_ind,
+                make_rateconst_kernel(info, target, test_size)))
 
         #stub for special handling of various evaluation types here
 
@@ -1816,10 +1846,10 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
 
     #if deep vectorization, we rearrange such that successive vector lanes
     #will access successive species
-    deep = loopy_opt.depth is not None
-    vector_ind = 'i'
-    if deep:
-        vector_ind = 'k'
+    wide = loopy_opt.width is not None
+    vector_ind = 'k'
+    if wide:
+        vector_ind = 'i'
 
     #pick out a values and T_mid
     a_lo = np.zeros((Ns, poly_dim), dtype=np.float64)

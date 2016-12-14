@@ -1794,7 +1794,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     loopy_opt : `loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
-        If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
+        If not None, this kernel is being used for testing.
 
     Returns
     -------
@@ -1802,6 +1802,9 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
         The generated loopy kernel for code generation / testing
 
     """
+
+    if test_size is None:
+        test_size = 'n'
 
     if loopy_opt.width is not None and loopy_opt.depth is not None:
         raise Exception('Cannot specify both SIMD/SIMT width and depth')
@@ -1811,18 +1814,12 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     poly_dim = specs[0].hi.shape[0]
     Ns = len(specs)
 
-    k = sp.Idx('k')
-    if loopy_opt.order == 'gpu':
-        eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
-                    sp.IndexedBase('a_lo')[k, i]) for i in range(poly_dim)]))
-        eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
-                    sp.IndexedBase('a_hi')[k, i]) for i in range(poly_dim)]))
-    else:
-        eq_lo = eq.subs(sp.IndexedBase('a')[k, 0], sp.IndexedBase('a_lo')[k, 0])
-        eq_lo = str(eq.subs([(sp.IndexedBase('a')[k, i],
-                    sp.IndexedBase('a_lo')[i, k]) for i in range(poly_dim)]))
-        eq_hi = str(eq.subs([(sp.IndexedBase('a')[k, i],
-                    sp.IndexedBase('a_hi')[i, k]) for i in range(poly_dim)]))
+    #if deep vectorization, we rearrange such that successive vector lanes
+    #will access successive species
+    deep = loopy_opt.depth is not None
+    vector_ind = 'i'
+    if deep:
+        vector_ind = 'k'
 
     #pick out a values and T_mid
     a_lo = np.zeros((Ns, poly_dim), dtype=np.float64)
@@ -1833,51 +1830,58 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
         a_hi[ind, :] = spec.hi[:]
         T_mid[ind] = spec.Trange[1]
 
-    #need to transpose poly arrays
-    if loopy_opt.order == 'cpu':
-        a_lo = a_lo.T.copy()
-        a_hi = a_hi.T.copy()
-
-    #loopy variables
-    a_lo_lp = lp.TemporaryVariable('a_lo', shape=a_lo.shape, initializer=a_lo, read_only=True,
-                                scope=scopes.GLOBAL)
-    a_hi_lp = lp.TemporaryVariable('a_hi', shape=a_hi.shape, initializer=a_hi, read_only=True,
-                                scope=scopes.GLOBAL)
+    #get correctly ordered arrays / strings
+    temp_vec_ind = '${param_val}' if vector_ind == 'i' else vector_ind
+    a_lo_lp, a_lo_str, _ = lp_utils.get_loopy_arg('a_lo', ['k', '${param_val}'], a_lo.shape,
+                    temp_vec_ind, initializer=a_lo,
+                    scope=scopes.GLOBAL)
+    a_hi_lp, a_hi_str, _ = lp_utils.get_loopy_arg('a_hi', ['k', '${param_val}'], a_hi.shape,
+                    temp_vec_ind, initializer=a_hi,
+                    scope=scopes.GLOBAL)
     T_mid_lp = lp.TemporaryVariable('T_mid', shape=T_mid.shape, initializer=T_mid, read_only=True,
                                 scope=scopes.GLOBAL)
 
-    target = utils.get_target(loopy_opt.lang)
+    k = sp.Idx('k')
+    lo_eq_str = str(eq.subs([(sp.IndexedBase('a')[k, i],
+                    Template(a_lo_str).safe_substitute(param_val=i)) for i in range(poly_dim)]))
+    hi_eq_str = str(eq.subs([(sp.IndexedBase('a')[k, i],
+                    Template(a_hi_str).safe_substitute(param_val=i)) for i in range(poly_dim)]))
 
-    #create the loopy arrays
-    test_size = 1 if test_size is None else test_size
+
+    target = lp_utils.get_target(loopy_opt.lang)
+
+    #create the input arrays arrays
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
-    out_lp = lp.GlobalArg(nicename, shape=lp.auto, dtype=np.float64)
-    #correct indexing
-    indexed = nicename + ('[k, i]' if loopy_opt.order == 'gpu' else '[i, k]')
+    out_lp, out_str, _ = lp_utils.get_loopy_arg(nicename, ['k', 'i'],
+                    (Ns, test_size), vector_ind)
+
+    knl_data = [a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
+
+    if test_size == 'n':
+        knl_data = [lp.ValueArg('n', dtype=np.int32)] + knl_data
 
     #first we generate the kernel
     knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns,
         test_size),
-        """
+        Template("""
         for i
             <> T = T_arr[i]
             for k
-                <> Tcond = T < T_mid[k]
-                if Tcond
-                    {0} = {1}
-                end
-                if not Tcond
-                    {0} = {2}
+                if T < T_mid[k]
+                    ${out_str} = ${lo_eq}
+                else
+                    ${out_str} = ${hi_eq}
                 end
             end
         end
-        """.format(indexed, eq_lo, eq_hi),
+        """).safe_substitute(out_str=out_str, lo_eq=lo_eq_str, hi_eq=hi_eq_str),
         target=target,
-        kernel_data=[a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp],
+        kernel_data=knl_data,
         name='eval_{}'.format(nicename)
         )
 
     knl = lp.prioritize_loops(knl, ['i', 'k'])
+
 
     if loopy_opt.depth is not None:
         #and assign the l0 axis to 'k'
@@ -1933,7 +1937,7 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     if auto_diff:
         file_prefix = 'ad_'
 
-    target = utils.get_target(opts.lang)
+    target = lp_utils.get_target(opts.lang)
 
     #generate the kernels
     conp_eqs = eqs['conp']

@@ -1,6 +1,3 @@
-#compatibility
-from builtins import range
-
 #system
 import os
 import filecmp
@@ -261,9 +258,9 @@ class SubTest(TestClass):
                 args['P_arr'] =  P
 
             assert auto_run(kernels, ref, device=state['device'],
-                **args,
                 compare_mask=compare_mask,
-                compare_axis=1 if state['width'] is None else 0), \
+                compare_axis=1 if state['width'] is None else 0
+                **args), \
                 'Evaluate {} rates failed'.format(name)
 
 

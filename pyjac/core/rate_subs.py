@@ -395,17 +395,17 @@ def assign_rates(reacs, rate_spec):
     fall_reacs, fall_map, num_fall = __seperate(
         reacs, [reaction_type.fall, reaction_type.chem])
     #find chem vs fall
-    fall_types = np.array([reaction_type.chem if x.match(reaction_type.chem)
-        else reaction_type.fall for x in fall_reacs], dtype=np.int32)
+    fall_types = np.array([int(reaction_type.chem) if x.match(reaction_type.chem)
+        else int(reaction_type.fall) for x in fall_reacs], dtype=np.int32)
     #find blending type
-    blend_type = np.array([next(y for y in x.type if isinstance(
+    blend_type = np.array([next(int(y) for y in x.type if isinstance(
         y, falloff_form)) for x in fall_reacs], dtype=np.int32)
 
     #find third-body types
     thd_reacs, thd_map, num_thd = __seperate(
         reacs, [reaction_type.fall, reaction_type.chem, reaction_type.thd])
     #find third body type
-    thd_type = np.array([next(y for y in x.type if isinstance(
+    thd_type = np.array([next(int(y) for y in x.type if isinstance(
         y, thd_body_type)) for x in thd_reacs], dtype=np.int32)
     #find the species indicies
     thd_spec_num = []

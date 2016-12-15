@@ -4,6 +4,9 @@ import numpy as np
 import unittest
 import loopy as lp
 
+#system
+import os
+
 #local imports
 from ..sympy.sympy_interpreter import load_equations
 from ..core.mech_interpret import read_mech_ct
@@ -58,10 +61,11 @@ class TestClass(unittest.TestCase):
             #load equations
             conp_vars, conp_eqs = load_equations(True)
             conv_vars, conv_eqs = load_equations(False)
+            self.dirpath = os.path.dirname(os.path.realpath(__file__))
             #load the gas
-            gas = ct.Solution('test.cti')
+            gas = ct.Solution(os.path.join(self.dirpath, 'test.cti'))
             #the mechanism
-            elems, specs, reacs = read_mech_ct('test.cti')
+            elems, specs, reacs = read_mech_ct(os.path.join(self.dirpath, 'test.cti'))
             self.store = storage(conp_vars, conp_eqs, conv_vars,
                 conv_eqs, gas, specs, reacs)
             self.is_setup = True

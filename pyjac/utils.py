@@ -270,9 +270,12 @@ def reassign_species_lists(reacs, specs):
 
     species_map = {sp.name: i for i, sp in enumerate(specs)}
     for rxn in reacs:
-        rxn.reac = [species_map[sp] for sp in rxn.reac]
-        rxn.prod = [species_map[sp] for sp in rxn.prod]
-        rxn.thd_body_eff = [(species_map[thd[0]], thd[1]) for thd in rxn.thd_body_eff]
+        rxn.reac, rxn.reac_nu = zip(*[(species_map[sp], nu) for sp, nu in
+            sorted(zip(rxn.reac, rxn.reac_nu), key=lambda x:species_map[x[0]])])
+        rxn.prod, rxn.prod_nu = zip(*[(species_map[sp], nu) for sp, nu in
+            sorted(zip(rxn.prod, rxn.prod_nu), key=lambda x:species_map[x[0]])])
+        rxn.thd_body_eff = sorted([(species_map[thd[0]], thd[1])
+            for thd in rxn.thd_body_eff], key=lambda x: x[0])
         if rxn.pdep_sp != '':
             rxn.pdep_sp = species_map[rxn.pdep_sp]
         else:

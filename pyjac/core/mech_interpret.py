@@ -48,7 +48,7 @@ act_energy_fact = dict({'kelvins': 1.0,
 elem_wt = chem.get_elem_wt()
 
 
-def read_mech(mech_filename, therm_filename):
+def read_mech(mech_filename, therm_filename, sort_type=None):
     """Read and interpret mechanism file for elements, species, and reactions.
 
     Parameters
@@ -57,6 +57,8 @@ def read_mech(mech_filename, therm_filename):
         Reaction mechanism filename (e.g. 'mech.dat')
     therm_filename : str, optional
         Thermodynamic database filename (e.g., 'therm.dat')
+    sort_type : ?
+        If not none, call the mechanism sorter
 
     Returns
     -------
@@ -709,6 +711,13 @@ def read_mech(mech_filename, therm_filename):
         print('Error: missing thermo data for ' + ', '.join(missing_mw))
         sys.exit(1)
 
+    if sort_type:
+        pass #stub for mechanism sorting
+
+    #reassign the reaction's product / reactant / third body list
+    # to integer indexes for speed
+    utils.reassign_species_lists(reacs, specs)
+
     #determine reaction type enums
     for reac in reacs:
         reac.finalize(len(specs))
@@ -866,7 +875,7 @@ def read_thermo(filename, elems, specs):
     return None
 
 
-def read_mech_ct(filename=None, gas=None):
+def read_mech_ct(filename=None, gas=None, sort_type=None):
     """Read and interpret Cantera-format mechanism file.
 
     Parameters
@@ -875,6 +884,8 @@ def read_mech_ct(filename=None, gas=None):
         Reaction mechanism filename (e.g. 'mech.cti'). Optional.
     gas : `cantera.Solution` object
         Existing Cantera Solution object to be used. Optional.
+    sort_type : ?
+        If not none, call the mechanism sorter
 
     Returns
     -------
@@ -1078,6 +1089,13 @@ def read_mech_ct(filename=None, gas=None):
         # No reverse reactions with explicit coefficients in Cantera.
 
         reacs.append(reac)
+
+    if sort_type:
+        pass #stub for mechanism sorting
+
+    #reassign the reaction's product / reactant / third body list
+    # to integer indexes for speed
+    utils.reassign_species_lists(reacs, specs)
 
     #determine reaction type enums
     for reac in reacs:

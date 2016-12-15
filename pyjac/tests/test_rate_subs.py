@@ -14,7 +14,7 @@ from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, ge
     get_target)
 from ..utils import create_dir
 from . import TestClass
-from ..core.reaction_types import reaction_type
+from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
 
 #modules
 from optionloop import OptionLoop
@@ -132,6 +132,57 @@ class SubTest(TestClass):
                     rtypes.append(4)
         assert np.allclose(result['simple']['type'], np.array(rtypes))
         __tester(result)
+
+        #test the thd / falloff / chem assignments
+        assert np.allclose(result['fall']['map'],
+            [i for i, x in enumerate(gas.reactions()) if (isinstance(x,
+                ct.FalloffReaction) or isinstance(x, ct.ChemicallyActivatedReaction))])
+        fall_reacs = [gas.reaction(y) for y in result['fall']['map']]
+        #test fall vs chemically activated
+        assert np.allclose(result['fall']['type'],
+            np.array([reaction_type.fall if (isinstance(x, ct.FalloffReaction) and not
+                isinstance(x, ct.ChemicallyActivatedReaction)) else reaction_type.chem for x in
+                fall_reacs], dtype=np.int32))
+        #test blending func
+        blend_types = []
+        for x in fall_reacs:
+            if isinstance(x.falloff, ct.TroeFalloff):
+                blend_types.append(falloff_form.troe)
+            elif isinstance(x.falloff, ct.SriFalloff):
+                blend_types.append(falloff_form.sri)
+            else:
+                blend_types.append(falloff_form.lind)
+        assert np.allclose(result['fall']['blend'], np.array(blend_types, dtype=np.int32))
+        #and finally test the third body stuff
+        #test map
+        third_reac_inds = [i for i, x in enumerate(gas.reactions()) if (isinstance(x,
+                ct.FalloffReaction) or isinstance(x, ct.ChemicallyActivatedReaction)
+                or isinstance(x, ct.ThreeBodyReaction))]
+        assert np.allclose(result['thd']['map'], third_reac_inds)
+        #construct types, efficiencies, species, and species numbers
+        thd_type = []
+        thd_eff = []
+        thd_sp = []
+        thd_sp_num = []
+        for ind in third_reac_inds:
+            eff_dict = gas.reaction(ind).efficiencies
+            eff = sorted(eff_dict, key=lambda x:gas.species_index(x))
+            if not len(eff):
+                thd_type.append(thd_body_type.unity)
+            elif (len(eff) == 1 and eff_dict[eff[0]] == 1 and
+                    gas.reaction(ind).default_efficiency == 0):
+                thd_type.append(thd_body_type.species)
+            else:
+                thd_type.append(thd_body_type.mix)
+            thd_sp_num.append(len(eff))
+            for spec in eff:
+                thd_sp.append(gas.species_index(spec))
+                thd_eff.append(eff_dict[spec])
+        #and test
+        assert np.allclose(result['thd']['type'], np.array(thd_type, dtype=np.int32))
+        assert np.allclose(result['thd']['eff'], thd_eff)
+        assert np.allclose(result['thd']['spec_num'], thd_sp_num)
+        assert np.allclose(result['thd']['spec'], thd_sp)
 
     def __test_rateconst_type(self, rtype):
         """

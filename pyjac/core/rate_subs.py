@@ -36,7 +36,7 @@ from . import mech_auxiliary as aux
 from . import shared_memory as shared
 from . import file_writers as filew
 from ..sympy import sympy_utils as sp_utils
-from . reaction_types import reaction_type
+from . reaction_types import reaction_type, falloff_form, thd_body_type
 
 
 def rxn_rate_const(A, b, E):
@@ -299,11 +299,14 @@ def assign_rates(reacs, rate_spec):
     Returns
     -------
     rate_info : dict of parameters
-        Keys are 'simple', 'plog', 'cheb'
-        Values are further dictionaries including addtional rate info, including
-            number, offset, maps, and (in the case of simple) additional rate
-            info (i.e. A, Ta, b, rate type and maximum b-value)
+        Keys are 'simple', 'plog', 'cheb', 'fall', 'chem', 'thd'
+        Values are further dictionaries including addtional rate info, number,
+        offset, maps, etc.
 
+    Notes
+    -----
+        Note that the reactions in 'fall', 'chem' and 'thd' are also in 'simple'
+        Further, there are duplicates between 'thd' and 'fall' / 'chem'
     """
 
     #determine specialization
@@ -388,6 +391,42 @@ def assign_rates(reacs, rate_spec):
         cheb_plim.append(cheb.cheb_plim)
         cheb_tlim.append(cheb.cheb_tlim)
 
+    #find falloff types
+    fall_reacs, fall_map, num_fall = __seperate(
+        reacs, [reaction_type.fall, reaction_type.chem])
+    #find chem vs fall
+    fall_types = np.array([reaction_type.chem if x.match(reaction_type.chem)
+        else reaction_type.fall for x in fall_reacs], dtype=np.int32)
+    #find blending type
+    blend_type = np.array([next(y for y in x.type if isinstance(
+        y, falloff_form)) for x in fall_reacs], dtype=np.int32)
+
+    #find third-body types
+    thd_reacs, thd_map, num_thd = __seperate(
+        reacs, [reaction_type.fall, reaction_type.chem, reaction_type.thd])
+    #find third body type
+    thd_type = np.array([next(y for y in x.type if isinstance(
+        y, thd_body_type)) for x in thd_reacs], dtype=np.int32)
+    #find the species indicies
+    thd_spec_num = []
+    thd_spec = []
+    thd_eff = []
+    for x in thd_reacs:
+        if x.match(thd_body_type.species):
+            thd_spec_num.append(1)
+            thd_spec.append(x.pdep_sp)
+            thd_eff.append(1)
+        elif x.match(thd_body_type.unity):
+            thd_spec_num.append(0)
+        else:
+            thd_spec_num.append(len(x.thd_body_eff))
+            spec, eff = zip(*x.thd_body_eff)
+            thd_spec.extend(spec)
+            thd_eff.extend(eff)
+    thd_spec_num = np.array(thd_spec_num, dtype=np.int32)
+    thd_spec = np.array(thd_spec, dtype=np.int32)
+    thd_eff = np.array(thd_eff, dtype=np.float64)
+
     return {'simple' : {'A' : A, 'b' : b, 'Ta' : Ta, 'type' : simple_rate_type,
                 'num' : num_simple, 'map' : simple_map},
             'plog' : {'map' : plog_map, 'num' : num_plog,
@@ -396,6 +435,11 @@ def assign_rates(reacs, rate_spec):
                 'num_P' : cheb_n_pres, 'num_T' : cheb_n_temp,
                 'params' : cheb_coeff, 'Tlim' : cheb_tlim,
                 'Plim' : cheb_plim},
+            'fall' : {'map' : fall_map, 'num' : num_fall,
+                'type' : fall_types, 'blend' : blend_type},
+            'thd' : {'map' : thd_map, 'num' : num_thd,
+                'type' : thd_type, 'spec_num' : thd_spec_num,
+                'spec' : thd_spec, 'eff' : thd_eff},
             'Nr' : len(reacs)}
 
 class rateconst_info(object):

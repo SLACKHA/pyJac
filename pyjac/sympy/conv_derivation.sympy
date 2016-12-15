@@ -305,7 +305,7 @@ Mul(MyImplicitSymbol('[X]_i', (IndexedConc(Symbol('[C]'),Symbol('t')), MyImplici
 if thd_body_type.species
 Mul(MyImplicitSymbol('k_{0, i}', MyImplicitSymbol('T', Symbol('t'))), Pow(MyImplicitSymbol('k_{infty, i}', MyImplicitSymbol('T', Symbol('t'))), Integer(-1)), MyIndexedFuncValue(IndexedConc(Symbol('[C]'),Symbol('t')), Symbol('t'), Idx(Symbol('m', integer=True))))
 if thd_body_type.unity
-Mul(MyImplicitSymbol('k_{0, i}', MyImplicitSymbol('T', Symbol('t'))), Pow(MyImplicitSymbol('k_{infty, i}', MyImplicitSymbol('T', Symbol('t'))), Integer(-1)), MyIndexedFuncValue(IndexedConc(Symbol('[C]'),Symbol('t')), Symbol('t'), Idx(Symbol('m', integer=True))))
+Mul(MyImplicitSymbol('[C]', (MyImplicitSymbol('T', Symbol('t')), MyImplicitSymbol('P', (IndexedConc(Symbol('[C]'),Symbol('t')), MyImplicitSymbol('T', Symbol('t')))))), MyImplicitSymbol('k_{0, i}', MyImplicitSymbol('T', Symbol('t'))), Pow(MyImplicitSymbol('k_{infty, i}', MyImplicitSymbol('T', Symbol('t'))), Integer(-1)))
 
 MyIndexedFuncValue(MyIndexedFunc(Symbol('frac{partial q }{partial [C][j] }'),(IndexedConc(Symbol('[C]'),Symbol('t')), MyImplicitSymbol('T', Symbol('t')))), Tuple(IndexedConc(Symbol('[C]'),Symbol('t')), MyImplicitSymbol('T', Symbol('t'))), Idx(Symbol('k', integer=True)))
 if reaction_type.plog,reaction_type.chem

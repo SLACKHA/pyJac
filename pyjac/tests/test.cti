@@ -9,7 +9,7 @@ ideal_gas(name='gas',
                      CO          CO2         CH4         C2H4
                      C2H6        c2h3oh      hocho       ch3cho
                      ch2cho      ho2ch2co    C8H6        C2H
-                     C6H5        C4H2""",
+                     C6H5        C4H2        N2""",
           reactions='all',
           initial_state=state(temperature=300.0, pressure=OneAtm))
 
@@ -377,6 +377,18 @@ species(name=u'C4H2',
                       -2.20010465E+01])),
         note=u'ATcT')
 
+species(name=u'N2',
+        atoms='N:2',
+        thermo=(NASA([300.00, 1000.00],
+                     [ 3.29867700E+00,  1.40824040E-03, -3.96322200E-06,
+                       5.64151500E-09, -2.44485400E-12, -1.02089990E+03,
+                       3.95037200E+00]),
+                NASA([1000.00, 5000.00],
+                     [ 2.92664000E+00,  1.48797680E-03, -5.68476000E-07,
+                       1.00970380E-10, -6.75335100E-15, -9.22797700E+02,
+                       5.98052800E+00])),
+        note=u'121286')
+
 #-------------------------------------------------------------------------------
 # Reaction data
 #-------------------------------------------------------------------------------
@@ -472,3 +484,8 @@ chebyshev_reaction('C8H6 + C2H (+ M) <=> C6H5 + C4H2 (+ M)',
                            [-2.84050e-02, -1.91500e-02, -5.25570e-03],
                            [ 2.42520e-02,  2.59210e-02,  6.70840e-03]])
 # NetReaction from PDepNetwork #7 (C10H7)    deltaHrxn(T=298K) = -19.317280861892925 kcal/mol
+# this should be last to test non-zero last efficiency (N2)
+
+# Reaction 15
+three_body_reaction('H + O2 + M <=> HO2 + M', [2.800000e+18, -0.86, 0.0],
+                    efficiencies='CO2:1.5 CO:0.75 H2O:0.0 AR:0.0 C2H6:1.5 N2:3.0 O2:0.0')

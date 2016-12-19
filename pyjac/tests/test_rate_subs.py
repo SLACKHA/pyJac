@@ -182,7 +182,8 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, ref_ans, ref_ans_T, args, mask=None):
+    def __generic_rate_tester(self, func, ref_ans, ref_ans_T, args, mask=None,
+        variable_loop_length=False):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -198,6 +199,8 @@ class SubTest(TestClass):
             The args to pass to the kernel
         mask : :class:`numpy.ndarray`
             If not none, the compare mask to use in testing
+        variable_loop_length : bool
+            ILP interferes with this type of kernel, turn it off
         """
 
         eqs = {'conp' : self.store.conp_eqs,
@@ -205,9 +208,9 @@ class SubTest(TestClass):
         oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
             ('width', [4, None]),
             ('depth', [4, None]),
-            ('ilp', [True, False]),
+            ('ilp', [True, False] if not variable_loop_length else [False]),
             ('unr', [None, 4]),
-            ('device', ['0:0', '1']),
+            ('device', get_device_list()),
             ('rate_spec', [x for x in RateSpecialization]),
             ('rate_spec_kernels', [True, False])
             ]))
@@ -252,13 +255,11 @@ class SubTest(TestClass):
                     #it's a function
                     args_copy[key] = args_copy[key](state['width'])
 
-            import pdb; pdb.set_trace()
             assert auto_run(kernels, ref, device=state['device'],
                 compare_mask=mask,
                 compare_axis=1 if state['width'] is None else 0,
                 **args_copy), \
                 'Evaluate {} rates failed'.format(name)
-
 
     def __test_rateconst_type(self, rtype):
         """
@@ -319,4 +320,5 @@ class SubTest(TestClass):
         args = { 'T_arr' : T,
                  'P_arr' : P,
                  'conc' : lambda x: concs[:-1, :].copy() if x else concs[:-1, :].T.copy()}
-        self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args)
+        self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args,
+            variable_loop_length=True)

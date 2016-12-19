@@ -591,9 +591,9 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
         if thd_eff_ns[i] != 1:
             #we need to add all the other species :(
             #get updated species list
-            to_add = np.array(range(Ns), dtype=np.int32)
+            to_add = np.array(range(Ns - 1), dtype=np.int32)
             #and efficiencies
-            eff = np.array([1 - thd_eff_ns[i] for spec in range(Ns)])
+            eff = np.array([1 - thd_eff_ns[i] for spec in range(Ns - 1)])
             eff[spec_list[offset:offset+num_specs[i]]] = thd_effs[offset:offset+num_specs[i]]
             #delete from the species list / efficiencies
             spec_list = np.delete(spec_list, range(offset, offset+num_specs[i]))

@@ -59,6 +59,25 @@ class loopy_options(object):
         self.rate_spec = rate_spec
         self.rate_spec_kernels = rate_spec_kernels
 
+def get_device_list():
+    """
+    Returns the available pyopencl devices
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    devices : list of :class:`pyopencl.Device`
+
+    """
+    device_list = []
+    for p in cl.get_platforms():
+        device_list.append(p.get_devices())
+
+    return device_list
+
 
 def get_context(device='0'):
     """
@@ -66,14 +85,18 @@ def get_context(device='0'):
 
     Parameters
     ----------
-    device : str
-        The pyopencl string denoting the device to use, defaults to '0'
+    device : str or :class:`pyopencl.Device`
+        The pyopencl string (or device class) denoting the device to use, defaults to '0'
     """
-    os.environ['PYOPENCL_CTX'] = device
+
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
+    if isinstance(device, str):
+        os.environ['PYOPENCL_CTX'] = device
+        ctx = cl.create_some_context(interactive=False)
+    else:
+        ctx = cl.Context(devices=device)
 
     lp.set_caching_enabled(False)
-    ctx = cl.create_some_context(interactive=False)
     queue = cl.CommandQueue(ctx)
     return ctx, queue
 
@@ -173,26 +196,25 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
     #create context
     ctx, queue = get_context(device)
 
+
     #run kernel
-    if isinstance(knl, list):
-        out_ref = np.zeros_like(ref_answer)
-        for k in knl:
-            test_knl = set_editor(k)
-            try:
-                evt, (out,) = test_knl(queue, **input_args)
-            except Exception as e:
-                print(k)
-                raise e
-            copy_inds = np.where(np.logical_not(np.isinf(out)))
-            out_ref[copy_inds] = out[copy_inds]
-        out = out_ref
-    else:
+    if not isinstance(knl, list):
+        knl = [knl]
+
+    out_ref = np.zeros_like(ref_answer)
+    for k in knl:
+        test_knl = set_editor(k)
+        if isinstance(k.target, lp.PyOpenCLTarget):
+            #recreate with device
+            k.target = lp.PyOpenCLTarget(device=device)
         try:
-            test_knl = set_editor(knl)
-            evt, (out,) = test_knl(queue, **input_args)
+            evt, (out,) = test_knl(queue, out_host=True, **input_args)
         except Exception as e:
-            print(knl)
+            print(k)
             raise e
+        copy_inds = np.where(np.logical_not(np.isinf(out)))
+        out_ref[copy_inds] = out[copy_inds]
+    out = out_ref
 
     if compare_mask is not None:
         return np.allclose(np.take(out, compare_mask, compare_axis),
@@ -370,13 +392,15 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     return arg, '{name}[{inds}]'.format(name=arg_name,
                 inds=','.join(string_inds)), map_instructs
 
-def get_target(lang):
+def get_target(lang, device=None):
     """
 
     Parameters
     ----------
     lang : str
         One of the supported languages, {'c', 'cuda', 'opencl'}
+    device : :class:`pyopencl.Device`
+        If supplied, and lang is 'opencl', passed to the :class:`loopy.PyOpenCLTarget`
 
     Returns
     -------
@@ -387,7 +411,7 @@ def get_target(lang):
 
     #set target
     if lang == 'opencl':
-        return lp.PyOpenCLTarget()
+        return lp.PyOpenCLTarget(device=device)
     elif lang == 'c':
         return lp.CTarget()
     elif lang == 'cuda':

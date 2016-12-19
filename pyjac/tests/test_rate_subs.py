@@ -8,7 +8,7 @@ from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
-    get_target)
+    get_target, get_device_list)
 from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
@@ -47,7 +47,7 @@ class SubTest(TestClass):
         assert np.all(result['simple']['type'] == 0)
 
         #import gas in cantera for testing
-        gas = ct.Solution('test.cti')
+        gas = self.gas
 
         def __tester(result):
             #test return value

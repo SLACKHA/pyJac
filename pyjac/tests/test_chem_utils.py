@@ -26,7 +26,7 @@ class SubTest(TestClass):
             ('depth', [4, None]),
             ('ilp', [True, False]),
             ('unr', [None, 4]),
-            ('device', ['0:0', '1'])]))
+            ('device', get_device_list())]))
 
         specs = self.store.specs
         test_size = self.store.test_size

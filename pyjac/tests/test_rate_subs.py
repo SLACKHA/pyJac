@@ -47,7 +47,7 @@ class SubTest(TestClass):
         assert np.all(result['simple']['type'] == 0)
 
         #import gas in cantera for testing
-        gas = self.gas
+        gas = self.store.gas
 
         def __tester(result):
             #test return value

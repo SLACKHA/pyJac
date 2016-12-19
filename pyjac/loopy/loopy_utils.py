@@ -353,6 +353,9 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         given mappings
     """
 
+    if initializer is not None:
+        assert initializer.dtype == dtype
+
     #first do any reordering
     indicies, dimensions, initializer = get_loopy_order(indicies, dimensions,
                                                 last_ind, additional_ordering,

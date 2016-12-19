@@ -265,7 +265,7 @@ def get_cheb_rate(lang, rxn, write_defns=True):
 
     return ''.join(line_list)
 
-def assign_rates(reacs, rate_spec):
+def assign_rates(reacs, specs, rate_spec):
     """
     From a given set of reactions, determine the rate types for evaluation
 
@@ -273,6 +273,8 @@ def assign_rates(reacs, rate_spec):
     ----------
     reacs : list of `ReacInfo`
         The reactions in the mechanism
+    specs : list of `SpecInfo`
+        The species in the mechanism
     rate_spec : `RateSpecialization` enum
         The specialization option specified
 
@@ -440,13 +442,14 @@ def assign_rates(reacs, rate_spec):
             'thd' : {'map' : thd_map, 'num' : num_thd,
                 'type' : thd_type, 'spec_num' : thd_spec_num,
                 'spec' : thd_spec, 'eff' : thd_eff},
-            'Nr' : len(reacs)}
+            'Nr' : len(reacs),
+            'Ns' : len(specs)}
 
 class rateconst_info(object):
     def __init__(self, name, instructions, pre_instructions=[],
         reac_ind='i', kernel_data=None,
         maps=[], extra_inames=[], indicies=[],
-        assumptions=[]):
+        assumptions=[], parameters={}):
         self.name = name
         self.instructions = instructions
         self.pre_instructions = pre_instructions[:]
@@ -456,6 +459,7 @@ class rateconst_info(object):
         self.extra_inames = extra_inames[:]
         self.indicies = indicies[:]
         self.assumptions = assumptions[:]
+        self.parameters = parameters.copy()
 
 __TINV_PREINST_KEY = 'Tinv'
 __TLOG_PREINST_KEY = 'logT'
@@ -504,8 +508,175 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
 
     return indicies
 
+def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for third body concentrations
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+    """
+
+    Ns = rate_info['Ns']
+    num_thd = rate_info['thd']['num']
+    reac_ind = 'i'
+
+    #create args
+    indicies = ['${species_ind}', 'j']
+    last_index = '${species_ind}'
+    if loopy_opt.width:
+        last_index = 'j'
+    concs_lp, concs_str, _ = lp_utils.get_loopy_arg('conc',
+                                                    indicies,
+                                                    (Ns - 1, test_size),
+                                                    last_index)
+
+    indicies = ['${reac_ind}', 'j']
+    last_index = '${reac_ind}'
+    if loopy_opt.width:
+        last_index = 'j'
+    thd_lp, thd_str, _ = lp_utils.get_loopy_arg('pres_mod',
+                                                indicies,
+                                                (num_thd, test_size),
+                                                last_index)
+
+    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+    P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
+
+    def __1Dcreator(name, numpy_arg, scope=scopes.PRIVATE):
+        arg_lp, arg_str, _ = lp_utils.get_loopy_arg(name,
+                                                     ['${reac_ind}'],
+                                                     numpy_arg.shape,
+                                                     '${reac_ind}',
+                                                     initializer=numpy_arg,
+                                                     scope=scope,
+                                                     dtype=numpy_arg.dtype)
+        return arg_lp, arg_str
+
+    thd_eff_ns = np.ones(num_thd)
+    num_specs = rate_info['thd']['spec_num'].copy()
+    spec_list = rate_info['thd']['spec'].copy()
+    thd_effs = rate_info['thd']['eff'].copy()
+
+    last_spec = Ns - 1
+    #first, we must do some surgery to get _our_ form of the thd-body efficiencies
+    for i in range(num_specs.size):
+        num = num_specs[i]
+        offset = np.sum(num_specs[:i])
+        #check if Ns has a non-default efficiency
+        if last_spec in spec_list[offset:offset+num]:
+            ind = np.where(spec_list[offset:offset+num] == last_spec)[0][0]
+            #set the efficiency
+            thd_eff_ns[i] = thd_effs[offset + ind]
+            #delete from the species list
+            spec_list = np.delete(spec_list, offset + ind)
+            #delete from effiency list
+            thd_effs = np.delete(thd_effs, offset + ind)
+            #subtract from species num
+            num_specs[i] -= 1
+        #and subtract from efficiencies
+        thd_effs[offset:offset+num_specs[i]] -= thd_eff_ns[i]
+        if thd_eff_ns[i] != 1:
+            #we need to add all the other species :(
+            #get updated species list
+            to_add = np.array(range(Ns), dtype=np.int32)
+            #and efficiencies
+            eff = np.array([1 - thd_eff_ns[i] for spec in range(Ns)])
+            eff[spec_list[offset:offset+num_specs[i]]] = thd_effs[offset:offset+num_specs[i]]
+            #delete from the species list / efficiencies
+            spec_list = np.delete(spec_list, range(offset, offset+num_specs[i]))
+            thd_effs = np.delete(thd_effs,  range(offset, offset+num_specs[i]))
+            #insert
+            spec_list = np.insert(spec_list, offset, to_add)
+            thd_effs = np.insert(thd_effs, offset, eff)
+            #and update number
+            num_specs[i] = to_add.size
+
+
+    #and temporary variables:
+    thd_type_lp, thd_type_str = __1Dcreator('thd_type', rate_info['thd']['type'], scopes.GLOBAL)
+    thd_eff_lp, thd_eff_str = __1Dcreator('thd_eff', thd_effs)
+    thd_spec_lp, thd_spec_str = __1Dcreator('thd_spec', spec_list)
+    thd_num_spec_lp, thd_num_spec_str = __1Dcreator('thd_spec_num', num_specs)
+    thd_eff_ns_lp, thd_eff_ns_str = __1Dcreator('thd_eff_ns', thd_eff_ns)
+
+    #calculate offsets
+    offsets = np.cumsum(num_specs, dtype=np.int32) - num_specs
+    thd_offset_lp, thd_offset_str = __1Dcreator('thd_offset', offsets)
+
+    #kernel data
+    kernel_data = [T_arr, P_arr, concs_lp, thd_lp, thd_type_lp,
+                   thd_eff_lp, thd_spec_lp, thd_num_spec_lp, thd_offset_lp,
+                   thd_eff_ns_lp]
+
+    #maps
+    out_map = {}
+    outmap_name = 'out_map'
+    indicies = rate_info['thd']['map'].astype(dtype=np.int32)
+    indicies = __handle_indicies(indicies, reac_ind, out_map, kernel_data)
+    #extra loops
+    extra_inames = [('k', '0 <= k < num')]
+
+    #generate instructions
+    instructions = Template("""
+<> offset = ${offset}
+<> num_temp = ${num_spec_str} {id=num0}
+if ${type_str} == 2 # single species
+    <> thd_temp = ${conc_spec} {id=thd0, dep=num0}
+    num_temp = 0 {id=num1, dep=num0}
+else
+    thd_temp = P_arr[j] * ${thd_eff_ns_str} / (R * T_arr[j]) {id=thd1, dep=num0}
+end
+<> num = num_temp {dep=num*}
+for k
+    thd_temp = thd_temp + ${thd_eff} * ${conc_thd_spec} {id=thd2}
+end
+${thd_str} = thd_temp {dep=thd*}
+""")
+
+    #sub in instructions
+    instructions = Template(
+        instructions.safe_substitute(
+            offset=thd_offset_str,
+            type_str=thd_type_str,
+            conc_spec=Template(concs_str).safe_substitute(
+                    species_ind=thd_spec_str),
+            num_spec_str=thd_num_spec_str,
+            thd_eff=Template(thd_eff_str).safe_substitute(
+                    reac_ind='offset + k'),
+            conc_thd_spec=Template(concs_str).safe_substitute(
+                species_ind=Template(thd_spec_str).safe_substitute(
+                    reac_ind='offset + k')),
+            thd_str=thd_str,
+            thd_eff_ns_str=thd_eff_ns_str
+        )
+    ).safe_substitute(reac_ind=reac_ind)
+
+
+    #create info
+    info = rateconst_info('thd',
+                         instructions=instructions,
+                         reac_ind=reac_ind,
+                         kernel_data=kernel_data,
+                         extra_inames=extra_inames,
+                         indicies=indicies,
+                         parameters={'R' : chem.RU})
+    return info
+
 def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
-    """Generates instructions, kernel arguements, and data for p-log rate constants
+    """Generates instructions, kernel arguements, and data for cheb rate constants
 
     Parameters
     ----------
@@ -1265,6 +1436,9 @@ def make_rateconst_kernel(info, target, test_size):
         target=target,
         assumptions=' and '.join(assumptions)
     )
+    #fix parameters
+    if info.parameters:
+        knl = lp.fix_parameters(knl, **info.parameters)
     #prioritize and return
     knl = lp.prioritize_loops(knl, inames)
     return knl
@@ -1308,7 +1482,7 @@ def apply_rateconst_vectorization(loopy_opt, reac_ind, knl):
 
     return knl
 
-def rate_const_kernel_gen(eqs, reacs,
+def rate_const_kernel_gen(eqs, reacs, specs,
                             loopy_opt, test_size=None):
     """Helper function that generates kernels for
        evaluation of simple arrhenius rate forms
@@ -1318,7 +1492,9 @@ def rate_const_kernel_gen(eqs, reacs,
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
     reacs : list of `ReacInfo`
-        List of species in the mechanism.
+        List of reactions in the mechanism.
+    specs : list of `SpecInfo`
+        List of species in the mechanism
     loopy_opt : `loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
@@ -1335,7 +1511,7 @@ def rate_const_kernel_gen(eqs, reacs,
         test_size = 'n'
 
     #determine rate evaluation types, indicies etc.
-    rate_info = assign_rates(reacs, loopy_opt.rate_spec)
+    rate_info = assign_rates(reacs, specs, loopy_opt.rate_spec)
 
     kernels = {}
 

@@ -31,12 +31,30 @@ class storage(object):
         self.Y = np.random.uniform(0, 1, size=(self.gas.n_species, test_size))
         self.concs = np.empty_like(self.Y)
         self.fwd_rate_constants = np.zeros((self.gas.n_reactions, test_size))
+
+        #third body indicies
+        thd_inds = np.array([i for i, x in enumerate(gas.reactions())
+            if isinstance(x, ct.FalloffReaction) or
+                isinstance(x, ct.ChemicallyActivatedReaction) or
+                isinstance(x, ct.ThreeBodyReaction)])
+        self.ref_thd = np.zeros((thd_inds.size, test_size))
+        thd_eff_maps = []
+        for i in thd_inds:
+            default = gas.reaction(i).default_efficiency
+            #fill all missing with default
+            thd_eff_map = [default if j not in gas.reaction(i).efficiencies
+                              else gas.reaction(i).efficiencies[j] for j in gas.species_names]
+            thd_eff_maps.append(np.array(thd_eff_map))
+        thd_eff_maps = np.array(thd_eff_maps)
+
         for i in range(test_size):
             self.gas.TPY = self.T[i], self.P[i], self.Y[:, i]
             self.concs[:, i] = self.gas.concentrations[:]
 
             #store various information
             self.fwd_rate_constants[:, i] = gas.forward_rate_constants[:]
+            self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
+
 
 class TestClass(unittest.TestCase):
     #global setup var

@@ -6,7 +6,7 @@ from collections import OrderedDict
 #local imports
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
-    make_rateconst_kernel, apply_rateconst_vectorization)
+    make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target)
 from ..utils import create_dir
@@ -40,7 +40,8 @@ class SubTest(TestClass):
 
     def test_assign_rates(self):
         reacs = self.store.reacs
-        result = assign_rates(reacs, RateSpecialization.fixed)
+        specs = self.store.specs
+        result = assign_rates(reacs, specs, RateSpecialization.fixed)
 
         #test rate type
         assert np.all(result['simple']['type'] == 0)
@@ -81,7 +82,7 @@ class SubTest(TestClass):
 
         __tester(result)
 
-        result = assign_rates(reacs, RateSpecialization.hybrid)
+        result = assign_rates(reacs, specs, RateSpecialization.hybrid)
 
         def __get_vals(reac):
             try:
@@ -110,7 +111,7 @@ class SubTest(TestClass):
         assert np.allclose(result['simple']['type'], np.array(rtypes))
         __tester(result)
 
-        result = assign_rates(reacs, RateSpecialization.full)
+        result = assign_rates(reacs, specs, RateSpecialization.full)
 
         #test rate type
         rtypes = []
@@ -181,26 +182,26 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __test_rateconst_type(self, rtype):
+    def __generic_rate_tester(self, func, ref_ans, ref_ans_T, args, mask=None):
         """
-        Performs tests for a single reaction rate type
+        A generic testing method that can be used for rate constants, third bodies, ...
 
         Parameters
         ----------
-        rtype : {'simple', 'plog', 'cheb'}
-            The reaction type to test
+        func : function
+            The function to test
+        ref_ans : :class:`numpy.ndarray`
+            The answer in 'wide' form
+        ref_ans_T : :class:`numpy.ndarray`
+            The answer in 'deep' form
+        args : list of `loopy.KernelArguement`
+            The args to pass to the kernel
+        mask : :class:`numpy.ndarray`
+            If not none, the compare mask to use in testing
         """
-
-        T = self.store.T
-        P = self.store.P
-        ref_const = self.store.fwd_rate_constants
-        ref_const_T = ref_const.T.copy()
 
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
-
-        target = get_target('opencl')
-
         oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
             ('width', [4, None]),
             ('depth', [4, None]),
@@ -212,18 +213,9 @@ class SubTest(TestClass):
             ]))
 
         reacs = self.store.reacs
-        masks = {
-            'simple' : (
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))]),
-                get_simple_arrhenius_rates),
-            'plog' : (
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))]),
-                get_plog_arrhenius_rates),
-            'cheb' : (
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.cheb,))]),
-                get_cheb_arrhenius_rates)}
+        specs = self.store.specs
 
-        compare_mask, rate_func = masks[rtype]
+        target = get_target('opencl')
 
         for i, state in enumerate(oploop):
             if state['width'] is not None and state['depth'] is not None:
@@ -231,9 +223,9 @@ class SubTest(TestClass):
             opt = loopy_options(**{x : state[x] for x in
                 state if x != 'device'})
             #find rate info
-            rate_info = assign_rates(reacs, opt.rate_spec)
+            rate_info = assign_rates(reacs, specs, opt.rate_spec)
             #create the kernel info
-            infos = rate_func(eqs, opt, rate_info,
+            infos = func(eqs, opt, rate_info,
                         test_size=self.store.test_size)
 
             if not isinstance(infos, list):
@@ -252,16 +244,57 @@ class SubTest(TestClass):
 
                 kernels.append(knl)
 
-            ref = ref_const if state['width'] else ref_const_T
-            args = {'T_arr' : T}
-            if rtype != 'simple':
-                args['P_arr'] =  P
+            ref = ref_ans if state['width'] else ref_ans_T
 
+            args_copy = args.copy()
+            for key in args_copy:
+                if hasattr(args_copy[key], '__call__'):
+                    #it's a function
+                    args_copy[key] = args_copy[key](state['width'])
+
+            import pdb; pdb.set_trace()
             assert auto_run(kernels, ref, device=state['device'],
-                compare_mask=compare_mask,
-                compare_axis=1 if state['width'] is None else 0
-                **args), \
+                compare_mask=mask,
+                compare_axis=1 if state['width'] is None else 0,
+                **args_copy), \
                 'Evaluate {} rates failed'.format(name)
+
+
+    def __test_rateconst_type(self, rtype):
+        """
+        Performs tests for a single reaction rate type
+
+        Parameters
+        ----------
+        rtype : {'simple', 'plog', 'cheb'}
+            The reaction type to test
+        """
+
+        T = self.store.T
+        P = self.store.P
+        ref_const = self.store.fwd_rate_constants
+        ref_const_T = ref_const.T.copy()
+
+        reacs = self.store.reacs
+        masks = {
+            'simple' : (
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))]),
+                get_simple_arrhenius_rates),
+            'plog' : (
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))]),
+                get_plog_arrhenius_rates),
+            'cheb' : (
+                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.cheb,))]),
+                get_cheb_arrhenius_rates)}
+
+        args = {'T_arr' : T}
+        if rtype != 'simple':
+            args['P_arr'] =  P
+
+        compare_mask, rate_func = masks[rtype]
+
+        self.__generic_rate_tester(rate_func, ref_const, ref_const_T, args,
+            mask=compare_mask)
 
 
     @attr('long')
@@ -275,3 +308,15 @@ class SubTest(TestClass):
     @attr('long')
     def test_cheb_rate_constants(self):
         self.__test_rateconst_type('cheb')
+
+    @attr('long')
+    def test_thd_body_concs(self):
+        T = self.store.T
+        P = self.store.P
+        concs = self.store.concs
+        ref_ans = self.store.ref_thd.copy()
+        ref_ans_T = self.store.ref_thd.T.copy()
+        args = { 'T_arr' : T,
+                 'P_arr' : P,
+                 'conc' : lambda x: concs[:-1, :].copy() if x else concs[:-1, :].T.copy()}
+        self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args)

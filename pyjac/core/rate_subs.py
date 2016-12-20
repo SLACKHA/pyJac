@@ -15,7 +15,6 @@ import math
 import os
 import re
 import logging
-import itertools
 from string import Template
 import textwrap
 
@@ -547,7 +546,7 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     last_index = '${reac_ind}'
     if loopy_opt.width:
         last_index = 'j'
-    thd_lp, thd_str, _ = lp_utils.get_loopy_arg('pres_mod',
+    thd_lp, thd_str, _ = lp_utils.get_loopy_arg('thd_conc',
                                                 indicies,
                                                 (num_thd, test_size),
                                                 last_index)

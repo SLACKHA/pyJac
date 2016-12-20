@@ -1104,7 +1104,8 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         maps=maps, extra_inames=extra_inames, indicies=indicies)]
 
 
-def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
+def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
+        falloff=False):
     """Generates instructions, kernel arguements, and data for specialized forms
     of simple (non-pressure dependent) rate constants
 
@@ -1119,6 +1120,9 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     test_size : int
         If not none, this kernel is being used for testing.
         Hence we need to size the arrays accordingly
+    falloff : bool
+        If true, generate rate kernel for the falloff rates, i.e. either
+        k0 or kinf depending on whether the reaction is falloff or chemically activated
 
     Returns
     -------
@@ -1128,7 +1132,14 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     """
 
     #find options, sizes, etc.
-    Nr = rate_info['Nr']
+    if falloff:
+        tag = 'fall'
+        kf_name = 'kf_fall'
+        Nr = rate_info['fall']['num']
+    else:
+        tag = 'simple'
+        kf_name = 'kf'
+        Nr = rate_info['Nr']
 
     #first assign the reac types, parameters
     full = loopy_opt.rate_spec == lp_utils.RateSpecialization.full
@@ -1142,13 +1153,13 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
 
     #define loopy arrays
     A_lp = lp.TemporaryVariable('A', shape=lp.auto,
-        initializer=rate_info['simple']['A'],
+        initializer=rate_info[tag]['A'],
         read_only=True, scope=scopes.GLOBAL)
     b_lp = lp.TemporaryVariable('beta', shape=lp.auto,
-        initializer=rate_info['simple']['b'],
+        initializer=rate_info[tag]['b'],
         read_only=True, scope=scopes.GLOBAL)
     Ta_lp = lp.TemporaryVariable('Ta', shape=lp.auto,
-        initializer=rate_info['simple']['Ta'],
+        initializer=rate_info[tag]['Ta'],
         read_only=True, scope=scopes.GLOBAL)
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     simple_arrhenius_data = [A_lp, b_lp, Ta_lp, T_arr]
@@ -1156,7 +1167,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #if we need the rtype array, add it
     if not separated_kernels and not fixed:
         rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto,
-            initializer=rate_info['simple']['type'],
+            initializer=rate_info[tag]['type'],
             read_only=True, scope=scopes.PRIVATE)
         simple_arrhenius_data.append(rtype_lp)
 
@@ -1251,10 +1262,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         #first, get indicies
         if rtype < 0:
             #select all for joined kernel
-            info.indicies = np.arange(0, rate_info['simple']['type'].size, dtype=np.int32)
+            info.indicies = np.arange(0, rate_info[tag]['type'].size, dtype=np.int32)
         else:
             #otherwise choose just our rtype
-            info.indicies = np.where(rate_info['simple']['type'] == rtype)[0].astype(dtype=np.int32)
+            info.indicies = np.where(rate_info[tag]['type'] == rtype)[0].astype(dtype=np.int32)
 
         if not info.indicies.size:
             #kernel doesn't act on anything, remove it
@@ -1266,8 +1277,8 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         if (separated_kernels and (info.name == i_beta_int.name)) or \
             (not separated_kernels and not fixed):
             #find max b exponent
-            maxb_test = rate_info['simple']['b'][
-                    np.where(rate_info['simple']['type'] == rtype)]
+            maxb_test = rate_info[tag]['b'][
+                    np.where(rate_info[tag]['type'] == rtype)]
             if maxb_test.size:
                 maxb = int(np.max(np.abs(maxb_test)))
                 #if we need to iterate
@@ -1297,7 +1308,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         outmap_name = 'out_map'
         info.indicies = __handle_indicies(info.indicies, info.reac_ind,
                       out_map, info.kernel_data, outmap_name=outmap_name,
-                      alternate_indicies=rate_info['simple']['map'][
+                      alternate_indicies=rate_info[tag]['map'][
                                 info.indicies])
 
         wide = loopy_opt.width is not None
@@ -1306,7 +1317,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
             vector_ind = 'j'
 
         #get the proper kf indexing / array
-        kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
+        kf_arr, kf_str, map_result = lp_utils.get_loopy_arg(kf_name,
                         [info.reac_ind, 'j'],
                         [Nr, test_size],
                         vector_ind,

@@ -333,36 +333,61 @@ def assign_rates(reacs, specs, rate_spec):
         reacs, [reaction_type.elementary, reaction_type.thd,
                     reaction_type.fall, reaction_type.chem])
 
-    simple_rate_type = np.zeros((num_simple,), dtype=np.int32)
-    #reaction parameters
-    A = np.zeros((num_simple,), dtype=np.float64)
-    b = np.zeros((num_simple,), dtype=np.float64)
-    Ta = np.zeros((num_simple,), dtype=np.float64)
+    def __specialize(rates, fall=False):
+        fall_types = None
+        num = len(rates)
+        rate_type = np.zeros((num,), dtype=np.int32)
+        if fall:
+            fall_types = np.zeros((num,), dtype=np.int32)
+        #reaction parameters
+        A = np.zeros((num,), dtype=np.float64)
+        b = np.zeros((num,), dtype=np.float64)
+        Ta = np.zeros((num,), dtype=np.float64)
 
-    i = 0
-    for i, reac in enumerate(simple_rate):
-        #assign rate params
-        A[i] = np.log(reac.A)
-        b[i] = reac.b
-        Ta[i] = reac.E
-        if fixed:
-            simple_rate_type[i] = 0
-            continue
-        #assign rate types
-        if reac.b == 0 and reac.E == 0:
-            A[i] = reac.A
-            simple_rate_type[i] = 0
-        elif reac.b == int(reac.b) and reac.b and reac.E == 0:
-            A[i] = reac.A
-            simple_rate_type[i] = 1
-        elif reac.E == 0 and reac.b != 0:
-            simple_rate_type[i] = 2
-        elif reac.b == 0 and reac.E != 0:
-            simple_rate_type[i] = 3
-        else:
-            simple_rate_type[i] = 4
-        if not full:
-            simple_rate_type[i] = simple_rate_type[i] if simple_rate_type[i] <= 1 else 2
+        for i, reac in enumerate(rates):
+            factor = 1
+            if (reac.high or reac.low) and fall:
+                factor = -1
+                if reac.high:
+                    #we want k_inf, therefore we need to
+                    #multiply all terms by -1 such that we take
+                    #exp(-X) = 1/exp(X)
+                    factor = -1
+                    Ai, bi, Tai = reac.high
+                    fall_types[i] = 1 #mark as chemically activated
+                else:
+                    #we want k0, hence default factor is fine
+                    Ai, bi, Tai = reac.low
+                    fall_types[i] = 0 #mark as falloff
+            else:
+                #assign rate params
+                Ai, bi, Tai = reac.A, reac.b, reac.E
+            #generic assign
+            A[i] = factor * np.log(Ai)
+            b[i] = factor * bi
+            Ta[i] = factor * Tai
+
+            if fixed:
+                rate_type[i] = 0
+                continue
+            #assign rate types
+            if bi == 0 and Tai == 0:
+                A[i] = factor * Ai
+                rate_type[i] = 0
+            elif bi == int(bi) and bi and Tai == 0:
+                A[i] = factor * Ai
+                rate_type[i] = 1
+            elif Tai == 0 and bi != 0:
+                rate_type[i] = 2
+            elif bi == 0 and Tai != 0:
+                rate_type[i] = 3
+            else:
+                rate_type[i] = 4
+            if not full:
+                rate_type[i] = rate_type[i] if rate_type[i] <= 1 else 2
+        return rate_type, A, b, Ta, fall_types
+
+    simple_rate_type, A, b, Ta, _ = __specialize(simple_rate)
 
     #finally determine the advanced rate evaulation types
     plog_reacs, plog_map, num_plog = __seperate(
@@ -395,9 +420,7 @@ def assign_rates(reacs, specs, rate_spec):
     #find falloff types
     fall_reacs, fall_map, num_fall = __seperate(
         reacs, [reaction_type.fall, reaction_type.chem])
-    #find chem vs fall
-    fall_types = np.array([int(reaction_type.chem) if x.match(reaction_type.chem)
-        else int(reaction_type.fall) for x in fall_reacs], dtype=np.int32)
+    fall_rate_type, fall_A, fall_b, fall_Ta, fall_types = __specialize(fall_reacs, True)
     #find blending type
     blend_type = np.array([next(int(y) for y in x.type if isinstance(
         y, falloff_form)) for x in fall_reacs], dtype=np.int32)
@@ -437,7 +460,9 @@ def assign_rates(reacs, specs, rate_spec):
                 'params' : cheb_coeff, 'Tlim' : cheb_tlim,
                 'Plim' : cheb_plim},
             'fall' : {'map' : fall_map, 'num' : num_fall,
-                'type' : fall_types, 'blend' : blend_type},
+                'ftype' : fall_types, 'blend' : blend_type,
+                'A' : fall_A, 'b' : fall_b, 'Ta' : fall_Ta,
+                'type' : fall_rate_type},
             'thd' : {'map' : thd_map, 'num' : num_thd,
                 'type' : thd_type, 'spec_num' : thd_spec_num,
                 'spec' : thd_spec, 'eff' : thd_eff},

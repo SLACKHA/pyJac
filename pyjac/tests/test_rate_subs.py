@@ -84,51 +84,64 @@ class SubTest(TestClass):
 
         result = assign_rates(reacs, specs, RateSpecialization.hybrid)
 
-        def __get_vals(reac):
+        def __get_vals(reac, fall=False):
             try:
                 Ea = reac.rate.activation_energy
                 b = reac.rate.temperature_exponent
+                if fall:
+                    return None, None #don't care
             except:
-                if isinstance(reac, ct.FalloffReaction) and not isinstance(reac, ct.ChemicallyActivatedReaction):
-                    Ea = reac.high_rate.activation_energy
-                    b = reac.high_rate.temperature_exponent
+                if not fall:
+                    #want the normal rates
+                    if isinstance(reac, ct.FalloffReaction) and not isinstance(reac, ct.ChemicallyActivatedReaction):
+                        rate = reac.high_rate
+                    else:
+                        rate = reac.low_rate
                 else:
-                    Ea = reac.low_rate.activation_energy
-                    b = reac.low_rate.temperature_exponent
+                    #want the other rates
+                    if isinstance(reac, ct.FalloffReaction) and not isinstance(reac, ct.ChemicallyActivatedReaction):
+                        rate = reac.low_rate
+                    else:
+                        rate = reac.high_rate
+                Ea = rate.activation_energy
+                b = rate.temperature_exponent
             return Ea, b
 
+        def test_assign(type_max, fall):
+            #test rate type
+            rtypes = []
+            for reac in gas.reactions():
+                if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
+                    Ea, b = __get_vals(reac, fall)
+                    if Ea is None:
+                        continue
+                    if Ea == 0 and b == 0:
+                        rtypes.append(0)
+                    elif Ea == 0 and int(b) == b:
+                        rtypes.append(1)
+                    elif Ea == 0:
+                        rtypes.append(2)
+                    elif b == 0:
+                        rtypes.append(3)
+                    else:
+                        rtypes.append(4)
+                    rtypes[-1] = min(rtypes[-1], type_max)
+            return rtypes
+
         #test rate type
-        rtypes = []
-        for reac in gas.reactions():
-            if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
-                Ea, b = __get_vals(reac)
-                if Ea == 0 and b == 0:
-                    rtypes.append(0)
-                elif Ea == 0 and int(b) == b:
-                    rtypes.append(1)
-                else:
-                    rtypes.append(2)
-        assert np.allclose(result['simple']['type'], np.array(rtypes))
+        assert np.allclose(result['simple']['type'],
+            test_assign(2, False))
+        assert np.allclose(result['fall']['type'],
+            test_assign(2, True))
         __tester(result)
 
         result = assign_rates(reacs, specs, RateSpecialization.full)
 
         #test rate type
-        rtypes = []
-        for reac in gas.reactions():
-            if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
-                Ea, b = __get_vals(reac)
-                if Ea == 0 and b == 0:
-                    rtypes.append(0)
-                elif Ea == 0 and int(b) == b:
-                    rtypes.append(1)
-                elif Ea == 0:
-                    rtypes.append(2)
-                elif b == 0:
-                    rtypes.append(3)
-                else:
-                    rtypes.append(4)
-        assert np.allclose(result['simple']['type'], np.array(rtypes))
+        assert np.allclose(result['simple']['type'],
+            test_assign(5, False))
+        assert np.allclose(result['fall']['type'],
+            test_assign(5, True))
         __tester(result)
 
         #test the thd / falloff / chem assignments
@@ -137,10 +150,10 @@ class SubTest(TestClass):
                 ct.FalloffReaction) or isinstance(x, ct.ChemicallyActivatedReaction))])
         fall_reacs = [gas.reaction(y) for y in result['fall']['map']]
         #test fall vs chemically activated
-        assert np.allclose(result['fall']['type'],
+        assert np.allclose(result['fall']['ftype'],
             np.array([reaction_type.fall if (isinstance(x, ct.FalloffReaction) and not
                 isinstance(x, ct.ChemicallyActivatedReaction)) else reaction_type.chem for x in
-                fall_reacs], dtype=np.int32))
+                fall_reacs], dtype=np.int32) - int(reaction_type.fall))
         #test blending func
         blend_types = []
         for x in fall_reacs:

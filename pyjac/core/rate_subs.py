@@ -424,6 +424,25 @@ def assign_rates(reacs, specs, rate_spec):
     #find blending type
     blend_type = np.array([next(int(y) for y in x.type if isinstance(
         y, falloff_form)) for x in fall_reacs], dtype=np.int32)
+    #seperate parameters based on blending type
+    #sri
+    sri_map = np.where(blend_type == int(falloff_form.sri))[0].astype(dtype=np.int32)
+    sri_reacs = [reacs[fall_map[i]] for i in sri_map]
+    sri_par = [reac.sri_par for reac in sri_reacs]
+    #now fill in defaults as needed
+    for par_set in sri_par:
+        if len(par_set) != 5:
+            par_set.extend([1, 0])
+    sri_a, sri_b, sri_c, sri_d, sri_e = [np.array(x, dtype=np.float64) for x in zip(*sri_par)]
+    #and troe
+    troe_map = np.where(blend_type == int(falloff_form.troe))[0].astype(dtype=np.int32)
+    troe_reacs = [reacs[fall_map[i]] for i in troe_map]
+    troe_par = [reac.troe_par for reac in troe_reacs]
+    #now fill in defaults as needed
+    for par_set in troe_par:
+        if len(par_set) != 4:
+            par_set.append(0)
+    troe_a, troe_T3, troe_T1, troe_T2 = [np.array(x, dtype=np.float64) for x in zip(*troe_par)]
 
     #find third-body types
     thd_reacs, thd_map, num_thd = __seperate(
@@ -462,7 +481,25 @@ def assign_rates(reacs, specs, rate_spec):
             'fall' : {'map' : fall_map, 'num' : num_fall,
                 'ftype' : fall_types, 'blend' : blend_type,
                 'A' : fall_A, 'b' : fall_b, 'Ta' : fall_Ta,
-                'type' : fall_rate_type},
+                'type' : fall_rate_type,
+                'sri' :
+                    {'map' : sri_map,
+                     'num' : sri_map.size,
+                     'a' : sri_a,
+                     'b' : sri_b,
+                     'c' : sri_c,
+                     'd' : sri_d,
+                     'e' : sri_e
+                    },
+                 'troe' :
+                    {'map' : troe_map,
+                     'num' : troe_map.size,
+                     'a' : troe_a,
+                     'T3' : troe_T3,
+                     'T1' : troe_T1,
+                     'T2' : troe_T2
+                    }
+                },
             'thd' : {'map' : thd_map, 'num' : num_thd,
                 'type' : thd_type, 'spec_num' : thd_spec_num,
                 'spec' : thd_spec, 'eff' : thd_eff},

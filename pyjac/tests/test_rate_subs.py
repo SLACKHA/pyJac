@@ -164,6 +164,31 @@ class SubTest(TestClass):
             else:
                 blend_types.append(falloff_form.lind)
         assert np.allclose(result['fall']['blend'], np.array(blend_types, dtype=np.int32))
+        #test parameters
+        #troe
+        troe_reacs = [x for x in fall_reacs if isinstance(x.falloff, ct.TroeFalloff)]
+        troe_par = [x.falloff.parameters for x in troe_reacs]
+        troe_a, troe_T3, troe_T1, troe_T2 = [np.array(x) for x in zip(*troe_par)]
+        assert np.allclose(result['fall']['troe']['a'], troe_a)
+        assert np.allclose(result['fall']['troe']['T3'], troe_T3)
+        assert np.allclose(result['fall']['troe']['T1'], troe_T1)
+        assert np.allclose(result['fall']['troe']['T2'], troe_T2)
+        #and map
+        assert np.allclose([fall_reacs.index(x) for x in troe_reacs],
+            result['fall']['troe']['map'])
+        #sri
+        sri_reacs = [x for x in fall_reacs if isinstance(x.falloff, ct.SriFalloff)]
+        sri_par = [x.falloff.parameters for x in sri_reacs]
+        sri_a, sri_b, sri_c, sri_d, sri_e = [np.array(x) for x in zip(*sri_par)]
+        assert np.allclose(result['fall']['sri']['a'], sri_a)
+        assert np.allclose(result['fall']['sri']['b'], sri_b)
+        assert np.allclose(result['fall']['sri']['c'], sri_c)
+        assert np.allclose(result['fall']['sri']['d'], sri_d)
+        assert np.allclose(result['fall']['sri']['e'], sri_e)
+        #and map
+        assert np.allclose([fall_reacs.index(x) for x in sri_reacs],
+            result['fall']['sri']['map'])
+
         #and finally test the third body stuff
         #test map
         third_reac_inds = [i for i, x in enumerate(gas.reactions()) if (isinstance(x,

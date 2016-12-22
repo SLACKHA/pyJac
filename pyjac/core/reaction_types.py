@@ -11,18 +11,16 @@ class reaction_type(Enum):
         return self.value
 
 class thd_body_type(Enum):
-    none = 0
-    mix = 1
-    species = 2
-    unity = 3
+    mix = 0
+    species = 1
+    unity = 2
     def __int__(self):
         return self.value
 
 class falloff_form(Enum):
-    none = 0
-    lind = 1
-    troe = 2
-    sri = 3
+    lind = 0
+    troe = 1
+    sri = 2
     def __int__(self):
         return self.value
 

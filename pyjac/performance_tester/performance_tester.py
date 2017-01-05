@@ -296,8 +296,9 @@ def performance_tester(home, work_dir, use_old_opt):
     except OSError:
         #otherwise simply skip cuda
         pass
+    #tchem seems not to be openmp parallelizable, nor do we care
     tchem_params = {'lang' : 'tchem',
-                    'num_threads' : num_threads}
+                    'num_threads' : [1]}
 
     for mech_name, mech_info in sorted(mechanism_list.items(),
                                        key=lambda x:x[1]['ns']

@@ -572,6 +572,31 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
 
     return indicies
 
+def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
+    """
+    Simple convenience method for creating 1D loopy arrays from
+    Numpy args
+
+    Parameters
+    ----------
+    name : str
+        The loopy arg name
+    numpy_arg : :class:`numpy.ndarray`
+        The numpy array to use as initializer
+    index : str, optional
+        The string form of the index used in loopy code. Defaults to ${reac_ind}
+    scope : :class:`loopy.temp_var_scope`
+        The scope to use for the temporary variable. Defaults to PRIVATE
+    """
+    arg_lp, arg_str, _ = lp_utils.get_loopy_arg(name,
+                                                 [index],
+                                                 numpy_arg.shape,
+                                                 index,
+                                                 initializer=numpy_arg,
+                                                 scope=scope,
+                                                 dtype=numpy_arg.dtype)
+    return arg_lp, arg_str
+
 def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for third body concentrations
 
@@ -618,16 +643,6 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
 
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
-
-    def __1Dcreator(name, numpy_arg, scope=scopes.PRIVATE):
-        arg_lp, arg_str, _ = lp_utils.get_loopy_arg(name,
-                                                     ['${reac_ind}'],
-                                                     numpy_arg.shape,
-                                                     '${reac_ind}',
-                                                     initializer=numpy_arg,
-                                                     scope=scope,
-                                                     dtype=numpy_arg.dtype)
-        return arg_lp, arg_str
 
     thd_eff_ns = np.ones(num_thd)
     num_specs = rate_info['thd']['spec_num'].copy()
@@ -760,9 +775,6 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         The generated infos for feeding into the kernel generator
 
     """
-    #control over memory access
-    wide = loopy_opt.width is not None
-    deep = loopy_opt.depth is not None
 
     #the equation set doesn't matter for this application
     #just use conp
@@ -803,19 +815,33 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     num_T = np.array(rate_info['cheb']['num_T'], dtype=np.int32)
 
     #max degrees in mechanism
-    maxP = np.max(num_P)
-    maxT = np.max(num_T)
-    minP = np.min(num_P)
-    minT = np.min(num_T)
-    poly_max = np.maximum(maxP, maxT)
+    maxP = int(np.max(num_P))
+    maxT = int(np.max(num_T))
+    minP = int(np.min(num_P))
+    minT = int(np.min(num_T))
+    poly_max = int(np.maximum(maxP, maxT))
 
     #now we start defining parameters / temporary variable
 
     #workspace vars
-    pres_poly_lp = lp.TemporaryVariable('pres_poly', shape=(poly_max,), dtype=np.float64,
-                                   scope=scopes.PRIVATE)
-    temp_poly_lp = lp.TemporaryVariable('temp_poly', shape=(poly_max,), dtype=np.float64,
-                                   scope=scopes.PRIVATE)
+    pres_poly_lp, pres_poly_str, _ = lp_utils.get_loopy_arg('pres_poly',
+                                        ['${pres_poly_ind}'],
+                                        (poly_max,),
+                                        loopy_opt.order,
+                                        dtype=np.float64,
+                                        scope=scopes.PRIVATE,
+                                        force_temporary=True,
+                                        read_only=False)
+    temp_poly_lp, temp_poly_str, _ = lp_utils.get_loopy_arg('temp_poly',
+                                        ['${temp_poly_ind}'],
+                                        (poly_max,),
+                                        loopy_opt.order,
+                                        dtype=np.float64,
+                                        scope=scopes.PRIVATE,
+                                        force_temporary=True,
+                                        read_only=False)
+    pres_poly_str = Template(pres_poly_str)
+    temp_poly_str = Template(temp_poly_str)
 
     #chebyshev parameters
     params = np.zeros((num_cheb, maxT, maxP))
@@ -823,56 +849,61 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         params[i, :num_T[i], :num_P[i]] = p[:, :]
 
     indicies=['${reac_ind}', '${temp_poly_ind}', '${pres_poly_ind}']
-    pvector_ind = '${pres_poly_ind}'
-    if deep:
-        pvector_ind = '${reac_ind}'
-
     params_lp, params_str, _ = lp_utils.get_loopy_arg('cheb_params',
                                       indicies,
                                       dimensions=params.shape,
-                                      last_ind=pvector_ind,
-                                      additional_ordering=[x for x in indicies if x != pvector_ind],
+                                      order=loopy_opt.order,
                                       initializer=params,
                                       scope=scopes.GLOBAL
                                      )
     params_str = Template(params_str)
 
     #finally the min/maxs & param #'s
-    numP_lp = lp.TemporaryVariable('cheb_numP', shape=num_P.shape,
-                                   initializer=num_P,
-                                   scope=scopes.GLOBAL, read_only=True)
-    numT_lp = lp.TemporaryVariable('cheb_numT', shape=num_T.shape,
-                                   initializer=num_T,
-                                   scope=scopes.GLOBAL, read_only=True)
+    numP_lp, numP_str, _ = lp_utils.get_loopy_arg('cheb_numP',
+                                    ['${reac_ind}'],
+                                    num_P.shape,
+                                    order=loopy_opt.order,
+                                    initializer=num_P,
+                                    dtype=np.int32)
+    numT_lp, numT_str, _ = lp_utils.get_loopy_arg('cheb_numT',
+                                    ['${reac_ind}'],
+                                    num_T.shape,
+                                    order=loopy_opt.order,
+                                    initializer=num_T,
+                                    dtype=np.int32)
 
     # limits for cheby polys
     Plim = np.log(np.array(rate_info['cheb']['Plim'], dtype=np.float64))
     Tlim = 1. / np.array(rate_info['cheb']['Tlim'], dtype=np.float64)
 
     indicies = ['${reac_ind}', '${lim_ind}']
-    plim_ind = '${lim_ind}'
-    if deep:
-        plim_ind = '${reac_ind}'
-
     plim_lp, plim_str, _ = lp_utils.get_loopy_arg('cheb_plim',
                               indicies,
                               dimensions=Plim.shape,
-                              last_ind=plim_ind,
                               initializer=Plim,
+                              order=loopy_opt.order,
                               scope=scopes.GLOBAL
                              )
     tlim_lp, tlim_str, _ = lp_utils.get_loopy_arg('cheb_tlim',
                               indicies,
                               dimensions=Tlim.shape,
-                              last_ind=plim_ind,
                               initializer=Tlim,
+                              order=loopy_opt.order,
                               scope=scopes.GLOBAL
                              )
     plim_str = Template(plim_str)
     tlim_str = Template(tlim_str)
 
-    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
-    P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
+    T_arr, T_arr_str, _ = lp_utils.get_loopy_arg('T_arr',
+                          indicies=['j'],
+                          dimensions=[test_size],
+                          order=loopy_opt.order,
+                          dtype=np.float64)
+    P_arr, P_arr_str, _= lp_utils.get_loopy_arg('P_arr',
+                          indicies=['j'],
+                          dimensions=[test_size],
+                          order=loopy_opt.order,
+                          dtype=np.float64)
     kernel_data = [params_lp, numP_lp, numT_lp, plim_lp, tlim_lp,
                     pres_poly_lp, temp_poly_lp, T_arr, P_arr]
 
@@ -885,14 +916,11 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     indicies = __handle_indicies(indicies, reac_ind,
                       out_map, kernel_data, outmap_name=outmap_name)
 
-    vector_ind = reac_ind
-    if wide:
-        vector_ind = 'j'
     #get the proper kf indexing / array
     kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
-                    [reac_ind, 'j'],
-                    [Nr, test_size],
-                    vector_ind,
+                    indicies=[reac_ind, 'j'],
+                    dimensions=[Nr, test_size],
+                    order=loopy_opt.order,
                     map_name=out_map)
 
     maps = [map_result[reac_ind]]
@@ -906,8 +934,8 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #extra loops
     pres_poly_ind = 'k'
     temp_poly_ind = 'm'
-    extra_inames = [('k', '0 <= k < {}'.format(maxP)),
-                    ('m', '0 <= m < {}'.format(maxT)),
+    extra_inames = [(pres_poly_ind, '0 <= {} < {}'.format(pres_poly_ind, maxP)),
+                    (temp_poly_ind, '0 <= {} < {}'.format(temp_poly_ind, maxT)),
                     ('p', '2 <= p < {}'.format(poly_max))]
 
     instructions = Template("""
@@ -917,35 +945,29 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
 <>Tmax = ${Tmax_str}
 <>Tred = ${Tred_str}
 <>Pred = ${Pred_str}
-<>numP = cheb_numP[${reac_ind}] {id=plim}
-<>numT = cheb_numT[${reac_ind}] {id=tlim}
-pres_poly[0] = 1
-pres_poly[1] = Pred
-temp_poly[0] = 1
-temp_poly[1] = Tred
-#<> k_end = numP
-#<> m_end = numT
+<>numP = ${numP_str} {id=plim}
+<>numT = ${numT_str} {id=tlim}
+${ppoly_0} = 1
+${ppoly_1} = Pred
+${tpoly_0} = 1
+${tpoly_1} = Tred
 #<> poly_end = max(numP, numT)
 #compute polynomial terms
 for p
     if p < numP
-        pres_poly[p] = 2 * Pred * pres_poly[p - 1] - pres_poly[p - 2] {id=ppoly, dep=plim}
+        ${ppoly_p} = 2 * Pred * ${ppoly_pm1} - ${ppoly_pm2} {id=ppoly, dep=plim}
     end
     if p < numT
-        temp_poly[p] = 2 * Tred * temp_poly[p - 1] - temp_poly[p - 2] {id=tpoly, dep=tlim}
+        ${tpoly_p} = 2 * Tred * ${tpoly_pm1} - ${tpoly_pm2} {id=tpoly, dep=tlim}
     end
 end
 <> kf_temp = 0
 for m
     <>temp = 0
     for k
-        if k < numP
-            temp = temp + pres_poly[k] * ${chebpar_km} {id=temp, dep=ppoly:tpoly}
-        end
+        temp = temp + ${ppoly_k} * ${chebpar_km} {id=temp, dep=ppoly:tpoly}
     end
-    if m < numT
-        kf_temp = kf_temp + temp_poly[m] * temp {id=kf, dep=temp}
-    end
+    kf_temp = kf_temp + ${tpoly_m} * temp {id=kf, dep=temp}
 end
 
 ${kf_str} = exp10(kf_temp) {dep=kf}
@@ -959,7 +981,22 @@ ${kf_str} = exp10(kf_temp) {dep=kf}
                     Pmax_str=plim_str.safe_substitute(lim_ind=1),
                     Tmin_str=tlim_str.safe_substitute(lim_ind=0),
                     Tmax_str=tlim_str.safe_substitute(lim_ind=1),
-                    chebpar_km=params_str.safe_substitute(temp_poly_ind='m', pres_poly_ind='k'),
+                    ppoly_0=pres_poly_str.safe_substitute(pres_poly_ind=0),
+                    ppoly_1=pres_poly_str.safe_substitute(pres_poly_ind=1),
+                    ppoly_k=pres_poly_str.safe_substitute(pres_poly_ind=pres_poly_ind),
+                    ppoly_p=pres_poly_str.safe_substitute(pres_poly_ind='p'),
+                    ppoly_pm1=pres_poly_str.safe_substitute(pres_poly_ind='p - 1'),
+                    ppoly_pm2=pres_poly_str.safe_substitute(pres_poly_ind='p - 2'),
+                    tpoly_0=temp_poly_str.safe_substitute(temp_poly_ind=0),
+                    tpoly_1=temp_poly_str.safe_substitute(temp_poly_ind=1),
+                    tpoly_m=temp_poly_str.safe_substitute(temp_poly_ind=temp_poly_ind),
+                    tpoly_p=temp_poly_str.safe_substitute(temp_poly_ind='p'),
+                    tpoly_pm1=temp_poly_str.safe_substitute(temp_poly_ind='p - 1'),
+                    tpoly_pm2=temp_poly_str.safe_substitute(temp_poly_ind='p - 2'),
+                    chebpar_km=params_str.safe_substitute(temp_poly_ind=temp_poly_ind,
+                        pres_poly_ind=pres_poly_ind),
+                    numP_str=numP_str,
+                    numT_str=numT_str,
                     kf_eval=str(cheb_form),
                     num_cheb=num_cheb)).safe_substitute(reac_ind=reac_ind)
 
@@ -1486,7 +1523,7 @@ def make_rateconst_kernel(info, target, test_size):
                 break
         result = [line if i == 0 else whitespace + line for i, line in
                     enumerate(textwrap.dedent(value).splitlines())]
-        return '\n'.join(result)
+        return Template('\n'.join(result)).safe_substitute(reac_ind=info.reac_ind)
 
 
     kernel_str = Template(skeleton).safe_substitute(

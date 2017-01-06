@@ -246,7 +246,8 @@ class SubTest(TestClass):
         oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
             ('width', [4, None]),
             ('depth', [4, None]),
-            ('ilp', [True, False] if not variable_loop_length else [False]),
+            ('order', ['C', 'F']),
+            ('ilp', [False]),
             ('unr', [None, 4]),
             ('device', get_device_list()),
             ('rate_spec', [x for x in RateSpecialization]),
@@ -285,7 +286,7 @@ class SubTest(TestClass):
 
                 kernels.append(knl)
 
-            ref = ref_ans if state['width'] else ref_ans_T
+            ref = ref_ans if state['order'] == 'F' else ref_ans_T
 
             args_copy = args.copy()
             for key in args_copy:
@@ -295,9 +296,9 @@ class SubTest(TestClass):
 
             assert auto_run(kernels, ref, device=state['device'],
                 compare_mask=mask,
-                compare_axis=1 if state['width'] is None else 0,
+                compare_axis=1 if state['order'] == 'C' else 0,
                 **args_copy), \
-                'Evaluate {} rates failed'.format(name)
+                'Evaluate {} rates failed'.format(func.__name__)
 
     def __test_rateconst_type(self, rtype):
         """

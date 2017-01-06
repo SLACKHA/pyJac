@@ -433,7 +433,10 @@ def assign_rates(reacs, specs, rate_spec):
     for par_set in sri_par:
         if len(par_set) != 5:
             par_set.extend([1, 0])
-    sri_a, sri_b, sri_c, sri_d, sri_e = [np.array(x, dtype=np.float64) for x in zip(*sri_par)]
+    if len(sri_par):
+        sri_a, sri_b, sri_c, sri_d, sri_e = [np.array(x, dtype=np.float64) for x in zip(*sri_par)]
+    else:
+        sri_a, sri_b, sri_c, sri_d, sri_e = [np.empty(shape=(0,)) for i in range(5)]
     #and troe
     troe_map = np.where(blend_type == int(falloff_form.troe))[0].astype(dtype=np.int32)
     troe_reacs = [reacs[fall_map[i]] for i in troe_map]

@@ -345,14 +345,8 @@ def assign_rates(reacs, specs, rate_spec):
         Ta = np.zeros((num,), dtype=np.float64)
 
         for i, reac in enumerate(rates):
-            factor = 1
             if (reac.high or reac.low) and fall:
-                factor = -1
                 if reac.high:
-                    #we want k_inf, therefore we need to
-                    #multiply all terms by -1 such that we take
-                    #exp(-X) = 1/exp(X)
-                    factor = -1
                     Ai, bi, Tai = reac.high
                     fall_types[i] = 1 #mark as chemically activated
                 else:
@@ -363,19 +357,19 @@ def assign_rates(reacs, specs, rate_spec):
                 #assign rate params
                 Ai, bi, Tai = reac.A, reac.b, reac.E
             #generic assign
-            A[i] = factor * np.log(Ai)
-            b[i] = factor * bi
-            Ta[i] = factor * Tai
+            A[i] = np.log(Ai)
+            b[i] = bi
+            Ta[i] = Tai
 
             if fixed:
                 rate_type[i] = 0
                 continue
             #assign rate types
             if bi == 0 and Tai == 0:
-                A[i] = factor * Ai
+                A[i] = Ai
                 rate_type[i] = 0
             elif bi == int(bi) and bi and Tai == 0:
-                A[i] = factor * Ai
+                A[i] = Ai
                 rate_type[i] = 1
             elif Tai == 0 and bi != 0:
                 rate_type[i] = 2

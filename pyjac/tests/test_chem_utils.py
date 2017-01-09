@@ -93,7 +93,7 @@ class SubTest(TestClass):
             {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
-                    unr=None))
+                    unr=None, order='C'))
 
         assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oh'),
                         os.path.join(script_dir, 'blessed', 'chem_utils.oh'))

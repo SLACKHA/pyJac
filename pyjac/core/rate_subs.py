@@ -588,13 +588,9 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     scope : :class:`loopy.temp_var_scope`
         The scope to use for the temporary variable. Defaults to PRIVATE
     """
-    arg_lp, arg_str, _ = lp_utils.get_loopy_arg(name,
-                                                 [index],
-                                                 numpy_arg.shape,
-                                                 index,
-                                                 initializer=numpy_arg,
-                                                 scope=scope,
-                                                 dtype=numpy_arg.dtype)
+    arg_lp = lp.TemporaryVariable(name, shape=numpy_arg.shape, initializer=numpy_arg,
+                                  scope=scope, dtype=numpy_arg.dtype, read_only=True)
+    arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
 
 def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
@@ -628,18 +624,19 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     if loopy_opt.width:
         last_index = 'j'
     concs_lp, concs_str, _ = lp_utils.get_loopy_arg('conc',
-                                                    indicies,
-                                                    (Ns - 1, test_size),
-                                                    last_index)
+                                                    indicies=indicies,
+                                                    dimensions=(Ns - 1, test_size),
+                                                    order=loopy_opt.order)
+    concs_str = Template(concs_str)
 
     indicies = ['${reac_ind}', 'j']
     last_index = '${reac_ind}'
     if loopy_opt.width:
         last_index = 'j'
     thd_lp, thd_str, _ = lp_utils.get_loopy_arg('thd_conc',
-                                                indicies,
-                                                (num_thd, test_size),
-                                                last_index)
+                                                indicies=indicies,
+                                                dimensions=(num_thd, test_size),
+                                                order=loopy_opt.order)
 
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
@@ -685,7 +682,7 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
 
 
     #and temporary variables:
-    thd_type_lp, thd_type_str = __1Dcreator('thd_type', rate_info['thd']['type'], scopes.GLOBAL)
+    thd_type_lp, thd_type_str = __1Dcreator('thd_type', rate_info['thd']['type'], scope=scopes.GLOBAL)
     thd_eff_lp, thd_eff_str = __1Dcreator('thd_eff', thd_effs)
     thd_spec_lp, thd_spec_str = __1Dcreator('thd_spec', spec_list)
     thd_num_spec_lp, thd_num_spec_str = __1Dcreator('thd_spec_num', num_specs)
@@ -712,7 +709,7 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     instructions = Template("""
 <> offset = ${offset}
 <> num_temp = ${num_spec_str} {id=num0}
-if ${type_str} == 2 # single species
+if ${type_str} == 1 # single species
     <> thd_temp = ${conc_spec} {id=thd0, dep=num0}
     num_temp = 0 {id=num1, dep=num0}
 else
@@ -720,7 +717,7 @@ else
 end
 <> num = num_temp {dep=num*}
 for k
-    thd_temp = thd_temp + ${thd_eff} * ${conc_thd_spec} {id=thd2}
+    thd_temp = thd_temp + ${thd_eff} * ${conc_thd_spec} {id=thdcalc}
 end
 ${thd_str} = thd_temp {dep=thd*}
 """)
@@ -730,12 +727,11 @@ ${thd_str} = thd_temp {dep=thd*}
         instructions.safe_substitute(
             offset=thd_offset_str,
             type_str=thd_type_str,
-            conc_spec=Template(concs_str).safe_substitute(
+            conc_spec=concs_str.safe_substitute(
                     species_ind=thd_spec_str),
             num_spec_str=thd_num_spec_str,
-            thd_eff=Template(thd_eff_str).safe_substitute(
-                    reac_ind='offset + k'),
-            conc_thd_spec=Template(concs_str).safe_substitute(
+            thd_eff=Template(thd_eff_str).safe_substitute(reac_ind='offset + k'),
+            conc_thd_spec=concs_str.safe_substitute(
                 species_ind=Template(thd_spec_str).safe_substitute(
                     reac_ind='offset + k')),
             thd_str=thd_str,
@@ -824,24 +820,12 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #now we start defining parameters / temporary variable
 
     #workspace vars
-    pres_poly_lp, pres_poly_str, _ = lp_utils.get_loopy_arg('pres_poly',
-                                        ['${pres_poly_ind}'],
-                                        (poly_max,),
-                                        loopy_opt.order,
-                                        dtype=np.float64,
-                                        scope=scopes.PRIVATE,
-                                        force_temporary=True,
-                                        read_only=False)
-    temp_poly_lp, temp_poly_str, _ = lp_utils.get_loopy_arg('temp_poly',
-                                        ['${temp_poly_ind}'],
-                                        (poly_max,),
-                                        loopy_opt.order,
-                                        dtype=np.float64,
-                                        scope=scopes.PRIVATE,
-                                        force_temporary=True,
-                                        read_only=False)
-    pres_poly_str = Template(pres_poly_str)
-    temp_poly_str = Template(temp_poly_str)
+    pres_poly_lp = lp.TemporaryVariable('pres_poly', shape=(poly_max,),
+        dtype=np.float64, scope=scopes.PRIVATE, read_only=False)
+    temp_poly_lp = lp.TemporaryVariable('temp_poly', shape=(poly_max,),
+        dtype=np.float64, scope=scopes.PRIVATE, read_only=False)
+    pres_poly_str = Template('pres_poly[${pres_poly_ind}]')
+    temp_poly_str = Template('temp_poly[${temp_poly_ind}]')
 
     #chebyshev parameters
     params = np.zeros((num_cheb, maxT, maxP))
@@ -849,50 +833,29 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         params[i, :num_T[i], :num_P[i]] = p[:, :]
 
     indicies=['${reac_ind}', '${temp_poly_ind}', '${pres_poly_ind}']
-    params_lp, params_str, _ = lp_utils.get_loopy_arg('cheb_params',
-                                      indicies,
-                                      dimensions=params.shape,
-                                      order=loopy_opt.order,
-                                      initializer=params,
-                                      scope=scopes.GLOBAL
-                                     )
-    params_str = Template(params_str)
+    params_lp = lp.TemporaryVariable('cheb_params', shape=params.shape,
+        initializer=params, scope=scopes.GLOBAL, read_only=True)
+    params_str = Template('cheb_params[' + ','.join(indicies) +  ']')
 
     #finally the min/maxs & param #'s
-    numP_lp, numP_str, _ = lp_utils.get_loopy_arg('cheb_numP',
-                                    ['${reac_ind}'],
-                                    num_P.shape,
-                                    order=loopy_opt.order,
-                                    initializer=num_P,
-                                    dtype=np.int32)
-    numT_lp, numT_str, _ = lp_utils.get_loopy_arg('cheb_numT',
-                                    ['${reac_ind}'],
-                                    num_T.shape,
-                                    order=loopy_opt.order,
-                                    initializer=num_T,
-                                    dtype=np.int32)
+    numP_lp = lp.TemporaryVariable('cheb_numP', shape=num_P.shape,
+        initializer=num_P, dtype=np.int32, read_only=True, scope=scopes.GLOBAL)
+    numP_str = 'cheb_numP[${reac_ind}]'
+    numT_lp = lp.TemporaryVariable('cheb_numT', shape=num_T.shape,
+        initializer=num_T, dtype=np.int32, read_only=True, scope=scopes.GLOBAL)
+    numT_str = 'cheb_numT[${reac_ind}]'
 
     # limits for cheby polys
     Plim = np.log(np.array(rate_info['cheb']['Plim'], dtype=np.float64))
     Tlim = 1. / np.array(rate_info['cheb']['Tlim'], dtype=np.float64)
 
     indicies = ['${reac_ind}', '${lim_ind}']
-    plim_lp, plim_str, _ = lp_utils.get_loopy_arg('cheb_plim',
-                              indicies,
-                              dimensions=Plim.shape,
-                              initializer=Plim,
-                              order=loopy_opt.order,
-                              scope=scopes.GLOBAL
-                             )
-    tlim_lp, tlim_str, _ = lp_utils.get_loopy_arg('cheb_tlim',
-                              indicies,
-                              dimensions=Tlim.shape,
-                              initializer=Tlim,
-                              order=loopy_opt.order,
-                              scope=scopes.GLOBAL
-                             )
-    plim_str = Template(plim_str)
-    tlim_str = Template(tlim_str)
+    plim_lp = lp.TemporaryVariable('cheb_plim', shape=Plim.shape,
+        initializer=Plim, scope=scopes.GLOBAL, read_only=True)
+    tlim_lp = lp.TemporaryVariable('cheb_tlim', shape=Tlim.shape,
+        initializer=Tlim, scope=scopes.GLOBAL, read_only=True)
+    plim_str = Template('cheb_plim[' + ','.join(indicies) + ']')
+    tlim_str = Template('cheb_tlim[' + ','.join(indicies) + ']')
 
     T_arr, T_arr_str, _ = lp_utils.get_loopy_arg('T_arr',
                           indicies=['j'],
@@ -1072,10 +1035,6 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #max # of parameters for sizing
     maxP = np.max(num_params)
 
-    #control over memory access
-    wide = loopy_opt.width is not None
-    deep = loopy_opt.depth is not None
-
     #for simplicity, we're going to use a padded form
     params = np.zeros((4, num_plog, maxP))
     for m in range(4):
@@ -1092,19 +1051,10 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
 
     #default params indexing order
     inds = ['${m}', '${reac_ind}', '${param_ind}']
-    pvector_ind = '${param_ind}'
-    if deep:
-        pvector_ind = '${reac_ind}'
-
     #make loopy version
-    plog_params_lp, param_str, _ = lp_utils.get_loopy_arg('plog_params', indicies=inds,
-                                                dimensions=params.shape,
-                                                last_ind=pvector_ind,
-                                                additional_ordering=[x for x in inds if x != pvector_ind],
-                                                initializer=params,
-                                                scope=scopes.GLOBAL)
-    #turn into a template
-    param_str = Template(param_str)
+    plog_params_lp = lp.TemporaryVariable('plog_params', shape=params.shape,
+        initializer=params, scope=scopes.GLOBAL, read_only=True)
+    param_str = Template('plog_params[' + ','.join(inds) + ']')
 
     #and finally the loopy version of num_params
     num_params_lp = lp.TemporaryVariable('plog_num_params', shape=lp.auto,
@@ -1135,16 +1085,12 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     indicies = __handle_indicies(indicies, reac_ind, out_map,
                     kernel_data, outmap_name='plog_inds')
 
-    vector_ind = reac_ind
-    if wide:
-        vector_ind = 'j'
-
     #get the proper kf indexing / array
     kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
-                    [reac_ind, 'j'],
-                    [Nr, test_size],
-                    vector_ind,
-                    map_name=out_map)
+                    indicies=[reac_ind, 'j'],
+                    dimensions=[Nr, test_size],
+                    map_name=out_map,
+                    order=loopy_opt.order)
     kernel_data.append(kf_arr)
 
     #handle map info
@@ -1413,17 +1359,12 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
                       alternate_indicies=rate_info[tag]['map'][
                                 info.indicies])
 
-        wide = loopy_opt.width is not None
-        vector_ind = info.reac_ind
-        if wide:
-            vector_ind = 'j'
-
         #get the proper kf indexing / array
         kf_arr, kf_str, map_result = lp_utils.get_loopy_arg(kf_name,
-                        [info.reac_ind, 'j'],
-                        [Nr, test_size],
-                        vector_ind,
-                        map_name=out_map)
+                        indicies=[info.reac_ind, 'j'],
+                        dimensions=[Nr, test_size],
+                        map_name=out_map,
+                        order=loopy_opt.order)
         info.kernel_data.append(kf_arr)
 
         #handle map info
@@ -2457,13 +2398,6 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     poly_dim = specs[0].hi.shape[0]
     Ns = len(specs)
 
-    #if deep vectorization, we rearrange such that successive vector lanes
-    #will access successive species
-    wide = loopy_opt.width is not None
-    vector_ind = 'k'
-    if wide:
-        vector_ind = 'i'
-
     #pick out a values and T_mid
     a_lo = np.zeros((Ns, poly_dim), dtype=np.float64)
     a_hi = np.zeros((Ns, poly_dim), dtype=np.float64)
@@ -2474,29 +2408,30 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
         T_mid[ind] = spec.Trange[1]
 
     #get correctly ordered arrays / strings
-    temp_vec_ind = '${param_val}' if vector_ind == 'i' else vector_ind
-    a_lo_lp, a_lo_str, _ = lp_utils.get_loopy_arg('a_lo', ['k', '${param_val}'], a_lo.shape,
-                    temp_vec_ind, initializer=a_lo,
-                    scope=scopes.GLOBAL)
-    a_hi_lp, a_hi_str, _ = lp_utils.get_loopy_arg('a_hi', ['k', '${param_val}'], a_hi.shape,
-                    temp_vec_ind, initializer=a_hi,
-                    scope=scopes.GLOBAL)
+    indicies = ['k', '${param_val}']
+    a_lo_lp = lp.TemporaryVariable('a_lo', shape=a_lo.shape, initializer=a_lo,
+        scope=scopes.GLOBAL, read_only=True)
+    a_hi_lp = lp.TemporaryVariable('a_hi', shape=a_hi.shape, initializer=a_hi,
+        scope=scopes.GLOBAL, read_only=True)
+    a_lo_str = Template('a_lo[' + ','.join(indicies) + ']')
+    a_hi_str = Template('a_hi[' + ','.join(indicies) + ']')
     T_mid_lp = lp.TemporaryVariable('T_mid', shape=T_mid.shape, initializer=T_mid, read_only=True,
                                 scope=scopes.GLOBAL)
 
     k = sp.Idx('k')
     lo_eq_str = str(eq.subs([(sp.IndexedBase('a')[k, i],
-                    Template(a_lo_str).safe_substitute(param_val=i)) for i in range(poly_dim)]))
+        a_lo_str.safe_substitute(param_val=i)) for i in range(poly_dim)]))
     hi_eq_str = str(eq.subs([(sp.IndexedBase('a')[k, i],
-                    Template(a_hi_str).safe_substitute(param_val=i)) for i in range(poly_dim)]))
-
+        a_hi_str.safe_substitute(param_val=i)) for i in range(poly_dim)]))
 
     target = lp_utils.get_target(loopy_opt.lang)
 
     #create the input arrays arrays
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
-    out_lp, out_str, _ = lp_utils.get_loopy_arg(nicename, ['k', 'i'],
-                    (Ns, test_size), vector_ind)
+    out_lp, out_str, _ = lp_utils.get_loopy_arg(nicename,
+                    indicies=['k', 'i'],
+                    dimensions=(Ns, test_size),
+                    order=loopy_opt.order)
 
     knl_data = [a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
 

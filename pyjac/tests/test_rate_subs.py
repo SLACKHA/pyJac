@@ -292,7 +292,7 @@ class SubTest(TestClass):
             for key in args_copy:
                 if hasattr(args_copy[key], '__call__'):
                     #it's a function
-                    args_copy[key] = args_copy[key](state['width'])
+                    args_copy[key] = args_copy[key](state['order'])
 
             assert auto_run(kernels, ref, device=state['device'],
                 compare_mask=mask,
@@ -358,6 +358,7 @@ class SubTest(TestClass):
         ref_ans_T = self.store.ref_thd.T.copy()
         args = { 'T_arr' : T,
                  'P_arr' : P,
-                 'conc' : lambda x: concs[:-1, :].copy() if x else concs[:-1, :].T.copy()}
+                 'conc' : lambda x: concs[:-1, :].copy() if x == 'F'
+                            else concs[:-1, :].T.copy()}
         self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args,
             variable_loop_length=True)

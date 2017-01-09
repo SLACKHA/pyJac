@@ -76,6 +76,10 @@ def get_device_list():
     device_list = []
     for p in cl.get_platforms():
         device_list.append(p.get_devices())
+    #don't need multiple gpu's etc.
+    for i in range(len(device_list)):
+        if len(device_list[i]) > 1:
+            device_list[i] = device_list[i][0]
 
     return device_list
 
@@ -276,6 +280,9 @@ def get_loopy_order(indicies, dimensions, order, numpy_arg=None):
     numpy_arg : :class:`numpy.ndarray`
         The transformed numpy array, is None
     """
+
+    if order not in ['C', 'F']:
+        raise Exception('Parameter order passed with unknown value: {}'.format(order))
 
     if order != 'F':
         #need to flip indicies / dimensions

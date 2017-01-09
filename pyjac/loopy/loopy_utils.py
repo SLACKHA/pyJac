@@ -79,7 +79,7 @@ def get_device_list():
     #don't need multiple gpu's etc.
     for i in range(len(device_list)):
         if len(device_list[i]) > 1:
-            device_list[i] = device_list[i][0]
+            device_list[i] = [device_list[i][0]]
 
     return device_list
 

@@ -546,10 +546,10 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
     indicies : :class:`numpy.ndarray` OR tuple of int
         The transformed indicies
     """
-    if indicies[0] + indicies.size == indicies[-1]:
+    if indicies[0] + indicies.size - 1 == indicies[-1]:
         #if the indicies are contiguous, we can get away with an
         #offset
-        indicies = (indicies[0], indicies[-1])
+        indicies = (indicies[0], indicies.size)
     else:
         #need an output map
         out_map[reac_ind] = outmap_name
@@ -1348,10 +1348,12 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
         #check if we need an output map
         out_map = {}
         outmap_name = 'out_map'
+        alt_inds = None
+        if not falloff:
+            alt_inds = rate_info[tag]['map'][info.indicies]
         info.indicies = __handle_indicies(info.indicies, info.reac_ind,
                       out_map, info.kernel_data, outmap_name=outmap_name,
-                      alternate_indicies=rate_info[tag]['map'][
-                                info.indicies])
+                      alternate_indicies=alt_inds)
 
         #get the proper kf indexing / array
         kf_arr, kf_str, map_result = lp_utils.get_loopy_arg(kf_name,

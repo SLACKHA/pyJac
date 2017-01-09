@@ -49,47 +49,13 @@ class SubTest(TestClass):
         #import gas in cantera for testing
         gas = self.store.gas
 
-        def __tester(result):
-            #test return value
-            assert 'simple' in result and 'cheb' in result and 'plog' in result
-
-            #test num, map
-            plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
-                    if isinstance(x, ct.PlogReaction)])
-            assert result['plog']['num'] == len(plog_inds)
-            assert np.allclose(result['plog']['map'], np.array(plog_inds))
-            #check values
-            assert np.array_equal(result['plog']['num_P'], [len(p.rates) for p in plog_reacs])
-            for i, reac_params in enumerate(result['plog']['params']):
-                act_energy_ratios = []
-                for j, rates in enumerate(plog_reacs[i].rates):
-                    assert np.isclose(reac_params[j][0], rates[0])
-                    assert np.isclose(reac_params[j][1], rates[1].pre_exponential_factor)
-                    assert np.isclose(reac_params[j][2], rates[1].temperature_exponent)
-                    act_energy_ratios.append(reac_params[j][3] / rates[1].activation_energy)
-                #for the activation energies, we simply check that the ratios are the same
-                assert np.all(np.isclose(act_energy_ratios, act_energy_ratios[0]))
-
-            cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
-                    if isinstance(x, ct.ChebyshevReaction)])
-            assert result['cheb']['num'] == len(cheb_inds)
-            assert np.allclose(result['cheb']['map'], np.array(cheb_inds))
-
-            simple_inds = sorted(list(set(range(gas.n_reactions)).difference(
-                set(plog_inds).union(set(cheb_inds)))))
-            assert result['simple']['num'] == len(simple_inds)
-            assert np.allclose(result['simple']['map'], np.array(simple_inds))
-
-        __tester(result)
-
-        result = assign_rates(reacs, specs, RateSpecialization.hybrid)
-
-        def __get_vals(reac, fall=False):
+        def __get_rate(reac, fall=False):
             try:
                 Ea = reac.rate.activation_energy
                 b = reac.rate.temperature_exponent
                 if fall:
-                    return None, None #don't care
+                    return None
+                return reac.rate
             except:
                 if not fall:
                     #want the normal rates
@@ -103,18 +69,82 @@ class SubTest(TestClass):
                         rate = reac.low_rate
                     else:
                         rate = reac.high_rate
-                Ea = rate.activation_energy
-                b = rate.temperature_exponent
+                return rate
             return Ea, b
+
+        def __tester(result, spec_type):
+            #test return value
+            assert 'simple' in result and 'cheb' in result and 'plog' in result
+
+            #test num, map
+            plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
+                    if isinstance(x, ct.PlogReaction)])
+            cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
+            if isinstance(x, ct.ChebyshevReaction)])
+
+            def rate_checker(our_params, ct_params, rate_forms, force_act_nonlog=False):
+                act_energy_ratios = []
+                for ourvals, ctvals, form in zip(*(our_params, ct_params, rate_forms)):
+                    #activation energy, check rate form
+                    #if it's fixed specialization, or the form >= 2
+                    if (spec_type == RateSpecialization.fixed or form >= 2) and not force_act_nonlog:
+                        #it's in log form
+                        assert np.isclose(ourvals[0], np.log(ctvals.pre_exponential_factor))
+                    else:
+                        assert np.isclose(ourvals[0], ctvals.pre_exponential_factor)
+                    #temperature exponent doesn't change w/ form
+                    assert np.isclose(ourvals[1], ctvals.temperature_exponent)
+                    #activation energy, either the ratios should be constant or
+                    #it should be zero
+                    if ourvals[2] == 0 or ctvals.activation_energy == 0:
+                        assert ourvals[2] == ctvals.activation_energy
+                    else:
+                        act_energy_ratios.append(ourvals[2] / ctvals.activation_energy)
+                #check that all activation energy ratios are the same
+                assert np.all(np.isclose(act_energy_ratios, act_energy_ratios[0]))
+
+            #check rate values
+            assert np.array_equal(result['plog']['num_P'], [len(p.rates) for p in plog_reacs])
+            for i, reac_params in enumerate(result['plog']['params']):
+                for j, rates in enumerate(plog_reacs[i].rates):
+                    assert np.isclose(reac_params[j][0], rates[0])
+                #plog uses a weird form, so use force_act_nonlog
+                rate_checker([rp[1:] for rp in reac_params], [rate[1] for rate in plog_reacs[i].rates],
+                    [2 for rate in plog_reacs[i].rates], force_act_nonlog=True)
+
+            simple_inds = sorted(list(set(range(gas.n_reactions)).difference(
+                set(plog_inds).union(set(cheb_inds)))))
+            assert result['simple']['num'] == len(simple_inds)
+            assert np.allclose(result['simple']['map'], np.array(simple_inds))
+            #test the simple reaction rates
+            simple_reacs = [gas.reaction(i) for i in simple_inds]
+            rate_checker([(result['simple']['A'][i], result['simple']['b'][i],
+                result['simple']['Ta'][i]) for i in range(result['simple']['num'])],
+                [__get_rate(reac, False) for reac in simple_reacs],
+                result['simple']['type'])
+
+            #test the falloff (alternate) rates
+            fall_reacs = [gas.reaction(i) for i in result['fall']['map']]
+            rate_checker([(result['fall']['A'][i], result['fall']['b'][i],
+                result['fall']['Ta'][i]) for i in range(result['fall']['num'])],
+                [__get_rate(reac, True) for reac in fall_reacs],
+                result['fall']['type'])
+
+        __tester(result, RateSpecialization.fixed)
+
+
+        result = assign_rates(reacs, specs, RateSpecialization.hybrid)
 
         def test_assign(type_max, fall):
             #test rate type
             rtypes = []
             for reac in gas.reactions():
                 if not (isinstance(reac, ct.PlogReaction) or isinstance(reac, ct.ChebyshevReaction)):
-                    Ea, b = __get_vals(reac, fall)
-                    if Ea is None:
+                    rate = __get_rate(reac, fall)
+                    if rate is None:
                         continue
+                    Ea = rate.activation_energy
+                    b = rate.temperature_exponent
                     if Ea == 0 and b == 0:
                         rtypes.append(0)
                     elif Ea == 0 and int(b) == b:
@@ -133,7 +163,7 @@ class SubTest(TestClass):
             test_assign(2, False))
         assert np.allclose(result['fall']['type'],
             test_assign(2, True))
-        __tester(result)
+        __tester(result, RateSpecialization.hybrid)
 
         result = assign_rates(reacs, specs, RateSpecialization.full)
 
@@ -142,7 +172,18 @@ class SubTest(TestClass):
             test_assign(5, False))
         assert np.allclose(result['fall']['type'],
             test_assign(5, True))
-        __tester(result)
+        __tester(result, RateSpecialization.full)
+
+        #ALL BELOW HERE ARE INDEPENDENT OF SPECIALIZATIONS
+        cheb_inds, cheb_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
+            if isinstance(x, ct.ChebyshevReaction)])
+        assert result['cheb']['num'] == len(cheb_inds)
+        assert np.allclose(result['cheb']['map'], np.array(cheb_inds))
+
+        plog_inds, plog_reacs = zip(*[(i, x) for i, x in enumerate(gas.reactions())
+            if isinstance(x, ct.PlogReaction)])
+        assert result['plog']['num'] == len(plog_inds)
+        assert np.allclose(result['plog']['map'], np.array(plog_inds))
 
         #test the thd / falloff / chem assignments
         assert np.allclose(result['fall']['map'],

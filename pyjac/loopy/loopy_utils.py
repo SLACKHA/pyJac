@@ -13,6 +13,10 @@ import os
 from ..utils import check_lang
 from .loopy_edit_script import substitute as codefix
 
+#make loopy's logging less verbose
+import logging
+logging.getLogger('loopy').setLevel(logging.WARNING)
+
 edit_script = os.path.join(os.path.abspath(os.path.dirname(__file__)),
     'loopy_edit_script.py')
 

@@ -546,25 +546,23 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
     indicies : :class:`numpy.ndarray` OR tuple of int
         The transformed indicies
     """
-    if indicies[0] + indicies.size - 1 == indicies[-1]:
+
+    check = indicies if alternate_indicies is None else alternate_indicies
+    if check[0] + check.size - 1 == check[-1]:
         #if the indicies are contiguous, we can get away with an
         #offset
-        indicies = (indicies[0], indicies.size)
+        check = (0, check.size)
     else:
         #need an output map
         out_map[reac_ind] = outmap_name
-        #if alternat indicies supplied
-        vals = indicies
-        if alternate_indicies is not None:
-            vals = alternate_indicies
         #add to kernel data
         outmap_lp = lp.TemporaryVariable(outmap_name,
             shape=lp.auto,
-            initializer=vals.astype(dtype=np.int32),
+            initializer=check.astype(dtype=np.int32),
             read_only=True, scope=scopes.PRIVATE)
         kernel_data.append(outmap_lp)
 
-    return indicies
+    return check
 
 def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     """

@@ -550,8 +550,7 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
     check = indicies if alternate_indicies is None else alternate_indicies
     if check[0] + check.size - 1 == check[-1]:
         #if the indicies are contiguous, we can get away with an
-        #offset
-        check = (0, check.size)
+        check = (check[0], check[0] + check.size)
     else:
         #need an output map
         out_map[reac_ind] = outmap_name
@@ -1336,12 +1335,17 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
 
         #check if we have an input map
         if info.reac_ind != 'i':
-            #need to add the input map to kernel data
-            inmap_lp = lp.TemporaryVariable(inmap_name,
-                shape=lp.auto,
-                initializer=info.indicies,
-                read_only=True, scope=scopes.PRIVATE)
-            info.kernel_data.append(inmap_lp)
+            if info.indicies[0] + info.indicies.size - 1 == info.indicies[-1]:
+                #it'll end up in offset form, hence we don't need a map
+                info.reac_ind = 'i'
+                info.maps = []
+            else:
+                #need to add the input map to kernel data
+                inmap_lp = lp.TemporaryVariable(inmap_name,
+                    shape=lp.auto,
+                    initializer=info.indicies,
+                    read_only=True, scope=scopes.PRIVATE)
+                info.kernel_data.append(inmap_lp)
 
         #check if we need an output map
         out_map = {}

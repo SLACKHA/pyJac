@@ -2,6 +2,8 @@
 import os
 import filecmp
 from collections import OrderedDict
+import logging
+logging.getLogger('root').setLevel(logging.WARNING)
 
 #local imports
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,

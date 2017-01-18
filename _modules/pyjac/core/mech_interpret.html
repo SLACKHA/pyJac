@@ -56,6 +56,7 @@
 <span class="kn">import</span> <span class="nn">math</span>
 <span class="kn">import</span> <span class="nn">re</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">deepcopy</span>
+<span class="kn">import</span> <span class="nn">logging</span>
 
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
 
@@ -596,6 +597,18 @@
                         <span class="n">par1</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line_split</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
                         <span class="n">par2</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line_split</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
                         <span class="n">par3</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line_split</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span>
+
+                        <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="k">if</span> <span class="n">par2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">do_warn</span><span class="o">=</span><span class="kc">True</span>
+                            <span class="n">par2</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                        <span class="k">if</span> <span class="n">par3</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                            <span class="n">do_warn</span><span class="o">=</span><span class="kc">True</span>
+                            <span class="n">par3</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                        <span class="k">if</span> <span class="n">do_warn</span><span class="p">:</span>
+                            <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Troe parameters in reaction </span><span class="si">{}</span><span class="s1"> modified to avoid&#39;</span>
+                                <span class="s1">&#39; division by zero!.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)))</span>
+
                         <span class="n">reacs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">troe_par</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">par1</span><span class="p">)</span>
                         <span class="n">reacs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">troe_par</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">par2</span><span class="p">)</span>
                         <span class="n">reacs</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">troe_par</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">par3</span><span class="p">)</span>
@@ -1029,6 +1042,16 @@
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;Troe&#39;</span><span class="p">:</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">troe</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                    <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                    <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">do_warn</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Troe parameters in reaction </span><span class="si">{}</span><span class="s1"> modified to avoid&#39;</span>
+                                    <span class="s1">&#39; division by zero!.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)))</span>
             <span class="k">elif</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;SRI&#39;</span><span class="p">:</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">sri</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">sri_par</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>

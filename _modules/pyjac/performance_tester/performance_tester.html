@@ -256,7 +256,7 @@
         <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="performance_tester"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.performance_tester">[docs]</a><span class="k">def</span> <span class="nf">performance_tester</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="n">work_dir</span><span class="p">,</span> <span class="n">use_old_opt</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">):</span>
+<div class="viewcode-block" id="performance_tester"><a class="viewcode-back" href="../../../src/pyjac.performance_tester.performance_tester.html#pyjac.performance_tester.performance_tester.performance_tester">[docs]</a><span class="k">def</span> <span class="nf">performance_tester</span><span class="p">(</span><span class="n">home</span><span class="p">,</span> <span class="n">work_dir</span><span class="p">,</span> <span class="n">use_old_opt</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;Runs performance testing for pyJac, TChem, and finite differences.</span>
 
 <span class="sd">    Parameters</span>
@@ -267,8 +267,6 @@
 <span class="sd">        Working directory with mechanisms and for data</span>
 <span class="sd">    use_old_opt : bool</span>
 <span class="sd">        If ``True``, use old optimization files found</span>
-<span class="sd">    num_threads : int</span>
-<span class="sd">        Number of OpenMP threads to parallelize performance testing</span>
 
 <span class="sd">    Returns</span>
 <span class="sd">    -------</span>
@@ -320,21 +318,33 @@
     <span class="k">def</span> <span class="nf">false_factory</span><span class="p">():</span>
         <span class="k">return</span> <span class="kc">False</span>
 
+    <span class="kn">import</span> <span class="nn">multiprocessing</span> <span class="c1">#for cpu count</span>
+    <span class="n">max_cpu</span> <span class="o">=</span> <span class="n">multiprocessing</span><span class="o">.</span><span class="n">cpu_count</span><span class="p">()</span>
+    <span class="n">num_threads</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">while</span> <span class="n">num_threads</span> <span class="o">&lt;</span> <span class="n">max_cpu</span><span class="p">:</span>
+        <span class="n">num_threads</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">min</span><span class="p">(</span><span class="n">max_cpu</span><span class="p">,</span> <span class="n">num_threads</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">2</span><span class="p">))</span>
     <span class="n">c_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;c&#39;</span><span class="p">,</span>
-                <span class="s1">&#39;cache_opt&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
-                <span class="s1">&#39;finite_diffs&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]</span>
+                <span class="s1">&#39;cache_opt&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">],</span>
+                <span class="s1">&#39;finite_diffs&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
+                <span class="s1">&#39;num_threads&#39;</span> <span class="p">:</span> <span class="n">num_threads</span>
                 <span class="p">}</span>
-    <span class="n">cuda_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;cuda&#39;</span><span class="p">,</span>
-                   <span class="s1">&#39;cache_opt&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
+
+    <span class="c1">#check that nvcc installed</span>
+    <span class="n">cuda_params</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span><span class="s1">&#39;nvcc --version&#39;</span><span class="p">)</span>
+        <span class="c1">#if we have NVCC, assume we can execute CUDA</span>
+        <span class="n">cuda_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;cuda&#39;</span><span class="p">,</span>
+                   <span class="s1">&#39;cache_opt&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">],</span>
                    <span class="s1">&#39;shared&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">],</span>
                    <span class="s1">&#39;finite_diffs&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">]</span>
                    <span class="p">}</span>
-    <span class="n">tchem_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;tchem&#39;</span><span class="p">}</span>
-
-    <span class="c1">#set up testing environment</span>
-    <span class="n">env</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
-    <span class="n">env</span><span class="p">[</span><span class="s1">&#39;OMP_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">env</span><span class="p">[</span><span class="s1">&#39;MKL_NUM_THREADS&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">OSError</span><span class="p">:</span>
+        <span class="c1">#otherwise simply skip cuda</span>
+        <span class="k">pass</span>
+    <span class="c1">#tchem seems not to be openmp parallelizable, nor do we care</span>
+    <span class="n">tchem_params</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;lang&#39;</span> <span class="p">:</span> <span class="s1">&#39;tchem&#39;</span><span class="p">,</span>
+                    <span class="s1">&#39;num_threads&#39;</span> <span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">]}</span>
 
     <span class="k">for</span> <span class="n">mech_name</span><span class="p">,</span> <span class="n">mech_info</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">mechanism_list</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span>
                                        <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span><span class="n">x</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="s1">&#39;ns&#39;</span><span class="p">]</span>
@@ -407,6 +417,12 @@
             <span class="n">opt</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;cache_opt&#39;</span><span class="p">]</span>
             <span class="n">smem</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;shared&#39;</span><span class="p">]</span>
 
+            <span class="c1">#handle threading</span>
+            <span class="n">num_threads</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+            <span class="k">if</span> <span class="s1">&#39;num_threads&#39;</span> <span class="ow">in</span> <span class="n">state</span><span class="p">:</span>
+                <span class="n">num_threads</span> <span class="o">=</span> <span class="n">state</span><span class="p">[</span><span class="s1">&#39;num_threads&#39;</span><span class="p">]</span>
+
+
             <span class="k">if</span> <span class="nb">any</span><span class="p">([</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">PlogReaction</span><span class="p">)</span> <span class="ow">or</span>
                 <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChebyshevReaction</span><span class="p">)</span> <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()</span>
                 <span class="p">])</span> <span class="ow">and</span> <span class="n">lang</span> <span class="o">==</span> <span class="s1">&#39;tchem&#39;</span><span class="p">:</span>
@@ -415,9 +431,10 @@
                       <span class="p">)</span>
                 <span class="k">continue</span>
 
-            <span class="n">data_output</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;co&#39;</span> <span class="k">if</span> <span class="n">opt</span> <span class="k">else</span> <span class="s1">&#39;nco&#39;</span><span class="p">,</span>
+            <span class="n">data_output</span> <span class="o">=</span> <span class="p">(</span><span class="s1">&#39;</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">_</span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">lang</span><span class="p">,</span> <span class="s1">&#39;co&#39;</span> <span class="k">if</span> <span class="n">opt</span> <span class="k">else</span> <span class="s1">&#39;nco&#39;</span><span class="p">,</span>
                                                 <span class="s1">&#39;smem&#39;</span> <span class="k">if</span> <span class="n">smem</span> <span class="k">else</span> <span class="s1">&#39;nosmem&#39;</span><span class="p">,</span>
-                                                <span class="s1">&#39;fd&#39;</span> <span class="k">if</span> <span class="n">FD</span> <span class="k">else</span> <span class="s1">&#39;ajac&#39;</span>
+                                                <span class="s1">&#39;fd&#39;</span> <span class="k">if</span> <span class="n">FD</span> <span class="k">else</span> <span class="s1">&#39;ajac&#39;</span><span class="p">,</span>
+                                                <span class="n">num_threads</span>
                                                 <span class="p">)</span> <span class="o">+</span>
                            <span class="s1">&#39;_output.txt&#39;</span>
                            <span class="p">)</span>
@@ -533,7 +550,7 @@
                         <span class="n">subprocess</span><span class="o">.</span><span class="n">check_call</span><span class="p">(</span>
                             <span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">the_path</span><span class="p">,</span>
                             <span class="n">test_dir</span><span class="p">,</span> <span class="s1">&#39;speedtest&#39;</span><span class="p">),</span>
-                            <span class="nb">str</span><span class="p">(</span><span class="n">stepsize</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">file</span><span class="p">,</span> <span class="n">env</span><span class="o">=</span><span class="n">env</span>
+                            <span class="nb">str</span><span class="p">(</span><span class="n">stepsize</span><span class="p">),</span> <span class="nb">str</span><span class="p">(</span><span class="n">num_threads</span><span class="p">)],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">file</span>
                             <span class="p">)</span></div>
 </pre></div>
 

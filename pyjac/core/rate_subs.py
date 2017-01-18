@@ -624,7 +624,7 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
         last_index = 'j'
     concs_lp, concs_str, _ = lp_utils.get_loopy_arg('conc',
                                                     indicies=indicies,
-                                                    dimensions=(Ns - 1, test_size),
+                                                    dimensions=(Ns, test_size),
                                                     order=loopy_opt.order)
     concs_str = Template(concs_str)
 

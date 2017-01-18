@@ -176,13 +176,55 @@ def get_code(knl):
     code, _ = lp.generate_code(knl)
     return codefix('stdin', text_in=code)
 
-def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **input_args):
+def populate(knl, device='0', **input_args):
     """
-    This method tests the supplied `loopy.kernel` (or list thereof) against a reference answer
+    This method runs the supplied :class:`loopy.LoopKernel` (or list thereof), and is often used by
+    :method:`auto_run`
 
     Parameters
     ----------
-    knl : `loopy.kernel` or list of `loopy.kernel`
+    knl : :class:`loopy.LoopKernel` or list of :class:`loopy.LoopKernel`
+        The kernel to test, if a list of kernels they will be successively applied and the
+        end result compared
+    device : str
+        The pyopencl string denoting the device to use, defaults to '0'
+    input_args : dict of `numpy.array`s
+        The arguements to supply to the kernel
+
+    Returns
+    -------
+    out_ref : :class:`numpy.ndarray`
+        The value of the evaluated :class:`loopy.LoopKernel`
+    """
+
+    #create context
+    ctx, queue = get_context(device)
+
+    out_ref = None
+    for k in knl:
+        test_knl = set_editor(k)
+        if isinstance(k.target, lp.PyOpenCLTarget):
+            #recreate with device
+            k.target = lp.PyOpenCLTarget(device=device)
+        try:
+            evt, (out,) = test_knl(queue, out_host=True, **input_args)
+        except Exception as e:
+            print(k)
+            raise e
+        if out_ref is None:
+            out_ref = out
+        else:
+            copy_inds = np.where(np.logical_not(np.isinf(out)))
+            out_ref[copy_inds] = out[copy_inds]
+    return out_ref
+
+def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **input_args):
+    """
+    This method tests the supplied :class:`loopy.LoopKernel` (or list thereof) against a reference answer
+
+    Parameters
+    ----------
+    knl : :class:`loopy.LoopKernel` or list of :class:`loopy.LoopKernel`
         The kernel to test, if a list of kernels they will be successively applied and the
         end result compared
     ref_answer : `numpy.array`
@@ -202,28 +244,11 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
         True if all tests pass
     """
 
-    #create context
-    ctx, queue = get_context(device)
-
-
     #run kernel
     if not isinstance(knl, list):
         knl = [knl]
 
-    out_ref = np.zeros_like(ref_answer)
-    for k in knl:
-        test_knl = set_editor(k)
-        if isinstance(k.target, lp.PyOpenCLTarget):
-            #recreate with device
-            k.target = lp.PyOpenCLTarget(device=device)
-        try:
-            evt, (out,) = test_knl(queue, out_host=True, **input_args)
-        except Exception as e:
-            print(k)
-            raise e
-        copy_inds = np.where(np.logical_not(np.isinf(out)))
-        out_ref[copy_inds] = out[copy_inds]
-    out = out_ref
+    out = populate(knl, device=device, **input_args)
 
     if compare_mask is not None:
         return np.allclose(np.take(out, compare_mask, compare_axis),
@@ -304,7 +329,8 @@ def get_loopy_arg(arg_name, indicies, dimensions,
                     scope=scopes.GLOBAL,
                     dtype=np.float64,
                     force_temporary=False,
-                    read_only=True):
+                    read_only=True,
+                    map_result=''):
     """
     Convience method that generates a loopy GlobalArg with correct indicies
     and sizes.
@@ -334,6 +360,8 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         of initializer
     read_only: bool
         If True, the :class:`loopy.TemporaryVariable` will be readonly
+    map_result : str
+        If not empty, use instead of the default 'variable_name'_map
 
     Returns
     -------
@@ -359,7 +387,10 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     if map_name is not None:
         for imap in map_name:
             #make a new name off the replaced iname
-            mapped_name = '{}_map'.format(imap)
+            if map_result:
+                mapped_name = map_result
+            else:
+                mapped_name = '{}_map'.format(imap)
             if map_name[imap].startswith('<>'):
                 #already an instruction
                 map_instructs[imap] = map_name[imap]

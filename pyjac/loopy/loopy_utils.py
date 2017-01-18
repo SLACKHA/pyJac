@@ -111,11 +111,11 @@ def get_context(device='0'):
 
 def get_header(knl):
     """
-    Returns header definition code for a `loopy.kernel`
+    Returns header definition code for a :class:`loopy.LoopKernel`
 
     Parameters
     ----------
-    knl : `loopy.kernel`
+    knl : :class:`loopy.LoopKernel`
         The kernel to generate a header definition for
 
     Returns
@@ -137,12 +137,12 @@ def set_editor(knl):
 
     Parameters
     ----------
-    knl : `loopy.kernel`
+    knl : :class:`loopy.LoopKernel`
         The kernel to generate code for
 
     Returns
     -------
-    edit_knl : `loopy.kernel`
+    edit_knl : :class:`loopy.LoopKernel`
         The kernel set up for editing
     """
 
@@ -157,11 +157,11 @@ def set_editor(knl):
 
 def get_code(knl):
     """
-    Returns the device code for a `loopy.kernel`
+    Returns the device code for a :class:`loopy.LoopKernel`
 
     Parameters
     ----------
-    knl : `loopy.kernel`
+    knl : :class:`loopy.LoopKernel`
         The kernel to generate code for
 
     Returns

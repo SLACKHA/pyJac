@@ -19,7 +19,7 @@ def sanitize(eqn, subs={}, symlist={}):
         a list of complex substitions do perform
     symlist : dict of str -> `sympy.Symbol`
         A list of simpler symbol names to substitute into the equation
-    
+
     """
     #first we replace values with regular symbols for easy working
     #if an equivalent value is not found in the symlist the str conversion of the symbol will be used

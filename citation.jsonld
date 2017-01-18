@@ -18,7 +18,7 @@
         }
     ],
     "identifier": "http://dx.doi.org/10.5281/zenodo.51139",
-    "codeRepository": "https://github.com/kyleniemeyer/pyJac",
+    "codeRepository": "https://github.com/slackha/pyJac",
     "datePublished": "2015-",
     "description": "pyJac creates code for CPU and GPU chemical kinetics Jacobian matrices",
     "keywords": "Jacobian, chemical kinetics, SIMD, GPU",

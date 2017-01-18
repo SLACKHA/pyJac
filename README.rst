@@ -15,14 +15,21 @@ for a chemical reaction mechanism.
 Documentation
 =============
 
-The full documentation for pyJac can be found at http://kyleniemeyer.github.io/pyJac/.
+The full documentation for pyJac can be found at http://slackha.github.io/pyJac/.
+
+======
+Theory
+======
+
+Theory, derivations, validation and performance testing can be found in the paper fully describing version 1.0.2 of pyJac:
+https://Niemeyer-Research-Group.github.io/pyJac-paper/
 
 ============
 Installation
 ============
 
 Detailed installation instructions can be found in the
-`full documentation <http://kyleniemeyer.github.io/pyJac/>`_.
+`full documentation <http://slackha.github.io/pyJac/>`_.
 However, pyJac can be installed as a Python module::
 
    python setup.py install
@@ -48,11 +55,11 @@ License
 =======
 
 pyJac is released under the MIT license; see the
-`LICENSE <https://github.com/kyleniemeyer/pyJac/blob/master/LICENSE>`_ for
+`LICENSE <https://github.com/slackha/pyJac/blob/master/LICENSE>`_ for
 details.
 
 If you use this package as part of a scholarly publication, please see
-`CITATION.md <https://github.com/kyleniemeyer/pyJac/blob/master/CITATION.md>`_
+`CITATION.md <https://github.com/slackha/pyJac/blob/master/CITATION.md>`_
 for the appropriate citation(s).
 
 ============
@@ -60,7 +67,7 @@ Contributing
 ============
 
 We welcome contributions to pyJac! Please see the guide to making contributions
-in the `CONTRIBUTING.md <https://github.com/kyleniemeyer/pyJac/blob/master/CONTRIBUTING.md>`_
+in the `CONTRIBUTING.md <https://github.com/slackha/pyJac/blob/master/CONTRIBUTING.md>`_
 file.
 
 =======

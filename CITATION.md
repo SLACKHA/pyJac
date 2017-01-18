@@ -1,7 +1,7 @@
 ## Cite As:
 
-Kyle E. Niemeyer and Nicholas J. Curtis (2016). pyJac version 1.0.1 [Software].
-Available from https://github.com/kyleniemeyer/pyJac.
+Kyle E. Niemeyer and Nicholas J. Curtis (2016). pyJac version 1.0.2 [Software].
+Available from https://github.com/slackha/pyJac.
 [doi:10.5281/zenodo.53100](http://dx.doi.org/10.5281/zenodo.53100)
 
 ## BibTeX entry:
@@ -10,7 +10,7 @@ Available from https://github.com/kyleniemeyer/pyJac.
         author = {Kyle E Niemeyer and Nicholas J Curtis},
         title = {{pyJac}},
         year = {2016},
-        howpublished = {Available via \url{https://github.com/kyleniemeyer/pyJac}},
+        howpublished = {Available via \url{https://github.com/slackha/pyJac}},
         doi = {10.5281/zenodo.53100},
         Note = {Version 1.0.1}
         }

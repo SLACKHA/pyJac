@@ -31,7 +31,7 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/kyleniemeyer/pyJac',
+    url='https://github.com/slackha/pyJac',
 
     # Author details
     author='Kyle E. Niemeyer',

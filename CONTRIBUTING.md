@@ -2,7 +2,7 @@
 
 We welcome contributions in the form of bug reports, bug fixes, improvements to the documentation, ideas for enhancements (or the enhancements themselves!).
 
-You can find a [list of current issues](https://github.com/kyleniemeyer/pyJac/issues) in the project's GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submitting a [pull request](https://github.com/kyleniemeyer/pyJac/pulls).
+You can find a [list of current issues](https://github.com/slackha/pyJac/issues) in the project's GitHub repo. Feel free to tackle any existing bugs or enhancement ideas by submitting a [pull request](https://github.com/slackha/pyJac/pulls).
 
 ## Bug Reports
 
@@ -15,8 +15,8 @@ You can find a [list of current issues](https://github.com/kyleniemeyer/pyJac/is
  * Changes should be [PEP8](http://www.python.org/dev/peps/pep-0008/) compatible.
  * Keep style fixes to a separate commit to make your pull request more readable.
  * Docstrings are required and should follow the [NumPy style](http://sphinxcontrib-napoleon.readthedocs.io/en/latest/example_numpy.html#example-numpy).
- * When you start working on a pull request, start by creating a new branch pointing at the latest commit on [GitHub master](https://github.com/kyleniemeyer/pyJac/tree/master).
- * The pyJac copyright policy is detailed in the [`LICENSE`](https://github.com/kyleniemeyer/pyJac/blob/master/LICENSE).
+ * When you start working on a pull request, start by creating a new branch pointing at the latest commit on [GitHub master](https://github.com/slackha/pyJac/tree/master).
+ * The pyJac copyright policy is detailed in the [`LICENSE`](https://github.com/slackha/pyJac/blob/master/LICENSE).
 
 ## Tests
 

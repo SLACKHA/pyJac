@@ -43,7 +43,7 @@ Citation
 Up-to-date information about citing **pyJac** can be found within the
 `CITATION.md`_ file.
 
-.. _CITATION.md: https://github.com/kyleniemeyer/pyJac/blob/master/CITATION.md
+.. _CITATION.md: https://github.com/slackha/pyJac/blob/master/CITATION.md
 
 See also
 --------
@@ -52,7 +52,7 @@ See also
 - Kyle Niemeyer, Nick Curtis, and Chih-Jen Sung's `WSSCI Fall 2015 paper`_ introducing
 - The associated `WSSCI Fall 2015 slides`_
 
-.. _pyJac v1 paper: http://kyleniemeyer.github.io/pyJac-paper/
+.. _pyJac v1 paper: https://Niemeyer-Research-Group.github.io/pyJac-paper
 .. _WSSCI Fall 2015 paper: https://dx.doi.org/10.6084/m9.figshare.2075515.v1
 .. _WSSCI Fall 2015 slides: http://www.slideshare.net/kyleniemeyer/initial-investigation-of-pyjac-an-analytical-jacobian-generator-for-chemical-kinetics
 
@@ -63,8 +63,8 @@ Get in touch
 - There, new contributors can also find `a guide to contributing`_.
 - You can also contact Kyle `on Twitter`_.
 
-.. _on GitHub: https://github.com/kyleniemeyer/pyJac
-.. _a guide to contributing: https://github.com/kyleniemeyer/pyJac/blob/master/CONTRIBUTING.md
+.. _on GitHub: https://github.com/slackha/pyJac
+.. _a guide to contributing: https://github.com/slackha/pyJac/blob/master/CONTRIBUTING.md
 .. _on Twitter: http://twitter.com/kyleniemeyer
 
 

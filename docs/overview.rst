@@ -44,5 +44,5 @@ The Jacobian matrix is then filled by the partial derivaties
 .. math::
     \mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j}
 
-More details can be found in the paper fully describing version 1.0 of pyJac:
-http://kyleniemeyer.github.io/pyJac-paper/
+More details can be found in the paper fully describing version 1.0.2 of pyJac:
+https://Niemeyer-Research-Group.github.io/pyJac-paper/

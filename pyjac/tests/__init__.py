@@ -47,6 +47,24 @@ class storage(object):
             thd_eff_maps.append(np.array(thd_eff_map))
         thd_eff_maps = np.array(thd_eff_maps)
 
+        #various indicies and mappings
+        fall_inds = np.array([i for i, x in enumerate(gas.reactions())
+            if isinstance(x, ct.FalloffReaction)])
+        sri_inds = np.array([i for i, x in enumerate(gas.reactions())
+            if i in fall_inds and isinstance(x.falloff, ct.SriFalloff)])
+        sri_to_pr_map = np.array([np.where(fall_inds == j)[0][0] for j in sri_inds])
+        self.ref_Pr = np.zeros((fall_inds.size, test_size))
+        self.ref_Sri = np.zeros((sri_inds.size, test_size))
+        #and the corresponding reactions
+        fall_reacs = [gas.reaction(j) for j in fall_inds]
+        sri_reacs = [gas.reaction(j) for j in sri_inds]
+
+        #convenience method for reduced pressure evaluation
+        arrhen_temp = np.zeros(fall_inds.size)
+        def pr_eval(i, j):
+            reac = fall_reacs[j]
+            return reac.low_rate(self.T[i]) / reac.high_rate(self.T[i])
+
         for i in range(test_size):
             self.gas.TPY = self.T[i], self.P[i], self.Y[:, i]
             self.concs[:, i] = self.gas.concentrations[:]
@@ -54,6 +72,11 @@ class storage(object):
             #store various information
             self.fwd_rate_constants[:, i] = gas.forward_rate_constants[:]
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
+            for j in range(fall_inds.size):
+                arrhen_temp[j] = pr_eval(i, j)
+            self.ref_Pr[:, i] = self.ref_thd[np.where(np.in1d(thd_inds, fall_inds))[0], i] * arrhen_temp
+            for j in range(sri_inds.size):
+                self.ref_Sri[j, i] = sri_reacs[j].falloff(self.T[i], self.ref_Pr[sri_to_pr_map[j], i])
 
 
 class TestClass(unittest.TestCase):

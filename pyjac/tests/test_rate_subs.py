@@ -8,9 +8,10 @@ logging.getLogger('root').setLevel(logging.WARNING)
 #local imports
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
-    make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs)
+    make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
+    get_reduced_pressure)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
-    get_target, get_device_list)
+    get_target, get_device_list, populate)
 from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
@@ -401,7 +402,62 @@ class SubTest(TestClass):
         ref_ans_T = self.store.ref_thd.T.copy()
         args = { 'T_arr' : T,
                  'P_arr' : P,
-                 'conc' : lambda x: concs[:-1, :].copy() if x == 'F'
-                            else concs[:-1, :].T.copy()}
+                 'conc' : lambda x: concs.copy() if x == 'F'
+                            else concs.T.copy()}
         self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args,
+            variable_loop_length=True)
+
+    @attr('long')
+    def test_reduced_pressure(self):
+        T = self.store.T
+        ref_thd = self.store.ref_thd.copy()
+        ref_ans = self.store.ref_Pr.copy()
+        ref_ans_T = self.store.ref_Pr.T.copy()
+        kf_vals = {}
+        kf_fall_vals = {}
+        args = { 'T_arr' : T,
+                 'kf' : lambda x: kf_vals[x],
+                 'kf_fall' : lambda x: kf_fall_vals[x],
+                 'thd_conc' : lambda x: ref_thd.copy() if x == 'F'
+                            else ref_thd.T.copy()
+                 }
+
+        def __tester(eqs, loopy_opts, rate_info, test_size):
+            #check if we've found the kf / kf_fall values yet
+            if loopy_opts.order not in kf_vals:
+                #first we have to get the simple arrhenius rates
+                #in order to evaluate the reduced pressure
+                target = get_target(loopy_opts.lang)
+
+                device = get_device_list()[0]
+
+                #first with falloff parameters
+                infos = get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size,
+                        falloff=True)
+                knl_list = []
+                for info in infos:
+                    #make kernel
+                    knl = make_rateconst_kernel(info, target, test_size)
+                    #apply vectorization
+                    knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
+                    #and add to list
+                    knl_list.append(knl)
+                kf_fall_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)
+
+                #next with regular parameters
+                infos = get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size)
+                knl_list = []
+                for info in infos:
+                    #make kernel
+                    knl = make_rateconst_kernel(info, target, test_size)
+                    #apply vectorization
+                    knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
+                    #and add to list
+                    knl_list.append(knl)
+                kf_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)
+
+            #finally we can call the reduced pressure evaluator
+            return get_reduced_pressure(eqs, loopy_opts, rate_info, test_size)
+
+        self.__generic_rate_tester(__tester, ref_ans, ref_ans_T, args,
             variable_loop_length=True)

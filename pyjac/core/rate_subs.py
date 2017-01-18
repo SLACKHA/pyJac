@@ -1151,6 +1151,144 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         maps=maps, extra_inames=extra_inames, indicies=indicies)]
 
 
+def get_reduced_pressure(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the reduced
+    pressure evaluation kernel
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+
+    """
+
+    reac_ind = 'i'
+    conp_eqs = eqs['conp'] #conp / conv irrelevant for rates
+
+    #create the various necessary arrays
+
+    kernel_data = []
+
+    map_instructs = []
+    inmaps = {}
+
+    #falloff index mapping
+    indicies = ['${reac_ind}', 'j']
+    __handle_indicies(rate_info['fall']['map'], '${reac_ind}', inmaps, kernel_data,
+                            outmap_name='fall_map',
+                            force_zero=True)
+
+    #simple arrhenius rates
+    kf_arr, kf_str, map_inst = lp_utils.get_loopy_arg('kf',
+                    indicies=indicies,
+                    dimensions=[rate_info['Nr'], test_size],
+                    order=loopy_opt.order,
+                    map_name=inmaps)
+    if '${reac_ind}' in map_inst:
+        map_instructs.append(map_inst['${reac_ind}'])
+
+    #simple arrhenius rates using falloff (alternate) parameters
+    kf_fall_arr, kf_fall_str, _ = lp_utils.get_loopy_arg('kf_fall',
+                        indicies=indicies,
+                        dimensions=[rate_info['fall']['num'], test_size],
+                        order=loopy_opt.order)
+
+    #temperatures
+    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+
+    #create a Pr array
+    Pr_arr, Pr_str, _ = lp_utils.get_loopy_arg('Pr',
+                        indicies=indicies,
+                        dimensions=[rate_info['fall']['num'], test_size],
+                        order=loopy_opt.order)
+
+    #third-body concentrations
+    thd_indexing_str = '${reac_ind}'
+    thd_index_map = {}
+
+    #check if a mapping is needed
+    thd_inds = rate_info['thd']['map']
+    fall_inds = rate_info['fall']['map']
+    if not np.array_equal(thd_inds, fall_inds):
+        #add a mapping for falloff index -> third body conc index
+        thd_map_name = 'thd_map'
+        thd_map = np.where(np.in1d(thd_inds, fall_inds))[0].astype(np.int32)
+
+        __handle_indicies(thd_map, thd_indexing_str, thd_index_map,
+            kernel_data, outmap_name=thd_map_name, force_map=True)
+
+    #create the array
+    indicies = ['${reac_ind}', 'j']
+    thd_conc_lp, thd_conc_str, map_inst = lp_utils.get_loopy_arg('thd_conc',
+                                                 indicies=indicies,
+                                                 dimensions=(rate_info['thd']['num'], test_size),
+                                                 order=loopy_opt.order,
+                                                 map_name=thd_index_map,
+                                                 map_result='thd_i')
+    if '${reac_ind}' in map_inst:
+        map_instructs.append(map_inst['${reac_ind}'])
+
+    #and finally the falloff types
+    fall_type_lp, fall_type_str = __1Dcreator('fall_type', rate_info['fall']['ftype'],
+        scope=scopes.GLOBAL)
+
+    #append all arrays to the kernel data
+    kernel_data.extend([T_arr, thd_conc_lp, kf_arr, kf_fall_arr, Pr_arr,
+        fall_type_lp])
+
+    #create Pri eqn
+    Pri_sym = next(x for x in conp_eqs if str(x) == 'P_{r, i}')
+    #make substituions to get a usable form
+    pres_mod_sym = sp.Symbol(thd_conc_str)
+    Pri_eqn = sp_utils.sanitize(conp_eqs[Pri_sym][(thd_body_type.mix,)],
+                       subs={'[X]_i' : pres_mod_sym,
+                            'k_{0, i}' : 'k0',
+                            'k_{infty, i}' : 'kinf'}
+                      )
+
+    #create instruction set
+    pr_instructions = Template("""
+if fall_type[${reac_ind}]
+    #chemically activated
+    <>k0 = ${kf_str} {id=k0_c}
+    <>kinf = ${kf_fall_str} {id=kinf_c}
+else
+    #fall-off
+    kinf = ${kf_str} {id=kinf_f}
+    k0 = ${kf_fall_str} {id=k0_f}
+end
+${Pr_str} = ${Pr_eq} {dep=k*}
+""")
+
+    #sub in strings
+    pr_instructions = Template(pr_instructions.safe_substitute(
+    kf_str=kf_str,
+    kf_fall_str=kf_fall_str,
+    Pr_str=Pr_str,
+    Pr_eq=Pri_eqn)).safe_substitute(
+        reac_ind=reac_ind)
+
+    #and finally return the resulting info
+    return [rateconst_info('red_pres',
+                     instructions=pr_instructions,
+                     reac_ind=reac_ind,
+                     kernel_data=kernel_data,
+                     indicies=np.array(range(rate_info['fall']['num']), dtype=np.int32),
+                     maps=map_instructs)]
+
+
 def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
         falloff=False):
     """Generates instructions, kernel arguements, and data for specialized forms

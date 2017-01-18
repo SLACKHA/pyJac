@@ -1151,7 +1151,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         maps=maps, extra_inames=extra_inames, indicies=indicies)]
 
 
-def get_reduced_pressure(eqs, loopy_opt, rate_info, test_size=None):
+def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the reduced
     pressure evaluation kernel
 

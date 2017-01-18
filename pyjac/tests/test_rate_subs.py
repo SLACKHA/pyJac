@@ -9,7 +9,7 @@ logging.getLogger('root').setLevel(logging.WARNING)
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
-    get_reduced_pressure)
+    get_reduced_pressure_kernel, get_sri_kernel)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate)
 from ..utils import create_dir

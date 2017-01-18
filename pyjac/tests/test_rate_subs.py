@@ -264,8 +264,7 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, ref_ans, ref_ans_T, args, mask=None,
-        variable_loop_length=False):
+    def __generic_rate_tester(self, func, ref_ans, ref_ans_T, args, mask=None):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -281,8 +280,6 @@ class SubTest(TestClass):
             The args to pass to the kernel
         mask : :class:`numpy.ndarray`
             If not none, the compare mask to use in testing
-        variable_loop_length : bool
-            ILP interferes with this type of kernel, turn it off
         """
 
         eqs = {'conp' : self.store.conp_eqs,
@@ -404,8 +401,7 @@ class SubTest(TestClass):
                  'P_arr' : P,
                  'conc' : lambda x: concs.copy() if x == 'F'
                             else concs.T.copy()}
-        self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args,
-            variable_loop_length=True)
+        self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args)
 
     @attr('long')
     def test_reduced_pressure(self):
@@ -457,7 +453,25 @@ class SubTest(TestClass):
                 kf_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)
 
             #finally we can call the reduced pressure evaluator
-            return get_reduced_pressure(eqs, loopy_opts, rate_info, test_size)
+            return get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size)
 
-        self.__generic_rate_tester(__tester, ref_ans, ref_ans_T, args,
-            variable_loop_length=True)
+        self.__generic_rate_tester(__tester, ref_ans, ref_ans_T, args)
+
+    @attr('long')
+    def test_sri_falloff(self):
+        T = self.store.T
+        ref_Pr = self.store.ref_Pr.copy()
+        ref_ans = self.store.ref_Sri.copy().squeeze()
+        ref_ans_T = self.store.ref_Sri.T.copy().squeeze()
+        args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
+                         else ref_Pr.T.copy(),
+                 'T_arr' : T
+               }
+
+        #get SRI reaction mask
+        sri_mask = np.where(self.store.sri_inds == self.store.fall_inds)[0][0]
+        mask = {'out_mask' : 0,
+                'mask' : sri_mask}
+
+        self.__generic_rate_tester(get_sri_kernel, ref_ans, ref_ans_T, args,
+            mask=mask)

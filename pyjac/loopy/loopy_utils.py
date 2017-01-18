@@ -176,7 +176,7 @@ def get_code(knl):
     code, _ = lp.generate_code(knl)
     return codefix('stdin', text_in=code)
 
-def populate(knl, device='0', **input_args):
+def populate(knl, device='0', out_mask=None, **input_args):
     """
     This method runs the supplied :class:`loopy.LoopKernel` (or list thereof), and is often used by
     :method:`auto_run`
@@ -188,6 +188,8 @@ def populate(knl, device='0', **input_args):
         end result compared
     device : str
         The pyopencl string denoting the device to use, defaults to '0'
+    out_mask : int
+        The index of the returned array to aggregate
     input_args : dict of `numpy.array`s
         The arguements to supply to the kernel
 
@@ -207,10 +209,14 @@ def populate(knl, device='0', **input_args):
             #recreate with device
             k.target = lp.PyOpenCLTarget(device=device)
         try:
-            evt, (out,) = test_knl(queue, out_host=True, **input_args)
+            evt, out = test_knl(queue, out_host=True, **input_args)
         except Exception as e:
             print(k)
             raise e
+        if out_mask is not None:
+            out = out[out_mask]
+        else:
+            out = out[0]
         if out_ref is None:
             out_ref = out
         else:
@@ -229,8 +235,11 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
         end result compared
     ref_answer : `numpy.array`
         The numpy array to test against, should be the same shape as the kernel output
-    compare_mask : `numpy.array`
+    compare_mask : `numpy.array` or dictionary
         A list of indexes to compare, useful when the kernel only computes partial results
+        If a dictionary, the entry 'out_mask' corresponds to the index of
+            the returned array that should be checked and the 'mask' entry corresponds
+            to the results to check
     compare_axis = int
         An axis to apply the compare_mask along, unused if compare_mask is none
     device : str
@@ -248,11 +257,19 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
     if not isinstance(knl, list):
         knl = [knl]
 
-    out = populate(knl, device=device, **input_args)
+    out_mask = None
+    if isinstance(compare_mask, dict):
+        out_mask = compare_mask['out_mask']
+        compare_mask = compare_mask['mask']
+
+    out = populate(knl, device=device, out_mask=out_mask, **input_args)
 
     if compare_mask is not None:
-        return np.allclose(np.take(out, compare_mask, compare_axis),
-            np.take(ref_answer, compare_mask, compare_axis))
+        out = np.take(out, compare_mask, compare_axis)
+        if out.shape != ref_answer.shape:
+            #apply the same transformation to the answer
+            return np.allclose(out,
+                np.take(ref_answer, compare_mask, compare_axis))
     #check against supplied answer
     return np.allclose(out, ref_answer)
 

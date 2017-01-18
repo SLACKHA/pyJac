@@ -36,13 +36,13 @@ class storage(object):
         self.fwd_rate_constants = np.zeros((self.gas.n_reactions, test_size))
 
         #third body indicies
-        thd_inds = np.array([i for i, x in enumerate(gas.reactions())
+        self.thd_inds = np.array([i for i, x in enumerate(gas.reactions())
             if isinstance(x, ct.FalloffReaction) or
                 isinstance(x, ct.ChemicallyActivatedReaction) or
                 isinstance(x, ct.ThreeBodyReaction)])
-        self.ref_thd = np.zeros((thd_inds.size, test_size))
+        self.ref_thd = np.zeros((self.thd_inds.size, test_size))
         thd_eff_maps = []
-        for i in thd_inds:
+        for i in self.thd_inds:
             default = gas.reaction(i).default_efficiency
             #fill all missing with default
             thd_eff_map = [default if j not in gas.reaction(i).efficiencies
@@ -51,22 +51,24 @@ class storage(object):
         thd_eff_maps = np.array(thd_eff_maps)
 
         #various indicies and mappings
-        fall_inds = np.array([i for i, x in enumerate(gas.reactions())
+        self.fall_inds = np.array([i for i, x in enumerate(gas.reactions())
             if isinstance(x, ct.FalloffReaction)])
-        sri_inds = np.array([i for i, x in enumerate(gas.reactions())
-            if i in fall_inds and isinstance(x.falloff, ct.SriFalloff)])
-        sri_to_pr_map = np.array([np.where(fall_inds == j)[0][0] for j in sri_inds])
-        self.ref_Pr = np.zeros((fall_inds.size, test_size))
-        self.ref_Sri = np.zeros((sri_inds.size, test_size))
+        self.sri_inds = np.array([i for i, x in enumerate(gas.reactions())
+            if i in self.fall_inds and isinstance(x.falloff, ct.SriFalloff)])
+        sri_to_pr_map = np.array([np.where(self.fall_inds == j)[0][0] for j in self.sri_inds])
+        self.ref_Pr = np.zeros((self.fall_inds.size, test_size))
+        self.ref_Sri = np.zeros((self.sri_inds.size, test_size))
         #and the corresponding reactions
-        fall_reacs = [gas.reaction(j) for j in fall_inds]
-        sri_reacs = [gas.reaction(j) for j in sri_inds]
+        fall_reacs = [gas.reaction(j) for j in self.fall_inds]
+        sri_reacs = [gas.reaction(j) for j in self.sri_inds]
 
         #convenience method for reduced pressure evaluation
-        arrhen_temp = np.zeros(fall_inds.size)
+        arrhen_temp = np.zeros(self.fall_inds.size)
         def pr_eval(i, j):
             reac = fall_reacs[j]
             return reac.low_rate(self.T[i]) / reac.high_rate(self.T[i])
+
+        thd_to_fall_map = np.where(np.in1d(self.thd_inds, self.fall_inds))[0]
 
         for i in range(test_size):
             self.gas.TPY = self.T[i], self.P[i], self.Y[:, i]
@@ -75,10 +77,10 @@ class storage(object):
             #store various information
             self.fwd_rate_constants[:, i] = gas.forward_rate_constants[:]
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
-            for j in range(fall_inds.size):
+            for j in range(self.fall_inds.size):
                 arrhen_temp[j] = pr_eval(i, j)
-            self.ref_Pr[:, i] = self.ref_thd[np.where(np.in1d(thd_inds, fall_inds))[0], i] * arrhen_temp
-            for j in range(sri_inds.size):
+            self.ref_Pr[:, i] = self.ref_thd[thd_to_fall_map, i] * arrhen_temp
+            for j in range(self.sri_inds.size):
                 self.ref_Sri[j, i] = sri_reacs[j].falloff(self.T[i], self.ref_Pr[sri_to_pr_map[j], i])
 
 

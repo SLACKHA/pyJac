@@ -1289,6 +1289,152 @@ ${Pr_str} = ${Pr_eq} {dep=k*}
                      maps=map_instructs)]
 
 
+def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the SRI
+    falloff evaluation kernel
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+
+    """
+
+    #set of equations is irrelevant for non-derivatives
+    conp_eqs = eqs['conp']
+    reac_ind = 'i'
+
+    #Create the temperature array
+    T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+    kernel_data = [T_arr]
+
+    #figure out if we need to do any mapping of the input variable
+    out_map = {}
+    outmap_name = 'out_map'
+    indicies = np.array(rate_info['fall']['sri']['map'], dtype=np.int32)
+    indicies = __handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
+                                force_zero=True)
+
+    #start creating SRI kernel
+    Fi_sym = next(x for x in conp_eqs if str(x) == 'F_{i}')
+    keys = conp_eqs[Fi_sym]
+    Fi = {}
+    for key in keys:
+        fall_form = next(x for x in key if isinstance(x, falloff_form))
+        Fi[fall_form] = conp_eqs[Fi_sym][key]
+
+    #find Pr symbol
+    Pri_sym = next(x for x in conp_eqs if str(x) == 'P_{r, i}')
+
+    #create Fi array / mapping
+    Fi_lp, Fi_str, map_result = lp_utils.get_loopy_arg('Fi',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['num'], test_size],
+                        order=loopy_opt.order,
+                        map_name=out_map)
+    #and Pri array / mapping
+    Pr_lp, Pr_str, map_result = lp_utils.get_loopy_arg('Pr',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['num'], test_size],
+                        order=loopy_opt.order,
+                        map_name=out_map)
+    maps = []
+    if '${reac_ind}' in map_result:
+        maps.append(map_result['${reac_ind}'])
+    kernel_data.extend([Fi_lp, Pr_lp])
+
+    #get SRI symbols
+    X_sri_sym = next(x for x in Fi[falloff_form.sri].free_symbols if str(x) == 'X')
+    a_sri_sym = next(x for x in Fi[falloff_form.sri].free_symbols if str(x) == 'a')
+    b_sri_sym = next(x for x in Fi[falloff_form.sri].free_symbols if str(x) == 'b')
+    c_sri_sym = next(x for x in Fi[falloff_form.sri].free_symbols if str(x) == 'c')
+    d_sri_sym = next(x for x in Fi[falloff_form.sri].free_symbols if str(x) == 'd')
+    e_sri_sym = next(x for x in Fi[falloff_form.sri].free_symbols if str(x) == 'e')
+    #get SRI params and create arrays
+    sri_a, sri_b, sri_c, sri_d, sri_e = rate_info['fall']['sri']['a'], \
+        rate_info['fall']['sri']['b'], \
+        rate_info['fall']['sri']['c'], \
+        rate_info['fall']['sri']['d'], \
+        rate_info['fall']['sri']['e']
+    X_sri_lp, X_sri_str, _ = lp_utils.get_loopy_arg('X',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['sri']['num'], test_size],
+                        order=loopy_opt.order)
+    sri_a_lp, sri_a_str = __1Dcreator('sri_a', sri_a, scope=scopes.GLOBAL)
+    sri_b_lp, sri_b_str = __1Dcreator('sri_b', sri_b, scope=scopes.GLOBAL)
+    sri_c_lp, sri_c_str = __1Dcreator('sri_c', sri_c, scope=scopes.GLOBAL)
+    sri_d_lp, sri_d_str = __1Dcreator('sri_d', sri_d, scope=scopes.GLOBAL)
+    sri_e_lp, sri_e_str = __1Dcreator('sri_e', sri_e, scope=scopes.GLOBAL)
+    kernel_data.extend([X_sri_lp, sri_a_lp, sri_b_lp, sri_c_lp, sri_d_lp, sri_e_lp])
+
+    #create SRI eqs
+    X_sri_eq = conp_eqs[X_sri_sym].subs(sp.Pow(sp.log(Pri_sym, 10), 2), 'logPr * logPr')
+    Fi_sri_eq = Fi[falloff_form.sri]
+    Fi_sri_eq = sp_utils.sanitize(Fi_sri_eq,
+        subs={
+            'a' : sri_a_str,
+            'b' : sri_b_str,
+            'c' : sri_c_str,
+            'd' : sri_d_str,
+            'e' : sri_e_str,
+            'X' : 'X_temp'
+        })
+    #do some surgery on the Fi_sri_eq to get the optional parts
+    Fi_sri_base = next(x for x in sp.Mul.make_args(Fi_sri_eq)
+                       if any(str(y) == sri_a_str for y in x.free_symbols))
+    Fi_sri_opt = Fi_sri_eq / Fi_sri_base
+    Fi_sri_d_opt = next(x for x in sp.Mul.make_args(Fi_sri_opt)
+                       if any(str(y) == sri_d_str for y in x.free_symbols))
+    Fi_sri_e_opt = next(x for x in sp.Mul.make_args(Fi_sri_opt)
+                       if any(str(y) == sri_e_str for y in x.free_symbols))
+
+    #create instruction set
+    sri_instructions = Template(Template("""
+<>T = T_arr[j]
+<>logPr = log10(${pr_str})
+<>X_temp = ${Xeq} {id=X_decl} #this must be a temporary to avoid a race on Fi_temp assignment
+<>Fi_temp = ${Fi_sri} {id=Fi_decl, dep=X_decl}
+if ${d_str} != 1.0
+    Fi_temp = Fi_temp * ${d_eval} {id=Fi_decl1, dep=Fi_decl}
+end
+if ${e_str} != 0.0
+    Fi_temp = Fi_temp * ${e_eval} {id=Fi_decl2, dep=Fi_decl}
+end
+${Fi_str} = Fi_temp {dep=Fi_decl*}
+${X_str} = X_temp
+""").safe_substitute(logPr_eval='logPr',
+                     pr_str=Pr_str,
+                     X_str=X_sri_str,
+                     Xeq=X_sri_eq,
+                     Fi_sri=Fi_sri_base,
+                     d_str=sri_d_str,
+                     d_eval=Fi_sri_d_opt,
+                     e_str=sri_e_str,
+                     e_eval=Fi_sri_e_opt,
+                     Fi_str=Fi_str)).safe_substitute(
+                            reac_ind=reac_ind)
+
+    return [rateconst_info('fall_sri',
+                     instructions=sri_instructions,
+                     reac_ind=reac_ind,
+                     kernel_data=kernel_data,
+                     indicies=indicies,
+                     maps=maps)]
+
+
+
 def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
         falloff=False):
     """Generates instructions, kernel arguements, and data for specialized forms

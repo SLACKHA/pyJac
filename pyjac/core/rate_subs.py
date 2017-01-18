@@ -524,7 +524,8 @@ __TLOG_PREINST_KEY = 'logT'
 __PLOG_PREINST_KEY = 'logP'
 
 def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
-                        outmap_name='out_map', alternate_indicies=None):
+                        outmap_name='out_map', alternate_indicies=None,
+                        force_zero=False, force_map=False):
     """Consolidates the commonly used indicies mapping steps
 
     Parameters
@@ -541,6 +542,11 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
         The name to use in mapping
     alternate_indicies : :class:`numpy.ndarray`
         An alternate list of indicies that can be substituted in to the mapping
+    force_zero : bool
+        If true, any indicies that don't start with zero require a map (e.g. for
+            smaller arrays)
+    force_map : bool
+        If true, forces use of a map
     Returns
     -------
     indicies : :class:`numpy.ndarray` OR tuple of int
@@ -548,7 +554,9 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
     """
 
     check = indicies if alternate_indicies is None else alternate_indicies
-    if check[0] + check.size - 1 == check[-1]:
+    if check[0] + check.size - 1 == check[-1] and \
+            (not force_zero or check[0] == 0) and \
+            not force_map:
         #if the indicies are contiguous, we can get away with an
         check = (check[0], check[0] + check.size)
     else:

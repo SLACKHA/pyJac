@@ -1,7 +1,7 @@
 #system
 import os
 import filecmp
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 import logging
 logging.getLogger('root').setLevel(logging.WARNING)
 
@@ -62,19 +62,25 @@ class SubTest(TestClass):
         fwd_nu = []
         rev_specs = []
         rev_nu = []
+        nu_sum = []
         for i, reac in enumerate(gas.reactions()):
+            temp_nu_sum = defaultdict(lambda: 0)
             for spec, nu in sorted(reac.reactants.items(), key=lambda x: gas.species_index(x[0])):
                 fwd_specs.append(gas.species_index(spec))
                 fwd_nu.append(nu)
+                temp_nu_sum[spec] -= nu
             assert result['fwd']['num_spec'][i] == len(reac.reactants)
             for spec, nu in sorted(reac.products.items(), key=lambda x: gas.species_index(x[0])):
                 rev_specs.append(gas.species_index(spec))
                 rev_nu.append(nu)
+                temp_nu_sum[spec] += nu
             assert result['rev']['num_spec'][i] == len(reac.products)
+            nu_sum.append(sum(temp_nu_sum.values()))
         assert np.allclose(fwd_specs, result['fwd']['specs'])
         assert np.allclose(fwd_nu, result['fwd']['nu'])
         assert np.allclose(rev_specs, result['rev']['specs'])
         assert np.allclose(rev_nu, result['rev']['nu'])
+        assert np.allclose(nu_sum, result['rev']['nu_sum'])
 
         def __get_rate(reac, fall=False):
             try:

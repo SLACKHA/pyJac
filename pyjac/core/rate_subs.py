@@ -327,6 +327,7 @@ def assign_rates(reacs, specs, rate_spec):
     rev_spec = []
     rev_num_spec = []
     rev_nu = []
+    nu_sum = []
     fwd_allnu_integer = True
     rev_allnu_integer = True
     for rxn in reacs:
@@ -338,6 +339,10 @@ def assign_rates(reacs, specs, rate_spec):
         rev_spec.extend(rxn.prod[:])
         rev_num_spec.append(len(rxn.prod))
         rev_nu.extend(rxn.prod_nu[:])
+        #and nu sum for equilibrium constants
+        nu_sum.append(sum(utils.get_nu(isp, rxn) for isp
+            in set(rxn.reac + rxn.prod)))
+
     #create numpy versions
     fwd_spec = np.array(fwd_spec, dtype=np.int32)
     fwd_num_spec = np.array(fwd_num_spec, dtype=np.int32)
@@ -353,6 +358,11 @@ def assign_rates(reacs, specs, rate_spec):
         fwd_allnu_integer = False
     else:
         rev_nu = np.array(rev_nu, dtype=np.int32)
+
+    if fwd_allnu_integer and rev_allnu_integer:
+        nu_sum = np.array(nu_sum, dtype=np.int32)
+    else:
+        nu_sum = np.array(nu_sum)
 
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset
@@ -544,7 +554,8 @@ def assign_rates(reacs, specs, rate_spec):
                 'nu' : fwd_nu, 'allint' : fwd_allnu_integer},
             'rev' : {'map' : rev_map, 'num' : num_rev,
                 'num_spec' :  rev_num_spec, 'specs' : rev_spec,
-                'nu' : rev_nu, 'allint' : rev_allnu_integer},
+                'nu' : rev_nu, 'allint' : rev_allnu_integer,
+                'nu_sum' : nu_sum},
             'Nr' : len(reacs),
             'Ns' : len(specs)}
 

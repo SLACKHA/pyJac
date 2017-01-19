@@ -461,8 +461,8 @@ class SubTest(TestClass):
     def test_sri_falloff(self):
         T = self.store.T
         ref_Pr = self.store.ref_Pr.copy()
-        ref_ans = self.store.ref_Sri.copy().squeeze()
-        ref_ans_T = self.store.ref_Sri.T.copy().squeeze()
+        ref_ans = self.store.ref_Sri.copy()
+        ref_ans_T = self.store.ref_Sri.T.copy()
         args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
                          else ref_Pr.T.copy(),
                  'T_arr' : T

@@ -52,6 +52,30 @@ class SubTest(TestClass):
         #import gas in cantera for testing
         gas = self.store.gas
 
+        #test fwd / rev maps, nu, species etc.
+        assert result['fwd']['num'] == gas.n_reactions
+        assert np.array_equal(result['fwd']['map'], np.arange(gas.n_reactions))
+        rev_inds = [i for i in range(gas.n_reactions) if gas.is_reversible(i)]
+        assert np.array_equal(result['rev']['map'], rev_inds)
+        assert result['rev']['num'] == len(rev_inds)
+        fwd_specs = []
+        fwd_nu = []
+        rev_specs = []
+        rev_nu = []
+        for i, reac in enumerate(gas.reactions()):
+            for spec, nu in sorted(reac.reactants.items(), key=lambda x: gas.species_index(x[0])):
+                fwd_specs.append(gas.species_index(spec))
+                fwd_nu.append(nu)
+            assert result['fwd']['num_spec'][i] == len(reac.reactants)
+            for spec, nu in sorted(reac.products.items(), key=lambda x: gas.species_index(x[0])):
+                rev_specs.append(gas.species_index(spec))
+                rev_nu.append(nu)
+            assert result['rev']['num_spec'][i] == len(reac.products)
+        assert np.allclose(fwd_specs, result['fwd']['specs'])
+        assert np.allclose(fwd_nu, result['fwd']['nu'])
+        assert np.allclose(rev_specs, result['rev']['specs'])
+        assert np.allclose(rev_nu, result['rev']['nu'])
+
         def __get_rate(reac, fall=False):
             try:
                 Ea = reac.rate.activation_energy

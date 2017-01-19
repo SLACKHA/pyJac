@@ -316,6 +316,44 @@ def assign_rates(reacs, specs, rate_spec):
     hybrid = rate_spec == lp_utils.RateSpecialization.hybrid
     fixed = rate_spec == lp_utils.RateSpecialization.fixed
 
+    #find fwd / reverse rate parameters
+    #first, the number of each
+    rev_map = [i for i, x in enumerate(reacs) if x.rev]
+    num_rev = len(rev_map)
+    #next, find the species / nu values
+    fwd_spec = []
+    fwd_num_spec = []
+    fwd_nu = []
+    rev_spec = []
+    rev_num_spec = []
+    rev_nu = []
+    fwd_allnu_integer = True
+    rev_allnu_integer = True
+    for rxn in reacs:
+        #fwd
+        fwd_spec.extend(rxn.reac[:])
+        fwd_num_spec.append(len(rxn.reac))
+        fwd_nu.extend(rxn.reac_nu[:])
+        #and rev
+        rev_spec.extend(rxn.prod[:])
+        rev_num_spec.append(len(rxn.prod))
+        rev_nu.extend(rxn.prod_nu[:])
+    #create numpy versions
+    fwd_spec = np.array(fwd_spec, dtype=np.int32)
+    fwd_num_spec = np.array(fwd_num_spec, dtype=np.int32)
+    if any(not utils.is_integer(nu) for nu in fwd_nu):
+        fwd_nu = np.array(fwd_nu)
+        fwd_allnu_integer = False
+    else:
+        fwd_nu = np.array(fwd_nu, dtype=np.int32)
+    rev_spec = np.array(rev_spec, dtype=np.int32)
+    rev_num_spec = np.array(rev_num_spec, dtype=np.int32)
+    if any(not utils.is_integer(nu) for nu in rev_nu):
+        rev_nu = np.array(rev_nu)
+        fwd_allnu_integer = False
+    else:
+        rev_nu = np.array(rev_nu, dtype=np.int32)
+
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset
         rate = [(i, x) for i, x in enumerate(reacs) if any(x.match(y) for y in matchers)]
@@ -501,6 +539,12 @@ def assign_rates(reacs, specs, rate_spec):
             'thd' : {'map' : thd_map, 'num' : num_thd,
                 'type' : thd_type, 'spec_num' : thd_spec_num,
                 'spec' : thd_spec, 'eff' : thd_eff},
+            'fwd' : {'map' : np.arange(len(reacs)), 'num' : len(reacs),
+                'num_spec' :  fwd_num_spec, 'specs' : fwd_spec,
+                'nu' : fwd_nu, 'allint' : fwd_allnu_integer},
+            'rev' : {'map' : rev_map, 'num' : num_rev,
+                'num_spec' :  rev_num_spec, 'specs' : rev_spec,
+                'nu' : rev_nu, 'allint' : rev_allnu_integer},
             'Nr' : len(reacs),
             'Ns' : len(specs)}
 

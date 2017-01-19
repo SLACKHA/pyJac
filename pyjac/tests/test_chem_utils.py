@@ -85,6 +85,14 @@ class SubTest(TestClass):
         self.__subtest(T, ref_ans, ref_ans_T, 'U[k]',
             'u', self.store.conv_eqs)
 
+    @attr('long')
+    def test_b(self):
+        T, ref_ans, ref_ans_T = self.__populate(lambda j, i, T: self.store.gas.species(
+            j).thermo.s(T[i]) / ct.gas_constant - self.store.gas.species(
+            j).thermo.h(T[i]) / (ct.gas_constant * T[i]) - np.log(T[i]))
+        self.__subtest(T, ref_ans, ref_ans_T, 'B[k]',
+            'b', self.store.conp_eqs)
+
     def test_write_chem_utils(self):
         script_dir = os.path.abspath(os.path.dirname(__file__))
         build_dir = os.path.join(script_dir, 'out')

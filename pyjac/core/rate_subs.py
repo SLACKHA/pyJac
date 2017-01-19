@@ -2341,7 +2341,7 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     code = []
     for varname, nicename in [('{C_p}[k]', 'cp'),
         ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
-        ('U[k]', 'u')]:
+        ('U[k]', 'u'), ('B[k]', 'b')]:
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
         kernels.append(polyfit_kernel_gen(varname, nicename,
             eq, specs, opts))

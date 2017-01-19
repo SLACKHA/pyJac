@@ -17,6 +17,7 @@ import re
 import logging
 from string import Template
 import textwrap
+from collections import OrderedDict
 
 # Non-standard librarys
 import sympy as sp
@@ -789,10 +790,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
 
     #get tilde{T}, tilde{P}
     T_red = next(x for x in conp_eqs if str(x) == 'tilde{T}')
-    #print conp_eqs[T_red]
-
     P_red = next(x for x in conp_eqs if str(x) == 'tilde{P}')
-    #print conp_eqs[P_red]
 
     Pred_eqn = sp_utils.sanitize(conp_eqs[P_red], subs={sp.log(sp.Symbol('P_{min}')) : Pmin,
                                                sp.log(sp.Symbol('P_{max}')) : Pmax,
@@ -1287,6 +1285,196 @@ ${Pr_str} = ${Pr_eq} {dep=k*}
                      kernel_data=kernel_data,
                      indicies=np.array(range(rate_info['fall']['num']), dtype=np.int32),
                      maps=map_instructs)]
+
+def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the Troe
+    falloff evaluation kernel
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+
+    """
+
+    #set of equations is irrelevant for non-derivatives
+    conp_eqs = eqs['conp']
+
+    #rate info and reac ind
+    reac_ind = 'i'
+    kernel_data = []
+
+    #add the troe map
+    #add sri map
+    out_map = {}
+    outmap_name = 'out_map'
+    indicies = np.array(rate_info['fall']['troe']['map'], dtype=np.int32)
+    indicies = __handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
+                                force_zero=True)
+
+    #create the Pr loopy array / string
+    Pr_lp, Pr_str, map_result = lp_utils.get_loopy_arg('Pr',
+                            indicies=['${reac_ind}', 'j'],
+                            dimensions=[rate_info['fall']['num'], test_size],
+                            order=loopy_opt.order,
+                            map_name=out_map)
+
+    #create Fi loopy array / string
+    Fi_lp, Fi_str, map_result = lp_utils.get_loopy_arg('Fi',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['num'], test_size],
+                        order=loopy_opt.order,
+                        map_name=out_map)
+
+    #add to the kernel maps
+    maps = []
+    if '${reac_ind}' in map_result:
+        maps.append(map_result['${reac_ind}'])
+
+    #create the Fcent loopy array / str
+    Fcent_lp, Fcent_str, _ = lp_utils.get_loopy_arg('Fcent',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['troe']['num'], test_size],
+                        order=loopy_opt.order)
+
+    #create the Atroe loopy array / str
+    Atroe_lp, Atroe_str, _ = lp_utils.get_loopy_arg('Atroe',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['troe']['num'], test_size],
+                        order=loopy_opt.order)
+
+    #create the Fcent loopy array / str
+    Btroe_lp, Btroe_str, _ = lp_utils.get_loopy_arg('Btroe',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['troe']['num'], test_size],
+                        order=loopy_opt.order)
+
+    #create the temperature array
+    T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
+
+    #update the kernel_data
+    kernel_data.extend([Pr_lp, T_lp, Fi_lp, Fcent_lp, Atroe_lp, Btroe_lp])
+
+    #find the falloff form equations
+    Fi_sym = next(x for x in conp_eqs if str(x) == 'F_{i}')
+    keys = conp_eqs[Fi_sym]
+    Fi = {}
+    for key in keys:
+        fall_form = next(x for x in key if isinstance(x, falloff_form))
+        Fi[fall_form] = conp_eqs[Fi_sym][key]
+
+    #get troe syms / eqs
+    Fcent = next(x for x in Fi[falloff_form.troe].free_symbols if str(x) == 'F_{cent}')
+    Atroe = next(x for x in Fi[falloff_form.troe].free_symbols if str(x) == 'A_{Troe}')
+    Btroe = next(x for x in Fi[falloff_form.troe].free_symbols if str(x) == 'B_{Troe}')
+    Fcent_eq, Atroe_eq, Btroe_eq = conp_eqs[Fcent], conp_eqs[Atroe], conp_eqs[Btroe]
+
+    #get troe params and create arrays
+    troe_a, troe_T3, troe_T1, troe_T2 = rate_info['fall']['troe']['a'], \
+         rate_info['fall']['troe']['T3'], \
+         rate_info['fall']['troe']['T1'], \
+         rate_info['fall']['troe']['T2']
+    troe_a_lp, troe_a_str = __1Dcreator('troe_a', troe_a, scope=scopes.GLOBAL)
+    troe_T3_lp, troe_T3_str = __1Dcreator('troe_T3', troe_T3, scope=scopes.GLOBAL)
+    troe_T1_lp, troe_T1_str = __1Dcreator('troe_T1', troe_T1, scope=scopes.GLOBAL)
+    troe_T2_lp, troe_T2_str = __1Dcreator('troe_T2', troe_T2, scope=scopes.GLOBAL)
+    #update the kernel_data
+    kernel_data.extend([troe_a_lp, troe_T3_lp, troe_T1_lp, troe_T2_lp])
+    #sub into eqs
+    Fcent_eq = sp_utils.sanitize(Fcent_eq, subs={
+            'a' : troe_a_str,
+            'T^{*}' : troe_T1_str,
+            'T^{***}' : troe_T3_str,
+            'T^{**}' : troe_T2_str,
+        })
+
+    #now separate into optional / base parts
+    Fcent_base_eq = sp.Add(*[x for x in sp.Add.make_args(Fcent_eq) if not sp.Symbol(troe_T2_str) in x.free_symbols])
+    Fcent_opt_eq = Fcent_eq - Fcent_base_eq
+
+    #develop the Atroe / Btroe eqs
+    Atroe_eq = sp_utils.sanitize(Atroe_eq, subs=OrderedDict([
+            ('F_{cent}', Fcent_str),
+            ('P_{r, i}', Pr_str),
+            (sp.log(sp.Symbol(Pr_str), 10), 'logPr'),
+            (sp.log(sp.Symbol(Fcent_str), 10), sp.Symbol('logFcent'))
+        ]))
+
+    Btroe_eq = sp_utils.sanitize(Btroe_eq, subs=OrderedDict([
+            ('F_{cent}', Fcent_str),
+            ('P_{r, i}', Pr_str),
+            (sp.log(sp.Symbol(Pr_str), 10), 'logPr'),
+            (sp.log(sp.Symbol(Fcent_str), 10), sp.Symbol('logFcent'))
+        ]))
+
+    Fcent_temp_str = 'Fcent_temp'
+    #finally, work on the Fi form
+    Fi_eq = sp_utils.sanitize(Fi[falloff_form.troe], subs=OrderedDict([
+            ('F_{cent}', Fcent_temp_str),
+            ('A_{Troe}', Atroe_str),
+            ('B_{Troe}', Btroe_str)
+        ]))
+
+    #separate into Fcent and power
+    Fi_base_eq = next(x for x in Fi_eq.args if str(x) == Fcent_temp_str)
+    Fi_pow_eq = next(x for x in Fi_eq.args if str(x) != Fcent_temp_str)
+    Fi_pow_eq = sp_utils.sanitize(Fi_pow_eq, subs=OrderedDict([
+            (sp.Pow(sp.Symbol(Atroe_str), 2), sp.Symbol('Atroe_squared')),
+            (sp.Pow(sp.Symbol(Btroe_str), 2), sp.Symbol('Btroe_squared'))
+        ]))
+
+    #make the instructions
+    troe_instructions = Template(
+    """
+    <>T = T_arr[j]
+    <>${Fcent_temp} = ${Fcent_base_eq} {id=Fcent_decl} #this must be a temporary to avoid a race on future assignments
+    if ${troe_T2_str} != 0
+        ${Fcent_temp} = ${Fcent_temp} + ${Fcent_opt_eq} {id=Fcent_decl2, dep=Fcent_decl}
+    end
+    ${Fcent_str} = ${Fcent_temp} {dep=Fcent_decl*}
+    <>logFcent = log10(${Fcent_temp}) {dep=Fcent_decl*}
+    <>logPr = log10(${Pr_str}) {id=Pr_decl}
+    <>Atroe_temp = ${Atroe_eq} {dep=Fcent_decl*:Pr_decl}
+    <>Btroe_temp = ${Btroe_eq} {dep=Fcent_decl*:Pr_decl}
+    ${Atroe_str} = Atroe_temp #this must be a temporary to avoid a race on future assignments
+    ${Btroe_str} = Btroe_temp #this must be a temporary to avoid a race on future assignments
+    <>Atroe_squared = Atroe_temp * Atroe_temp
+    <>Btroe_squared = Btroe_temp * Btroe_temp
+    ${Fi_str} = ${Fi_base_eq}**(${Fi_pow_eq}) {dep=Fcent_decl*:Pr_decl}
+    """
+    ).safe_substitute(Fcent_temp=Fcent_temp_str,
+                     Fcent_str=Fcent_str,
+                     Fcent_base_eq=Fcent_base_eq,
+                     Fcent_opt_eq=Fcent_opt_eq,
+                     troe_T2_str=troe_T2_str,
+                     Pr_str=Pr_str,
+                     Atroe_eq=Atroe_eq,
+                     Btroe_eq=Btroe_eq,
+                     Atroe_str=Atroe_str,
+                     Btroe_str=Btroe_str,
+                     Fi_str=Fi_str,
+                     Fi_base_eq=Fi_base_eq,
+                     Fi_pow_eq=Fi_pow_eq)
+    troe_instructions = Template(troe_instructions).safe_substitute(reac_ind=reac_ind)
+
+    return [rateconst_info('fall_troe',
+                     instructions=troe_instructions,
+                     reac_ind=reac_ind,
+                     kernel_data=kernel_data,
+                     indicies=indicies,
+                     maps=maps)]
 
 
 def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):

@@ -55,12 +55,17 @@ class storage(object):
             if isinstance(x, ct.FalloffReaction)])
         self.sri_inds = np.array([i for i, x in enumerate(gas.reactions())
             if i in self.fall_inds and isinstance(x.falloff, ct.SriFalloff)])
+        self.troe_inds = np.array([i for i, x in enumerate(gas.reactions())
+            if i in self.fall_inds and isinstance(x.falloff, ct.TroeFalloff)])
+        troe_to_pr_map = np.array([np.where(self.fall_inds == j)[0][0] for j in self.troe_inds])
         sri_to_pr_map = np.array([np.where(self.fall_inds == j)[0][0] for j in self.sri_inds])
         self.ref_Pr = np.zeros((self.fall_inds.size, test_size))
         self.ref_Sri = np.zeros((self.sri_inds.size, test_size))
+        self.ref_Troe = np.zeros((self.troe_inds.size, test_size))
         #and the corresponding reactions
         fall_reacs = [gas.reaction(j) for j in self.fall_inds]
         sri_reacs = [gas.reaction(j) for j in self.sri_inds]
+        troe_reacs = [gas.reaction(j) for j in self.troe_inds]
 
         #convenience method for reduced pressure evaluation
         arrhen_temp = np.zeros(self.fall_inds.size)
@@ -82,6 +87,8 @@ class storage(object):
             self.ref_Pr[:, i] = self.ref_thd[thd_to_fall_map, i] * arrhen_temp
             for j in range(self.sri_inds.size):
                 self.ref_Sri[j, i] = sri_reacs[j].falloff(self.T[i], self.ref_Pr[sri_to_pr_map[j], i])
+            for j in range(self.troe_inds.size):
+                self.ref_Troe[j, i] = troe_reacs[j].falloff(self.T[i], self.ref_Pr[troe_to_pr_map[j], i])
 
 
 class TestClass(unittest.TestCase):

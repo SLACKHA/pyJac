@@ -9,7 +9,7 @@ logging.getLogger('root').setLevel(logging.WARNING)
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
-    get_reduced_pressure_kernel, get_sri_kernel)
+    get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate)
 from ..utils import create_dir
@@ -469,9 +469,28 @@ class SubTest(TestClass):
                }
 
         #get SRI reaction mask
-        sri_mask = np.where(self.store.sri_inds == self.store.fall_inds)[0][0]
+        sri_mask = np.where(np.in1d(self.store.fall_inds, self.store.sri_inds))[0]
         mask = {'out_mask' : 0,
                 'mask' : sri_mask}
 
         self.__generic_rate_tester(get_sri_kernel, ref_ans, ref_ans_T, args,
+            mask=mask)
+
+    @attr('long')
+    def test_troe_falloff(self):
+        T = self.store.T
+        ref_Pr = self.store.ref_Pr.copy()
+        ref_ans = self.store.ref_Troe.copy().squeeze()
+        ref_ans_T = self.store.ref_Troe.T.copy().squeeze()
+        args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
+                         else ref_Pr.T.copy(),
+                 'T_arr' : T
+               }
+
+        #get Troe reaction mask
+        troe_mask = np.where(np.in1d(self.store.fall_inds, self.store.troe_inds))[0]
+        mask = {'out_mask' : 0,
+                'mask' : troe_mask}
+
+        self.__generic_rate_tester(get_troe_kernel, ref_ans, ref_ans_T, args,
             mask=mask)

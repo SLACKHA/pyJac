@@ -63,6 +63,9 @@ class SubTest(TestClass):
         rev_specs = []
         rev_nu = []
         nu_sum = []
+        net_nu = []
+        net_specs = []
+        net_num_specs = []
         for i, reac in enumerate(gas.reactions()):
             temp_nu_sum = defaultdict(lambda: 0)
             for spec, nu in sorted(reac.reactants.items(), key=lambda x: gas.species_index(x[0])):
@@ -75,12 +78,20 @@ class SubTest(TestClass):
                 rev_nu.append(nu)
                 temp_nu_sum[spec] += nu
             assert result['rev']['num_spec'][i] == len(reac.products)
-            nu_sum.append(sum(temp_nu_sum.values()))
+            temp_specs, temp_nu_sum = zip(*[(gas.species_index(x[0]), x[1]) for x in
+                sorted(temp_nu_sum.items(), key=lambda x: gas.species_index(x[0]))])
+            net_specs.extend(temp_specs)
+            net_num_specs.append(len(temp_specs))
+            net_nu.extend(temp_nu_sum)
+            nu_sum.append(sum(temp_nu_sum))
         assert np.allclose(fwd_specs, result['fwd']['specs'])
         assert np.allclose(fwd_nu, result['fwd']['nu'])
         assert np.allclose(rev_specs, result['rev']['specs'])
         assert np.allclose(rev_nu, result['rev']['nu'])
-        assert np.allclose(nu_sum, result['rev']['nu_sum'])
+        assert np.allclose(nu_sum, result['net']['nu_sum'])
+        assert np.allclose(net_nu, result['net']['nu'])
+        assert np.allclose(net_num_specs, result['net']['num_spec'])
+        assert np.allclose(net_specs, result['net']['specs'])
 
         def __get_rate(reac, fall=False):
             try:

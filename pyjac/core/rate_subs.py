@@ -328,6 +328,9 @@ def assign_rates(reacs, specs, rate_spec):
     rev_num_spec = []
     rev_nu = []
     nu_sum = []
+    net_num_spec = []
+    net_nu = []
+    net_spec = []
     fwd_allnu_integer = True
     rev_allnu_integer = True
     for rxn in reacs:
@@ -339,9 +342,14 @@ def assign_rates(reacs, specs, rate_spec):
         rev_spec.extend(rxn.prod[:])
         rev_num_spec.append(len(rxn.prod))
         rev_nu.extend(rxn.prod_nu[:])
+        #finally, net values
+        spec = list(sorted(set(rxn.reac + rxn.prod)))
+        net_spec.extend(spec)
+        net_num_spec.append(len(spec))
+        nu = [utils.get_nu(isp, rxn) for isp in spec]
+        net_nu.extend(nu)
         #and nu sum for equilibrium constants
-        nu_sum.append(sum(utils.get_nu(isp, rxn) for isp
-            in set(rxn.reac + rxn.prod)))
+        nu_sum.append(sum(nu))
 
     #create numpy versions
     fwd_spec = np.array(fwd_spec, dtype=np.int32)
@@ -554,8 +562,9 @@ def assign_rates(reacs, specs, rate_spec):
                 'nu' : fwd_nu, 'allint' : fwd_allnu_integer},
             'rev' : {'map' : rev_map, 'num' : num_rev,
                 'num_spec' :  rev_num_spec, 'specs' : rev_spec,
-                'nu' : rev_nu, 'allint' : rev_allnu_integer,
-                'nu_sum' : nu_sum},
+                'nu' : rev_nu, 'allint' : rev_allnu_integer},
+            'net' : {'num_spec' : net_num_spec, 'nu_sum' : nu_sum,
+                'nu' : net_nu, 'specs' : net_spec},
             'Nr' : len(reacs),
             'Ns' : len(specs)}
 
@@ -2106,13 +2115,22 @@ def rate_const_kernel_gen(eqs, reacs, specs,
         rate_info, test_size=test_size)
 
     #check for plog
-    if any(r.plog for r in reacs):
+    if rate_info['plog']['num']:
         #generate the plog kernel
         kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opt,
             rate_info, test_size=test_size)
 
-    if any(r.cheb for r in reacs):
+    if rate_info['cheb']['num']:
         kernels['plog'] = get_cheb_arrhenius_rates(eqs, loopy_opt,
+            rate_info, test_size=test_size)
+
+    #check for falloff
+    if rate_info['fall']['num']:
+        if rate_info['fall']['troe']['num']:
+            kernels['troe'] = get_troe_kernel(eqs, loopy_opt,
+            rate_info, test_size=test_size)
+        if rate_info['fall']['sri']['num']:
+            kernels['sri'] = get_troe_kernel(eqs, loopy_opt,
             rate_info, test_size=test_size)
 
 

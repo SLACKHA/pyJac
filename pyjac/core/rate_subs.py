@@ -318,7 +318,7 @@ def assign_rates(reacs, specs, rate_spec):
 
     #find fwd / reverse rate parameters
     #first, the number of each
-    rev_map = [i for i, x in enumerate(reacs) if x.rev]
+    rev_map = np.array([i for i, x in enumerate(reacs) if x.rev], dtype=np.int32)
     num_rev = len(rev_map)
     #next, find the species / nu values
     fwd_spec = []
@@ -369,8 +369,12 @@ def assign_rates(reacs, specs, rate_spec):
 
     if fwd_allnu_integer and rev_allnu_integer:
         nu_sum = np.array(nu_sum, dtype=np.int32)
+        net_nu = np.array(net_nu, dtype=np.int32)
     else:
         nu_sum = np.array(nu_sum)
+        net_nu = np.array(net_nu)
+    net_num_spec = np.array(net_num_spec, dtype=np.int32)
+    net_spec = np.array(net_spec, dtype=np.int32)
 
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset
@@ -564,7 +568,8 @@ def assign_rates(reacs, specs, rate_spec):
                 'num_spec' :  rev_num_spec, 'specs' : rev_spec,
                 'nu' : rev_nu, 'allint' : rev_allnu_integer},
             'net' : {'num_spec' : net_num_spec, 'nu_sum' : nu_sum,
-                'nu' : net_nu, 'specs' : net_spec},
+                'nu' : net_nu, 'specs' : net_spec,
+                'allint' : rev_allnu_integer and fwd_allnu_integer},
             'Nr' : len(reacs),
             'Ns' : len(specs)}
 

@@ -36,7 +36,7 @@ from . import mech_auxiliary as aux
 from . import shared_memory as shared
 from . import file_writers as filew
 from ..sympy import sympy_utils as sp_utils
-from . reaction_types import reaction_type, falloff_form, thd_body_type
+from . reaction_types import reaction_type, falloff_form, thd_body_type, reversible_type
 
 
 def rxn_rate_const(A, b, E):
@@ -661,6 +661,211 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
                                   scope=scope, dtype=numpy_arg.dtype, read_only=True)
     arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
+
+
+def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for reverse reaction rates
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+    """
+    #start developing the Kc kernel
+    #rate info and reac ind
+    reac_ind = 'i'
+    kernel_data = []
+
+    #set of eqn's doesn't matter
+    conp_eqs = eqs['conp']
+
+    #add the reverse map
+    maps = []
+    rev_map = {}
+    indicies = __handle_indicies(rate_info['rev']['map'], '${reac_ind}', rev_map, kernel_data)
+
+    #find Kc equation
+    Kc_sym = next(x for x in conp_eqs if str(x) == '{K_c}[i]')
+    Kc_eqn = conp_eqs[Kc_sym]
+    nu_sym = next(x for x in Kc_eqn.free_symbols if str(x) == 'nu[k, i]')
+    B_sym  = next(x for x in Kc_eqn.free_symbols if str(x) == 'B[k]')
+    kr_sym = next(x for x in conp_eqs if str(x) == '{k_r}[i]')
+    kf_sym = next(x for x in conp_eqs if str(x) == '{k_f}[i]')
+
+    #create nu_sum
+    nu_sum_lp, nu_sum_str, map_result = lp_utils.get_loopy_arg('nu_sum',
+                                                   ['${reac_ind}'],
+                                                   dimensions=rate_info['net']['nu_sum'].shape,
+                                                   order=loopy_opt.order,
+                                                   initializer=rate_info['net']['nu_sum'],
+                                                   dtype=rate_info['net']['nu_sum'].dtype,
+                                                   map_name=rev_map)
+    if '${reac_ind}' in map_result:
+        maps.append(map_result['${reac_ind}'])
+    #all species in reaction
+    spec_lp, spec_str = __1Dcreator('allspec_in_reac', rate_info['net']['specs'],
+                                            '${spec_map}', scope=scopes.GLOBAL)
+    #total # species in reaction
+    num_spec_lp, num_spec_str, map_result = lp_utils.get_loopy_arg('total_spec_per_reac',
+                                                   ['${reac_ind}'],
+                                                   dimensions=rate_info['net']['num_spec'].shape,
+                                                   order=loopy_opt.order,
+                                                   initializer=rate_info['net']['num_spec'],
+                                                   dtype=rate_info['net']['num_spec'].dtype,
+                                                   map_name=rev_map)
+    #species offsets
+    net_spec_offsets = np.cumsum(rate_info['net']['num_spec']) - rate_info['net']['num_spec']
+    num_spec_offsets_lp, num_spec_offsets_str, map_result = lp_utils.get_loopy_arg('total_spec_per_reac_offset',
+                                                   ['${reac_ind}'],
+                                                   dimensions=net_spec_offsets.shape,
+                                                   order=loopy_opt.order,
+                                                   initializer=net_spec_offsets,
+                                                   dtype=net_spec_offsets.dtype,
+                                                   map_name=rev_map)
+    #B array
+    B_lp, B_str, _ = lp_utils.get_loopy_arg('B',
+                                            ['${spec_ind}', 'j'],
+                                            dimensions=(rate_info['Ns'], test_size),
+                                            order=loopy_opt.order)
+    net_nu_lp, net_nu_str, _ = lp_utils.get_loopy_arg('net_nu',
+                                            ['${spec_map}'],
+                                            dimensions=rate_info['net']['nu'].shape,
+                                            initializer=rate_info['net']['nu'],
+                                            dtype=rate_info['net']['nu'].dtype,
+                                            order=loopy_opt.order)
+
+    #and the Kc array
+    Kc_lp, Kc_str, _ = lp_utils.get_loopy_arg('Kc',
+                                              ['${reac_ind}', 'j'],
+                                              dimensions=(rate_info['rev']['num'], test_size),
+                                              order=loopy_opt.order)
+
+    #modify Kc equation
+    Kc_eqn = sp_utils.sanitize(conp_eqs[Kc_sym],
+                              symlist={'nu[k, i]' : nu_sym,
+                                       'B[k]' : B_sym},
+                              subs={sp.Sum(nu_sym, (sp.Idx('k'), 1, sp.Symbol('N_s'))) : nu_sum_str})
+    Kc_eqn_Pres = next(x for x in sp.Mul.make_args(Kc_eqn) if x.has(sp.Symbol('R_u')))
+    Kc_eqn_exp = Kc_eqn / Kc_eqn_Pres
+    Kc_eqn_exp = sp_utils.sanitize(Kc_eqn_exp,
+                                   symlist={'nu[k, i]' : nu_sym,
+                                            'B[k]' : B_sym},
+                                   subs={sp.Sum(B_sym * nu_sym, (sp.Idx('k'), 1, sp.Symbol('N_s'))) : 'B_sum'})
+
+    #create the kf array / str
+    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
+                    indicies=['${reac_ind}', 'j'],
+                    dimensions=[rate_info['Nr'], test_size],
+                    order=loopy_opt.order,
+                    map_name=rev_map)
+
+    #create the kr array / str
+    kr_arr, kr_str, _ = lp_utils.get_loopy_arg('kr',
+                    indicies=['${reac_ind}', 'j'],
+                    dimensions=[rate_info['rev']['num'], test_size],
+                    order=loopy_opt.order)
+
+    #get the kr eqn
+    Kc_temp_str = 'Kc_temp'
+    #for some reason this substitution is poorly behaved
+    #hence we just do this rather than deriving from sympy for the moment
+    kr_eqn = sp.Symbol(kf_str) / sp.Symbol(Kc_temp_str)
+    #kr_eqn = sp_utils.sanitize(conp_eqs[kr_sym][(reversible_type.non_explicit,)],
+    #                           symlist={'{k_f}[i]' : sp.Symbol('kf[i]'),
+    #                                    '{K_c}[i]' : sp.Symbol('Kc[i]')},
+    #                           subs={'kf[i]' : kf_str,
+    #                                'Kc[i]' : Kc_temp_str})
+
+    #update kernel data
+    kernel_data.extend([nu_sum_lp, spec_lp, num_spec_lp, num_spec_offsets_lp,
+        B_lp, Kc_lp, net_nu_lp, kf_arr, kr_arr])
+
+    #create the pressure product loop
+    pressure_prod = Template(
+    """<> P_sum_end = abs(${nu_sum}) {id=P_bound}
+    <> P_sum = 1.0d {id=P_init}
+    if ${nu_sum} > 0
+        <> P_val = P_a / R_u {id=P_val_decl}
+    else
+        P_val = R_u / P_a {id=P_val_decl1}
+    end
+    for P_sum_ind
+        P_sum = P_sum * P_val {id=P_accum, dep=P_val_decl:P_val_decl1:P_bound:P_init}
+    end
+    #P_sum = pown(P_val, P_sum_end)
+    """).safe_substitute(nu_sum=nu_sum_str)
+
+    if not rate_info['net']['allint']:
+        #if not all integers, need to add outer if statment to check integer status
+        pressure_prod = Template("""
+    if int(${nu_sum}) == ${nu_sum}
+    ${pprod}
+    else
+        P_sum = (P_a / R_u)**(${nu_sum}) {id=P_accum}
+    end""").safe_substitute(nu_sum=nu_sum_str,
+                            pprod='\n'.join('    ' + line for line in
+                                           pressure_prod.split('\n') if line))
+
+    #and the b sum loop
+    Bsum_inst = Template(
+    """<>num_spec = ${num_spec} {id=B_bound}
+    <>offset = ${spec_offset} {id=offset}
+    <>B_sum = 0 {id=B_init}
+    for spec_count
+        <>spec = ${spec_mapper} {dep=offset:B_bound}
+        if ${net_nu} != 0
+            B_sum = B_sum + ${net_nu} * ${B_val} {id=B_accum, dep=B_init}
+        end
+    end
+    B_sum = exp(B_sum) {id=B_final, dep=B_accum}""").safe_substitute(num_spec=num_spec_str,
+                        spec_offset=num_spec_offsets_str,
+                        spec_mapper=spec_str,
+                        nu_val=nu_sum_str,
+                        net_nu=net_nu_str,
+                        B_val=B_str
+                        )
+    Bsum_inst = Template(Bsum_inst).safe_substitute(
+        spec_map='offset + spec_count',
+        spec_ind='spec')
+
+    Rate_assign = Template(
+"""<>${Kc_temp_str} = P_sum * B_sum {dep=P_accum:B_final}
+${Kc_val} = ${Kc_temp_str}
+${kr_val} = ${rev_eqn}
+""").safe_substitute(Kc_val=Kc_str,
+                     Kc_temp_str=Kc_temp_str,
+                     kr_val=kr_str,
+                     rev_eqn=kr_eqn)
+
+    instructions = '\n'.join([Bsum_inst, pressure_prod, Rate_assign])
+    instructions = Template(instructions).safe_substitute(reac_ind=reac_ind)
+
+    #create the extra inames
+    extra_inames = [('P_sum_ind', '0 <= P_sum_ind < {}'.format('P_sum_end')),
+                    ('spec_count', '0 <= spec_count < {}'.format('num_spec'))]
+
+
+    #and return the rateinfo
+    return rateconst_info(name='Kc',
+                   instructions=instructions,
+                   reac_ind=reac_ind,
+                   kernel_data=kernel_data,
+                   maps=maps,
+                   extra_inames=extra_inames,
+                   indicies=indicies,
+                   parameters={'P_a' : np.float64(chem.PA), 'R_u' : np.float64(chem.RU)})
 
 def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for third body concentrations

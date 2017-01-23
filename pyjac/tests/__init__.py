@@ -51,7 +51,10 @@ class storage(object):
         thd_eff_maps = np.array(thd_eff_maps)
 
         #various indicies and mappings
-        self.rev_inds = np.array([i for i in range(gas.reactions()) if gas.is_reversible(i)])
+        self.rev_inds = np.array([i for i in range(gas.n_reactions) if gas.is_reversible(i)])
+        self.rev_rate_constants = np.zeros((self.rev_inds.size, test_size))
+        self.equilibrium_constants = np.zeros((self.rev_inds.size, test_size))
+
         self.fall_inds = np.array([i for i, x in enumerate(gas.reactions())
             if isinstance(x, ct.FalloffReaction)])
         self.sri_inds = np.array([i for i, x in enumerate(gas.reactions())
@@ -63,6 +66,7 @@ class storage(object):
         self.ref_Pr = np.zeros((self.fall_inds.size, test_size))
         self.ref_Sri = np.zeros((self.sri_inds.size, test_size))
         self.ref_Troe = np.zeros((self.troe_inds.size, test_size))
+        self.ref_B_rev = np.zeros((gas.n_species, test_size))
         #and the corresponding reactions
         fall_reacs = [gas.reaction(j) for j in self.fall_inds]
         sri_reacs = [gas.reaction(j) for j in self.sri_inds]
@@ -92,6 +96,9 @@ class storage(object):
                 self.ref_Sri[j, i] = sri_reacs[j].falloff(self.T[i], self.ref_Pr[sri_to_pr_map[j], i])
             for j in range(self.troe_inds.size):
                 self.ref_Troe[j, i] = troe_reacs[j].falloff(self.T[i], self.ref_Pr[troe_to_pr_map[j], i])
+            for j in range(gas.n_species):
+                self.ref_B_rev[j, i] = gas.species(j).thermo.s(self.T[i]) / ct.gas_constant -\
+                    gas.species(j).thermo.h(self.T[i]) / (ct.gas_constant * self.T[i]) - np.log(self.T[i])
 
 
 class TestClass(unittest.TestCase):

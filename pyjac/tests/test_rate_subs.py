@@ -9,7 +9,7 @@ logging.getLogger('root').setLevel(logging.WARNING)
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
-    get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel)
+    get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate)
 from ..utils import create_dir
@@ -305,7 +305,7 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, ref_ans, ref_ans_T, args, mask=None):
+    def __generic_rate_tester(self, func, ref_ans, args):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -313,14 +313,17 @@ class SubTest(TestClass):
         ----------
         func : function
             The function to test
-        ref_ans : :class:`numpy.ndarray`
-            The answer in 'wide' form
-        ref_ans_T : :class:`numpy.ndarray`
-            The answer in 'deep' form
+        ref_ans : list of tuples or a single :class:`numpy.ndarray`
+            Each tuple consists of:
+                * ans: :class:`numpy.ndarray`
+                    The answer in 'F' order
+                * ind: int
+                    The answer index
+                * mask: :class:`numpy.ndarray`
+                    If not none, the compare mask to use in testing
+            If a single array, ind will be set to 0 and mask to None
         args : list of `loopy.KernelArguement`
             The args to pass to the kernel
-        mask : :class:`numpy.ndarray`
-            If not none, the compare mask to use in testing
         """
 
         eqs = {'conp' : self.store.conp_eqs,
@@ -340,6 +343,11 @@ class SubTest(TestClass):
         specs = self.store.specs
 
         target = get_target('opencl')
+
+        if isinstance(ref_ans, np.ndarray):
+            ref_ans = [(ref_ans, 0, None)]
+        if not isinstance(ref_ans, list):
+            ref_ans = [ref_ans]
 
         for i, state in enumerate(oploop):
             if state['width'] is not None and state['depth'] is not None:
@@ -368,7 +376,10 @@ class SubTest(TestClass):
 
                 kernels.append(knl)
 
-            ref = ref_ans if state['order'] == 'F' else ref_ans_T
+            #create a list of answers to check
+            ans, out_inds, compare_mask = zip(
+                        *[(x[0].copy(), x[1], x[2]) if state['order'] == 'F' else
+                        (x[0].T.copy(), x[1], x[2])  for x in ref_ans])
 
             args_copy = args.copy()
             for key in args_copy:
@@ -376,8 +387,9 @@ class SubTest(TestClass):
                     #it's a function
                     args_copy[key] = args_copy[key](state['order'])
 
-            assert auto_run(kernels, ref, device=state['device'],
-                compare_mask=mask,
+            assert auto_run(kernels, ans, device=state['device'],
+                compare_mask=compare_mask,
+                out_mask=out_inds,
                 compare_axis=1 if state['order'] == 'C' else 0,
                 **args_copy), \
                 'Evaluate {} rates failed'.format(func.__name__)
@@ -395,7 +407,6 @@ class SubTest(TestClass):
         T = self.store.T
         P = self.store.P
         ref_const = self.store.fwd_rate_constants
-        ref_const_T = ref_const.T.copy()
 
         reacs = self.store.reacs
         masks = {
@@ -415,8 +426,7 @@ class SubTest(TestClass):
 
         compare_mask, rate_func = masks[rtype]
 
-        self.__generic_rate_tester(rate_func, ref_const, ref_const_T, args,
-            mask=compare_mask)
+        self.__generic_rate_tester(rate_func, (ref_const, 0, compare_mask), args)
 
 
     @attr('long')
@@ -437,19 +447,17 @@ class SubTest(TestClass):
         P = self.store.P
         concs = self.store.concs
         ref_ans = self.store.ref_thd.copy()
-        ref_ans_T = self.store.ref_thd.T.copy()
         args = { 'T_arr' : T,
                  'P_arr' : P,
                  'conc' : lambda x: concs.copy() if x == 'F'
                             else concs.T.copy()}
-        self.__generic_rate_tester(get_thd_body_concs, ref_ans, ref_ans_T, args)
+        self.__generic_rate_tester(get_thd_body_concs, ref_ans, args)
 
     @attr('long')
     def test_reduced_pressure(self):
         T = self.store.T
         ref_thd = self.store.ref_thd.copy()
         ref_ans = self.store.ref_Pr.copy()
-        ref_ans_T = self.store.ref_Pr.T.copy()
         kf_vals = {}
         kf_fall_vals = {}
         args = { 'T_arr' : T,
@@ -479,7 +487,7 @@ class SubTest(TestClass):
                     knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
                     #and add to list
                     knl_list.append(knl)
-                kf_fall_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)
+                kf_fall_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)[0]
 
                 #next with regular parameters
                 infos = get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size)
@@ -491,19 +499,18 @@ class SubTest(TestClass):
                     knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
                     #and add to list
                     knl_list.append(knl)
-                kf_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)
+                kf_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)[0]
 
             #finally we can call the reduced pressure evaluator
             return get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size)
 
-        self.__generic_rate_tester(__tester, ref_ans, ref_ans_T, args)
+        self.__generic_rate_tester(__tester, ref_ans, args)
 
     @attr('long')
     def test_sri_falloff(self):
         T = self.store.T
         ref_Pr = self.store.ref_Pr.copy()
         ref_ans = self.store.ref_Sri.copy()
-        ref_ans_T = self.store.ref_Sri.T.copy()
         args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
                          else ref_Pr.T.copy(),
                  'T_arr' : T
@@ -511,18 +518,14 @@ class SubTest(TestClass):
 
         #get SRI reaction mask
         sri_mask = np.where(np.in1d(self.store.fall_inds, self.store.sri_inds))[0]
-        mask = {'out_mask' : 0,
-                'mask' : sri_mask}
-
-        self.__generic_rate_tester(get_sri_kernel, ref_ans, ref_ans_T, args,
-            mask=mask)
+        import pdb; pdb.set_trace()
+        self.__generic_rate_tester(get_sri_kernel, (ref_ans, 0, sri_mask), args)
 
     @attr('long')
     def test_troe_falloff(self):
         T = self.store.T
         ref_Pr = self.store.ref_Pr.copy()
-        ref_ans = self.store.ref_Troe.copy().squeeze()
-        ref_ans_T = self.store.ref_Troe.T.copy().squeeze()
+        ref_ans = self.store.ref_Troe.copy()
         args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
                          else ref_Pr.T.copy(),
                  'T_arr' : T
@@ -533,5 +536,16 @@ class SubTest(TestClass):
         mask = {'out_mask' : 0,
                 'mask' : troe_mask}
 
-        self.__generic_rate_tester(get_troe_kernel, ref_ans, ref_ans_T, args,
-            mask=mask)
+        self.__generic_rate_tester(get_troe_kernel, (ref_ans, 0, troe_mask), args)
+
+    @attr('long')
+    def test_rev_rates(self):
+        ref_fwd_rates = self.store.fwd_rate_constants.copy()
+        ref_kc = self.store.equilibrium_constants.copy()
+        ref_B = self.store.ref_B_rev.copy()
+        ref_rev = self.store.rev_rate_constants.copy()
+        ref_ans = [(ref_kc, 0, None), (ref_rev, 1, None)]
+        args={'B' : lambda x: ref_B.copy() if x == 'F' else ref_B.T.copy(),
+                'kf' : lambda x: ref_fwd_rates.copy() if x == 'F' else ref_fwd_rates.T.copy()}
+
+        self.__generic_rate_tester(get_rev_rates, ref_ans, args)

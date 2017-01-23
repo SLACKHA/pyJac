@@ -51,6 +51,7 @@ class storage(object):
         thd_eff_maps = np.array(thd_eff_maps)
 
         #various indicies and mappings
+        self.rev_inds = np.array([i for i in range(gas.reactions()) if gas.is_reversible(i)])
         self.fall_inds = np.array([i for i, x in enumerate(gas.reactions())
             if isinstance(x, ct.FalloffReaction)])
         self.sri_inds = np.array([i for i, x in enumerate(gas.reactions())
@@ -81,6 +82,8 @@ class storage(object):
 
             #store various information
             self.fwd_rate_constants[:, i] = gas.forward_rate_constants[:]
+            self.rev_rate_constants[:, i] = gas.reverse_rate_constants[self.rev_inds]
+            self.equilibrium_constants[:, i] = gas.equilibrium_constants[self.rev_inds]
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
             for j in range(self.fall_inds.size):
                 arrhen_temp[j] = pr_eval(i, j)

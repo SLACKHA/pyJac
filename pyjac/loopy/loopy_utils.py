@@ -188,21 +188,28 @@ def populate(knl, device='0', out_mask=None, **input_args):
         end result compared
     device : str
         The pyopencl string denoting the device to use, defaults to '0'
-    out_mask : int
-        The index of the returned array to aggregate
+    out_mask : int or list of int
+        The index(ices) of the returned array to aggregate
     input_args : dict of `numpy.array`s
         The arguements to supply to the kernel
 
     Returns
     -------
-    out_ref : :class:`numpy.ndarray`
-        The value of the evaluated :class:`loopy.LoopKernel`
+    out_ref : list of :class:`numpy.ndarray`
+        The value(s) of the evaluated :class:`loopy.LoopKernel`
     """
 
     #create context
     ctx, queue = get_context(device)
 
-    out_ref = None
+    out_ref = [None]
+    if out_mask is not None:
+        try:
+            out_mask[0]
+        except:
+            out_mask = [out_mask]
+        out_ref = [None for i in out_mask]
+
     for k in knl:
         test_knl = set_editor(k)
         if isinstance(k.target, lp.PyOpenCLTarget):
@@ -214,17 +221,22 @@ def populate(knl, device='0', out_mask=None, **input_args):
             print(k)
             raise e
         if out_mask is not None:
-            out = out[out_mask]
+            try:
+                out = [out[ind] for ind in out_mask]
+            except:
+                import pdb; pdb.set_trace()
         else:
-            out = out[0]
-        if out_ref is None:
-            out_ref = out
+            out = [out[0]]
+        if not any(out_ref):
+            out_ref = out[:]
         else:
-            copy_inds = np.where(np.logical_not(np.isinf(out)))
-            out_ref[copy_inds] = out[copy_inds]
+            for ind in range(len(out)):
+                copy_inds = np.where(np.logical_not(np.isinf(out[ind])))
+                out_ref[ind][copy_inds] = out[ind][copy_inds]
     return out_ref
 
-def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **input_args):
+def auto_run(knl, ref_answer, compare_mask=None,
+        out_mask=None, compare_axis=0, device='0', **input_args):
     """
     This method tests the supplied :class:`loopy.LoopKernel` (or list thereof) against a reference answer
 
@@ -233,14 +245,13 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
     knl : :class:`loopy.LoopKernel` or list of :class:`loopy.LoopKernel`
         The kernel to test, if a list of kernels they will be successively applied and the
         end result compared
-    ref_answer : `numpy.array`
+    ref_answer : :class:`numpy.ndarray` or list thereof
         The numpy array to test against, should be the same shape as the kernel output
-    compare_mask : `numpy.array` or dictionary
+    compare_mask : :class:`numpy.ndarray` or list therof
         A list of indexes to compare, useful when the kernel only computes partial results
-        If a dictionary, the entry 'out_mask' corresponds to the index of
-            the returned array that should be checked and the 'mask' entry corresponds
-            to the results to check
-    compare_axis = int
+    out_mask : int or list of int
+        The indicies of output variables to check
+    compare_axis : int
         An axis to apply the compare_mask along, unused if compare_mask is none
     device : str
         The pyopencl string denoting the device to use, defaults to '0'
@@ -254,24 +265,32 @@ def auto_run(knl, ref_answer, compare_mask=None, compare_axis=0, device='0', **i
     """
 
     #run kernel
+
+    #check lists
     if not isinstance(knl, list):
         knl = [knl]
-
-    out_mask = None
-    if isinstance(compare_mask, dict):
-        out_mask = compare_mask['out_mask']
-        compare_mask = compare_mask['mask']
+    try:
+        compare_mask[0]
+    except:
+        compare_mask = [compare_mask]
+    try:
+        ref_answer[0]
+    except:
+        ref_answer = [ref_answer]
 
     out = populate(knl, device=device, out_mask=out_mask, **input_args)
 
-    if compare_mask is not None:
-        out = np.take(out, compare_mask, compare_axis)
-        if out.shape != ref_answer.shape:
-            #apply the same transformation to the answer
-            return np.allclose(out,
-                np.take(ref_answer, compare_mask, compare_axis))
-    #check against supplied answer
-    return np.allclose(out, ref_answer)
+    allclear = True
+    for i in range(len(out)):
+        if compare_mask[i] is not None:
+            outv = np.take(out[i], compare_mask[i], compare_axis)
+            if outv.shape != ref_answer[i].shape:
+                #apply the same transformation to the answer
+                allclear = allclear and np.allclose(outv,
+                    np.take(ref_answer[i], compare_mask[i], compare_axis))
+        else:
+            allclear = allclear and np.allclose(out[i], ref_answer[i])
+    return allclear
 
 def generate_map_instruction(oldname, newname, map_arr):
     """

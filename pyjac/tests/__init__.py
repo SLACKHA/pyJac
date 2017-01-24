@@ -41,6 +41,7 @@ class storage(object):
                 isinstance(x, ct.ChemicallyActivatedReaction) or
                 isinstance(x, ct.ThreeBodyReaction)])
         self.ref_thd = np.zeros((self.thd_inds.size, test_size))
+        self.ref_pres_mod = np.zeros((self.thd_inds.size, test_size))
         thd_eff_maps = []
         for i in self.thd_inds:
             default = gas.reaction(i).default_efficiency
@@ -66,6 +67,7 @@ class storage(object):
         self.ref_Pr = np.zeros((self.fall_inds.size, test_size))
         self.ref_Sri = np.zeros((self.sri_inds.size, test_size))
         self.ref_Troe = np.zeros((self.troe_inds.size, test_size))
+        self.ref_Fall = np.ones((self.fall_inds.size, test_size))
         self.ref_B_rev = np.zeros((gas.n_species, test_size))
         #and the corresponding reactions
         fall_reacs = [gas.reaction(j) for j in self.fall_inds]
@@ -96,9 +98,27 @@ class storage(object):
                 self.ref_Sri[j, i] = sri_reacs[j].falloff(self.T[i], self.ref_Pr[sri_to_pr_map[j], i])
             for j in range(self.troe_inds.size):
                 self.ref_Troe[j, i] = troe_reacs[j].falloff(self.T[i], self.ref_Pr[troe_to_pr_map[j], i])
+            self.ref_Fall[sri_to_pr_map, i] = self.ref_Sri[:, i]
+            self.ref_Fall[troe_to_pr_map, i] = self.ref_Troe[:, i]
             for j in range(gas.n_species):
                 self.ref_B_rev[j, i] = gas.species(j).thermo.s(self.T[i]) / ct.gas_constant -\
                     gas.species(j).thermo.h(self.T[i]) / (ct.gas_constant * self.T[i]) - np.log(self.T[i])
+
+        #the pressure mod terms depend on the reaction type
+        #for pure third bodies, it's just the third body conc:
+        self.ref_pres_mod[:, :] = self.ref_thd[:, :]
+        #now find the Pr poly
+        Pr_poly = 1. / (1. + self.ref_Pr)
+        #and multiply the falloff (i.e. non-chem activated terms)
+        pure_fall_inds = np.array([i for i, x in enumerate(gas.reactions())
+            if isinstance(x, ct.FalloffReaction) and not isinstance(x, ct.ChemicallyActivatedReaction)])
+        pure_fall_inds = np.where(np.in1d(self.fall_inds, pure_fall_inds))[0]
+        Pr_poly[pure_fall_inds, :] *= self.ref_Pr[pure_fall_inds, :]
+        #finally find the product of the Pr poly and the falloff blending term
+        Fall_pres_mod = Pr_poly * self.ref_Fall
+        #and replace in the pressure mod
+        replace_inds = np.where(np.in1d(self.thd_inds, self.fall_inds))[0]
+        self.ref_pres_mod[replace_inds, :] = Fall_pres_mod[:, :]
 
 
 class TestClass(unittest.TestCase):

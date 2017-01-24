@@ -595,7 +595,7 @@ __PLOG_PREINST_KEY = 'logP'
 
 def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
                         outmap_name='out_map', alternate_indicies=None,
-                        force_zero=False, force_map=False):
+                        force_zero=False, force_map=False, scope=scopes.PRIVATE):
     """Consolidates the commonly used indicies mapping steps
 
     Parameters
@@ -617,6 +617,8 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
             smaller arrays)
     force_map : bool
         If true, forces use of a map
+    scope : :class:`loopy.temp_var_scope`
+        The scope of the temporary variable definition, if necessary
     Returns
     -------
     indicies : :class:`numpy.ndarray` OR tuple of int
@@ -636,7 +638,7 @@ def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
         outmap_lp = lp.TemporaryVariable(outmap_name,
             shape=lp.auto,
             initializer=check.astype(dtype=np.int32),
-            read_only=True, scope=scopes.PRIVATE)
+            read_only=True, scope=scope)
         kernel_data.append(outmap_lp)
 
     return check
@@ -661,6 +663,203 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
                                   scope=scope, dtype=numpy_arg.dtype, read_only=True)
     arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
+
+
+def get_rxn_pres_mod(eqs, loopy_opt, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for pressure modification
+    term of the forward reaction rates.
+    The developed kernels are also responsible for multiplying the forward rate by this term
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opt : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+    """
+
+    #start developing the ci kernel
+    #rate info and reac ind
+    reac_ind = 'i'
+    kernel_data = []
+
+    #set of eqn's doesn't matter
+    conp_eqs = eqs['conp']
+
+    #create the third body conc pres-mod kernel
+
+    #first, we need all third body reactions that are not falloff
+    num_thd = rate_info['thd']['num']
+    non_fall_thd = np.where(np.logical_not(np.in1d(rate_info['thd']['map'],
+                        rate_info['fall']['map'])))[0]
+
+    thd_map = {}
+    thd_maplist = []
+    indicies = __handle_indicies(non_fall_thd, '${reac_ind}', thd_map, kernel_data,
+                        outmap_name='thd_only_ind')
+
+    #next the thd_body_conc's
+    num_thd = rate_info['thd']['num']
+    reac_mapname = '${reac_ind}_map'
+    thd_lp, thd_str, map_instructs = lp_utils.get_loopy_arg('thd_conc',
+                                                indicies=['${reac_ind}', 'j'],
+                                                dimensions=(num_thd, test_size),
+                                                order=loopy_opt.order,
+                                                map_name=thd_map,
+                                                map_result=reac_mapname)
+    #add the map
+    if '${reac_ind}' in map_instructs:
+        thd_maplist.append(map_instructs['${reac_ind}'])
+
+    #and the pressure mod term
+    pres_mod_lp, pres_mod_str, map_instructs = lp_utils.get_loopy_arg('pres_mod',
+                                      ['${reac_ind}', 'j'],
+                                      dimensions=(num_thd, test_size),
+                                      order=loopy_opt.order,
+                                      map_name=thd_map)
+
+    #find the third-body -> all map
+    map_name = 'out_map'
+    out_ind = 'out_ind'
+    out_map = rate_info['thd']['map'][non_fall_thd]
+    out_map, out_map_str = __1Dcreator('out_map', out_map, reac_mapname)
+    thd_maplist.append(lp_utils.generate_map_instruction(
+                                        newname=out_ind,
+                                        map_arr=map_name,
+                                        oldname=reac_mapname))
+
+    #create the kf array / str
+    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
+                    indicies=['${out_ind}', 'j'],
+                    dimensions=[rate_info['Nr'], test_size],
+                    order=loopy_opt.order)
+
+    thd_instructions = Template(
+"""
+<>ci_temp = ${thd_conc} {id=decl}
+${pres_mod} = ci_temp {dep=decl}
+${kf_value} = ${kf_value} * ci_temp {dep=decl}
+
+""").safe_substitute(pres_mod=pres_mod_str,
+                     thd_conc=thd_str,
+                     kf_value=kf_str)
+    thd_instructions = Template(thd_instructions).safe_substitute(reac_ind=reac_ind,
+                     out_ind=out_ind)
+    #and the args
+    kernel_data.extend([thd_lp, pres_mod_lp, kf_arr, out_map])
+
+    #add to the info list
+    info_list = [
+        rateconst_info(name='ci_thd',
+                   instructions=thd_instructions,
+                   reac_ind=reac_ind,
+                   kernel_data=kernel_data,
+                   maps=thd_maplist,
+                   indicies=indicies)]
+
+    #and now the falloff kernel
+    kernel_data = []
+    fall_maplist = []
+    fall_map = {}
+    indicies = __handle_indicies(np.arange(rate_info['fall']['num'], dtype=np.int32),
+                        '${reac_ind}', fall_map, kernel_data,
+                        outmap_name='fall_inds', scope=scopes.GLOBAL)
+
+    #the falloff vs chemically activated indicator
+    fall_type = rate_info['fall']['ftype']
+    fall_type_lp, fall_type_str, map_instructs = lp_utils.get_loopy_arg('fall_type',
+                                      ['${reac_ind}'],
+                                      dimensions=(fall_type.shape),
+                                      order=loopy_opt.order,
+                                      initializer=fall_type,
+                                      dtype=fall_type.dtype)
+
+    #the blending term
+    Fi_lp, Fi_str, _ = lp_utils.get_loopy_arg('Fi',
+                            indicies=['${reac_ind}', 'j'],
+                            dimensions=[rate_info['fall']['num'], test_size],
+                            order=loopy_opt.order)
+    #the Pr array
+    Pr_lp, Pr_str, _ = lp_utils.get_loopy_arg('Pr',
+                            indicies=['${reac_ind}', 'j'],
+                            dimensions=[rate_info['fall']['num'], test_size],
+                            order=loopy_opt.order)
+
+    #find the falloff -> thd map
+    map_name = 'pres_mod_map'
+    pres_mod_ind = 'pres_mod_ind'
+    pres_mod_map = np.where(np.in1d(rate_info['thd']['map'], rate_info['fall']['map']))[0]
+    pres_mod_map, pres_mod_str = __1Dcreator(map_name, pres_mod_map, '${pres_mod_ind}')
+    fall_maplist.append(lp_utils.generate_map_instruction(
+                                        newname=pres_mod_ind,
+                                        map_arr=map_name,
+                                        oldname='${reac_ind}'))
+
+    #find the falloff -> all map
+    map_name = 'out_map'
+    out_ind = 'out_ind'
+    out_map = rate_info['fall']['map']
+    out_map, out_map_str = __1Dcreator(map_name, out_map, '${reac_ind}')
+    fall_maplist.append(lp_utils.generate_map_instruction(
+                                        newname=out_ind,
+                                        map_arr=map_name,
+                                        oldname='${reac_ind}'))
+
+    #create the kf array / str
+    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
+                    indicies=['${out_ind}', 'j'],
+                    dimensions=[rate_info['Nr'], test_size],
+                    order=loopy_opt.order,
+                    map_name=fall_map)
+
+    #and the pressure mod term
+    pres_mod_lp, pres_mod_str, _ = lp_utils.get_loopy_arg('pres_mod',
+                                      ['${pres_mod_ind}', 'j'],
+                                      dimensions=(num_thd, test_size),
+                                      order=loopy_opt.order)
+
+    #update the args
+    kernel_data.extend([Fi_lp, Pr_lp, fall_type_lp, pres_mod_lp,
+            out_map, pres_mod_map, kf_arr])
+
+    fall_instructions = Template(
+"""
+<>ci_temp = ${Fi_str} / (1 + ${Pr_str}) {id=ci_decl}
+if ${fall_type} == 1
+    ci_temp = ci_temp * ${Pr_str} {id=ci_update, dep=ci_decl}
+end
+${pres_mod} = ci_temp {dep=ci_update}
+${kf_val} = ${kf_val} * ci_temp {dep=ci_update}
+""").safe_substitute(Fi_str=Fi_str,
+                     Pr_str=Pr_str,
+                     pres_mod=pres_mod_str,
+                     fall_type=fall_type_str,
+                     kf_val=kf_str)
+    fall_instructions = Template(fall_instructions).safe_substitute(reac_ind=reac_ind,
+        out_ind=out_ind,
+        pres_mod_ind=pres_mod_ind)
+
+    #add to the info list
+    info_list.append(
+        rateconst_info(name='ci_fall',
+                   instructions=fall_instructions,
+                   reac_ind=reac_ind,
+                   kernel_data=kernel_data,
+                   maps=fall_maplist,
+                   indicies=indicies))
+
+    return info_list
+
 
 
 def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
@@ -2147,7 +2346,7 @@ def make_rateconst_kernel(info, target, test_size):
 
     Returns
     -------
-    knl : :class::class:`loopy.LoopKernel`
+    knl : :class:`loopy.LoopKernel`
         The generated loopy kernel
     """
 

@@ -553,12 +553,7 @@ class SubTest(TestClass):
         ref_Fi = self.store.ref_Fall.copy()
         ref_thd = self.store.ref_thd.copy()
 
-        #construct a copy of kf with the pressure mod term removed
-        kf_removed = ref_fwd_rates.copy()
-        kf_removed[self.store.thd_inds, :] = ref_fwd_rates[self.store.thd_inds, :] / ref_pres_mod
-
-        args = {'kf' : lambda x: kf_removed.copy() if x == 'F' else kf_removed.T.copy(),
-                'Fi' : lambda x: ref_Fi.copy() if x == 'F' else ref_Fi.T.copy(),
+        args = {'Fi' : lambda x: ref_Fi.copy() if x == 'F' else ref_Fi.T.copy(),
                 'thd_conc' : lambda x: ref_thd.copy() if x == 'F' else ref_thd.T.copy(),
                 'Pr' : lambda x: ref_Pr.copy() if x == 'F' else ref_Pr.T.copy()}
 
@@ -570,14 +565,14 @@ class SubTest(TestClass):
         fall_rxn_inds = self.store.fall_inds[:]
 
         #create the kernel call
-        kc = [kernel_call('rateconst_ci_thd', [ref_pres_mod, ref_fwd_rates],
-                        out_mask=[0, 1],
-                        compare_mask=[thd_only_inds, thd_rxn_inds],
+        kc = [kernel_call('rateconst_ci_thd', [ref_pres_mod],
+                        out_mask=[0],
+                        compare_mask=[thd_only_inds],
                         input_mask=['Fi', 'Pr'],
                         strict_name_match=True, **args),
-              kernel_call('rateconst_ci_fall', [ref_pres_mod, ref_fwd_rates],
-                        out_mask=[0, 1],
-                        compare_mask=[fall_only_inds, fall_rxn_inds],
+              kernel_call('rateconst_ci_fall', [ref_pres_mod],
+                        out_mask=[0],
+                        compare_mask=[fall_only_inds],
                         input_mask=['thd_conc'],
                         strict_name_match=True, **args)]
         self.__generic_rate_tester(get_rxn_pres_mod, kc)

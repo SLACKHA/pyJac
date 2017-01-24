@@ -442,6 +442,7 @@ def auto_run(knl, kernel_calls, device='0'):
     try:
         result = True
         for i, kc in enumerate(kernel_calls):
+            kc.compare(out[i])
             result = result and kc.compare(out[i])
         return result
     except:

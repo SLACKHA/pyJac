@@ -728,35 +728,15 @@ def get_rxn_pres_mod(eqs, loopy_opt, rate_info, test_size=None):
                                       order=loopy_opt.order,
                                       map_name=thd_map)
 
-    #find the third-body -> all map
-    map_name = 'out_map'
-    out_ind = 'out_ind'
-    out_map = rate_info['thd']['map'][non_fall_thd]
-    out_map, out_map_str = __1Dcreator('out_map', out_map, reac_mapname)
-    thd_maplist.append(lp_utils.generate_map_instruction(
-                                        newname=out_ind,
-                                        map_arr=map_name,
-                                        oldname=reac_mapname))
-
-    #create the kf array / str
-    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
-                    indicies=['${out_ind}', 'j'],
-                    dimensions=[rate_info['Nr'], test_size],
-                    order=loopy_opt.order)
-
     thd_instructions = Template(
 """
-<>ci_temp = ${thd_conc} {id=decl}
-${pres_mod} = ci_temp {dep=decl}
-${kf_value} = ${kf_value} * ci_temp {dep=decl}
+${pres_mod} = ${thd_conc} {dep=decl}
 
 """).safe_substitute(pres_mod=pres_mod_str,
-                     thd_conc=thd_str,
-                     kf_value=kf_str)
-    thd_instructions = Template(thd_instructions).safe_substitute(reac_ind=reac_ind,
-                     out_ind=out_ind)
+                     thd_conc=thd_str)
+    thd_instructions = Template(thd_instructions).safe_substitute(reac_ind=reac_ind)
     #and the args
-    kernel_data.extend([thd_lp, pres_mod_lp, kf_arr, out_map])
+    kernel_data.extend([thd_lp, pres_mod_lp])
 
     #add to the info list
     info_list = [
@@ -805,22 +785,6 @@ ${kf_value} = ${kf_value} * ci_temp {dep=decl}
                                         map_arr=map_name,
                                         oldname='${reac_ind}'))
 
-    #find the falloff -> all map
-    map_name = 'out_map'
-    out_ind = 'out_ind'
-    out_map = rate_info['fall']['map']
-    out_map, out_map_str = __1Dcreator(map_name, out_map, '${reac_ind}')
-    fall_maplist.append(lp_utils.generate_map_instruction(
-                                        newname=out_ind,
-                                        map_arr=map_name,
-                                        oldname='${reac_ind}'))
-
-    #create the kf array / str
-    kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
-                    indicies=['${out_ind}', 'j'],
-                    dimensions=[rate_info['Nr'], test_size],
-                    order=loopy_opt.order,
-                    map_name=fall_map)
 
     #and the pressure mod term
     pres_mod_lp, pres_mod_str, _ = lp_utils.get_loopy_arg('pres_mod',
@@ -829,24 +793,20 @@ ${kf_value} = ${kf_value} * ci_temp {dep=decl}
                                       order=loopy_opt.order)
 
     #update the args
-    kernel_data.extend([Fi_lp, Pr_lp, fall_type_lp, pres_mod_lp,
-            out_map, pres_mod_map, kf_arr])
+    kernel_data.extend([Fi_lp, Pr_lp, fall_type_lp, pres_mod_lp, pres_mod_map])
 
     fall_instructions = Template(
 """
 <>ci_temp = ${Fi_str} / (1 + ${Pr_str}) {id=ci_decl}
-if ${fall_type} == 1
+if ${fall_type} == 0
     ci_temp = ci_temp * ${Pr_str} {id=ci_update, dep=ci_decl}
 end
 ${pres_mod} = ci_temp {dep=ci_update}
-${kf_val} = ${kf_val} * ci_temp {dep=ci_update}
 """).safe_substitute(Fi_str=Fi_str,
                      Pr_str=Pr_str,
                      pres_mod=pres_mod_str,
-                     fall_type=fall_type_str,
-                     kf_val=kf_str)
+                     fall_type=fall_type_str)
     fall_instructions = Template(fall_instructions).safe_substitute(reac_ind=reac_ind,
-        out_ind=out_ind,
         pres_mod_ind=pres_mod_ind)
 
     #add to the info list

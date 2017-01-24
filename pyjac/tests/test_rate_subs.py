@@ -9,9 +9,10 @@ logging.getLogger('root').setLevel(logging.WARNING)
 from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
-    get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates)
+    get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
+    get_rxn_pres_mod)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
-    get_target, get_device_list, populate)
+    get_target, get_device_list, populate, kernel_call)
 from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
@@ -305,7 +306,7 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, ref_ans, args):
+    def __generic_rate_tester(self, func, kernel_calls):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -313,17 +314,8 @@ class SubTest(TestClass):
         ----------
         func : function
             The function to test
-        ref_ans : list of tuples or a single :class:`numpy.ndarray`
-            Each tuple consists of:
-                * ans: :class:`numpy.ndarray`
-                    The answer in 'F' order
-                * ind: int
-                    The answer index
-                * mask: :class:`numpy.ndarray`
-                    If not none, the compare mask to use in testing
-            If a single array, ind will be set to 0 and mask to None
-        args : list of `loopy.KernelArguement`
-            The args to pass to the kernel
+        kernel_calls : :class:`kernel_call` or list thereof
+            Contains the masks and reference answers for kernel testing
         """
 
         eqs = {'conp' : self.store.conp_eqs,
@@ -343,11 +335,6 @@ class SubTest(TestClass):
         specs = self.store.specs
 
         target = get_target('opencl')
-
-        if isinstance(ref_ans, np.ndarray):
-            ref_ans = [(ref_ans, 0, None)]
-        if not isinstance(ref_ans, list):
-            ref_ans = [ref_ans]
 
         for i, state in enumerate(oploop):
             if state['width'] is not None and state['depth'] is not None:
@@ -377,21 +364,13 @@ class SubTest(TestClass):
                 kernels.append(knl)
 
             #create a list of answers to check
-            ans, out_inds, compare_mask = zip(
-                        *[(x[0].copy(), x[1], x[2]) if state['order'] == 'F' else
-                        (x[0].T.copy(), x[1], x[2])  for x in ref_ans])
+            try:
+                for kc in kernel_calls:
+                    kc.set_state(state['order'])
+            except:
+                kernel_calls.set_state(state['order'])
 
-            args_copy = args.copy()
-            for key in args_copy:
-                if hasattr(args_copy[key], '__call__'):
-                    #it's a function
-                    args_copy[key] = args_copy[key](state['order'])
-
-            assert auto_run(kernels, ans, device=state['device'],
-                compare_mask=compare_mask,
-                out_mask=out_inds,
-                compare_axis=1 if state['order'] == 'C' else 0,
-                **args_copy), \
+            assert auto_run(kernels, kernel_calls, device=state['device']), \
                 'Evaluate {} rates failed'.format(func.__name__)
 
     def __test_rateconst_type(self, rtype):
@@ -426,7 +405,11 @@ class SubTest(TestClass):
 
         compare_mask, rate_func = masks[rtype]
 
-        self.__generic_rate_tester(rate_func, (ref_const, 0, compare_mask), args)
+        #create the kernel call
+        kc = kernel_call('rateconst_' + rtype,
+                            ref_const, compare_mask=compare_mask, **args)
+
+        self.__generic_rate_tester(rate_func, kc)
 
 
     @attr('long')
@@ -451,7 +434,11 @@ class SubTest(TestClass):
                  'P_arr' : P,
                  'conc' : lambda x: concs.copy() if x == 'F'
                             else concs.T.copy()}
-        self.__generic_rate_tester(get_thd_body_concs, ref_ans, args)
+
+        #create the kernel call
+        kc = kernel_call('rateconst_thd', ref_ans,
+                                    compare_mask=compare_mask, **args)
+        self.__generic_rate_tester(get_thd_body_concs, kc)
 
     @attr('long')
     def test_reduced_pressure(self):
@@ -504,7 +491,10 @@ class SubTest(TestClass):
             #finally we can call the reduced pressure evaluator
             return get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size)
 
-        self.__generic_rate_tester(__tester, ref_ans, args)
+        #create the kernel call
+        kc = kernel_call('rateconst_pred', ref_ans,
+                                    compare_mask=compare_mask, **args)
+        self.__generic_rate_tester(__tester, kc)
 
     @attr('long')
     def test_sri_falloff(self):
@@ -518,8 +508,10 @@ class SubTest(TestClass):
 
         #get SRI reaction mask
         sri_mask = np.where(np.in1d(self.store.fall_inds, self.store.sri_inds))[0]
-        import pdb; pdb.set_trace()
-        self.__generic_rate_tester(get_sri_kernel, (ref_ans, 0, sri_mask), args)
+        #create the kernel call
+        kc = kernel_call('rateconst_fall_sri', ref_ans, out_mask=[0],
+                                    compare_mask=sri_mask, **args)
+        self.__generic_rate_tester(get_sri_kernel, kc)
 
     @attr('long')
     def test_troe_falloff(self):
@@ -533,10 +525,10 @@ class SubTest(TestClass):
 
         #get Troe reaction mask
         troe_mask = np.where(np.in1d(self.store.fall_inds, self.store.troe_inds))[0]
-        mask = {'out_mask' : 0,
-                'mask' : troe_mask}
-
-        self.__generic_rate_tester(get_troe_kernel, (ref_ans, 0, troe_mask), args)
+        #create the kernel call
+        kc = kernel_call('rateconst_fall_troe', ref_ans, out_mask=[0],
+                                    compare_mask=troe_mask, **args)
+        self.__generic_rate_tester(get_troe_kernel, kc)
 
     @attr('long')
     def test_rev_rates(self):
@@ -544,8 +536,48 @@ class SubTest(TestClass):
         ref_kc = self.store.equilibrium_constants.copy()
         ref_B = self.store.ref_B_rev.copy()
         ref_rev = self.store.rev_rate_constants.copy()
-        ref_ans = [(ref_kc, 0, None), (ref_rev, 1, None)]
         args={'B' : lambda x: ref_B.copy() if x == 'F' else ref_B.T.copy(),
                 'kf' : lambda x: ref_fwd_rates.copy() if x == 'F' else ref_fwd_rates.T.copy()}
 
-        self.__generic_rate_tester(get_rev_rates, ref_ans, args)
+        #create the kernel call
+        kc = kernel_call('rateconst_Kc', [ref_kc, ref_rev],
+                                    out_mask=[0, 1], **args)
+
+        self.__generic_rate_tester(get_rev_rates, kc)
+
+    @attr('long')
+    def test_pressure_mod(self):
+        ref_fwd_rates = self.store.fwd_rate_constants.copy()
+        ref_pres_mod = self.store.ref_pres_mod.copy()
+        ref_Pr = self.store.ref_Pr.copy()
+        ref_Fi = self.store.ref_Fall.copy()
+        ref_thd = self.store.ref_thd.copy()
+
+        #construct a copy of kf with the pressure mod term removed
+        kf_removed = ref_fwd_rates.copy()
+        kf_removed[self.store.thd_inds, :] = ref_fwd_rates[self.store.thd_inds, :] / ref_pres_mod
+
+        args = {'kf' : lambda x: kf_removed.copy() if x == 'F' else kf_removed.T.copy(),
+                'Fi' : lambda x: ref_Fi.copy() if x == 'F' else ref_Fi.T.copy(),
+                'thd_conc' : lambda x: ref_thd.copy() if x == 'F' else ref_thd.T.copy(),
+                'Pr' : lambda x: ref_Pr.copy() if x == 'F' else ref_Pr.T.copy()}
+
+        thd_only_inds = np.where(np.logical_not(np.in1d(self.store.thd_inds,
+                                    self.store.fall_inds)))[0]
+        thd_rxn_inds = self.store.thd_inds[thd_only_inds]
+        fall_only_inds = np.where(np.in1d(self.store.thd_inds,
+                                    self.store.fall_inds))[0]
+        fall_rxn_inds = self.store.fall_inds[:]
+
+        #create the kernel call
+        kc = [kernel_call('rateconst_ci_thd', [ref_pres_mod, ref_fwd_rates],
+                        out_mask=[0, 1],
+                        compare_mask=[thd_only_inds, thd_rxn_inds],
+                        input_mask=['Fi', 'Pr'],
+                        strict_name_match=True, **args),
+              kernel_call('rateconst_ci_fall', [ref_pres_mod, ref_fwd_rates],
+                        out_mask=[0, 1],
+                        compare_mask=[fall_only_inds, fall_rxn_inds],
+                        input_mask=['thd_conc'],
+                        strict_name_match=True, **args)]
+        self.__generic_rate_tester(get_rxn_pres_mod, kc)

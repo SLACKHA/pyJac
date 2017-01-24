@@ -60,6 +60,7 @@ class loopy_options(object):
         self.unr = unr
         check_lang(lang)
         self.lang = lang
+        assert order in ['C', 'F']
         self.order = order
         self.rate_spec = rate_spec
         self.rate_spec_kernels = rate_spec_kernels
@@ -75,7 +76,7 @@ def get_device_list():
     Returns
     -------
     devices : list of :class:`pyopencl.Device`
-
+        The devices recognized by pyopencl
     """
     device_list = []
     for p in cl.get_platforms():
@@ -96,6 +97,13 @@ def get_context(device='0'):
     ----------
     device : str or :class:`pyopencl.Device`
         The pyopencl string (or device class) denoting the device to use, defaults to '0'
+
+    Returns
+    -------
+    ctx : :class:`pyopencl.Context`
+        The running context
+    queue : :class:`pyopencl.Queue`
+        The command queue
     """
 
     os.environ['PYOPENCL_COMPILER_OUTPUT'] = '1'
@@ -176,7 +184,164 @@ def get_code(knl):
     code, _ = lp.generate_code(knl)
     return codefix('stdin', text_in=code)
 
-def populate(knl, device='0', out_mask=None, **input_args):
+class kernel_call(object):
+    """
+    A wrapper for the various parameters (e.g. args, masks, etc.)
+    for calling / executing a loopy kernel
+    """
+
+    def __init__(self, name, ref_answer, compare_axis=0, compare_mask=None,
+                    out_mask=None, input_mask=[], strict_name_match=False,
+                    **input_args):
+        """
+        The initializer for the :class:`kernel_call` object
+
+        Parameters
+        ----------
+        name : str
+            The kernel name, used for matching
+        ref_answer : :class:`numpy.ndarray` or list of :class:`numpy.ndarray`
+            The reference answer to compare to
+        compare_axis : int, optional
+            An axis to apply the compare_mask along, unused if compare_mask is None
+        compare_mask : :class:`numpy.ndarray` or :class:`numpy.ndarray`, optional
+            A list of indexes to compare, useful when the kernel only computes partial results
+            Should match length of ref_answer
+        out_mask : int, optional
+            The index(ices) of the returned array to aggregate.  Should match length of ref_answer
+        input_mask : list of str, optional
+            An optional list of input arguements to filter out
+        strict_name_match : bool, optional
+            If true, only kernels exactly matching this name will be excecuted
+            Defaut is False
+        input_args : dict of `numpy.array`s
+            The arguements to supply to the kernel
+
+        Returns
+        -------
+        out_ref : list of :class:`numpy.ndarray`
+            The value(s) of the evaluated :class:`loopy.LoopKernel`
+        """
+
+        self.name = name
+        self.ref_answer = ref_answer
+        if isinstance(ref_answer, list):
+            num_check = len(ref_answer)
+        else:
+            num_check = 1
+            self.ref_answer = [ref_answer]
+        self.compare_axis = compare_axis
+        if compare_mask is not None:
+            self.compare_mask = compare_mask
+        else:
+            self.compare_mask = [None for i in range(num_check)]
+        self.out_mask = out_mask
+        self.input_mask = input_mask
+        self.input_args = input_args
+        self.strict_name_match = strict_name_match
+        self.kernel_args = None
+
+    def is_my_kernel(self, knl):
+        """
+        Tests whether this kernel should be run with this call
+
+        Parameters
+        ----------
+        knl : :class:`loopy.LoopKernel`
+            The kernel to call
+        """
+
+        if self.strict_name_match:
+            return self.name == knl.name
+        return True
+
+    def set_state(self, order='F'):
+        """
+        Updates the kernel arguements, and  and compare axis to the order given
+        If the 'arg' is a function, it will be called to get the correct answer
+
+        Parameters
+        ----------
+        order : {'C', 'F'}
+            The memory layout of the arrays, C (row major) or Fortran (column major)
+        """
+        self.compare_axis = 1 if order == 'C' else 0
+
+        #filter out bad input
+        args_copy = self.input_args.copy()
+        if self.input_mask is not None:
+            args_copy = {x : args_copy[x] for x in args_copy
+                if x not in self.input_mask}
+
+        for key in args_copy:
+            if hasattr(args_copy[key], '__call__'):
+                #it's a function
+                args_copy[key] = args_copy[key]('order')
+
+        self.kernel_args = args_copy
+        self.transformed_ref_ans = [ans.T.copy() if order == 'C' else ans.copy()
+            for ans in self.ref_answer ]
+
+
+    def __call__(self, knl, queue):
+        """
+        Calls the kernel, filtering input / output args as required
+
+        Parameters
+        ----------
+        knl : :class:`loopy.LoopKernel`
+            The kernel to call
+        queue : :class:`pyopencl.Queue`
+            The command queue
+
+        Returns
+        -------
+        out : list of :class:`numpy.ndarray`
+            The (potentially filtered) output variables
+        """
+
+        try:
+            evt, out = knl(queue, out_host=True, **self.kernel_args)
+        except Exception as e:
+            raise e
+
+        if self.out_mask is not None:
+            return [out[ind] for ind in self.out_mask]
+        else:
+            return [out[0]]
+
+    def compare(self, output_variables):
+        """
+        Compare the output variables to the given reference answer
+
+        Parameters
+        ----------
+        output_variables : :class:`numpy.ndarray` or :class:`numpy.ndarray`, optional
+            The output variables to test
+
+        Returns
+        -------
+        match : bool
+            True IFF the masked output variables match the input
+        """
+
+        allclear = True
+        for i in range(len(output_variables)):
+            if self.compare_mask[i] is not None:
+                outv = np.take(output_variables[i],
+                        self.compare_mask[i], self.compare_axis)
+                if outv.shape != self.transformed_ref_ans[i].shape:
+                    #apply the same transformation to the answer
+                    allclear = allclear and np.allclose(outv,
+                        np.take(self.transformed_ref_ans[i],
+                                self.compare_mask[i], self.compare_axis))
+            else:
+                allclear = allclear and np.allclose(output_variables[i],
+                                self.transformed_ref_ans[i])
+        return allclear
+
+
+def populate(knl, kernel_calls, device='0'):
     """
     This method runs the supplied :class:`loopy.LoopKernel` (or list thereof), and is often used by
     :method:`auto_run`
@@ -186,12 +351,10 @@ def populate(knl, device='0', out_mask=None, **input_args):
     knl : :class:`loopy.LoopKernel` or list of :class:`loopy.LoopKernel`
         The kernel to test, if a list of kernels they will be successively applied and the
         end result compared
+    kernel_calls : :class:`kernel_call` or list thereof
+        The masks / ref_answers, etc. to use in testing
     device : str
         The pyopencl string denoting the device to use, defaults to '0'
-    out_mask : int or list of int
-        The index(ices) of the returned array to aggregate
-    input_args : dict of `numpy.array`s
-        The arguements to supply to the kernel
 
     Returns
     -------
@@ -202,41 +365,52 @@ def populate(knl, device='0', out_mask=None, **input_args):
     #create context
     ctx, queue = get_context(device)
 
-    out_ref = [None]
-    if out_mask is not None:
+    output = []
+    kc_ind = 0
+    oob = False
+    while not oob:
+        #handle weirdness between list / non-list input
         try:
-            out_mask[0]
-        except:
-            out_mask = [out_mask]
-        out_ref = [None for i in out_mask]
+            kc = kernel_calls[kc_ind]
+            kc_ind += 1
+        except IndexError:
+            oob = True
+            break #reached end of list
+        except TypeError:
+            #not a list
+            oob = True #break on next run
+            kc = kernel_calls
 
-    for k in knl:
-        test_knl = set_editor(k)
-        if isinstance(k.target, lp.PyOpenCLTarget):
-            #recreate with device
-            k.target = lp.PyOpenCLTarget(device=device)
-        try:
-            evt, out = test_knl(queue, out_host=True, **input_args)
-        except Exception as e:
-            print(k)
-            raise e
-        if out_mask is not None:
-            try:
-                out = [out[ind] for ind in out_mask]
-            except:
-                import pdb; pdb.set_trace()
+        #create the outputs
+        if kc.out_mask is not None:
+            out_ref = [None for i in kc.out_mask]
         else:
-            out = [out[0]]
-        if not any(out_ref):
-            out_ref = out[:]
-        else:
-            for ind in range(len(out)):
-                copy_inds = np.where(np.logical_not(np.isinf(out[ind])))
-                out_ref[ind][copy_inds] = out[ind][copy_inds]
-    return out_ref
+            out_ref = [None]
 
-def auto_run(knl, ref_answer, compare_mask=None,
-        out_mask=None, compare_axis=0, device='0', **input_args):
+        #run kernels
+        for k in knl:
+            #test that we want to run this one
+            if kc.is_my_kernel(k):
+                #set the editor to avoid intel bugs
+                test_knl = set_editor(k)
+                if isinstance(k.target, lp.PyOpenCLTarget):
+                    #recreate with device
+                    test_knl.target = lp.PyOpenCLTarget(device=device)
+
+                #run!
+                out = kc(test_knl, queue)
+
+                #output mapping
+                if all(x is None for x in out_ref):
+                    out_ref = out[:]
+                else:
+                    for ind in range(len(out)):
+                        copy_inds = np.where(np.logical_not(np.isinf(out[ind])))
+                        out_ref[ind][copy_inds] = out[ind][copy_inds]
+        output.append(out_ref)
+    return output
+
+def auto_run(knl, kernel_calls, device='0'):
     """
     This method tests the supplied :class:`loopy.LoopKernel` (or list thereof) against a reference answer
 
@@ -245,14 +419,8 @@ def auto_run(knl, ref_answer, compare_mask=None,
     knl : :class:`loopy.LoopKernel` or list of :class:`loopy.LoopKernel`
         The kernel to test, if a list of kernels they will be successively applied and the
         end result compared
-    ref_answer : :class:`numpy.ndarray` or list thereof
-        The numpy array to test against, should be the same shape as the kernel output
-    compare_mask : :class:`numpy.ndarray` or list therof
-        A list of indexes to compare, useful when the kernel only computes partial results
-    out_mask : int or list of int
-        The indicies of output variables to check
-    compare_axis : int
-        An axis to apply the compare_mask along, unused if compare_mask is none
+    kernel_calls : :class:`kernel_call`
+        The masks / ref_answers, etc. to use in testing
     device : str
         The pyopencl string denoting the device to use, defaults to '0'
     input_args : dict of `numpy.array`s
@@ -269,28 +437,15 @@ def auto_run(knl, ref_answer, compare_mask=None,
     #check lists
     if not isinstance(knl, list):
         knl = [knl]
-    try:
-        compare_mask[0]
-    except:
-        compare_mask = [compare_mask]
-    try:
-        ref_answer[0]
-    except:
-        ref_answer = [ref_answer]
 
-    out = populate(knl, device=device, out_mask=out_mask, **input_args)
-
-    allclear = True
-    for i in range(len(out)):
-        if compare_mask[i] is not None:
-            outv = np.take(out[i], compare_mask[i], compare_axis)
-            if outv.shape != ref_answer[i].shape:
-                #apply the same transformation to the answer
-                allclear = allclear and np.allclose(outv,
-                    np.take(ref_answer[i], compare_mask[i], compare_axis))
-        else:
-            allclear = allclear and np.allclose(out[i], ref_answer[i])
-    return allclear
+    out = populate(knl, kernel_calls, device=device)
+    try:
+        result = True
+        for i, kc in enumerate(kernel_calls):
+            result = result and kc.compare(out[i])
+        return result
+    except:
+        return kernel_calls.compare(out[0])
 
 def generate_map_instruction(oldname, newname, map_arr):
     """
@@ -388,7 +543,7 @@ def get_loopy_arg(arg_name, indicies, dimensions,
     initializer : `numpy.array`
         If not None, the arg is assumed to be a :class:`loopy.TemporaryVariable`
         with :param:`scope`
-    scope : :class:`temp_var_scope`
+    scope : :class:`loopy.temp_var_scope`
         The scope of the temporary variable definition,
         if initializer is not None, this must be supplied
     force_temporary: bool

@@ -34,6 +34,7 @@ class storage(object):
         self.Y = np.random.uniform(0, 1, size=(self.gas.n_species, test_size))
         self.concs = np.empty_like(self.Y)
         self.fwd_rate_constants = np.zeros((self.gas.n_reactions, test_size))
+        self.fwd_rxn_rate = np.zeros((self.gas.n_reactions, test_size))
 
         #third body indicies
         self.thd_inds = np.array([i for i, x in enumerate(gas.reactions())
@@ -54,6 +55,7 @@ class storage(object):
         #various indicies and mappings
         self.rev_inds = np.array([i for i in range(gas.n_reactions) if gas.is_reversible(i)])
         self.rev_rate_constants = np.zeros((self.rev_inds.size, test_size))
+        self.rev_rxn_rate = np.zeros((self.rev_inds.size, test_size))
         self.equilibrium_constants = np.zeros((self.rev_inds.size, test_size))
 
         self.fall_inds = np.array([i for i, x in enumerate(gas.reactions())
@@ -90,6 +92,8 @@ class storage(object):
             self.fwd_rate_constants[:, i] = gas.forward_rate_constants[:]
             self.rev_rate_constants[:, i] = gas.reverse_rate_constants[self.rev_inds]
             self.equilibrium_constants[:, i] = gas.equilibrium_constants[self.rev_inds]
+            self.fwd_rxn_rate[:, i] = gas.forward_rates_of_progress[:]
+            self.rev_rxn_rate[:, i] = gas.reverse_rates_of_progress[self.rev_inds]
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
             for j in range(self.fall_inds.size):
                 arrhen_temp[j] = pr_eval(i, j)

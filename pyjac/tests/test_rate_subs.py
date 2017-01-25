@@ -10,7 +10,7 @@ from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
     get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
-    get_rxn_pres_mod)
+    get_rxn_pres_mod, get_rop)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call)
 from ..utils import create_dir
@@ -306,7 +306,7 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, kernel_calls):
+    def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -327,9 +327,12 @@ class SubTest(TestClass):
             ('ilp', [False]),
             ('unr', [None, 4]),
             ('device', get_device_list()),
-            ('rate_spec', [x for x in RateSpecialization]),
-            ('rate_spec_kernels', [True, False])
             ]))
+        ratespec_loop = OptionLoop(OrderedDict([
+            ('rate_spec', [x for x in RateSpecialization]),
+            ('rate_spec_kernels', [True, False])]))
+        if do_ratespec:
+            oploop = oploop + ratespec_loop
 
         reacs = self.store.reacs
         specs = self.store.specs
@@ -409,7 +412,7 @@ class SubTest(TestClass):
         kc = kernel_call('rateconst_' + rtype,
                             ref_const, compare_mask=compare_mask, **args)
 
-        self.__generic_rate_tester(rate_func, kc)
+        self.__generic_rate_tester(rate_func, kc, rtype == 'simple')
 
 
     @attr('long')
@@ -576,3 +579,23 @@ class SubTest(TestClass):
                         input_mask=['thd_conc'],
                         strict_name_match=True, **args)]
         self.__generic_rate_tester(get_rxn_pres_mod, kc)
+
+    @attr('long')
+    def test_rop(self):
+        fwd_rate_constants = self.store.fwd_rate_constants.copy()
+        rev_rate_constants = self.store.rev_rate_constants.copy()
+        fwd_rxn_rate = self.store.fwd_rxn_rate.copy()
+        rev_rxn_rate = self.store.rev_rxn_rate.copy()
+        concs = self.store.concs.copy()
+
+        args={'kf' : lambda x: fwd_rate_constants.copy() if x == 'F' else fwd_rate_constants.T.copy(),
+                'kr' : lambda x: rev_rate_constants.copy() if x == 'F' else rev_rate_constants.T.copy(),
+                'conc' : lambda x: concs.copy() if x == 'F' else concs.T.copy()}
+
+        kc = [kernel_call('rateconst_rop_fwd', [fwd_rxn_rate],
+                        input_mask=['kr'],
+                        strict_name_match=True, **args),
+              kernel_call('rateconst_rop_rev', [rev_rxn_rate],
+                        input_mask=['kf'],
+                        strict_name_match=True, **args)]
+        self.__generic_rate_tester(get_rop, kc)

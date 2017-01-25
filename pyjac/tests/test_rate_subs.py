@@ -442,8 +442,7 @@ class SubTest(TestClass):
                             else concs.T.copy()}
 
         #create the kernel call
-        kc = kernel_call('rateconst_thd', ref_ans,
-                                    compare_mask=compare_mask, **args)
+        kc = kernel_call('rateconst_thd', ref_ans, **args)
         self.__generic_rate_tester(get_thd_body_concs, kc)
 
     @attr('long')
@@ -498,15 +497,14 @@ class SubTest(TestClass):
             return get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size)
 
         #create the kernel call
-        kc = kernel_call('rateconst_pred', ref_ans,
-                                    compare_mask=compare_mask, **args)
+        kc = kernel_call('rateconst_pred', ref_ans, **args)
         self.__generic_rate_tester(__tester, kc)
 
     @attr('long')
     def test_sri_falloff(self):
         T = self.store.T
         ref_Pr = self.store.ref_Pr.copy()
-        ref_ans = self.store.ref_Sri.copy()
+        ref_ans = self.store.ref_Sri.copy().squeeze()
         args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
                          else ref_Pr.T.copy(),
                  'T_arr' : T

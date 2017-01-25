@@ -8,15 +8,16 @@ OpenCL implementations (mostly Intel)
 
 import sys
 import re
+from collections import OrderedDict
 
-swaps = {
+swaps = OrderedDict([
     #replace "bad" lid()/gid() subtractions in for loop clauses
     #re: https://software.intel.com/en-us/forums/opencl/topic/704155
-    r'(for.+)\+\s*-1\s*\*\s*((?:lid|gid)\((?:\d+)\))([^;]+)' : r'\1\3 - \2',
+    (r'(for.+)\+\s*-1\s*\*\s*((?:lid|gid)\((?:\d+)\))([^;]+)', r'\1\3 - \2'),
     #replace "bad" lid()/gid() subtractions in general
     #re: https://software.intel.com/en-us/forums/opencl/topic/709578
-    r'((?:\+\s*)?-\s*)(\d+)\s*\*\s*((?:lid|gid)\((?:\d+)\))' : r'- \2 * \3'
-    }
+    (r'(\+\s*-\s*)(\d+)\s*\*\s*((?:lid|gid)\((?:\d+)\))', r'- \2 * \3')
+    ])
 
 def __get_file(filename, text_in=None):
     if filename.lower() == 'stdin':

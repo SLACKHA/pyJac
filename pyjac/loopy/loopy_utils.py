@@ -276,7 +276,7 @@ class kernel_call(object):
         for key in args_copy:
             if hasattr(args_copy[key], '__call__'):
                 #it's a function
-                args_copy[key] = args_copy[key]('order')
+                args_copy[key] = args_copy[key](order)
 
         self.kernel_args = args_copy
         self.transformed_ref_ans = [ans.T.copy() if order == 'C' else ans.copy()
@@ -393,7 +393,7 @@ def populate(knl, kernel_calls, device='0'):
             if kc.is_my_kernel(k):
                 #set the editor to avoid intel bugs
                 test_knl = set_editor(k)
-                if isinstance(k.target, lp.PyOpenCLTarget):
+                if isinstance(test_knl.target, lp.PyOpenCLTarget):
                     #recreate with device
                     test_knl.target = lp.PyOpenCLTarget(device=device)
 

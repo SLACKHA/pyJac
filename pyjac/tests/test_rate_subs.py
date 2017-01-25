@@ -480,7 +480,9 @@ class SubTest(TestClass):
                     knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
                     #and add to list
                     knl_list.append(knl)
-                kf_fall_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)[0]
+                kc = kernel_call('rateconst_kf_fall', [], **{'T_arr' : T})
+                kc.set_state(loopy_opts.order)
+                kf_fall_vals[loopy_opts.order] = populate(knl_list, kc, device=device)[0][0]
 
                 #next with regular parameters
                 infos = get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size)
@@ -492,7 +494,9 @@ class SubTest(TestClass):
                     knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
                     #and add to list
                     knl_list.append(knl)
-                kf_vals[loopy_opts.order] = populate(knl_list, device=device, T_arr=T)[0]
+                kc = kernel_call('rateconst_kf', [], **{'T_arr' : T})
+                kc.set_state(loopy_opts.order)
+                kf_vals[loopy_opts.order] = populate(knl_list, kc, device=device)[0][0]
 
             #finally we can call the reduced pressure evaluator
             return get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size)

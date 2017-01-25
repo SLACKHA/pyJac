@@ -56,9 +56,9 @@ class SubTest(TestClass):
         #test fwd / rev maps, nu, species etc.
         assert result['fwd']['num'] == gas.n_reactions
         assert np.array_equal(result['fwd']['map'], np.arange(gas.n_reactions))
-        rev_inds = [i for i in range(gas.n_reactions) if gas.is_reversible(i)]
+        rev_inds = np.array([i for i in range(gas.n_reactions) if gas.is_reversible(i)])
         assert np.array_equal(result['rev']['map'], rev_inds)
-        assert result['rev']['num'] == len(rev_inds)
+        assert result['rev']['num'] == rev_inds.size
         fwd_specs = []
         fwd_nu = []
         rev_specs = []
@@ -75,10 +75,13 @@ class SubTest(TestClass):
                 temp_nu_sum[spec] -= nu
             assert result['fwd']['num_spec'][i] == len(reac.reactants)
             for spec, nu in sorted(reac.products.items(), key=lambda x: gas.species_index(x[0])):
-                rev_specs.append(gas.species_index(spec))
-                rev_nu.append(nu)
+                if i in rev_inds:
+                    rev_specs.append(gas.species_index(spec))
+                    rev_nu.append(nu)
                 temp_nu_sum[spec] += nu
-            assert result['rev']['num_spec'][i] == len(reac.products)
+            if i in rev_inds:
+                rev_ind = np.where(rev_inds == i)[0]
+                assert result['rev']['num_spec'][rev_ind] == len(reac.products)
             temp_specs, temp_nu_sum = zip(*[(gas.species_index(x[0]), x[1]) for x in
                 sorted(temp_nu_sum.items(), key=lambda x: gas.species_index(x[0]))])
             net_specs.extend(temp_specs)

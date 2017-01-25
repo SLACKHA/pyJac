@@ -323,19 +323,20 @@ class SubTest(TestClass):
 
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}
-        oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
+        oploop = [('lang', ['opencl']),
             ('width', [4, None]),
             ('depth', [4, None]),
             ('order', ['C', 'F']),
             ('ilp', [False]),
             ('unr', [None, 4]),
             ('device', get_device_list()),
-            ]))
-        ratespec_loop = OptionLoop(OrderedDict([
+            ]
+        ratespec_loop = [
             ('rate_spec', [x for x in RateSpecialization]),
-            ('rate_spec_kernels', [True, False])]))
+            ('rate_spec_kernels', [True, False])]
         if do_ratespec:
             oploop = oploop + ratespec_loop
+        oploop = OptionLoop(OrderedDict(oploop))
 
         reacs = self.store.reacs
         specs = self.store.specs

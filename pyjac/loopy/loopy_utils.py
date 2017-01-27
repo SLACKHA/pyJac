@@ -48,12 +48,15 @@ class loopy_options(object):
         Controls the level to which Arrenhius rate evaluations are specialized
     rate_spec_kernels : bool
         If True, break different Arrenhius rate specializations into different kernels
+    rop_net_kernels : bool
+        If True, break different ROP values (fwd / back / pdep) into different kernels
 
     """
     def __init__(self, width=None, depth=None, ilp=False,
                     unr=None, lang='opencl', order='C',
                     rate_spec=RateSpecialization.fixed,
-                    rate_spec_kernels=False):
+                    rate_spec_kernels=False,
+                    rop_net_kernels=False):
         self.width = width
         self.depth = depth
         self.ilp = ilp
@@ -64,6 +67,7 @@ class loopy_options(object):
         self.order = order
         self.rate_spec = rate_spec
         self.rate_spec_kernels = rate_spec_kernels
+        self.rop_net_kernels = rop_net_kernels
 
 def get_device_list():
     """

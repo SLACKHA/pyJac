@@ -2214,21 +2214,21 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
         alt_inds = None
         if not falloff:
             alt_inds = rate_info[tag]['map'][info.indicies]
-        info.indicies = __handle_indicies(info.indicies, info.reac_ind,
+        info.indicies = __handle_indicies(info.indicies, info.var_name,
                       out_map, info.kernel_data, outmap_name=outmap_name,
                       alternate_indicies=alt_inds)
 
         #get the proper kf indexing / array
         kf_arr, kf_str, map_result = lp_utils.get_loopy_arg(kf_name,
-                        indicies=[info.reac_ind, 'j'],
+                        indicies=[info.var_name, 'j'],
                         dimensions=[Nr, test_size],
                         map_name=out_map,
                         order=loopy_opt.order)
         info.kernel_data.append(kf_arr)
 
         #handle map info
-        if info.reac_ind in map_result:
-            info.maps.append(map_result[info.reac_ind])
+        if info.var_name in map_result:
+            info.maps.append(map_result[info.var_name])
 
         #substitute in whatever beta_iter / kf_str we found
         info.instructions = Template(
@@ -2461,7 +2461,7 @@ def rate_const_kernel_gen(eqs, reacs, specs,
     for eval_type in kernels:
         knl_list[eval_type] = []
         for info in kernels[eval_type]:
-            knl_list[eval_type].append((info.reac_ind,
+            knl_list[eval_type].append((info.var_name,
                 make_rateconst_kernel(info, target, test_size)))
 
         #stub for special handling of various evaluation types here

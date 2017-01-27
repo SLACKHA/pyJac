@@ -485,7 +485,7 @@ class SubTest(TestClass):
                     #make kernel
                     knl = make_rateconst_kernel(info, target, test_size)
                     #apply vectorization
-                    knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
+                    knl = apply_rateconst_vectorization(loopy_opts, info.var_name, knl)
                     #and add to list
                     knl_list.append(knl)
                 kc = kernel_call('rateconst_kf_fall', [], **{'T_arr' : T})
@@ -499,7 +499,7 @@ class SubTest(TestClass):
                     #make kernel
                     knl = make_rateconst_kernel(info, target, test_size)
                     #apply vectorization
-                    knl = apply_rateconst_vectorization(loopy_opts, info.reac_ind, knl)
+                    knl = apply_rateconst_vectorization(loopy_opts, info.var_name, knl)
                     #and add to list
                     knl_list.append(knl)
                 kc = kernel_call('rateconst_kf', [], **{'T_arr' : T})

@@ -1754,9 +1754,9 @@ def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
         Fi[fall_form] = conp_eqs[Fi_sym][key]
 
     #get troe syms / eqs
-    Fcent = next(x for x in Fi[falloff_form.troe].free_symbols if str(x) == 'F_{cent}')
-    Atroe = next(x for x in Fi[falloff_form.troe].free_symbols if str(x) == 'A_{Troe}')
-    Btroe = next(x for x in Fi[falloff_form.troe].free_symbols if str(x) == 'B_{Troe}')
+    Fcent = next(x for x in conp_eqs if str(x) == 'F_{cent}')
+    Atroe = next(x for x in conp_eqs if str(x) == 'A_{Troe}')
+    Btroe = next(x for x in conp_eqs if str(x) == 'B_{Troe}')
     Fcent_eq, Atroe_eq, Btroe_eq = conp_eqs[Fcent], conp_eqs[Atroe], conp_eqs[Btroe]
 
     #get troe params and create arrays

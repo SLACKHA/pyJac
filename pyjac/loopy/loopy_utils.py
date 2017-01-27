@@ -50,13 +50,33 @@ class loopy_options(object):
         If True, break different Arrenhius rate specializations into different kernels
     rop_net_kernels : bool
         If True, break different ROP values (fwd / back / pdep) into different kernels
+    spec_rates_sum_over_reac : bool
+        Controls the manner in which the species rates are calculated
+        *  If True, the summation occurs as:
+            for reac:
+                rate = reac_rates[reac]
+                for spec in reac:
+                    spec_rate[spec] += nu(spec, reac) * reac_rate
+        *  If False, the summation occurs as:
+            for spec:
+                for reac in spec_to_reacs[spec]:
+                    rate = reac_rates[reac]
+                    spec_rate[spec] += nu(spec, reac) * reac_rate
+        *  Of these, the first choice appears to be slightly more efficient, likely due to less
+        thread divergence / SIMD wastage, HOWEVER it causes issues with deep vectorization
+        (an atomic update of the spec_rate is needed, and doesn't appear to work in current loopy)
+        Hence, we supply both.
+        *  Note that if True, and deep vectorization is passed this switch will be ignored
+        and a warning will be issued
 
     """
     def __init__(self, width=None, depth=None, ilp=False,
                     unr=None, lang='opencl', order='C',
                     rate_spec=RateSpecialization.fixed,
                     rate_spec_kernels=False,
-                    rop_net_kernels=False):
+                    rop_net_kernels=False,
+                    species_rates_perspec=True,
+                    spec_rates_sum_over_reac=True):
         self.width = width
         self.depth = depth
         self.ilp = ilp
@@ -68,6 +88,7 @@ class loopy_options(object):
         self.rate_spec = rate_spec
         self.rate_spec_kernels = rate_spec_kernels
         self.rop_net_kernels = rop_net_kernels
+        self.spec_rates_sum_over_reac = spec_rates_sum_over_reac
 
 def get_device_list():
     """

@@ -137,7 +137,8 @@ def assign_rates(reacs, specs, rate_spec):
     else:
         rev_nu = np.array(rev_nu, dtype=np.int32)
 
-    if fwd_allnu_integer and rev_allnu_integer:
+    net_nu_integer = all(utils.is_integer(nu) for nu in net_nu)
+    if net_nu_integer:
         nu_sum = np.array(nu_sum, dtype=np.int32)
         net_nu = np.array(net_nu, dtype=np.int32)
     else:
@@ -145,6 +146,32 @@ def assign_rates(reacs, specs, rate_spec):
         net_nu = np.array(net_nu)
     net_num_spec = np.array(net_num_spec, dtype=np.int32)
     net_spec = np.array(net_spec, dtype=np.int32)
+
+    #sometimes we need the net properties forumlated per species rather than per reaction
+    #as above
+    spec_to_reac = []
+    spec_nu = []
+    spec_reac_count = []
+    spec_list = []
+    for ispec, spec in enumerate(specs):
+        #first, find all non-zero nu reactions
+        reac_list = [x for x in [(irxn, utils.get_nu(ispec, rxn)) for irxn, rxn in
+                        enumerate(reacs)] if x[1]]
+        if reac_list:
+            reac_list, nu_list = zip(*reac_list)
+            spec_to_reac.extend(reac_list)
+            spec_nu.extend(nu_list)
+            spec_reac_count.append(len(reac_list))
+            spec_list.append(ispec)
+
+    spec_to_reac = np.array(spec_to_reac, dtype=np.int32)
+    if net_nu_integer:
+        spec_nu = np.array(spec_nu, dtype=np.int32)
+    else:
+        spec_nu = np.array(spec_nu)
+    spec_reac_count = np.array(spec_reac_count, dtype=np.int32)
+    spec_list = np.array(spec_list, dtype=np.int32)
+
 
     def __seperate(reacs, matchers):
         #find all reactions / indicies that match this offset
@@ -339,7 +366,10 @@ def assign_rates(reacs, specs, rate_spec):
                 'nu' : rev_nu, 'allint' : rev_allnu_integer},
             'net' : {'num_spec' : net_num_spec, 'nu_sum' : nu_sum,
                 'nu' : net_nu, 'specs' : net_spec,
-                'allint' : rev_allnu_integer and fwd_allnu_integer},
+                'allint' : net_nu_integer},
+            'net_per_spec' : {'reac_count' : spec_reac_count, 'nu' : spec_nu,
+                'reacs' : spec_to_reac, 'map' : spec_list,
+                'allint' : net_nu_integer},
             'Nr' : len(reacs),
             'Ns' : len(specs)}
 
@@ -436,11 +466,214 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
 
+def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the net species rate
+    kernel
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opts : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+    """
+
+    #find summation direction and consistency check
+    over_reac = loopy_opts.spec_rates_sum_over_reac
+    deep = loopy_opts.depth is not None
+    if deep and over_reac:
+        logging.warn('Cannot use summation over reaction with a deep vectorization [not currently supported].'
+                     '  Disabling...')
+        over_reac = False
+
+    var_name = 'i'
+    kernel_data = []
+    extra_inames =[]
+    maps = {}
+    maplist = []
+    if over_reac:
+        #various indicies
+        reac_ind = var_name
+        omega_ind = 'spec_ind'
+
+        indicies = __handle_indicies(np.arange(rate_info['Nr']), '${var_name}', maps, kernel_data)
+
+        #create species rates kernel
+        #all species in reaction
+        spec_lp, spec_str = __1Dcreator('reac_to_spec', rate_info['net']['specs'],
+                                                '${spec_map}', scope=scopes.GLOBAL)
+
+        #total # species in reaction
+        num_spec_lp, num_spec_str, _ = lp_utils.get_loopy_arg('total_spec_per_reac',
+                                                   ['${var_name}'],
+                                                   dimensions=rate_info['net']['num_spec'].shape,
+                                                   order=loopy_opts.order,
+                                                   initializer=rate_info['net']['num_spec'],
+                                                   dtype=rate_info['net']['num_spec'].dtype)
+
+        #species offsets
+        net_spec_offsets = np.array(
+            np.cumsum(rate_info['net']['num_spec']) - rate_info['net']['num_spec'], dtype=np.int32)
+        num_spec_offsets_lp, num_spec_offsets_str, _ = lp_utils.get_loopy_arg('total_spec_per_reac_offset',
+                                                   ['${var_name}'],
+                                                   dimensions=net_spec_offsets.shape,
+                                                   order=loopy_opts.order,
+                                                   initializer=net_spec_offsets,
+                                                   dtype=net_spec_offsets.dtype)
+
+        #nu array
+        net_nu_lp, net_nu_str, _ = lp_utils.get_loopy_arg('net_nu',
+                                            ['${spec_map}'],
+                                            dimensions=rate_info['net']['nu'].shape,
+                                            initializer=rate_info['net']['nu'],
+                                            dtype=rate_info['net']['nu'].dtype,
+                                            order=loopy_opts.order)
+
+        #update kernel args
+        kernel_data.extend([spec_lp, num_spec_lp, num_spec_offsets_lp, net_nu_lp])
+
+    else:
+        #various indicies
+        reac_ind = 'reac_ind'
+        omega_ind = var_name
+
+        indicies = __handle_indicies(rate_info['net_per_spec']['map'], '${var_name}', maps, kernel_data)
+        #reaction per species
+        spec_to_reac = rate_info['net_per_spec']['reacs']
+        spec_to_reac_lp, spec_to_reac_str, _ = lp_utils.get_loopy_arg('spec_to_reac',
+                                                       ['${rxn_map}'],
+                                                       dimensions=spec_to_reac.shape,
+                                                       order=loopy_opts.order,
+                                                       initializer=spec_to_reac,
+                                                       dtype=spec_to_reac.dtype)
+        #total # reactions per species
+        spec_reac_count = rate_info['net_per_spec']['reac_count']
+        spec_reac_count_lp, spec_rxn_counts_str, map_instructs = lp_utils.get_loopy_arg('spec_reac_count',
+                                                       ['${var_name}'],
+                                                       dimensions=spec_reac_count.shape,
+                                                       order=loopy_opts.order,
+                                                       initializer=spec_reac_count,
+                                                       dtype=spec_reac_count.dtype)
+        #species offsets
+        spec_offsets = spec_offsets = np.array(
+            np.cumsum(spec_reac_count) - spec_reac_count, dtype=np.int32)
+        spec_offsets_lp, spec_offsets_str, map_instructs = lp_utils.get_loopy_arg('spec_offsets',
+                                                       ['${var_name}'],
+                                                       dimensions=spec_offsets.shape,
+                                                       order=loopy_opts.order,
+                                                       initializer=spec_offsets,
+                                                       dtype=spec_offsets.dtype)
+
+        #nu array
+        spec_net_nu = rate_info['net_per_spec']['nu']
+        spec_net_nu_lp, spec_net_nu_str, _ = lp_utils.get_loopy_arg('spec_net_nu',
+                                                        ['${rxn_map}'],
+                                                        dimensions=spec_net_nu.shape,
+                                                        initializer=spec_net_nu,
+                                                        dtype=spec_net_nu.dtype,
+                                                        order=loopy_opts.order)
+        kernel_data.extend([spec_to_reac_lp, spec_reac_count_lp, spec_offsets_lp, spec_net_nu_lp])
+
+    #net ROP
+    rop_net_lp, rop_net_str, _ = lp_utils.get_loopy_arg('rop_net',
+                    indicies=['${reac_ind}', 'j'],
+                    dimensions=[rate_info['Nr'], test_size],
+                    order=loopy_opts.order)
+
+    #add output map if needed
+    if '${var_name}' in maps:
+        omega_ind = 'omega_ind'
+        maplist.append(lp_utils.generate_map_instruction(var_name,
+                                                         omega_ind,
+                                                         maps['${var_name}'],
+                                                         affine=' + 1'))
+
+    #and finally the wdot
+    omega_dot_lp, omega_dot_str, _ = lp_utils.get_loopy_arg('wdot',
+                    indicies=['${omega_ind}', 'j'],
+                    dimensions=[rate_info['Ns'] + 1, test_size],
+                    order=loopy_opts.order)
+
+    #update args
+    kernel_data.extend([rop_net_lp, omega_dot_lp])
+
+    #and finally instructions
+    if over_reac:
+        #now the instructions
+        instructions = Template(
+        """
+        <>net_rate = ${rop_net_str} {id=rate_init}
+        <>offset = ${num_spec_offsets_str}
+        <>num_spec = ${num_spec_str}
+        for ispec
+            <> spec_map = offset + ispec
+            <> spec_ind = ${spec_str} + 1 # (offset by one for Tdot)
+            <> nu = ${nu_str}
+            ${omega_dot_str} = ${omega_dot_str} + nu * net_rate {dep=rate_update*}
+        end
+        """).safe_substitute(rop_net_str=rop_net_str,
+                             spec_str=spec_str,
+                             nu_str=net_nu_str,
+                             omega_dot_str=omega_dot_str,
+                             num_spec_offsets_str=num_spec_offsets_str,
+                             num_spec_str=num_spec_str)
+        instructions = Template(instructions).safe_substitute(
+            reac_ind=var_name,
+            spec_map='spec_map',
+            spec_ind='spec_ind')
+
+        instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
+        extra_inames = [('ispec', '0 <= ispec < num_spec')]
+    else:
+        #now the instructions
+        instructions = Template(
+        """
+        <>num_rxn = ${spec_rxn_counts_str}
+        <>rxn_offset = ${spec_offsets_str}
+        for irxn
+            <>rxn_map = rxn_offset + irxn
+            <>${reac_ind} = ${spec_to_reac_str}
+            ${omega_dot_str} = ${omega_dot_str} + ${spec_net_nu_str} * ${rop_net_str}
+        end
+        """).safe_substitute(spec_rxn_counts_str=spec_rxn_counts_str,
+                             spec_offsets_str=spec_offsets_str,
+                             spec_to_reac_str=spec_to_reac_str,
+                             rop_net_str=rop_net_str,
+                             spec_net_nu_str=spec_net_nu_str,
+                             omega_dot_str=omega_dot_str,
+                             omega_ind=omega_ind)
+
+        instructions = Template(instructions).safe_substitute(
+            rxn_map='rxn_map',
+            omega_ind=omega_ind,
+            reac_ind=reac_ind)
+        instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
+        extra_inames = [('irxn', '0 <= irxn < num_rxn')]
+
+    return rateconst_info(name='spec_rates',
+                           instructions=instructions,
+                           var_name=var_name,
+                           kernel_data=kernel_data,
+                           maps=maplist,
+                           extra_inames=extra_inames,
+                           indicies=indicies,
+                           extra_subs = {'reac_ind' : reac_ind,
+                                         'omega_ind' : omega_ind})
+
+
 def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the net Rate of Progress
     kernels
-
-    TODO: allow split into multiple kernels
 
     Parameters
     ----------
@@ -2289,7 +2522,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     separated_kernels = loopy_opts.rate_spec_kernels
     if fixed and separated_kernels:
         separated_kernels = False
-        logging.info('Cannot use separated kernels with a fixed RateSpecialization, '
+        logging.warn('Cannot use separated kernels with a fixed RateSpecialization, '
             'disabling...')
 
     #define loopy arrays

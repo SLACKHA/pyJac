@@ -10,7 +10,7 @@ from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
     get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
-    get_rxn_pres_mod, get_rop, get_rop_net)
+    get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call)
 from ..utils import create_dir
@@ -309,7 +309,8 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False, do_ropsplit=None):
+    def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False, do_ropsplit=None,
+            do_spec_per_reac=False):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -323,6 +324,8 @@ class SubTest(TestClass):
             If true, test rate specializations and kernel splitting for simple rates
         do_ropsplit : bool
             If true, test kernel splitting for rop_net
+        do_spec_per_reac : bool
+            If true, test species rates summing over reactions as well
         """
 
         eqs = {'conp' : self.store.conp_eqs,
@@ -340,10 +343,14 @@ class SubTest(TestClass):
             ('rate_spec_kernels', [True, False])]
         ropsplit_loop = [
             ('rop_net_kernels', [True])]
+        spec_per_reac_loop = [
+            ('spec_rates_sum_over_reac', [True, False])]
         if do_ratespec:
             oploop = oploop + ratespec_loop
         if do_ropsplit:
             oploop = oploop + ropsplit_loop
+        if do_spec_per_reac:
+            oploop = oploop + spec_per_reac_loop
         oploop = OptionLoop(OrderedDict(oploop))
 
         reacs = self.store.reacs
@@ -649,3 +656,17 @@ class SubTest(TestClass):
             input_mask=__input_mask, strict_name_match=True,
             chain=__chainer, **args)]
         self.__generic_rate_tester(get_rop_net, kc, do_ropsplit=True)
+
+    @attr('long')
+    def test_spec_rates(self):
+        wdot_init = np.zeros((1 + self.store.gas.n_species, self.store.test_size))
+        args={'rop_net' : lambda x: self.store.rxn_rates.copy() if x == 'F' else
+                    self.store.rxn_rates.T.copy(),
+              'wdot' : lambda x: wdot_init.copy() if x == 'F' else wdot_init.T.copy()}
+        wdot = np.concatenate((np.zeros((1, self.store.test_size)),
+            self.store.species_rates))
+        kc = kernel_call('rateconst_spec_rates', [wdot],
+            compare_mask=[1 + np.arange(self.store.gas.n_species)], **args)
+
+        #test regularly
+        self.__generic_rate_tester(get_spec_rates, kc, do_spec_per_reac=True)

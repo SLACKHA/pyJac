@@ -436,8 +436,250 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
 
+def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the net Rate of Progress
+    kernels
 
-def get_rop(eqs, loopy_opt, rate_info, test_size=None):
+    TODO: allow split into multiple kernels
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opts : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator
+    """
+
+    #create net rop kernel
+    reac_ind = '${reac_ind}'
+    rev_ind = '${reac_ind}'
+    pres_ind = '${reac_ind}'
+
+    kernel_data = {}
+    kernel_data['fwd'] = []
+    kernel_list = ['fwd']
+    maplist = {}
+    maps = {}
+    indicies = {}
+
+    separated_kernels = loopy_opts.rop_net_kernels
+    if separated_kernels:
+        kernel_data['rev'] = []
+        kernel_data['pres_mod'] = []
+        kernel_list = ['fwd', 'rev', 'pres_mod'] #ordering matters
+
+    for x in kernel_list:
+        maps[x] = {}
+        maplist[x] = []
+
+    def __add_data(knl, data):
+        if separated_kernels:
+            kernel_data[knl].append(data)
+        else:
+            kernel_data['fwd'].append(data)
+
+    def __add_to_all(data):
+        for kernel in kernel_list:
+            __add_data(kernel, data)
+
+
+    indicies['fwd'] = __handle_indicies(np.arange(rate_info['Nr']), '', None, kernel_data)
+    if separated_kernels:
+        if rate_info['rev']['num']:
+            indicies['rev'] = __handle_indicies(np.arange(rate_info['rev']['num'], dtype=np.int32),
+                '', None, kernel_data)
+        if rate_info['thd']['num']:
+            indicies['pres_mod'] = __handle_indicies(np.arange(rate_info['thd']['num'], dtype=np.int32),
+                '', None, kernel_data)
+
+    #create the fwd rop array / str
+    rop_fwd_lp, rop_fwd_str, _ = lp_utils.get_loopy_arg('rop_fwd',
+                    indicies=['${reac_ind}', 'j'],
+                    dimensions=[rate_info['Nr'], test_size],
+                    order=loopy_opts.order)
+
+    __add_data('fwd', rop_fwd_lp)
+
+    if rate_info['Nr'] != rate_info['rev']['num'] and rate_info['rev']['num']:
+        if not separated_kernels:
+            #only have one kernel, so all maps / data go here
+            kernel = 'fwd'
+            rev_ind = 'rev_ind'
+            #if not all reversible
+            #create the reverse map
+            rev_map = np.arange(rate_info['Nr'], dtype=np.int32)
+            rev_map[np.where(np.logical_not(np.in1d(rev_map, rate_info['rev']['map'])))[0]] = -1
+            rev_map[rate_info['rev']['map']] = np.arange(rate_info['rev']['num'], dtype=np.int32)
+            rev_map_lp, rev_map_str = __1Dcreator('rev_map', rev_map, '${reac_ind}', scope=scopes.PRIVATE)
+            #and add map instruction
+            maplist[kernel].append(lp_utils.generate_map_instruction('${reac_ind}', rev_ind, rev_map_lp.name))
+            __add_data(kernel, rev_map_lp)
+        else:
+            kernel = 'rev'
+            #need an output map
+            maps[kernel]['${reac_ind}'] = 'rev_ind'
+            rev_map_lp, rev_map_str = __1Dcreator('rev_map', rate_info['rev']['map'],
+                '${reac_ind}', scope=scopes.PRIVATE)
+            maplist[kernel].append(lp_utils.generate_map_instruction('${reac_ind}', maps[kernel]['${reac_ind}'],
+                rev_map_lp.name))
+            __add_data(kernel, rev_map_lp)
+
+
+
+    if rate_info['rev']['num']:
+        #have reversible reaction
+        #create the rev rop array / str
+        rop_rev_lp, rop_rev_str, _ = lp_utils.get_loopy_arg('rop_rev',
+                    indicies=[rev_ind, 'j'],
+                    dimensions=[rate_info['rev']['num'], test_size],
+                    order=loopy_opts.order)
+        __add_data('rev', rop_rev_lp)
+
+    #create the pressure modification array
+    if rate_info['Nr'] != rate_info['thd']['num'] and rate_info['thd']['num']:
+        if not separated_kernels:
+            #only have one kernel, so all maps / data go here
+            kernel = 'fwd'
+            pres_ind = 'pres_ind'
+            #if have pdep reactions and not all reacs are pdep, create map
+            pres_map = np.arange(rate_info['Nr'], dtype=np.int32)
+            pres_map[np.where(np.logical_not(np.in1d(pres_map, rate_info['thd']['map'])))[0]] = -1
+            pres_map[rate_info['thd']['map']] = np.arange(rate_info['thd']['num'], dtype=np.int32)
+            pres_map_lp, pres_map_str = __1Dcreator('pres_map', pres_map, '${reac_ind}', scope=scopes.PRIVATE)
+            #and add map instruction
+            maplist[kernel].append(lp_utils.generate_map_instruction('${reac_ind}', pres_ind, pres_map_lp.name))
+            __add_data(kernel, pres_map_lp)
+        else:
+            kernel = 'pres_mod'
+            #need an output map
+            maps[kernel]['${reac_ind}'] = 'pres_ind'
+            pres_map_lp, pres_map_str = __1Dcreator('thd_map', rate_info['thd']['map'], #named thd_map as used elsewhere
+                '${reac_ind}', scope=scopes.PRIVATE)
+            maplist[kernel].append(lp_utils.generate_map_instruction('${reac_ind}', maps[kernel]['${reac_ind}'],
+                pres_map_lp.name))
+            __add_data(kernel, pres_map_lp)
+
+    if rate_info['thd']['num']:
+        pres_mod_lp, pres_mod_str, _ = lp_utils.get_loopy_arg('pres_mod',
+                                              [pres_ind, 'j'],
+                                              dimensions=(rate_info['thd']['num'], test_size),
+                                              order=loopy_opts.order)
+        __add_data('pres_mod', pres_mod_lp)
+
+    #add rop net to all kernels:
+    rop_strs = {}
+    for name in kernel_list:
+        var_name = '${reac_ind}'
+        if var_name in maps[name]:
+            var_name = maps[name][var_name]
+        rop_net_lp, rop_net_str, _ = lp_utils.get_loopy_arg('rop_net',
+                        indicies=[var_name, 'j'],
+                        dimensions=[rate_info['Nr'], test_size],
+                        order=loopy_opts.order)
+        __add_data(name, rop_net_lp)
+        rop_strs[name] = rop_net_str
+
+    if not separated_kernels:
+        #now the instructions
+        instructions = Template(
+        """
+        <>net_rate = ${rop_fwd_str} {id=rate_update}
+        ${rev_update}
+        ${pmod_update}
+        ${rop_net_str} = net_rate {dep=rate_update*}
+        """).safe_substitute(rop_fwd_str=rop_fwd_str,
+                             rop_net_str=rop_strs['fwd'])
+
+        #reverse update
+        if rate_info['rev']['num']:
+            rev_update_instructions = Template(
+        """
+        if rev_ind >= 0
+            net_rate = net_rate - ${rop_rev_str} {id=rate_update_rev, dep=rate_update}
+        end
+        """).safe_substitute(
+                rev_map_str=rev_map_str,
+                rop_rev_str=rop_rev_str)
+        else:
+            rev_update_instructions = ''
+
+        #pmod update
+        if rate_info['thd']['num']:
+            pmod_update_instructions = Template(
+        """
+        if pres_ind >= 0
+            net_rate = net_rate * ${pres_mod_str} {id=rate_update_pmod, dep=rate_update${rev_dep}}
+        end
+        """).safe_substitute(
+                rev_dep=':rate_update_rev' if rate_info['rev']['num'] else '',
+                pres_map_str=pres_map_str,
+                pres_mod_str=pres_mod_str)
+        else:
+            pmod_update_instructions = ''
+
+        instructions = Template(instructions).safe_substitute(
+            rev_update=rev_update_instructions,
+            pmod_update=pmod_update_instructions)
+
+        instructions = Template(instructions).safe_substitute(
+            reac_ind='i',
+            rev_ind=rev_ind,
+            pres_ind=pres_ind)
+
+        instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
+
+        return rateconst_info(name='rop_net',
+                           instructions=instructions,
+                           var_name='i',
+                           kernel_data=kernel_data['fwd'],
+                           maps=maplist['fwd'],
+                           indicies=indicies['fwd'],
+                           extra_subs = {'reac_ind' : 'i'})
+
+    else:
+        infos = []
+        for kernel in kernel_list:
+            if kernel == 'fwd':
+                instructions = Template(
+            """
+            ${rop_net_str} = ${rop_fwd_str}
+                    """).safe_substitute(rop_fwd_str=rop_fwd_str,
+                                         rop_net_str=rop_strs['fwd'])
+            elif kernel == 'rev':
+                instructions = Template(
+            """
+            ${rop_net_str} = ${rop_net_str} - ${rop_rev_str}
+                    """).safe_substitute(rop_rev_str=rop_rev_str,
+                                         rop_net_str=rop_strs['rev'])
+            else:
+                instructions = Template(
+            """
+            ${rop_net_str} = ${rop_net_str} * ${pres_mod_str}
+                    """).safe_substitute(pres_mod_str=pres_mod_str,
+                                         rop_net_str=rop_strs['pres_mod'])
+
+            instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
+            infos.append(rateconst_info(name='rop_net_{}'.format(kernel),
+                           instructions=instructions,
+                           var_name='i',
+                           kernel_data=kernel_data[kernel],
+                           maps=maplist[kernel],
+                           indicies=indicies[kernel],
+                           extra_subs = {'reac_ind' : 'i'}))
+        return infos
+
+
+def get_rop(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the Rate of Progress
     kernels
 
@@ -445,7 +687,7 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -477,7 +719,7 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
         num_spec_offsets_lp, num_spec_offsets_str, map_result = lp_utils.get_loopy_arg('spec_offset_{}'.format(direction),
                                                        ['${reac_ind}'],
                                                        dimensions=net_spec_offsets.shape,
-                                                       order=loopy_opt.order,
+                                                       order=loopy_opts.order,
                                                        initializer=net_spec_offsets,
                                                        dtype=net_spec_offsets.dtype,
                                                        map_name=mapname,
@@ -491,7 +733,7 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
                                                 dimensions=rate_info[direction]['nu'].shape,
                                                 initializer=rate_info[direction]['nu'],
                                                 dtype=rate_info[direction]['nu'].dtype,
-                                                order=loopy_opt.order)
+                                                order=loopy_opts.order)
 
         #species lists
         spec_lp, spec_str, _ = lp_utils.get_loopy_arg('spec_{}'.format(direction),
@@ -499,13 +741,13 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
                                                 dimensions=rate_info[direction]['specs'].shape,
                                                 initializer=rate_info[direction]['specs'],
                                                 dtype=rate_info[direction]['specs'].dtype,
-                                                order=loopy_opt.order)
+                                                order=loopy_opts.order)
 
         #species counts
         num_spec_lp, num_spec_str, map_result = lp_utils.get_loopy_arg('num_spec_{}'.format(direction),
                                                        ['${reac_ind}'],
                                                        dimensions=rate_info[direction]['num_spec'].shape,
-                                                       order=loopy_opt.order,
+                                                       order=loopy_opts.order,
                                                        initializer=rate_info[direction]['num_spec'],
                                                        dtype=rate_info[direction]['num_spec'].dtype,
                                                        map_result='${spec_offset}')
@@ -514,19 +756,19 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
         rateconst_arr, rateconst_str, _ = lp_utils.get_loopy_arg('kf' if direction == 'fwd' else 'kr',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info[direction]['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
         #concentrations
         concs_lp, concs_str, _ = lp_utils.get_loopy_arg('conc',
                                                         indicies=['${spec_ind}', 'j'],
                                                         dimensions=(rate_info['Ns'], test_size),
-                                                        order=loopy_opt.order)
+                                                        order=loopy_opts.order)
 
         #and finally the ROP values
         rop_arr, rop_str, _ = lp_utils.get_loopy_arg('rop_{}'.format(direction),
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info[direction]['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
         #update kernel data
         kernel_data.extend([num_spec_offsets_lp, concs_lp, nu_lp, spec_lp, num_spec_lp, rateconst_arr, rop_arr])
@@ -610,7 +852,7 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
 
 
 
-def get_rxn_pres_mod(eqs, loopy_opt, rate_info, test_size=None):
+def get_rxn_pres_mod(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for pressure modification
     term of the forward reaction rates.
 
@@ -618,7 +860,7 @@ def get_rxn_pres_mod(eqs, loopy_opt, rate_info, test_size=None):
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -658,7 +900,7 @@ def get_rxn_pres_mod(eqs, loopy_opt, rate_info, test_size=None):
     thd_lp, thd_str, map_instructs = lp_utils.get_loopy_arg('thd_conc',
                                                 indicies=['${reac_ind}', 'j'],
                                                 dimensions=(num_thd, test_size),
-                                                order=loopy_opt.order,
+                                                order=loopy_opts.order,
                                                 map_name=thd_map,
                                                 map_result=reac_mapname)
     #add the map
@@ -669,7 +911,7 @@ def get_rxn_pres_mod(eqs, loopy_opt, rate_info, test_size=None):
     pres_mod_lp, pres_mod_str, map_instructs = lp_utils.get_loopy_arg('pres_mod',
                                       ['${reac_ind}', 'j'],
                                       dimensions=(num_thd, test_size),
-                                      order=loopy_opt.order,
+                                      order=loopy_opts.order,
                                       map_name=thd_map)
 
     thd_instructions = Template(
@@ -705,7 +947,7 @@ ${pres_mod} = ${thd_conc} {dep=decl}
     fall_type_lp, fall_type_str, map_instructs = lp_utils.get_loopy_arg('fall_type',
                                       ['${reac_ind}'],
                                       dimensions=(fall_type.shape),
-                                      order=loopy_opt.order,
+                                      order=loopy_opts.order,
                                       initializer=fall_type,
                                       dtype=fall_type.dtype)
 
@@ -713,12 +955,12 @@ ${pres_mod} = ${thd_conc} {dep=decl}
     Fi_lp, Fi_str, _ = lp_utils.get_loopy_arg('Fi',
                             indicies=['${reac_ind}', 'j'],
                             dimensions=[rate_info['fall']['num'], test_size],
-                            order=loopy_opt.order)
+                            order=loopy_opts.order)
     #the Pr array
     Pr_lp, Pr_str, _ = lp_utils.get_loopy_arg('Pr',
                             indicies=['${reac_ind}', 'j'],
                             dimensions=[rate_info['fall']['num'], test_size],
-                            order=loopy_opt.order)
+                            order=loopy_opts.order)
 
     #find the falloff -> thd map
     map_name = 'pres_mod_map'
@@ -735,7 +977,7 @@ ${pres_mod} = ${thd_conc} {dep=decl}
     pres_mod_lp, pres_mod_str, _ = lp_utils.get_loopy_arg('pres_mod',
                                       ['${pres_mod_ind}', 'j'],
                                       dimensions=(num_thd, test_size),
-                                      order=loopy_opt.order)
+                                      order=loopy_opts.order)
 
     #update the args
     kernel_data.extend([Fi_lp, Pr_lp, fall_type_lp, pres_mod_lp, pres_mod_map])
@@ -768,14 +1010,14 @@ ${pres_mod} = ci_temp {dep=ci_update}
 
 
 
-def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
+def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for reverse reaction rates
 
     Parameters
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -813,7 +1055,7 @@ def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
     nu_sum_lp, nu_sum_str, map_result = lp_utils.get_loopy_arg('nu_sum',
                                                    ['${reac_ind}'],
                                                    dimensions=rate_info['net']['nu_sum'].shape,
-                                                   order=loopy_opt.order,
+                                                   order=loopy_opts.order,
                                                    initializer=rate_info['net']['nu_sum'],
                                                    dtype=rate_info['net']['nu_sum'].dtype,
                                                    map_name=rev_map)
@@ -826,7 +1068,7 @@ def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
     num_spec_lp, num_spec_str, map_result = lp_utils.get_loopy_arg('total_spec_per_reac',
                                                    ['${reac_ind}'],
                                                    dimensions=rate_info['net']['num_spec'].shape,
-                                                   order=loopy_opt.order,
+                                                   order=loopy_opts.order,
                                                    initializer=rate_info['net']['num_spec'],
                                                    dtype=rate_info['net']['num_spec'].dtype,
                                                    map_name=rev_map)
@@ -835,7 +1077,7 @@ def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
     num_spec_offsets_lp, num_spec_offsets_str, map_result = lp_utils.get_loopy_arg('total_spec_per_reac_offset',
                                                    ['${reac_ind}'],
                                                    dimensions=net_spec_offsets.shape,
-                                                   order=loopy_opt.order,
+                                                   order=loopy_opts.order,
                                                    initializer=net_spec_offsets,
                                                    dtype=net_spec_offsets.dtype,
                                                    map_name=rev_map)
@@ -843,19 +1085,19 @@ def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
     B_lp, B_str, _ = lp_utils.get_loopy_arg('B',
                                             ['${spec_ind}', 'j'],
                                             dimensions=(rate_info['Ns'], test_size),
-                                            order=loopy_opt.order)
+                                            order=loopy_opts.order)
     net_nu_lp, net_nu_str, _ = lp_utils.get_loopy_arg('net_nu',
                                             ['${spec_map}'],
                                             dimensions=rate_info['net']['nu'].shape,
                                             initializer=rate_info['net']['nu'],
                                             dtype=rate_info['net']['nu'].dtype,
-                                            order=loopy_opt.order)
+                                            order=loopy_opts.order)
 
     #and the Kc array
     Kc_lp, Kc_str, _ = lp_utils.get_loopy_arg('Kc',
                                               ['${reac_ind}', 'j'],
                                               dimensions=(rate_info['rev']['num'], test_size),
-                                              order=loopy_opt.order)
+                                              order=loopy_opts.order)
 
     #modify Kc equation
     Kc_eqn = sp_utils.sanitize(conp_eqs[Kc_sym],
@@ -873,14 +1115,14 @@ def get_rev_rates(eqs, loopy_opt, rate_info, test_size=None):
     kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
                     indicies=['${reac_ind}', 'j'],
                     dimensions=[rate_info['Nr'], test_size],
-                    order=loopy_opt.order,
+                    order=loopy_opts.order,
                     map_name=rev_map)
 
     #create the kr array / str
     kr_arr, kr_str, _ = lp_utils.get_loopy_arg('kr',
                     indicies=['${reac_ind}', 'j'],
                     dimensions=[rate_info['rev']['num'], test_size],
-                    order=loopy_opt.order)
+                    order=loopy_opts.order)
 
     #get the kr eqn
     Kc_temp_str = 'Kc_temp'
@@ -973,14 +1215,14 @@ ${kr_val} = ${rev_eqn}
                    parameters={'P_a' : np.float64(chem.PA), 'R_u' : np.float64(chem.RU)},
                    extra_subs={'reac_ind' : reac_ind})
 
-def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
+def get_thd_body_concs(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for third body concentrations
 
     Parameters
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -1003,14 +1245,14 @@ def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     concs_lp, concs_str, _ = lp_utils.get_loopy_arg('conc',
                                                     indicies=indicies,
                                                     dimensions=(Ns, test_size),
-                                                    order=loopy_opt.order)
+                                                    order=loopy_opts.order)
     concs_str = Template(concs_str)
 
     indicies = ['${reac_ind}', 'j']
     thd_lp, thd_str, _ = lp_utils.get_loopy_arg('thd_conc',
                                                 indicies=indicies,
                                                 dimensions=(num_thd, test_size),
-                                                order=loopy_opt.order)
+                                                order=loopy_opts.order)
 
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
@@ -1125,14 +1367,14 @@ ${thd_str} = thd_temp {dep=thd*}
                          extra_subs={'reac_ind' : reac_ind})
     return info
 
-def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
+def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for cheb rate constants
 
     Parameters
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -1232,12 +1474,12 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     T_arr, T_arr_str, _ = lp_utils.get_loopy_arg('T_arr',
                           indicies=['j'],
                           dimensions=[test_size],
-                          order=loopy_opt.order,
+                          order=loopy_opts.order,
                           dtype=np.float64)
     P_arr, P_arr_str, _= lp_utils.get_loopy_arg('P_arr',
                           indicies=['j'],
                           dimensions=[test_size],
-                          order=loopy_opt.order,
+                          order=loopy_opts.order,
                           dtype=np.float64)
     kernel_data = [params_lp, numP_lp, numT_lp, plim_lp, tlim_lp,
                     pres_poly_lp, temp_poly_lp, T_arr, P_arr]
@@ -1255,7 +1497,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
                     indicies=[reac_ind, 'j'],
                     dimensions=[Nr, test_size],
-                    order=loopy_opt.order,
+                    order=loopy_opts.order,
                     map_name=out_map)
 
     maps = [map_result[reac_ind]]
@@ -1341,14 +1583,14 @@ ${kf_str} = exp10(kf_temp) {dep=kf}
                      extra_subs={'reac_ind' : reac_ind})
 
 
-def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
+def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for p-log rate constants
 
     Parameters
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -1463,7 +1705,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
                     indicies=[reac_ind, 'j'],
                     dimensions=[Nr, test_size],
                     map_name=out_map,
-                    order=loopy_opt.order)
+                    order=loopy_opts.order)
     kernel_data.append(kf_arr)
 
     #handle map info
@@ -1526,7 +1768,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
         extra_subs={'reac_ind' : reac_ind})]
 
 
-def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
+def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the reduced
     pressure evaluation kernel
 
@@ -1534,7 +1776,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -1569,7 +1811,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
     kf_arr, kf_str, map_inst = lp_utils.get_loopy_arg('kf',
                     indicies=indicies,
                     dimensions=[rate_info['Nr'], test_size],
-                    order=loopy_opt.order,
+                    order=loopy_opts.order,
                     map_name=inmaps)
     if '${reac_ind}' in map_inst:
         map_instructs.append(map_inst['${reac_ind}'])
@@ -1578,7 +1820,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
     kf_fall_arr, kf_fall_str, _ = lp_utils.get_loopy_arg('kf_fall',
                         indicies=indicies,
                         dimensions=[rate_info['fall']['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
     #temperatures
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
@@ -1587,7 +1829,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
     Pr_arr, Pr_str, _ = lp_utils.get_loopy_arg('Pr',
                         indicies=indicies,
                         dimensions=[rate_info['fall']['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
     #third-body concentrations
     thd_indexing_str = '${reac_ind}'
@@ -1609,7 +1851,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
     thd_conc_lp, thd_conc_str, map_inst = lp_utils.get_loopy_arg('thd_conc',
                                                  indicies=indicies,
                                                  dimensions=(rate_info['thd']['num'], test_size),
-                                                 order=loopy_opt.order,
+                                                 order=loopy_opts.order,
                                                  map_name=thd_index_map,
                                                  map_result='thd_i')
     if '${reac_ind}' in map_inst:
@@ -1664,7 +1906,7 @@ ${Pr_str} = ${Pr_eq} {dep=k*}
                      maps=map_instructs,
                      extra_subs={'reac_ind' : reac_ind})]
 
-def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
+def get_troe_kernel(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the Troe
     falloff evaluation kernel
 
@@ -1672,7 +1914,7 @@ def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -1706,14 +1948,14 @@ def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
     Pr_lp, Pr_str, map_result = lp_utils.get_loopy_arg('Pr',
                             indicies=['${reac_ind}', 'j'],
                             dimensions=[rate_info['fall']['num'], test_size],
-                            order=loopy_opt.order,
+                            order=loopy_opts.order,
                             map_name=out_map)
 
     #create Fi loopy array / string
     Fi_lp, Fi_str, map_result = lp_utils.get_loopy_arg('Fi',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['num'], test_size],
-                        order=loopy_opt.order,
+                        order=loopy_opts.order,
                         map_name=out_map)
 
     #add to the kernel maps
@@ -1725,19 +1967,19 @@ def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
     Fcent_lp, Fcent_str, _ = lp_utils.get_loopy_arg('Fcent',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['troe']['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
     #create the Atroe loopy array / str
     Atroe_lp, Atroe_str, _ = lp_utils.get_loopy_arg('Atroe',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['troe']['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
     #create the Fcent loopy array / str
     Btroe_lp, Btroe_str, _ = lp_utils.get_loopy_arg('Btroe',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['troe']['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
 
     #create the temperature array
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
@@ -1856,7 +2098,7 @@ def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
                      extra_subs={'reac_ind' : reac_ind})]
 
 
-def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):
+def get_sri_kernel(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the SRI
     falloff evaluation kernel
 
@@ -1864,7 +2106,7 @@ def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -1909,13 +2151,13 @@ def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):
     Fi_lp, Fi_str, map_result = lp_utils.get_loopy_arg('Fi',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['num'], test_size],
-                        order=loopy_opt.order,
+                        order=loopy_opts.order,
                         map_name=out_map)
     #and Pri array / mapping
     Pr_lp, Pr_str, map_result = lp_utils.get_loopy_arg('Pr',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['num'], test_size],
-                        order=loopy_opt.order,
+                        order=loopy_opts.order,
                         map_name=out_map)
     maps = []
     if '${reac_ind}' in map_result:
@@ -1938,7 +2180,7 @@ def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):
     X_sri_lp, X_sri_str, _ = lp_utils.get_loopy_arg('X',
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info['fall']['sri']['num'], test_size],
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
     sri_a_lp, sri_a_str = __1Dcreator('sri_a', sri_a, scope=scopes.GLOBAL)
     sri_b_lp, sri_b_str = __1Dcreator('sri_b', sri_b, scope=scopes.GLOBAL)
     sri_c_lp, sri_c_str = __1Dcreator('sri_c', sri_c, scope=scopes.GLOBAL)
@@ -2003,7 +2245,7 @@ ${X_str} = X_temp
 
 
 
-def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
+def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         falloff=False):
     """Generates instructions, kernel arguements, and data for specialized forms
     of simple (non-pressure dependent) rate constants
@@ -2012,7 +2254,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
@@ -2041,10 +2283,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
         Nr = rate_info['Nr']
 
     #first assign the reac types, parameters
-    full = loopy_opt.rate_spec == lp_utils.RateSpecialization.full
-    hybrid = loopy_opt.rate_spec == lp_utils.RateSpecialization.hybrid
-    fixed = loopy_opt.rate_spec == lp_utils.RateSpecialization.fixed
-    separated_kernels = loopy_opt.rate_spec_kernels
+    full = loopy_opts.rate_spec == lp_utils.RateSpecialization.full
+    hybrid = loopy_opts.rate_spec == lp_utils.RateSpecialization.hybrid
+    fixed = loopy_opts.rate_spec == lp_utils.RateSpecialization.fixed
+    separated_kernels = loopy_opts.rate_spec_kernels
     if fixed and separated_kernels:
         separated_kernels = False
         logging.info('Cannot use separated kernels with a fixed RateSpecialization, '
@@ -2223,7 +2465,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
                         indicies=[info.var_name, 'j'],
                         dimensions=[Nr, test_size],
                         map_name=out_map,
-                        order=loopy_opt.order)
+                        order=loopy_opts.order)
         info.kernel_data.append(kf_arr)
 
         #handle map info
@@ -2359,13 +2601,13 @@ def make_rateconst_kernel(info, target, test_size):
     knl = lp.prioritize_loops(knl, inames)
     return knl
 
-def apply_rateconst_vectorization(loopy_opt, reac_ind, knl):
+def apply_rateconst_vectorization(loopy_opts, reac_ind, knl):
     """
     Applies wide / deep vectorization to a generic rateconst kernel
 
     Parameters
     ----------
-    loopy_opt : :class:`loopy_options` object
+    loopy_opts : :class:`loopy_options` object
         A object containing all the loopy options to execute
     reac_ind : str
         The reaction index variable
@@ -2378,28 +2620,28 @@ def apply_rateconst_vectorization(loopy_opt, reac_ind, knl):
         The transformed kernel
     """
     #now apply specified optimizations
-    if loopy_opt.depth is not None:
+    if loopy_opts.depth is not None:
         #and assign the l0 axis to 'i'
-        knl = lp.split_iname(knl, reac_ind, loopy_opt.depth, inner_tag='l.0')
+        knl = lp.split_iname(knl, reac_ind, loopy_opts.depth, inner_tag='l.0')
         #assign g0 to 'j'
         knl = lp.tag_inames(knl, [('j', 'g.0')])
-    elif loopy_opt.width is not None:
+    elif loopy_opts.width is not None:
         #make the kernel a block of specifed width
-        knl = lp.split_iname(knl, 'j', loopy_opt.width, inner_tag='l.0')
+        knl = lp.split_iname(knl, 'j', loopy_opts.width, inner_tag='l.0')
         #assign g0 to 'i'
         knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
 
     #now do unr / ilp
-    i_tag = reac_ind + '_outer' if loopy_opt.depth is not None else reac_ind
-    if loopy_opt.unr is not None:
-        knl = lp.split_iname(knl, i_tag, loopy_opt.unr, inner_tag='unr')
-    elif loopy_opt.ilp:
+    i_tag = reac_ind + '_outer' if loopy_opts.depth is not None else reac_ind
+    if loopy_opts.unr is not None:
+        knl = lp.split_iname(knl, i_tag, loopy_opts.unr, inner_tag='unr')
+    elif loopy_opts.ilp:
         knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
 
     return knl
 
 def rate_const_kernel_gen(eqs, reacs, specs,
-                            loopy_opt, test_size=None):
+                            loopy_opts, test_size=None):
     """Helper function that generates kernels for
        evaluation of simple arrhenius rate forms
 
@@ -2411,7 +2653,7 @@ def rate_const_kernel_gen(eqs, reacs, specs,
         List of reactions in the mechanism.
     specs : list of `SpecInfo`
         List of species in the mechanism
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
         If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
@@ -2427,31 +2669,31 @@ def rate_const_kernel_gen(eqs, reacs, specs,
         test_size = 'n'
 
     #determine rate evaluation types, indicies etc.
-    rate_info = assign_rates(reacs, specs, loopy_opt.rate_spec)
+    rate_info = assign_rates(reacs, specs, loopy_opts.rate_spec)
 
     kernels = {}
 
     #get the simple arrhenius rateconst_info's
-    kernels['simple'] = get_simple_arrhenius_rates(eqs, loopy_opt,
+    kernels['simple'] = get_simple_arrhenius_rates(eqs, loopy_opts,
         rate_info, test_size=test_size)
 
     #check for plog
     if rate_info['plog']['num']:
         #generate the plog kernel
-        kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opt,
+        kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size)
 
     if rate_info['cheb']['num']:
-        kernels['plog'] = get_cheb_arrhenius_rates(eqs, loopy_opt,
+        kernels['plog'] = get_cheb_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size)
 
     #check for falloff
     if rate_info['fall']['num']:
         if rate_info['fall']['troe']['num']:
-            kernels['troe'] = get_troe_kernel(eqs, loopy_opt,
+            kernels['troe'] = get_troe_kernel(eqs, loopy_opts,
             rate_info, test_size=test_size)
         if rate_info['fall']['sri']['num']:
-            kernels['sri'] = get_troe_kernel(eqs, loopy_opt,
+            kernels['sri'] = get_troe_kernel(eqs, loopy_opts,
             rate_info, test_size=test_size)
 
 
@@ -2468,7 +2710,7 @@ def rate_const_kernel_gen(eqs, reacs, specs,
 
         #apply other optimizations
         for i, (reac_ind, knl) in enumerate(knl_list[eval_type]):
-            knl_list[eval_type][i] = apply_rateconst_vectorization(loopy_opt,
+            knl_list[eval_type][i] = apply_rateconst_vectorization(loopy_opts,
                 reac_ind, knl)
 
     return knl_list
@@ -2566,7 +2808,7 @@ def write_rate_constants(path, specs, reacs, eqs, opts, auto_diff=False):
 
 
 def polyfit_kernel_gen(varname, nicename, eqs, specs,
-                            loopy_opt, test_size=None):
+                            loopy_opts, test_size=None):
     """Helper function that generates kernels for
        evaluation of various thermodynamic species properties
 
@@ -2582,7 +2824,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
         List of species in the mechanism.
     lang : {'c', 'cuda', 'opencl'}
         Programming language.
-    loopy_opt : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
         If not None, this kernel is being used for testing.
@@ -2597,7 +2839,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     if test_size is None:
         test_size = 'n'
 
-    if loopy_opt.width is not None and loopy_opt.depth is not None:
+    if loopy_opts.width is not None and loopy_opts.depth is not None:
         raise Exception('Cannot specify both SIMD/SIMT width and depth')
 
     var = next(v for v in eqs.keys() if str(v) == varname)
@@ -2631,14 +2873,14 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     hi_eq_str = str(eq.subs([(sp.IndexedBase('a')[k, i],
         a_hi_str.safe_substitute(param_val=i)) for i in range(poly_dim)]))
 
-    target = lp_utils.get_target(loopy_opt.lang)
+    target = lp_utils.get_target(loopy_opts.lang)
 
     #create the input arrays arrays
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     out_lp, out_str, _ = lp_utils.get_loopy_arg(nicename,
                     indicies=['k', 'i'],
                     dimensions=(Ns, test_size),
-                    order=loopy_opt.order)
+                    order=loopy_opts.order)
 
     knl_data = [a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
 
@@ -2668,14 +2910,14 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     knl = lp.prioritize_loops(knl, ['i', 'k'])
 
 
-    if loopy_opt.depth is not None:
+    if loopy_opts.depth is not None:
         #and assign the l0 axis to 'k'
-        knl = lp.split_iname(knl, 'k', loopy_opt.depth, inner_tag='l.0')
+        knl = lp.split_iname(knl, 'k', loopy_opts.depth, inner_tag='l.0')
         #assign g0 to 'i'
         knl = lp.tag_inames(knl, [('i', 'g.0')])
-    elif loopy_opt.width is not None:
+    elif loopy_opts.width is not None:
         #make the kernel a block of specifed width
-        knl = lp.split_iname(knl, 'i', loopy_opt.width, inner_tag='l.0')
+        knl = lp.split_iname(knl, 'i', loopy_opts.width, inner_tag='l.0')
         #assign g0 to 'i'
         knl = lp.tag_inames(knl, [('i_outer', 'g.0')])
 
@@ -2683,10 +2925,10 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     knl = lp.fix_parameters(knl, R_u=chem.RU)
 
     #now do unr / ilp
-    k_tag = 'k_outer' if loopy_opt.depth is not None else 'k'
-    if loopy_opt.unr is not None:
-        knl = lp.split_iname(knl, k_tag, loopy_opt.unr, inner_tag='unr')
-    elif loopy_opt.ilp:
+    k_tag = 'k_outer' if loopy_opts.depth is not None else 'k'
+    if loopy_opts.unr is not None:
+        knl = lp.split_iname(knl, k_tag, loopy_opts.unr, inner_tag='unr')
+    elif loopy_opts.ilp:
         knl = lp.tag_inames(knl, [(k_tag, 'ilp')])
 
     return knl

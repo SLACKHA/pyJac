@@ -10,7 +10,7 @@ from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
     get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
-    get_rxn_pres_mod, get_rop)
+    get_rxn_pres_mod, get_rop, get_rop_net)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call)
 from ..utils import create_dir
@@ -309,7 +309,7 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
-    def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False):
+    def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False, do_ropsplit=None):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -319,6 +319,10 @@ class SubTest(TestClass):
             The function to test
         kernel_calls : :class:`kernel_call` or list thereof
             Contains the masks and reference answers for kernel testing
+        do_ratespec : bool
+            If true, test rate specializations and kernel splitting for simple rates
+        do_ropsplit : bool
+            If true, test kernel splitting for rop_net
         """
 
         eqs = {'conp' : self.store.conp_eqs,
@@ -334,8 +338,12 @@ class SubTest(TestClass):
         ratespec_loop = [
             ('rate_spec', [x for x in RateSpecialization]),
             ('rate_spec_kernels', [True, False])]
+        ropsplit_loop = [
+            ('rop_net_kernels', [True])]
         if do_ratespec:
             oploop = oploop + ratespec_loop
+        if do_ropsplit:
+            oploop = oploop + ropsplit_loop
         oploop = OptionLoop(OrderedDict(oploop))
 
         reacs = self.store.reacs
@@ -605,3 +613,38 @@ class SubTest(TestClass):
                         input_mask=['kf'],
                         strict_name_match=True, **args)]
         self.__generic_rate_tester(get_rop, kc)
+
+    @attr('long')
+    def test_rop_net(self):
+        fwd_removed = self.store.fwd_rxn_rate.copy()
+        fwd_removed[self.store.thd_inds, :] = fwd_removed[self.store.thd_inds, :] / self.store.ref_pres_mod
+        thd_in_rev = np.where(np.in1d(self.store.thd_inds, self.store.rev_inds))[0]
+        rev_update_map = np.where(np.in1d(self.store.rev_inds, self.store.thd_inds[thd_in_rev]))[0]
+        rev_removed = self.store.rev_rxn_rate.copy()
+        rev_removed[rev_update_map, :] = rev_removed[rev_update_map, :] / self.store.ref_pres_mod[thd_in_rev, :]
+        args={'rop_fwd' : lambda x: fwd_removed.copy() if x == 'F' else fwd_removed.T.copy(),
+                'rop_rev' : lambda x: rev_removed.copy() if x == 'F' else rev_removed.T.copy(),
+                'pres_mod' : lambda x: self.store.ref_pres_mod.copy() if x == 'F' else
+                                        self.store.ref_pres_mod.T.copy()}
+
+        #first test w/o the splitting
+        kc = kernel_call('rateconst_rop_net', [self.store.rxn_rates], **args)
+        self.__generic_rate_tester(get_rop_net, kc)
+
+        def __arg_test(argname, kernel_name):
+            if kernel_name == 'rateconst_rop_net_fwd' and argname != 'rop_fwd':
+                return False
+            if kernel_name == 'rateconst_rop_net_rev' and argname != 'rop_rev':
+                return False
+            if kernel_name == 'rateconst_rop_net_pres_mod' and argname != 'pres_mod':
+                return False
+            return True
+
+        #next test with splitting
+        kc = [kernel_call('rateconst_rop_net_fwd', [self.store.rxn_rates],
+            input_mask=['rop_rev', 'pres_mod'], **args),
+              kernel_call('rateconst_rop_net_rev', [self.store.rxn_rates],
+            input_mask=['rop_fwd', 'pres_mod'], **args),
+              kernel_call('rateconst_rop_net_pres_mod', [self.store.rxn_rates],
+            input_mask=['rop_fwd', 'rop_rev'], **args)]
+        self.__generic_rate_tester(get_rop_net, kc, do_ropsplit=True)

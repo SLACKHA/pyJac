@@ -345,19 +345,21 @@ def assign_rates(reacs, specs, rate_spec):
 
 class rateconst_info(object):
     def __init__(self, name, instructions, pre_instructions=[],
-        reac_ind='i', kernel_data=None,
+        var_name='i', kernel_data=None,
         maps=[], extra_inames=[], indicies=[],
-        assumptions=[], parameters={}):
+        assumptions=[], parameters={},
+        extra_subs={}):
         self.name = name
         self.instructions = instructions
         self.pre_instructions = pre_instructions[:]
-        self.reac_ind = reac_ind
+        self.var_name = var_name
         self.kernel_data = kernel_data[:]
         self.maps = maps[:]
         self.extra_inames = extra_inames[:]
         self.indicies = indicies[:]
         self.assumptions = assumptions[:]
         self.parameters = parameters.copy()
+        self.extra_subs = extra_subs
 
 __TINV_PREINST_KEY = 'Tinv'
 __TLOG_PREINST_KEY = 'logT'
@@ -594,11 +596,12 @@ def get_rop(eqs, loopy_opt, rate_info, test_size=None):
         #and return the rateconst
         return rateconst_info(name='rop_{}'.format(direction),
                        instructions=rop_instructions,
-                       reac_ind=reac_ind,
+                       var_name=reac_ind,
                        kernel_data=kernel_data,
                        maps=maplist,
                        extra_inames=extra_inames,
-                       indicies=indicies)
+                       indicies=indicies,
+                       extra_subs={'reac_ind' : reac_ind})
 
     infos = [__rop_create('fwd')]
     if rate_info['rev']['num']:
@@ -683,10 +686,11 @@ ${pres_mod} = ${thd_conc} {dep=decl}
     info_list = [
         rateconst_info(name='ci_thd',
                    instructions=thd_instructions,
-                   reac_ind=reac_ind,
+                   var_name=reac_ind,
                    kernel_data=kernel_data,
                    maps=thd_maplist,
-                   indicies=indicies)]
+                   indicies=indicies,
+                   extra_subs={'reac_ind' : reac_ind})]
 
     #and now the falloff kernel
     kernel_data = []
@@ -754,10 +758,11 @@ ${pres_mod} = ci_temp {dep=ci_update}
     info_list.append(
         rateconst_info(name='ci_fall',
                    instructions=fall_instructions,
-                   reac_ind=reac_ind,
+                   var_name=reac_ind,
                    kernel_data=kernel_data,
                    maps=fall_maplist,
-                   indicies=indicies))
+                   indicies=indicies,
+                   extra_subs={'reac_ind' : reac_ind}))
 
     return info_list
 
@@ -960,12 +965,13 @@ ${kr_val} = ${rev_eqn}
     #and return the rateinfo
     return rateconst_info(name='Kc',
                    instructions=instructions,
-                   reac_ind=reac_ind,
+                   var_name=reac_ind,
                    kernel_data=kernel_data,
                    maps=maps,
                    extra_inames=extra_inames,
                    indicies=indicies,
-                   parameters={'P_a' : np.float64(chem.PA), 'R_u' : np.float64(chem.RU)})
+                   parameters={'P_a' : np.float64(chem.PA), 'R_u' : np.float64(chem.RU)},
+                   extra_subs={'reac_ind' : reac_ind})
 
 def get_thd_body_concs(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for third body concentrations
@@ -1111,11 +1117,12 @@ ${thd_str} = thd_temp {dep=thd*}
     #create info
     info = rateconst_info('thd',
                          instructions=instructions,
-                         reac_ind=reac_ind,
+                         var_name=reac_ind,
                          kernel_data=kernel_data,
                          extra_inames=extra_inames,
                          indicies=indicies,
-                         parameters={'R' : chem.RU})
+                         parameters={'R' : chem.RU},
+                         extra_subs={'reac_ind' : reac_ind})
     return info
 
 def get_cheb_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
@@ -1329,8 +1336,9 @@ ${kf_str} = exp10(kf_temp) {dep=kf}
                     num_cheb=num_cheb)).safe_substitute(reac_ind=reac_ind)
 
     return rateconst_info('cheb', instructions=instructions, pre_instructions=preinstructs,
-                     reac_ind=reac_ind, kernel_data=kernel_data, maps=maps,
-                     extra_inames=extra_inames, indicies=indicies)
+                     var_name=reac_ind, kernel_data=kernel_data, maps=maps,
+                     extra_inames=extra_inames, indicies=indicies,
+                     extra_subs={'reac_ind' : reac_ind})
 
 
 def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
@@ -1513,8 +1521,9 @@ def get_plog_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None):
     #and return
     return [rateconst_info(name='plog', instructions=instructions,
         pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY, __PLOG_PREINST_KEY],
-        reac_ind=reac_ind, kernel_data=kernel_data,
-        maps=maps, extra_inames=extra_inames, indicies=indicies)]
+        var_name=reac_ind, kernel_data=kernel_data,
+        maps=maps, extra_inames=extra_inames, indicies=indicies,
+        extra_subs={'reac_ind' : reac_ind})]
 
 
 def get_reduced_pressure_kernel(eqs, loopy_opt, rate_info, test_size=None):
@@ -1649,10 +1658,11 @@ ${Pr_str} = ${Pr_eq} {dep=k*}
     #and finally return the resulting info
     return [rateconst_info('red_pres',
                      instructions=pr_instructions,
-                     reac_ind=reac_ind,
+                     var_name=reac_ind,
                      kernel_data=kernel_data,
                      indicies=np.array(range(rate_info['fall']['num']), dtype=np.int32),
-                     maps=map_instructs)]
+                     maps=map_instructs,
+                     extra_subs={'reac_ind' : reac_ind})]
 
 def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the Troe
@@ -1839,10 +1849,11 @@ def get_troe_kernel(eqs, loopy_opt, rate_info, test_size=None):
 
     return [rateconst_info('fall_troe',
                      instructions=troe_instructions,
-                     reac_ind=reac_ind,
+                     var_name=reac_ind,
                      kernel_data=kernel_data,
                      indicies=indicies,
-                     maps=maps)]
+                     maps=maps,
+                     extra_subs={'reac_ind' : reac_ind})]
 
 
 def get_sri_kernel(eqs, loopy_opt, rate_info, test_size=None):
@@ -1984,10 +1995,11 @@ ${X_str} = X_temp
 
     return [rateconst_info('fall_sri',
                      instructions=sri_instructions,
-                     reac_ind=reac_ind,
+                     var_name=reac_ind,
                      kernel_data=kernel_data,
                      indicies=indicies,
-                     maps=maps)]
+                     maps=maps,
+                     extra_subs={'reac_ind' : reac_ind})]
 
 
 
@@ -2075,8 +2087,9 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
 
     #put rateconst info args in dict for unpacking convenience
     extra_args = {'kernel_data' : simple_arrhenius_data,
-                  'reac_ind' : reac_ind,
-                  'maps' : maps}
+                  'var_name' : reac_ind,
+                  'maps' : maps,
+                  'extra_subs' : {'reac_ind' : reac_ind}}
 
     default_preinstructs = [__TINV_PREINST_KEY, __TLOG_PREINST_KEY]
 
@@ -2182,10 +2195,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opt, rate_info, test_size=None,
                 end"""
 
         #check if we have an input map
-        if info.reac_ind != 'i':
+        if info.var_name != 'i':
             if info.indicies[0] + info.indicies.size - 1 == info.indicies[-1]:
                 #it'll end up in offset form, hence we don't need a map
-                info.reac_ind = 'i'
+                info.var_name = 'i'
                 info.maps = []
             else:
                 #need to add the input map to kernel data
@@ -2254,7 +2267,7 @@ def make_rateconst_kernel(info, target, test_size):
     skeleton = """
     for j
         ${pre}
-        for ${reac_ind}
+        for ${var_name}
             ${main}
         end
     end
@@ -2267,7 +2280,7 @@ def make_rateconst_kernel(info, target, test_size):
         instructions = [x for x in instructions.split('\n') if x.strip()]
 
     #load inames
-    inames = [info.reac_ind, 'j']
+    inames = [info.var_name, 'j']
 
     #add map instructions
     instructions = info.maps + instructions
@@ -2286,7 +2299,7 @@ def make_rateconst_kernel(info, target, test_size):
         i_end = info.indicies.size
 
     #add to ranges
-    iname_range.append('{}<={}<{}'.format(i_start, info.reac_ind, i_end))
+    iname_range.append('{}<={}<{}'.format(i_start, info.var_name, i_end))
     iname_range.append('{}<=j<{}'.format(0, test_size))
 
     if isinstance(test_size, str):
@@ -2310,13 +2323,17 @@ def make_rateconst_kernel(info, target, test_size):
                 break
         result = [line if i == 0 else whitespace + line for i, line in
                     enumerate(textwrap.dedent(value).splitlines())]
-        return Template('\n'.join(result)).safe_substitute(reac_ind=info.reac_ind)
-
+        return Template('\n'.join(result)).safe_substitute(var_name=info.var_name)
 
     kernel_str = Template(skeleton).safe_substitute(
-        reac_ind=info.reac_ind,
+        var_name=info.var_name,
         pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
         main=subs_preprocess('${main}', '\n'.join(instructions)))
+
+    #finally do extra subs
+    if info.extra_subs:
+        kernel_str = Template(kernel_str).safe_substitute(
+            **info.extra_subs)
 
     iname_arr = []
     #generate iname strings

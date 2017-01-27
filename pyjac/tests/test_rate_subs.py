@@ -366,7 +366,7 @@ class SubTest(TestClass):
                 knl = make_rateconst_kernel(info, target, self.store.test_size)
 
                 #apply vectorization
-                knl = apply_rateconst_vectorization(opt, info.reac_ind, knl)
+                knl = apply_rateconst_vectorization(opt, info.var_name, knl)
 
                 kernels.append(knl)
 

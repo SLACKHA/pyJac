@@ -629,22 +629,23 @@ class SubTest(TestClass):
 
         #first test w/o the splitting
         kc = kernel_call('rateconst_rop_net', [self.store.rxn_rates], **args)
-        self.__generic_rate_tester(get_rop_net, kc)
+        #self.__generic_rate_tester(get_rop_net, kc)
 
-        def __arg_test(argname, kernel_name):
-            if kernel_name == 'rateconst_rop_net_fwd' and argname != 'rop_fwd':
-                return False
-            if kernel_name == 'rateconst_rop_net_rev' and argname != 'rop_rev':
-                return False
-            if kernel_name == 'rateconst_rop_net_pres_mod' and argname != 'pres_mod':
-                return False
-            return True
+        def __input_mask(self, arg_name):
+            names = ['fwd', 'rev', 'pres_mod']
+            return next(x for x in names if x in self.name) in arg_name
+
+        def __chainer(self, out_vals):
+            self.kernel_args['rop_net'] = out_vals[-1][0]
 
         #next test with splitting
         kc = [kernel_call('rateconst_rop_net_fwd', [self.store.rxn_rates],
-            input_mask=['rop_rev', 'pres_mod'], **args),
+            input_mask=__input_mask, strict_name_match=True,
+            check=False, **args),
               kernel_call('rateconst_rop_net_rev', [self.store.rxn_rates],
-            input_mask=['rop_fwd', 'pres_mod'], **args),
+            input_mask=__input_mask, strict_name_match=True,
+            check=False, chain=__chainer, **args),
               kernel_call('rateconst_rop_net_pres_mod', [self.store.rxn_rates],
-            input_mask=['rop_fwd', 'rop_rev'], **args)]
+            input_mask=__input_mask, strict_name_match=True,
+            chain=__chainer, **args)]
         self.__generic_rate_tester(get_rop_net, kc, do_ropsplit=True)

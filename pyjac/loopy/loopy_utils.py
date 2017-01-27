@@ -196,6 +196,7 @@ class kernel_call(object):
 
     def __init__(self, name, ref_answer, compare_axis=0, compare_mask=None,
                     out_mask=None, input_mask=[], strict_name_match=False,
+                    chain=None, check=True,
                     **input_args):
         """
         The initializer for the :class:`kernel_call` object
@@ -213,11 +214,24 @@ class kernel_call(object):
             Should match length of ref_answer
         out_mask : int, optional
             The index(ices) of the returned array to aggregate.  Should match length of ref_answer
-        input_mask : list of str, optional
+        input_mask : list of str or function, optional
             An optional list of input arguements to filter out
+            If a function is passed, the expected signature is along the lines of
+                def fcn(self, arg_name):
+                    ...
+            and returns True iff this arg_name should be used
         strict_name_match : bool, optional
             If true, only kernels exactly matching this name will be excecuted
             Defaut is False
+        chain : function, optional
+            If not None, a function of signature similar to:
+                def fcn(self, out_values):
+                    ....
+            is expected.  This function should take the output values from a previous kernel call,
+            and place in the input args for this kernel call as necessary
+        check : bool
+            If False, do not check result (useful when chaining to check only the last result)
+            Default is True
         input_args : dict of `numpy.array`s
             The arguements to supply to the kernel
 
@@ -244,6 +258,8 @@ class kernel_call(object):
         self.input_args = input_args
         self.strict_name_match = strict_name_match
         self.kernel_args = None
+        self.chain = chain
+        self.check = check
 
     def is_my_kernel(self, knl):
         """
@@ -274,8 +290,12 @@ class kernel_call(object):
         #filter out bad input
         args_copy = self.input_args.copy()
         if self.input_mask is not None:
-            args_copy = {x : args_copy[x] for x in args_copy
-                if x not in self.input_mask}
+            if hasattr(self.input_mask, '__call__'):
+                args_copy = {x : args_copy[x] for x in args_copy
+                    if self.input_mask(self, x)}
+            else:
+                args_copy = {x : args_copy[x] for x in args_copy
+                    if x not in self.input_mask}
 
         for key in args_copy:
             if hasattr(args_copy[key], '__call__'):
@@ -401,6 +421,10 @@ def populate(knl, kernel_calls, device='0'):
                     #recreate with device
                     test_knl.target = lp.PyOpenCLTarget(device=device)
 
+                #check for chaining
+                if kc.chain:
+                    kc.chain(kc, output)
+
                 #run!
                 out = kc(test_knl, queue)
 
@@ -446,8 +470,8 @@ def auto_run(knl, kernel_calls, device='0'):
     try:
         result = True
         for i, kc in enumerate(kernel_calls):
-            kc.compare(out[i])
-            result = result and kc.compare(out[i])
+            if kc.check:
+                result = result and kc.compare(out[i])
         return result
     except:
         return kernel_calls.compare(out[0])

@@ -43,6 +43,8 @@ class storage(object):
                 isinstance(x, ct.ThreeBodyReaction)])
         self.ref_thd = np.zeros((self.thd_inds.size, test_size))
         self.ref_pres_mod = np.zeros((self.thd_inds.size, test_size))
+        self.species_rates = np.zeros((gas.n_species, test_size))
+        self.rxn_rates = np.zeros((gas.n_reactions, test_size))
         thd_eff_maps = []
         for i in self.thd_inds:
             default = gas.reaction(i).default_efficiency
@@ -94,6 +96,8 @@ class storage(object):
             self.equilibrium_constants[:, i] = gas.equilibrium_constants[self.rev_inds]
             self.fwd_rxn_rate[:, i] = gas.forward_rates_of_progress[:]
             self.rev_rxn_rate[:, i] = gas.reverse_rates_of_progress[self.rev_inds]
+            self.rxn_rates[:, i] = gas.net_rates_of_progress[:]
+            self.species_rates[:, i] = gas.net_production_rates[:]
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
             for j in range(self.fall_inds.size):
                 arrhen_temp[j] = pr_eval(i, j)
@@ -102,8 +106,10 @@ class storage(object):
                 self.ref_Sri[j, i] = sri_reacs[j].falloff(self.T[i], self.ref_Pr[sri_to_pr_map[j], i])
             for j in range(self.troe_inds.size):
                 self.ref_Troe[j, i] = troe_reacs[j].falloff(self.T[i], self.ref_Pr[troe_to_pr_map[j], i])
-            self.ref_Fall[sri_to_pr_map, i] = self.ref_Sri[:, i]
-            self.ref_Fall[troe_to_pr_map, i] = self.ref_Troe[:, i]
+            if self.sri_inds.size:
+                self.ref_Fall[sri_to_pr_map, i] = self.ref_Sri[:, i]
+            if self.troe_inds.size:
+                self.ref_Fall[troe_to_pr_map, i] = self.ref_Troe[:, i]
             for j in range(gas.n_species):
                 self.ref_B_rev[j, i] = gas.species(j).thermo.s(self.T[i]) / ct.gas_constant -\
                     gas.species(j).thermo.h(self.T[i]) / (ct.gas_constant * self.T[i]) - np.log(self.T[i])

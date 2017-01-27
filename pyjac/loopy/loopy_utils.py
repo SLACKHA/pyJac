@@ -448,7 +448,7 @@ def auto_run(knl, kernel_calls, device='0'):
     except:
         return kernel_calls.compare(out[0])
 
-def generate_map_instruction(oldname, newname, map_arr):
+def generate_map_instruction(oldname, newname, map_arr, affine=''):
     """
     Generates a loopy instruction that maps oldname -> newname via the
     mapping array
@@ -461,6 +461,8 @@ def generate_map_instruction(oldname, newname, map_arr):
         The new temporary variable to map to
     map_arr : str
         The array that holds the mappings
+    affine : str, optional
+        An optional affine mapping term that may be passed in
 
     Returns
     -------
@@ -469,10 +471,14 @@ def generate_map_instruction(oldname, newname, map_arr):
                 given mapping
     """
 
-    return  '<>{newname} = {mapper}[{oldname}]'.format(
+    if affine and not affine.startswith(' '):
+        affine = ' ' + affine
+
+    return  '<>{newname} = {mapper}[{oldname}]{affine}'.format(
             newname=newname,
             mapper=map_arr,
-            oldname=oldname)
+            oldname=oldname,
+            affine=affine)
 
 def get_loopy_order(indicies, dimensions, order, numpy_arg=None):
     """
@@ -522,7 +528,8 @@ def get_loopy_arg(arg_name, indicies, dimensions,
                     dtype=np.float64,
                     force_temporary=False,
                     read_only=True,
-                    map_result=''):
+                    map_result='',
+                    **kwargs):
     """
     Convience method that generates a loopy GlobalArg with correct indicies
     and sizes.
@@ -554,6 +561,8 @@ def get_loopy_arg(arg_name, indicies, dimensions,
         If True, the :class:`loopy.TemporaryVariable` will be readonly
     map_result : str
         If not empty, use instead of the default 'variable_name'_map
+    kwargs : **'d dict
+        The keyword args to pass to the resulting arg
 
     Returns
     -------
@@ -597,7 +606,8 @@ def get_loopy_arg(arg_name, indicies, dimensions,
 
     #finally make the argument
     if initializer is None and not force_temporary:
-        arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=dtype)
+        arg = lp.GlobalArg(arg_name, shape=tuple(dimensions), dtype=dtype,
+                            **kwargs)
     else:
         if initializer is not None:
             initializer = np.asarray(initializer, order=order, dtype=dtype)
@@ -606,7 +616,8 @@ def get_loopy_arg(arg_name, indicies, dimensions,
             initializer=initializer,
             scope=scope,
             read_only=read_only,
-            dtype=dtype)
+            dtype=dtype,
+            **kwargs)
 
     #and return
     return arg, '{name}[{inds}]'.format(name=arg_name,

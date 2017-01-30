@@ -67,27 +67,37 @@ class SubTest(TestClass):
         net_nu = []
         net_specs = []
         net_num_specs = []
-        for i, reac in enumerate(gas.reactions()):
-            temp_nu_sum = defaultdict(lambda: 0)
+        reac_count = defaultdict(lambda: 0)
+        spec_nu = defaultdict(lambda: [])
+        spec_to_reac = defaultdict(lambda: [])
+        for ireac, reac in enumerate(gas.reactions()):
+            temp_nu_sum_dict = defaultdict(lambda: 0)
             for spec, nu in sorted(reac.reactants.items(), key=lambda x: gas.species_index(x[0])):
                 fwd_specs.append(gas.species_index(spec))
                 fwd_nu.append(nu)
-                temp_nu_sum[spec] -= nu
-            assert result['fwd']['num_spec'][i] == len(reac.reactants)
+                temp_nu_sum_dict[spec] -= nu
+            assert result['fwd']['num_spec'][ireac] == len(reac.reactants)
             for spec, nu in sorted(reac.products.items(), key=lambda x: gas.species_index(x[0])):
-                if i in rev_inds:
+                if ireac in rev_inds:
                     rev_specs.append(gas.species_index(spec))
                     rev_nu.append(nu)
-                temp_nu_sum[spec] += nu
-            if i in rev_inds:
-                rev_ind = np.where(rev_inds == i)[0]
+                temp_nu_sum_dict[spec] += nu
+            if ireac in rev_inds:
+                rev_ind = np.where(rev_inds == ireac)[0]
                 assert result['rev']['num_spec'][rev_ind] == len(reac.products)
             temp_specs, temp_nu_sum = zip(*[(gas.species_index(x[0]), x[1]) for x in
-                sorted(temp_nu_sum.items(), key=lambda x: gas.species_index(x[0]))])
+                sorted(temp_nu_sum_dict.items(), key=lambda x: gas.species_index(x[0]))])
             net_specs.extend(temp_specs)
             net_num_specs.append(len(temp_specs))
             net_nu.extend(temp_nu_sum)
             nu_sum.append(sum(temp_nu_sum))
+            for spec, nu in temp_nu_sum_dict.items():
+                spec_ind = gas.species_index(spec)
+                if nu:
+                    reac_count[spec_ind] += 1
+                    spec_nu[spec_ind].append(nu)
+                    spec_to_reac[spec_ind].append(ireac)
+
         assert np.allclose(fwd_specs, result['fwd']['specs'])
         assert np.allclose(fwd_nu, result['fwd']['nu'])
         assert np.allclose(rev_specs, result['rev']['specs'])

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
  - Explicitly conserve mass in PaSR
  - Minor path fixes
+ - Division by zero in some TROE parameter cases
 
 ## [1.0.1] - 2016-05-25
 ### Added

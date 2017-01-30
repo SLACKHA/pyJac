@@ -6,11 +6,11 @@ Available from https://github.com/slackha/pyJac.
 
 ## BibTeX entry:
 
-    @misc{pyjac:2016,
+    @misc{pyjac:2017,
         author = {Kyle E Niemeyer and Nicholas J Curtis},
         title = {{pyJac}},
-        year = {2016},
+        year = {2017},
         howpublished = {Available via \url{https://github.com/slackha/pyJac}},
-        doi = {10.5281/zenodo.53100},
-        Note = {Version 1.0.1}
+        doi = {10.5281/zenodo.251144},
+        Note = {Version 1.0.2}
         }

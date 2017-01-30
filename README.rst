@@ -2,8 +2,8 @@
 pyJac
 #####
 
-.. image:: https://zenodo.org/badge/doi/10.5281/zenodo.53100.svg
-   :target: http://dx.doi.org/10.5281/zenodo.53100
+.. image:: https://zenodo.org/badge/19829533.svg
+   :target: https://zenodo.org/badge/latestdoi/19829533
 
 .. image:: https://badge.fury.io/py/pyJac.svg
     :target: https://badge.fury.io/py/pyJac

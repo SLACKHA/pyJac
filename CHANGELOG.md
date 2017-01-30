@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+### Fixed
+ - Fix for SRI Falloff functions with non-default third bodies (#12)
+ - Fixed removal of jac/rate lists before libgen of functional_tester
+
 ## [1.0.2] - 2017.01.18
 ### Added
  - Added CHANGELOG

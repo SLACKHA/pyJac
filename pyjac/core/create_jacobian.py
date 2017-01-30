@@ -3564,15 +3564,16 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
 
 
     #remove old file which potentially could corrupt library generation
-    try:
-        os.remove(os.path.join(build_path, 'jacobs', 'jac_list_{}'.format(lang)))
-    except:
-        pass
+    if not auto_diff:
+        try:
+            os.remove(os.path.join(build_path, 'jacobs', 'jac_list_{}'.format(lang)))
+        except:
+            pass
 
-    try:
-        os.remove(os.path.join(build_path, 'rates', 'rate_list_{}'.format(lang)))
-    except:
-        pass
+        try:
+            os.remove(os.path.join(build_path, 'rates', 'rate_list_{}'.format(lang)))
+        except:
+            pass
 
 
     the_len = len(reacs)

@@ -8,7 +8,7 @@ from collections import OrderedDict
 
 #local imports
 from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
-from ..loopy.loopy_utils import auto_run, loopy_options, get_device_list
+from ..loopy.loopy_utils import auto_run, loopy_options, get_device_list, kernel_call
 from ..utils import create_dir
 from . import TestClass
 
@@ -29,6 +29,10 @@ class SubTest(TestClass):
             ('order', ['C', 'F']),
             ('device', get_device_list())]))
 
+        #create the kernel call
+        kc = kernel_call('eval_' + nicename,
+                            [ref_ans], T_arr=T)
+
         specs = self.store.specs
         test_size = self.store.test_size
         for i, state in enumerate(oploop):
@@ -36,9 +40,8 @@ class SubTest(TestClass):
                 opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
                 knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
                                             opt, test_size=test_size)
-                ref = ref_ans if state['order'] == 'F' else ref_ans_T
-                assert auto_run(knl, ref, device=state['device'],
-                    T_arr=T)
+                kc.set_state(state['order'])
+                assert auto_run(knl, kc, device=state['device'])
             except Exception as e:
                 if not(state['width'] and state['depth']):
                     raise e

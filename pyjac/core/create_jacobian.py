@@ -247,23 +247,23 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rxn_ind, pres_rxn_ind, get_array):
         if rxn.troe:
             jline += ' * pow(Fcent, 1.0 / (1 + A * A / (B * B)))'
         elif rxn.sri:
-            jline += '* pow({:.6} * '.format(reac.sri_par[0])
+            jline += '* pow({:.6} * '.format(rxn.sri_par[0])
             # Need to check for negative parameters, and
             # skip "-" sign if so.
-            if reac.sri_par[1] > 0.0:
-                line += 'exp(-{:.6} / T)'.format(reac.sri_par[1])
+            if rxn.sri_par[1] > 0.0:
+                jline += 'exp(-{:.6} / T)'.format(rxn.sri_par[1])
             else:
-                line += 'exp({:.6} / T)'.format(abs(reac.sri_par[1]))
+                jline += 'exp({:.6} / T)'.format(abs(rxn.sri_par[1]))
 
-            if reac.sri_par[2] > 0.0:
-                line += ' + exp(-T / {:.6}), X) '.format(reac.sri_par[2])
+            if rxn.sri_par[2] > 0.0:
+                jline += ' + exp(-T / {:.6}), X) '.format(rxn.sri_par[2])
             else:
-                line += ' + exp(T / {:.6}), X) '.format(abs(reac.sri_par[2]))
+                jline += ' + exp(T / {:.6}), X) '.format(abs(rxn.sri_par[2]))
 
-            if (len(reac.sri_par) == 5 and
-                    reac.sri_par[3] != 1.0 and reac.sri_par[4] != 0.0):
-                line += ('* {:.8e} * '.format(reac.sri_par[3]) +
-                         'pow(T, {:.6}) '.format(reac.sri_par[4])
+            if (len(rxn.sri_par) == 5 and
+                    rxn.sri_par[3] != 1.0 and rxn.sri_par[4] != 0.0):
+                jline += ('* {:.8e} * '.format(rxn.sri_par[3]) +
+                         'pow(T, {:.6}) '.format(rxn.sri_par[4])
                          )
         jline += ' / (1.0 + Pr)'
         file.write(jline + utils.line_end[lang])

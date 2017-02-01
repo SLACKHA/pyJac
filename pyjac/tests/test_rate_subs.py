@@ -690,7 +690,7 @@ class SubTest(TestClass):
         #test regularly
         self.__generic_rate_tester(get_spec_rates, kc, do_spec_per_reac=True)
 
-    @attr('long'):
+    @attr('long')
     def test_temperature_rates(self):
         wdot = np.concatenate((np.zeros((1, test_size)), species_rates))
         args={'wdot' : lambda x: self.store.wdot.copy() if x == 'F'
@@ -700,7 +700,7 @@ class SubTest(TestClass):
                 'cp' : lambda x: self.store.spec_cp.copy() if x == 'F'
                             else self.store.spec_cp.T.copy(),
                 'h' : lambda x: self.store.spec_h.copy() if x == 'F'
-                            else self.store.spec_h.T.copy()
+                            else self.store.spec_h.T.copy(),
                 'cv' : lambda x: self.store.spec_cv.copy() if x == 'F'
                             else self.store.spec_cv.T.copy(),
                 'u' : lambda x: self.store.spec_u.copy() if x == 'F'

@@ -106,6 +106,15 @@ class SubTest(TestClass):
         assert np.allclose(net_nu, result['net']['nu'])
         assert np.allclose(net_num_specs, result['net']['num_spec'])
         assert np.allclose(net_specs, result['net']['specs'])
+        spec_inds = sorted(reac_count.keys())
+        assert np.allclose([reac_count[x] for x in spec_inds],
+                                result['net_per_spec']['reac_count'])
+        assert np.allclose([y for x in spec_inds for y in spec_nu[x]],
+                                result['net_per_spec']['nu'])
+        assert np.allclose([y for x in spec_inds for y in spec_to_reac[x]],
+                                result['net_per_spec']['reacs'])
+        assert np.allclose(spec_inds,
+                                result['net_per_spec']['map'])
 
         def __get_rate(reac, fall=False):
             try:

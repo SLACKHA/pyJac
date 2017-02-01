@@ -1,0 +1,302 @@
+#include "rxn_rates.oclh"
+#if __OPENCL_C_VERSION__ < 120
+#pragma OPENCL EXTENSION cl_khr_fp64: enable
+#endif
+
+__global double* Atroe;
+__global double* B;
+__global double* Btroe;
+__global double* Fcent;
+__global double* Fi;
+__global double* Kc;
+__global double* Pr;
+__global double* X;
+__global double* kf;
+__global double* kr;
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_rate_constants(int const n, __global double const *restrict T_arr, __global double const *restrict P_arr)
+{
+    rateconst_full(T_arr,n,kf)
+rateconst_plog(T_arr,P_arr,n,kf)
+rateconst_cheb(T_arr,P_arr,n,kf)
+rateconst_fall_troe(n,Pr,T_arr,Fi,Fcent,Atroe,Btroe)
+rateconst_fall_sri(T_arr,n,Fi,Pr,X)
+rateconst_Kc(n,B,Kc,kf,kr)
+}
+
+#define lid(N) ((int) get_local_id(N))
+#define gid(N) ((int) get_group_id(N))
+
+__constant double const A[11] = { 25.51075757972846, 3.655839600035736, 26.937873935368604, 35.56839581209184, 35.56839581209184, 25.02733093015058, 22.33050132582531, 24.21977339841289, -10.479740981624573, 4.254193263163997, 28.660640533109706 };
+__constant double const Ta[11] = { 0.0, 3150.1544760183583, 0.0, 0.0, 0.0, 0.0, 5334.127387507124, 0.0, -2269.017017949964, 279.79007806169443, 0.0 };
+__constant double const beta[11] = { -1.0, 2.7, -1.0, -0.86, -0.86, -0.37, 0.099, 0.0, 3.286, 1.209, -0.86 };
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_full(__global double const *restrict T_arr, int const n, __global double *restrict kf)
+{
+  double T_inv;
+  int i_map;
+  double logT;
+  int const out_map[11] = { 0, 1, 2, 3, 4, 5, 6, 8, 10, 11, 14 };
+
+  for (int j = 0; j <= -1 + n; ++j)
+  {
+    logT = log(T_arr[j]);
+    T_inv = 1.0 / T_arr[j];
+    for (int i = 0; i <= 10; ++i)
+    {
+      i_map = out_map[i];
+      kf[15 * j + i_map] = exp(A[i] + -1.0 * T_inv * Ta[i] + beta[i] * logT);
+    }
+  }
+}
+
+__constant int const plog_num_params[2] = { 3, 4 };
+__constant double const plog_params[4 * 2 * 4] = { 8.307212626628308, 11.52608845149651, 13.828673544490554, 0.0, 6.920918265508418, 9.223503358502464, 11.52608845149651, 13.828673544490554, 116.35244167295203, 131.18142415054444, 131.48004806477962, 0.0, 144.05225944727948, 127.93416379632116, 105.51094603939981, 82.15909417270545, -13.9, -15.28, -14.91, 0.0, -21.87, -19.0, -15.55, -12.14, 4669.37434232817, 7165.846603594476, 8172.285733312801, 0.0, 9571.236123621273, 9606.461493161414, 8786.21360244098, 7528.164690293073 };
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_plog(__global double const *restrict T_arr, __global double const *restrict P_arr, int const n, __global double *restrict kf)
+{
+  double T_inv;
+  double hi[4];
+  int hi_ind;
+  int i_map;
+  double kf_temp;
+  int lo_ind;
+  double logP;
+  double logT;
+  double logk1;
+  double logk2;
+  double low[4];
+  int lower;
+  int midcheck;
+  int numP;
+  int oor;
+  int const plog_inds[2] = { 7, 12 };
+  int upper;
+
+  for (int j = 0; j <= -1 + n; ++j)
+  {
+    logP = log(P_arr[j]);
+    logT = log(T_arr[j]);
+    T_inv = 1.0 / T_arr[j];
+    for (int i = 0; i <= 1; ++i)
+    {
+      numP = plog_num_params[i] + -1;
+      upper = logP > plog_params[4 * i + numP];
+      lower = logP <= plog_params[4 * i];
+      oor = lower || upper;
+      i_map = plog_inds[i];
+      if (upper)
+      {
+        hi_ind = numP;
+        lo_ind = numP;
+      }
+      if (lower)
+      {
+        hi_ind = 0;
+        lo_ind = 0;
+      }
+      for (int k = 0; k <= 2; ++k)
+      {
+        midcheck = k <= numP && logP > plog_params[4 * i + k] && logP <= plog_params[4 * i + 1 + k];
+        if (midcheck)
+        {
+          hi_ind = k + 1;
+          lo_ind = k;
+        }
+      }
+      for (int m = 0; m <= 3; ++m)
+      {
+        low[m] = plog_params[8 * m + 4 * i + lo_ind];
+        hi[m] = plog_params[8 * m + 4 * i + hi_ind];
+      }
+      logk2 = -1.0 * T_inv * hi[3] + hi[1] + hi[2] * logT;
+      logk1 = -1.0 * T_inv * low[3] + logT * low[2] + low[1];
+      kf_temp = logk1;
+      if (!oor)
+        kf_temp = logk1 + (logP + -1.0 * low[0]) * (-1.0 * logk1 + logk2) / (hi[0] + -1.0 * low[0]);
+      kf[15 * j + i_map] = exp(kf_temp);
+    }
+  }
+}
+
+__constant int const cheb_numP[2] = { 3, 3 };
+__constant int const cheb_numT[2] = { 5, 5 };
+__constant double const cheb_params[2 * 5 * 3] = { 8.686, -0.89255, -0.18968, 1.0258, 0.88111, 0.11329, -0.10827, 0.15423, 0.10637, -0.1146, -0.06692, 0.013608, -0.047884, -0.06485, -0.024835, 10.109, -0.1937, -0.094573, -0.64157, 0.28516, 0.1379, -0.24741, -0.091641, -0.043948, -0.028405, -0.01915, -0.0052557, 0.024252, 0.025921, 0.0067084 };
+__constant double const cheb_plim[2 * 2] = { 6.907755278982137, 16.11809565095832, 6.907755278982137, 16.11809565095832 };
+__constant double const cheb_tlim[2 * 2] = { 0.0034482758620689655, 0.0003333333333333333, 0.0034482758620689655, 0.0003333333333333333 };
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_cheb(__global double const *restrict T_arr, __global double const *restrict P_arr, int const n, __global double *restrict kf)
+{
+  double Pmax;
+  double Pmin;
+  double Pred;
+  double T_inv;
+  double Tmax;
+  double Tmin;
+  double Tred;
+  int i_map;
+  double kf_temp;
+  double logP;
+  int numP;
+  int numT;
+  int const out_map[2] = { 9, 13 };
+  double pres_poly[5];
+  double temp;
+  double temp_poly[5];
+
+  for (int j = 0; j <= -1 + n; ++j)
+  {
+    T_inv = 1.0 / T_arr[j];
+    logP = log(P_arr[j]);
+    for (int i = 0; i <= 1; ++i)
+    {
+      numT = cheb_numT[i];
+      numP = cheb_numP[i];
+      pres_poly[0] = 1.0;
+      Tmax = cheb_tlim[2 * i + 1];
+      Pmax = cheb_plim[2 * i + 1];
+      Tmin = cheb_tlim[2 * i];
+      Tred = (2.0 * T_inv + -1.0 * Tmax + -1.0 * Tmin) / (Tmax + -1.0 * Tmin);
+      Pmin = cheb_plim[2 * i];
+      Pred = (-1.0 * Pmax + -1.0 * Pmin + 2.0 * logP) / (Pmax + -1.0 * Pmin);
+      pres_poly[1] = Pred;
+      kf_temp = 0.0;
+      temp_poly[1] = Tred;
+      temp_poly[0] = 1.0;
+      i_map = out_map[i];
+      for (int p = 2; p <= 4; ++p)
+      {
+        if (p < numT)
+          temp_poly[p] = 2.0 * Tred * temp_poly[-1 + p] + -1.0 * temp_poly[-2 + p];
+        if (p < numP)
+          pres_poly[p] = 2.0 * Pred * pres_poly[-1 + p] + -1.0 * pres_poly[-2 + p];
+      }
+      for (int m = 0; m <= 4; ++m)
+      {
+        temp = 0.0;
+        for (int k = 0; k <= 2; ++k)
+          temp = temp + pres_poly[k] * cheb_params[15 * i + 3 * m + k];
+        kf_temp = kf_temp + temp_poly[m] * temp;
+      }
+      kf[15 * j + i_map] = exp10(kf_temp);
+    }
+  }
+}
+
+__constant double const troe_T1[3] = { 1756.0, 1756.0, 1756.0 };
+__constant double const troe_T2[3] = { 5182.0, 5182.0, 5182.0 };
+__constant double const troe_T3[3] = { 94.0, 94.0, 94.0 };
+__constant double const troe_a[3] = { 0.7346, 0.7346, 0.7346 };
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_fall_troe(int const n, __global double const *restrict Pr, __global double const *restrict T_arr, __global double *restrict Fi, __global double *restrict Fcent, __global double *restrict Atroe, __global double *restrict Btroe)
+{
+  double Atroe_squared;
+  double Atroe_temp;
+  double Btroe_squared;
+  double Btroe_temp;
+  double Fcent_temp;
+  double T;
+  double logFcent;
+  double logPr;
+
+  for (int i = 0; i <= 2; ++i)
+    for (int j = 0; j <= -1 + n; ++j)
+    {
+      T = T_arr[j];
+      logPr = log10(Pr[5 * j + i]);
+      Fcent_temp = troe_a[i] * exp(-1.0 * T / troe_T1[i]) + (-1.0 * troe_a[i] + 1.0) * exp(-1.0 * T / troe_T3[i]);
+      if (troe_T2[i] != 0.0)
+        Fcent_temp = Fcent_temp + exp(-1.0 * troe_T2[i] / T);
+      logFcent = log10(Fcent_temp);
+      Btroe_temp = -1.1762 * logFcent + -1.0 * 0.14 * logPr + 0.806;
+      Btroe_squared = Btroe_temp * Btroe_temp;
+      Btroe[3 * j + i] = Btroe_temp;
+      Atroe_temp = -0.67 * logFcent + logPr + -0.4;
+      Atroe_squared = Atroe_temp * Atroe_temp;
+      Fi[5 * j + i] = pow(Fcent_temp, 1.0 / (Atroe_squared / Btroe_squared + 1.0));
+      Atroe[3 * j + i] = Atroe_temp;
+      Fcent[3 * j + i] = Fcent_temp;
+    }
+}
+
+__constant double const sri_a[1] = { 1.641 };
+__constant double const sri_b[1] = { 4334.0 };
+__constant double const sri_c[1] = { 2725.0 };
+__constant double const sri_d[1] = { 1.0 };
+__constant double const sri_e[1] = { 0.0 };
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_fall_sri(__global double const *restrict T_arr, int const n, __global double *restrict Fi, __global double const *restrict Pr, __global double *restrict X)
+{
+  double Fi_temp;
+  double T;
+  double X_temp;
+  int i_map;
+  double logPr;
+  int const out_map[1] = { 3 };
+
+  {
+    int const i = 0;
+
+    for (int j = 0; j <= -1 + n; ++j)
+    {
+      T = T_arr[j];
+      i_map = out_map[0];
+      logPr = log10(Pr[5 * j + i_map]);
+      X_temp = 1.0 / (logPr * logPr + 1.0);
+      X[j] = X_temp;
+      Fi_temp = pow(sri_a[0] * exp(-1.0 * sri_b[0] / T) + exp(-1.0 * T / sri_c[0]), X_temp);
+      if (sri_e[0] != 0.0)
+        Fi_temp = Fi_temp * pow(T, sri_e[0]);
+      if (sri_d[0] != 1.0)
+        Fi_temp = Fi_temp * sri_d[0];
+      Fi[5 * j + i_map] = Fi_temp;
+    }
+  }
+}
+
+__constant int const allspec_in_reac[44] = { 2, 3, 0, 1, 2, 4, 1, 2, 4, 1, 3, 6, 0, 1, 4, 7, 1, 9, 10, 3, 10, 11, 1, 14, 15, 1, 12, 13, 21, 22, 23, 21, 22, 23, 3, 24, 25, 26, 27, 28, 29, 1, 3, 6 };
+__constant int const net_nu[44] = { -2, 1, -1, 1, -1, 1, -1, -1, 1, -1, -1, 1, 1, -2, -2, 1, 1, -2, 1, -1, -1, 1, -1, -1, 1, 0, -1, 1, -1, 0, 1, 1, 0, -1, -1, -1, 1, -1, -1, 1, 1, -1, -1, 1 };
+__constant int const nu_sum[15] = { -1, 0, -1, -1, -1, -1, 0, -1, -1, 0, 0, 0, -1, 0, -1 };
+__constant int const total_spec_per_reac[15] = { 2, 4, 3, 3, 2, 2, 3, 3, 3, 3, 3, 3, 3, 4, 3 };
+__constant long const total_spec_per_reac_offset[15] = { 0, 2, 6, 9, 12, 14, 16, 19, 22, 25, 28, 31, 34, 37, 41 };
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_Kc(int const n, __global double const *restrict B, __global double *restrict Kc, __global double const *restrict kf, __global double *restrict kr)
+{
+  double B_sum;
+  double Kc_temp;
+  double P_sum;
+  int P_sum_end;
+  double P_val;
+  int i_map;
+  int num_spec;
+  long offset;
+  int const out_map[12] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14 };
+  int spec;
+
+  for (int i = 0; i <= 11; ++i)
+    for (int j = 0; j <= -1 + n; ++j)
+    {
+      i_map = out_map[i];
+      offset = total_spec_per_reac_offset[i_map];
+      if (!(nu_sum[i_map] > 0))
+        P_val = 8314.4621 / 101325.0;
+      if (nu_sum[i_map] > 0)
+        P_val = 101325.0 / 8314.4621;
+      P_sum = 1.0;
+      P_sum_end = abs(nu_sum[i_map]);
+      B_sum = 0.0;
+      num_spec = total_spec_per_reac[i_map];
+      for (int P_sum_ind = 0; P_sum_ind <= -1 + P_sum_end; ++P_sum_ind)
+        P_sum = P_sum * P_val;
+      for (int spec_count = 0; spec_count <= -1 + num_spec; ++spec_count)
+      {
+        spec = allspec_in_reac[offset + spec_count];
+        if (net_nu[offset + spec_count] != 0)
+          B_sum = B_sum + net_nu[offset + spec_count] * B[31 * j + spec];
+      }
+      B_sum = exp(B_sum);
+      Kc_temp = P_sum * B_sum;
+      kr[12 * j + i] = kf[15 * j + i_map] / Kc_temp;
+      Kc[12 * j + i] = Kc_temp;
+    }
+}

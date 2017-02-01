@@ -1,0 +1,12 @@
+#ifndef RXN_RATES_OCLH
+#define RXN_RATES_OCLH
+#include <cl.h>
+#include "mechanism.oclh"
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_rate_constants(int const n, __global double const *restrict T_arr, __global double const *restrict P_arr)
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_full(__global double const *restrict T_arr, int const n, __global double *restrict kf)
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_plog(__global double const *restrict T_arr, __global double const *restrict P_arr, int const n, __global double *restrict kf)
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_cheb(__global double const *restrict T_arr, __global double const *restrict P_arr, int const n, __global double *restrict kf)
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_fall_troe(int const n, __global double const *restrict Pr, __global double const *restrict T_arr, __global double *restrict Fi, __global double *restrict Fcent, __global double *restrict Atroe, __global double *restrict Btroe)
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_fall_sri(__global double const *restrict T_arr, int const n, __global double *restrict Fi, __global double const *restrict Pr, __global double *restrict X)
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_Kc(int const n, __global double const *restrict B, __global double *restrict Kc, __global double const *restrict kf, __global double *restrict kr)
+#endif

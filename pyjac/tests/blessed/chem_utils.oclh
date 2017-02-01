@@ -1,0 +1,13 @@
+#ifndef CHEM_UTILS_OCLH
+#define CHEM_UTILS_OCLH
+#include <cl.h>
+#include "mechanism.oclh"
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_cp(int const n, __global double const *restrict T_arr, __global double *restrict cp);
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_h(int const n, __global double const *restrict T_arr, __global double *restrict h);
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_cv(int const n, __global double const *restrict T_arr, __global double *restrict cv);
+
+__kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_u(int const n, __global double const *restrict T_arr, __global double *restrict u);
+
+#endif

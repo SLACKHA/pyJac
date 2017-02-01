@@ -29,11 +29,11 @@ comment = dict(c='//', cuda='//',
 langs = ['c', 'cuda', 'opencl']
 """list(`str`): list of supported languages"""
 
-file_ext = dict(c='.c', cuda='.cu', opencl='.co')
+file_ext = dict(c='.c', cuda='.cu', opencl='.ocl')
 """dict: source code file extensions based on language"""
 
 
-header_ext = dict(c='.h', cuda='.cuh', opencl='.oh')
+header_ext = dict(c='.h', cuda='.cuh', opencl='.oclh')
 """dict: header extensions based on language"""
 
 line_end = dict(c=';\n', cuda=';\n',

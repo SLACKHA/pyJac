@@ -44,7 +44,7 @@ def load_equations(conp=True, check=False):
         If false, the constant volume derivation will be used
     check : bool
         If true, the equations input will be checked to ensure that
-        all variables within are defined (slower, used for testing) 
+        all variables within are defined (slower, used for testing)
 
     Returns
     -------

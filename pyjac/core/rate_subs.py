@@ -1268,6 +1268,9 @@ def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
     reac_ind = 'i'
     kernel_data = []
 
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+
     #set of eqn's doesn't matter
     conp_eqs = eqs['conp']
 
@@ -1717,6 +1720,9 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     kernel_data = [params_lp, numP_lp, numT_lp, plim_lp, tlim_lp,
                     pres_poly_lp, temp_poly_lp, T_arr, P_arr]
 
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+
     reac_ind = 'i'
     out_map = {}
     outmap_name = 'out_map'
@@ -1918,6 +1924,9 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     #data
     kernel_data = [plog_params_lp, num_params_lp, T_arr,
                         P_arr, low_lp, hi_lp]
+
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #reac ind
     reac_ind = 'i'
@@ -2169,6 +2178,9 @@ def get_troe_kernel(eqs, loopy_opts, rate_info, test_size=None):
     reac_ind = 'i'
     kernel_data = []
 
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+
     #add the troe map
     #add sri map
     out_map = {}
@@ -2362,6 +2374,9 @@ def get_sri_kernel(eqs, loopy_opts, rate_info, test_size=None):
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     kernel_data = [T_arr]
 
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+
     #figure out if we need to do any mapping of the input variable
     out_map = {}
     outmap_name = 'out_map'
@@ -2538,6 +2553,9 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     simple_arrhenius_data = [A_lp, b_lp, Ta_lp, T_arr]
 
+    if test_size == 'n':
+        simple_arrhenius_data += [lp.ValueArg(test_size, dtype=np.int32)]
+
     #if we need the rtype array, add it
     if not separated_kernels and not fixed:
         rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto,
@@ -2711,7 +2729,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                             beta_iter=beta_iter)
                     ).safe_substitute(kf_str=kf_str)
 
-    return specializations.values()
+    return list(specializations.values())
 
 
 def make_rateconst_kernel(info, target, test_size):
@@ -2873,8 +2891,52 @@ def apply_rateconst_vectorization(loopy_opts, reac_ind, knl):
 
     return knl
 
-def rate_const_kernel_gen(eqs, reacs, specs,
-                            loopy_opts, test_size=None):
+class MangleGen(object):
+    def __init__(self, name, arg_dtypes, result_dtypes):
+        self.name = name
+        self.arg_dtypes = arg_dtypes
+        self.result_dtypes = result_dtypes
+
+    def __call__(self, kernel, name, arg_dtypes):
+        if name != self.name:
+            return None
+        assert arg_dtypes == self.arg_dtypes
+        from loopy.kernel.data import CallMangleInfo
+        return CallMangleInfo(
+            target_name=self.name,
+            result_dtypes=self.result_dtypes,
+            arg_dtypes=self.arg_dtypes)
+
+
+def create_function_mangler(kernel, return_dtypes=()):
+    """
+    Returns a function mangler to interface loopy kernels with function calls
+    to other kernels (e.g. falloff rates from the rate kernel, etc.)
+
+    Parameters
+    ----------
+    kernel : :class:`loopy.LoopKernel`
+        The kernel to create an interface for
+    return_dtypes : list :class:`numpy.dtype` returned from the kernel, optional
+        Most likely an empty list
+    Returns
+    -------
+    func : :method:`MangleGen`.__call__
+        A function that will return a :class:`loopy.kernel.data.CallMangleInfo` to
+        interface with the calling :class:`loopy.LoopKernel`
+    """
+
+    dtypes = []
+    for arg in kernel.args:
+        if not isinstance(arg, lp.TemporaryVariable):
+            dtypes.append(arg.dtype)
+    mg = MangleGen(kernel.name, tuple(dtypes), return_dtypes)
+    return mg.__call__
+
+
+def write_rateconst_kernel(path, eqs, reacs, specs,
+                            loopy_opts, test_size=None,
+                            auto_diff=False):
     """Helper function that generates kernels for
        evaluation of simple arrhenius rate forms
 
@@ -2898,55 +2960,167 @@ def rate_const_kernel_gen(eqs, reacs, specs,
 
     """
 
+    file_prefix = ''
+    if auto_diff:
+        file_prefix = 'ad_'
+
     if test_size is None:
         test_size = 'n'
 
     #determine rate evaluation types, indicies etc.
     rate_info = assign_rates(reacs, specs, loopy_opts.rate_spec)
 
-    kernels = {}
+    kernels = []
+
+    func_manglers = []
+
+    def __add_knl(knls):
+        try:
+            kernels.extend(knls)
+        except:
+            kernels.append(knls)
 
     #get the simple arrhenius rateconst_info's
-    kernels['simple'] = get_simple_arrhenius_rates(eqs, loopy_opts,
-        rate_info, test_size=test_size)
+    __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
+        rate_info, test_size=test_size))
 
     #check for plog
     if rate_info['plog']['num']:
         #generate the plog kernel
-        kernels['plog'] = get_plog_arrhenius_rates(eqs, loopy_opts,
-            rate_info, test_size=test_size)
+        __add_knl(get_plog_arrhenius_rates(eqs, loopy_opts,
+            rate_info, test_size=test_size))
 
     if rate_info['cheb']['num']:
-        kernels['plog'] = get_cheb_arrhenius_rates(eqs, loopy_opts,
-            rate_info, test_size=test_size)
+        __add_knl(get_cheb_arrhenius_rates(eqs, loopy_opts,
+            rate_info, test_size=test_size))
 
     #check for falloff
     if rate_info['fall']['num']:
         if rate_info['fall']['troe']['num']:
-            kernels['troe'] = get_troe_kernel(eqs, loopy_opts,
-            rate_info, test_size=test_size)
+            __add_knl(get_troe_kernel(eqs, loopy_opts,
+                rate_info, test_size=test_size))
         if rate_info['fall']['sri']['num']:
-            kernels['sri'] = get_troe_kernel(eqs, loopy_opts,
-            rate_info, test_size=test_size)
+            __add_knl(get_sri_kernel(eqs, loopy_opts,
+                rate_info, test_size=test_size))
 
+    if rate_info['rev']['num']:
+        __add_knl(get_rev_rates(eqs, loopy_opts,
+                rate_info, test_size=test_size))
 
-    knl_list = {}
+    #TODO: need to update loopy to allow pointer args
+    #to functions, in the meantime use a OpenCL Template
+
     #now create the kernels!
+    target = lp_utils.get_target(loopy_opts.lang)
+    for i, info in enumerate(kernels):
+        #create kernel from rateconst_info
+        knl = make_rateconst_kernel(info, target, test_size)
+        #apply vectorization
+        kernels[i] = apply_rateconst_vectorization(loopy_opts,
+            info.var_name, knl)
+        #and add a mangler
+        #func_manglers.append(create_function_mangler(kernels[i]))
 
-    for eval_type in kernels:
-        knl_list[eval_type] = []
-        for info in kernels[eval_type]:
-            knl_list[eval_type].append((info.var_name,
-                make_rateconst_kernel(info, target, test_size)))
+    #and finally register functions
+    #for func in func_manglers:
+    #    knl = lp.register_function_manglers(knl, [func])
 
-        #stub for special handling of various evaluation types here
+    #first, load the wrapper as a template
+    script_dir = os.path.abspath(os.path.dirname(__file__))
+    with open(os.path.join(script_dir, os.pardir, 'file_templates',
+                'rxn_rates.ocl.in'), 'r') as file:
+        file_src = Template(file.read())
 
-        #apply other optimizations
-        for i, (reac_ind, knl) in enumerate(knl_list[eval_type]):
-            knl_list[eval_type][i] = apply_rateconst_vectorization(loopy_opts,
-                reac_ind, knl)
+    #create T / P arrays
+    kernel_data = []
+    T_arr = lp.GlobalArg('T_arr',
+                    shape=(test_size),
+                    order=loopy_opts.order,
+                    dtype=np.float64)
+    P_arr = lp.GlobalArg('P_arr',
+                    shape=(test_size),
+                    order=loopy_opts.order,
+                    dtype=np.float64)
+    if test_size == 'n':
+        kernel_data += [lp.ValueArg(test_size, dtype=np.int32)]
+    kernel_data.extend([T_arr, P_arr])
 
-    return knl_list
+    vec_width = loopy_opts.depth
+    if vec_width is None:
+        vec_width = loopy_opts.width
+    if vec_width is None:
+        vec_width = 0
+    #create a dummy kernel to get the defn
+    knl = lp.make_kernel('{{[i, j]: 0 <= i,j < {}}}'.format(vec_width),
+        '',
+        kernel_data,
+        name='eval_rate_constants',
+        target=target
+        )
+    knl = apply_rateconst_vectorization(loopy_opts, 'i', knl)
+    defn_str = lp_utils.get_header(knl)
+
+    #next create the call instructions
+    def __gen_call(knl, idx):
+        return Template('${name}(${args})').safe_substitute(
+                name=knl.name,
+                args=','.join([arg.name for arg in knl.args
+                        if not isinstance(arg, lp.TemporaryVariable)]),
+                #dep='id=call_{}{}'.format(idx, ', dep=call_{}'.format(idx - 1) if idx > 0 else '')
+            )
+
+    instructions = '\n'.join(__gen_call(knl, i) for i, knl in enumerate(kernels))
+
+    #Finally, turn outside arguements into local defines
+    defines = [arg for knl in kernels for arg in knl.args if
+                    not isinstance(arg, lp.TemporaryVariable)
+                    and arg not in kernel_data]
+    nameset = set(d.name for d in defines)
+    new_temp_vars = []
+    for name in nameset:
+        #check for dupes
+        same_name = [x for x in defines if x.name == name]
+        assert all(same_name[0] == y for y in same_name[1:])
+        same_name = same_name[0]
+        #convert to global variable and add to kernel data
+        new_temp_vars.append(lp.TemporaryVariable(
+            name, dtype=same_name.dtype,
+            scope=scopes.GLOBAL))
+    def __get_temp_decl(tv):
+        assert tv.dtype == lp.types.to_loopy_type(np.float64)
+        return '__global double* {name};'.format(
+            name=tv.name)
+
+    defines = '\n'.join([__get_temp_decl(arg) for arg in
+                            sorted(new_temp_vars, key=lambda x:x.name)])
+
+    #and finally, generate the additional kernels
+    additional_kernels = '\n'.join([lp_utils.get_code(k) for k in kernels])
+
+    #create the file
+    with filew.get_file(os.path.join(path, file_prefix + 'rxn_rates'
+                             + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
+        lines = file_src.safe_substitute(
+                    rc_defines=defines,
+                    rc_func_define=defn_str,
+                    rc_body=instructions,
+                    rc_additional_kernels=additional_kernels).split('\n')
+
+        if auto_diff:
+            lines = [x.replace('double', 'adouble') for x in lines]
+        file.add_lines(lines)
+
+    #and the header file
+    headers = [lp_utils.get_header(knl) for knl in kernels]
+    with filew.get_header_file(os.path.join(path, file_prefix + 'rxn_rates'
+                             + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
+
+        lines = '\n'.join([defn_str] + headers).split('\n')
+        if auto_diff:
+            file.add_headers('adept.h')
+            file.add_lines('using adept::adouble;\n')
+            lines = [x.replace('double', 'adouble') for x in lines]
+        file.add_lines(lines)
 
 def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential
@@ -3000,44 +3174,6 @@ def get_rate_eqn(eqs, index='i'):
                                       (sp.log(T_sym), logT_sym)])
 
     return rate_eqn_pre
-
-
-def write_rate_constants(path, specs, reacs, eqs, opts, auto_diff=False):
-    """Write subroutine(s) to evaluate reaction rates constants.
-
-    Parameters
-    ----------
-    path : str
-        Path to build directory for file.
-    specs : list of `SpecInfo`
-        List of species in the mechanism.
-    reacs : list of `ReacInfo`
-        List of reactions in the mechanism.
-    eqs : dict
-        Sympy equations / variables for constant pressure / constant volume systems
-    opts : `loopy_options` object
-        A object containing all the loopy options to execute
-    auto_diff : bool
-        If ``True``, generate files for Adept autodifferention library.
-    Returns
-    -------
-    None
-
-    """
-
-    file_prefix = ''
-    double_type = 'double'
-    pres_ref = ''
-    if auto_diff:
-        file_prefix = 'ad_'
-        double_type = 'adouble'
-        pres_ref = '&'
-
-    target = utils.get_target(opts.lang)
-
-    #generate the rate kernels
-    knl_list = rate_const_simple_kernel_gen(eqs, reacs, opts)
-
 
 
 def polyfit_kernel_gen(varname, nicename, eqs, specs,
@@ -3223,33 +3359,23 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     for i in range(len(namelist)):
         code.append(lp_utils.get_code(kernels[i]))
 
-    #need to filter out double definitions of constants in code
-    preamble = []
-    inkernel = False
-    for line in code[0].split('\n'):
-        if not re.search(r'eval_\w+', line):
-            preamble.append(line)
-        else:
-            break
-    code = [line for line in '\n'.join(code).split('\n') if line not in preamble]
-
-
     #now write
     with filew.get_header_file(os.path.join(path, file_prefix + 'chem_utils'
                              + utils.header_ext[opts.lang]), opts.lang) as file:
 
+        lines = '\n'.join(headers).split('\n')
         if auto_diff:
             file.add_headers('adept.h')
-            file.add_lines('using adept::adouble;\n')
             lines = [x.replace('double', 'adouble') for x in lines]
-
-        lines = '\n'.join(headers).split('\n')
         file.add_lines(lines)
 
 
     with filew.get_file(os.path.join(path, file_prefix + 'chem_utils'
                              + utils.file_ext[opts.lang]), opts.lang) as file:
-        file.add_lines(preamble + code)
+        if auto_diff:
+            file.add_lines('using adept::adouble;\n')
+            lines = [x.replace('double', 'adouble') for x in lines]
+        file.add_lines(code)
 
 
 def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):

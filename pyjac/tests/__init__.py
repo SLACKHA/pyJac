@@ -1,6 +1,3 @@
-#compatibility fixes
-from builtins import range
-
 #modules
 import cantera as ct
 import numpy as np

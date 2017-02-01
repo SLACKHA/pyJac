@@ -6,7 +6,7 @@ import logging
 logging.getLogger('root').setLevel(logging.WARNING)
 
 #local imports
-from ..core.rate_subs import (rate_const_kernel_gen, get_rate_eqn, assign_rates,
+from ..core.rate_subs import (write_rateconst_kernel, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
     get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
@@ -680,3 +680,19 @@ class SubTest(TestClass):
 
         #test regularly
         self.__generic_rate_tester(get_spec_rates, kc, do_spec_per_reac=True)
+
+    def test_write_rateconst_knl(self):
+        script_dir = os.path.abspath(os.path.dirname(__file__))
+        build_dir = os.path.join(script_dir, 'out')
+        create_dir(build_dir)
+        write_rateconst_kernel(build_dir,
+                {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
+                self.store.reacs, self.store.specs,
+                loopy_options(lang='opencl',
+                    width=None, depth=None, ilp=False,
+                    unr=None, order='C'))
+
+        assert filecmp.cmp(os.path.join(build_dir, 'rxn_rates.oclh'),
+                        os.path.join(script_dir, 'blessed', 'rxn_rates.oclh'))
+        assert filecmp.cmp(os.path.join(build_dir, 'rxn_rates.ocl'),
+                        os.path.join(script_dir, 'blessed', 'rxn_rates.ocl'))

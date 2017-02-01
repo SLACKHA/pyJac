@@ -106,7 +106,7 @@ class SubTest(TestClass):
                     width=None, depth=None, ilp=False,
                     unr=None, order='C'))
 
-        assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oh'),
-                        os.path.join(script_dir, 'blessed', 'chem_utils.oh'))
-        assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.co'),
-                        os.path.join(script_dir, 'blessed', 'chem_utils.co'))
+        assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oclh'),
+                        os.path.join(script_dir, 'blessed', 'chem_utils.oclh'))
+        assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.ocl'),
+                        os.path.join(script_dir, 'blessed', 'chem_utils.ocl'))

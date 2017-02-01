@@ -3269,15 +3269,28 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     defn_str = lp_utils.get_header(knl)
 
     #next create the call instructions
-    def __gen_call(knl, idx):
-        return Template('${name}(${args})').safe_substitute(
+    def __gen_call(knl, idx, condition=None):
+        call = Template('${name}(${args})').safe_substitute(
                 name=knl.name,
                 args=','.join([arg.name for arg in knl.args
                         if not isinstance(arg, lp.TemporaryVariable)]),
                 #dep='id=call_{}{}'.format(idx, ', dep=call_{}'.format(idx - 1) if idx > 0 else '')
             )
+        if condition:
+            call = Template(
+"""
+#ifdef ${cond}
+    ${call}
+#endif
+"""            ).safe_substitute(cond=condition, call=call)
+        return call
 
-    instructions = '\n'.join(__gen_call(knl, i) for i, knl in enumerate(kernels))
+    conditions = [None for knl in kernels]
+    for i in range(len(kernels)):
+        if 'conp' in kernels[i].name or 'conv' in kernels[i].name:
+            conditions[i] = kernels[i].name.split('_')[-1].upper()
+    instructions = '\n'.join(__gen_call(knl, i, conditions[i])
+        for i, knl in enumerate(kernels))
 
     #Finally, turn outside arguements into local defines
     defines = [arg for knl in kernels for arg in knl.args if

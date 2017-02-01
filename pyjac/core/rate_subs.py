@@ -2732,6 +2732,38 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     return list(specializations.values())
 
 
+def __find_indent(template_str, key, value):
+    """
+    Finds and returns a formatted value containing the appropriate
+    whitespace to put 'value' in place of 'key' for template_str
+
+    Parameters
+    ----------
+    template_str : str
+        The string to sub into
+    key : str
+        The key in the template string
+    value : str
+        The string to format
+
+    Returns
+    -------
+    formatted_value : str
+        The formatted string
+    """
+
+    #find the instance of ${key} in kernel_str
+    whitespace = None
+    for i, line in enumerate(template_str.split('\n')):
+        if key in line:
+            #get whitespace
+            whitespace = re.match(r'\s*', line).group()
+            break
+    result = [line if i == 0 else whitespace + line for i, line in
+                enumerate(textwrap.dedent(value).splitlines())]
+    return '\n'.join(result)
+
+
 def make_rateconst_kernel(info, target, test_size):
     """
     Convience method to create kernels for rate constant evaluation
@@ -2808,15 +2840,8 @@ def make_rateconst_kernel(info, target, test_size):
 
     def subs_preprocess(key, value):
         #find the instance of ${key} in kernel_str
-        whitespace = None
-        for i, line in enumerate(skeleton.split('\n')):
-            if key in line:
-                #get whitespace
-                whitespace = re.match(r'\s*', line).group()
-                break
-        result = [line if i == 0 else whitespace + line for i, line in
-                    enumerate(textwrap.dedent(value).splitlines())]
-        return Template('\n'.join(result)).safe_substitute(var_name=info.var_name)
+        result = __find_indent(skeleton, key, value)
+        return Template(result).safe_substitute(var_name=info.var_name)
 
     kernel_str = Template(skeleton).safe_substitute(
         var_name=info.var_name,
@@ -2944,19 +2969,19 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
     ----------
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    reacs : list of `ReacInfo`
+    reacs : list of :class:`ReacInfo`
         List of reactions in the mechanism.
-    specs : list of `SpecInfo`
+    specs : list of :class:`SpecInfo`
         List of species in the mechanism
-    loopy_opts : `loopy_options` object
+    loopy_opts : :class:`loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
         If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
 
     Returns
     -------
-    knl_list : list of :class:`loopy.LoopKernel`
-        The generated loopy kernel(s) for code generation / testing
+    global_defines : list of :class:`loopy.TemporaryVariable`
+        The global variables for this kernel that need definition in the memory manager
 
     """
 
@@ -3028,8 +3053,9 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
     #first, load the wrapper as a template
     script_dir = os.path.abspath(os.path.dirname(__file__))
     with open(os.path.join(script_dir, os.pardir, 'file_templates',
-                'rxn_rates.ocl.in'), 'r') as file:
-        file_src = Template(file.read())
+                'wrapping_kernel.ocl.in'), 'r') as file:
+        file_str = file.read()
+        file_src = Template(file_str)
 
     #create T / P arrays
     kernel_data = []
@@ -3086,12 +3112,8 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
         new_temp_vars.append(lp.TemporaryVariable(
             name, dtype=same_name.dtype,
             scope=scopes.GLOBAL))
-    def __get_temp_decl(tv):
-        assert tv.dtype == lp.types.to_loopy_type(np.float64)
-        return '__global double* {name};'.format(
-            name=tv.name)
 
-    defines = '\n'.join([__get_temp_decl(arg) for arg in
+    defines = '\n'.join([utils.get_global_declaration(loopy_opts.lang, arg) for arg in
                             sorted(new_temp_vars, key=lambda x:x.name)])
 
     #and finally, generate the additional kernels
@@ -3100,6 +3122,7 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
     #create the file
     with filew.get_file(os.path.join(path, file_prefix + 'rxn_rates'
                              + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
+        instructions = __find_indent(file_str, 'body', instructions)
         lines = file_src.safe_substitute(
                     rc_defines=defines,
                     rc_func_define=defn_str,
@@ -3121,6 +3144,8 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
             file.add_lines('using adept::adouble;\n')
             lines = [x.replace('double', 'adouble') for x in lines]
         file.add_lines(lines)
+
+    return new_temp_vars
 
 def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential
@@ -3303,7 +3328,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     return knl
 
 
-def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
+def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
     """Write subroutine to evaluate species thermodynamic properties.
 
     Notes
@@ -3319,13 +3344,15 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
         List of species in the mechanism.
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    opts : `loopy_options` object
+    loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
     auto_diff : bool
         If ``True``, generate files for Adept autodifferention library.
+
     Returns
     -------
-    None
+    global_defines : list of :class:`loopy.TemporaryVariable`
+        The global variables for this kernel that need definition in the memory manager
 
     """
 
@@ -3333,7 +3360,7 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
     if auto_diff:
         file_prefix = 'ad_'
 
-    target = lp_utils.get_target(opts.lang)
+    target = lp_utils.get_target(loopy_opts.lang)
 
     #generate the kernels
     conp_eqs = eqs['conp']
@@ -3349,11 +3376,30 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
         ('U[k]', 'u'), ('B[k]', 'b')]:
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
         kernels.append(polyfit_kernel_gen(varname, nicename,
-            eq, specs, opts))
+            eq, specs, loopy_opts))
+
+    #Finally, turn arguements into local defines
+    defines = [arg for knl in kernels for arg in knl.args if
+                    not isinstance(arg, lp.TemporaryVariable)
+                    and arg.name not in ['T_arr', 'n']]
+    nameset = set(d.name for d in defines)
+    new_temp_vars = []
+    for name in nameset:
+        #check for dupes
+        same_name = [x for x in defines if x.name == name]
+        assert all(same_name[0] == y for y in same_name[1:])
+        same_name = same_name[0]
+        #convert to global variable and add to kernel data
+        new_temp_vars.append(lp.TemporaryVariable(
+            name, dtype=same_name.dtype,
+            scope=scopes.GLOBAL))
+
+    defines = '\n'.join([utils.get_global_declaration(loopy_opts.lang, arg) for arg in
+                            sorted(new_temp_vars, key=lambda x:x.name)])
 
     #get headers
     for i in range(len(namelist)):
-        headers.append(lp_utils.get_header(kernels[i]) + utils.line_end[opts.lang])
+        headers.append(lp_utils.get_header(kernels[i]) + utils.line_end[loopy_opts.lang])
 
     #and code
     for i in range(len(namelist)):
@@ -3361,7 +3407,7 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
 
     #now write
     with filew.get_header_file(os.path.join(path, file_prefix + 'chem_utils'
-                             + utils.header_ext[opts.lang]), opts.lang) as file:
+                             + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
 
         lines = '\n'.join(headers).split('\n')
         if auto_diff:
@@ -3371,11 +3417,15 @@ def write_chem_utils(path, specs, eqs, opts, auto_diff=False):
 
 
     with filew.get_file(os.path.join(path, file_prefix + 'chem_utils'
-                             + utils.file_ext[opts.lang]), opts.lang) as file:
+                             + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
+        lines = defines.split('\n')
+        lines = '\n'.join(lines + code).split('\n')
         if auto_diff:
             file.add_lines('using adept::adouble;\n')
             lines = [x.replace('double', 'adouble') for x in lines]
-        file.add_lines(code)
+        file.add_lines(lines)
+
+    return new_temp_vars
 
 
 def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):

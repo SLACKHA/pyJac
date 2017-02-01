@@ -3118,7 +3118,7 @@ def create_function_mangler(kernel, return_dtypes=()):
     mg = MangleGen(kernel.name, tuple(dtypes), return_dtypes)
     return mg.__call__
 
-def write_specrates_kernel(path, eqs, rate_info,
+def write_specrates_kernel(path, eqs, reacs, specs,
                             loopy_opts, test_size=None,
                             auto_diff=False):
     """Helper function that generates kernels for
@@ -3130,8 +3130,10 @@ def write_specrates_kernel(path, eqs, rate_info,
         The output path
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    rate_info : dict
-        The output of :method:`assign_rates` for this mechanism
+    reacs : list of :class:`ReacInfo`
+        List of species in the mechanism.
+    specs : list of :class:`SpecInfo`
+        List of species in the mechanism.
     loopy_opts : :class:`loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
@@ -3143,6 +3145,8 @@ def write_specrates_kernel(path, eqs, rate_info,
         The global variables for this kernel that need definition in the memory manager
 
     """
+
+    rate_info = assign_rates(reacs, specs, loopy_opts.rate_spec)
 
     file_prefix = ''
     if auto_diff:

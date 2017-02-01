@@ -98,6 +98,7 @@ class FileWriter(object):
         else:
             self.filter = self.preamble_filter
         self.lines = []
+        self.defines = []
 
     def __enter__(self):
         self.file = open(self.name, self.mode)
@@ -162,6 +163,10 @@ class FileWriter(object):
             else:
                 lines.append(header)
 
+        if self.is_header and self.defines:
+            lines.extend(['#define {name} ({value})'.format(
+                name=x[0], value=x[1]) for x in self.defines])
+
         lines.extend(self.lines)
         if self.is_header:
             lines.append('#endif')
@@ -173,6 +178,9 @@ class FileWriter(object):
             self.headers.extend(headers)
         else:
             self.headers.append(headers)
+
+    def add_define(self, name, value):
+        self.defines.append((name, value))
 
     def add_lines(self, lines):
         if isinstance(lines, str):

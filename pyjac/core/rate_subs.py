@@ -702,7 +702,8 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
         reac_ind = 'reac_ind'
         omega_ind = var_name
 
-        indicies = __handle_indicies(rate_info['net_per_spec']['map'], '${var_name}', maps, kernel_data)
+        indicies = __handle_indicies(rate_info['net_per_spec']['map'], '${var_name}', maps, kernel_data,
+                                    outmap_name='nonzero_specs', scope=scopes.GLOBAL)
         #reaction per species
         spec_to_reac = rate_info['net_per_spec']['reacs']
         spec_to_reac_lp, spec_to_reac_str, _ = lp_utils.get_loopy_arg('spec_to_reac',
@@ -3117,25 +3118,24 @@ def create_function_mangler(kernel, return_dtypes=()):
     mg = MangleGen(kernel.name, tuple(dtypes), return_dtypes)
     return mg.__call__
 
-
-def write_rateconst_kernel(path, eqs, reacs, specs,
+def write_specrates_kernel(path, eqs, rate_info,
                             loopy_opts, test_size=None,
                             auto_diff=False):
     """Helper function that generates kernels for
-       evaluation of simple arrhenius rate forms
+       evaluation of reaction rates / rate constants / and species rates
 
     Parameters
     ----------
+    path : str
+        The output path
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
-    reacs : list of :class:`ReacInfo`
-        List of reactions in the mechanism.
-    specs : list of :class:`SpecInfo`
-        List of species in the mechanism
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
     loopy_opts : :class:`loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
-        If not none, this kernel is being used for testing. Hence we need to size the arrays accordingly
+        If not None, this kernel is being used for testing. Hence we need to size the arrays accordingly
 
     Returns
     -------
@@ -3150,9 +3150,6 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
 
     if test_size is None:
         test_size = 'n'
-
-    #determine rate evaluation types, indicies etc.
-    rate_info = assign_rates(reacs, specs, loopy_opts.rate_spec)
 
     kernels = []
 
@@ -3174,6 +3171,7 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
         __add_knl(get_plog_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size))
 
+    #check for chebyshev
     if rate_info['cheb']['num']:
         __add_knl(get_cheb_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size))
@@ -3187,9 +3185,25 @@ def write_rateconst_kernel(path, eqs, reacs, specs,
             __add_knl(get_sri_kernel(eqs, loopy_opts,
                 rate_info, test_size=test_size))
 
+    #check for reverse rates
     if rate_info['rev']['num']:
         __add_knl(get_rev_rates(eqs, loopy_opts,
                 rate_info, test_size=test_size))
+
+    #check for pressure modification terms
+    if rate_info['thd']['num']:
+        __add_knl(get_rxn_pres_mod(eqs, loopy_opts,
+            rate_info, test_size))
+
+    #add ROP
+    __add_knl(get_rop(eqs, loopy_opts,
+        rate_info, test_size))
+    #add ROP net
+    __add_knl(get_rop_net(eqs, loopy_opts,
+        rate_info, test_size))
+    #add spec rates
+    __add_knl(get_spec_rates(eqs, loopy_opts,
+        rate_info, test_size))
 
     #TODO: need to update loopy to allow pointer args
     #to functions, in the meantime use a OpenCL Template

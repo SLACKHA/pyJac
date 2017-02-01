@@ -375,6 +375,7 @@ def assign_rates(reacs, specs, rate_spec):
 
 class rateconst_info(object):
     def __init__(self, name, instructions, pre_instructions=[],
+        post_instructions=[],
         var_name='i', kernel_data=None,
         maps=[], extra_inames=[], indicies=[],
         assumptions=[], parameters={},
@@ -382,6 +383,7 @@ class rateconst_info(object):
         self.name = name
         self.instructions = instructions
         self.pre_instructions = pre_instructions[:]
+        self.post_instructions = post_instructions[:]
         self.var_name = var_name
         self.kernel_data = kernel_data[:]
         self.maps = maps[:]
@@ -2795,6 +2797,7 @@ def make_rateconst_kernel(info, target, test_size):
         for ${var_name}
             ${main}
         end
+        ${post}
     end
     """
 
@@ -2838,6 +2841,8 @@ def make_rateconst_kernel(info, target, test_size):
     pre_instructions = [pre_inst[k] if k in pre_inst else k
                             for k in info.pre_instructions]
 
+    post_instructions = info.post_instructions[:]
+
     def subs_preprocess(key, value):
         #find the instance of ${key} in kernel_str
         result = __find_indent(skeleton, key, value)
@@ -2846,6 +2851,7 @@ def make_rateconst_kernel(info, target, test_size):
     kernel_str = Template(skeleton).safe_substitute(
         var_name=info.var_name,
         pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
+        post=subs_preprocess('${post}', '\n'.join(post_instructions)),
         main=subs_preprocess('${main}', '\n'.join(instructions)))
 
     #finally do extra subs

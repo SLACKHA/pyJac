@@ -33,6 +33,14 @@ class storage(object):
         self.fwd_rate_constants = np.zeros((self.gas.n_reactions, test_size))
         self.fwd_rxn_rate = np.zeros((self.gas.n_reactions, test_size))
 
+        self.spec_u = np.zeros((gas.n_species, test_size))
+        self.spec_h = np.zeros((gas.n_species, test_size))
+        self.spec_cv = np.zeros((gas.n_species, test_size))
+        self.spec_cp = np.zeros((gas.n_species, test_size))
+        self.spec_b = np.zeros((gas.n_species, test_size))
+        self.conp_temperature_rates = np.zeros(test_size)
+        self.conv_temperature_rates = np.zeros(test_size)
+
         #third body indicies
         self.thd_inds = np.array([i for i, x in enumerate(gas.reactions())
             if isinstance(x, ct.FalloffReaction) or
@@ -96,6 +104,14 @@ class storage(object):
             self.rxn_rates[:, i] = gas.net_rates_of_progress[:]
             self.species_rates[:, i] = gas.net_production_rates[:]
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
+            #species thermo props
+            for j in range(gas.n_species):
+                self.spec_cv[j, i] = gas.species(j).thermo.cp(self.T[i]) - ct.gas_constant
+                self.spec_cp[j, i] = gas.species(j).thermo.cp(self.T[i])
+                self.spec_b[j, i] = gas.species(j).thermo.s(self.T[i]) / ct.gas_constant -\
+                                gas.species(j).thermo.h(self.T[i]) / (ct.gas_constant * self.T[i]) - np.log(self.T[i])
+                self.spec_u[j, i] = gas.species(j).thermo.h(self.T[i]) - self.T[i] * ct.gas_constant
+                self.spec_h[j, i] = gas.species(j).thermo.h(self.T[i])
             for j in range(self.fall_inds.size):
                 arrhen_temp[j] = pr_eval(i, j)
             self.ref_Pr[:, i] = self.ref_thd[thd_to_fall_map, i] * arrhen_temp

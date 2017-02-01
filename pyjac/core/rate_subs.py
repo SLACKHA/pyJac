@@ -3182,6 +3182,8 @@ def write_specrates_kernel(path, eqs, reacs, specs,
 
     #check for falloff
     if rate_info['fall']['num']:
+        __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
+            rate_info, test_size=test_size, falloff=True))
         if rate_info['fall']['troe']['num']:
             __add_knl(get_troe_kernel(eqs, loopy_opts,
                 rate_info, test_size=test_size))
@@ -3207,6 +3209,9 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         rate_info, test_size))
     #add spec rates
     __add_knl(get_spec_rates(eqs, loopy_opts,
+        rate_info, test_size))
+    #and temperature rate
+    __add_knl(get_temperature_rate(eqs, loopy_opts,
         rate_info, test_size))
 
     #TODO: need to update loopy to allow pointer args

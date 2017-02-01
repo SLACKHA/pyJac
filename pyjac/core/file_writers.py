@@ -92,8 +92,11 @@ class FileWriter(object):
         self.std_headers = []
         self.is_header = is_header
         if self.is_header:
-            self.headers = ['header']
+            self.headers = ['mechanism']
             self.std_headers = get_standard_headers(lang)
+            self.filter = lambda x: x
+        else:
+            self.filter = self.preamble_filter
         self.lines = []
 
     def __enter__(self):
@@ -103,6 +106,38 @@ class FileWriter(object):
     def __exit__(self, type, value, traceback):
         self.write()
         self.file.close()
+
+    def preamble_filter(self, lines):
+        #check things outside of function definitions for duplicated lines
+        #first, find the kernel text
+
+        seen = set()
+        out_lines = []
+        in_preamble = True
+        brace_counter = 0
+        for line in lines:
+            if 'void' in line:
+                in_preamble = False
+                assert brace_counter == 0
+
+            if in_preamble:
+                #check for dupes
+                if line not in seen or not line.strip():
+                    seen.add(line)
+                    out_lines.append(line)
+            else:
+                out_lines.append(line)
+
+            #update braces
+            if not in_preamble and '{' in line:
+                brace_counter += 1
+            if not in_preamble and '}' in line:
+                brace_counter -= 1
+                if brace_counter == 0:
+                    in_preamble = True
+
+        return out_lines
+
 
     def write(self):
         lines = []
@@ -121,14 +156,15 @@ class FileWriter(object):
         for header in self.headers:
             if not any(header.endswith(x) for x in utils.header_ext.values()):
                 header = header + utils.header_ext[self.lang]
-            if not (header.endswith('>') or header.endswith('"')): 
+            if not (header.endswith('>') or header.endswith('"')):
                 lines.append('#include "{}"'.format(header,
                     ext))
             else:
                 lines.append(header)
 
         lines.extend(self.lines)
-        lines.append('#endif')
+        if self.is_header:
+            lines.append('#endif')
         self.file.write('\n'.join(lines))
 
 
@@ -141,5 +177,7 @@ class FileWriter(object):
     def add_lines(self, lines):
         if isinstance(lines, str):
             lines = lines.split('\n')
+
+        lines = self.filter(lines)
 
         self.lines.extend(lines)

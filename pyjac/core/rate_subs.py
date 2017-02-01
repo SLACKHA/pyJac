@@ -468,6 +468,159 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
 
+def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the temperature derivative
+    kernel
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opts : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`rateconst_info`
+        The generated infos for feeding into the kernel generator for both equation types
+    """
+
+    #TODO: fix for parallel reductions
+
+    #here, the equation form _does_ matter
+    conp_term = next(x for x in eqs['conp'] if str(x) == 'frac{text{d} T }{text{d} t }')
+    conp_term = eqs['conp'][conp_term]
+    conv_term = next(x for x in eqs['conv'] if str(x) == 'frac{text{d} T }{text{d} t }')
+    conv_term = eqs['conv'][conv_term]
+
+    #first, create all arrays
+    kernel_data_conp = []
+    kernel_data_conv = []
+
+    if test_size == 'n':
+        kernel_data_conp.append(lp.ValueArg(test_size, dtype=np.int32))
+        kernel_data_conv.append(lp.ValueArg(test_size, dtype=np.int32))
+
+    #figure out if we need to do all species rates
+    indicies = __handle_indicies(np.arange(rate_info['Ns']), '${var_name}', None, kernel_data_conp)
+
+    h_lp, h_str, map_result = lp_utils.get_loopy_arg('h',
+                        indicies=['${var_name}', 'j'],
+                        dimensions=(Ns, test_size),
+                        order=loopy_opts.order)
+
+    u_lp, u_str, map_result = lp_utils.get_loopy_arg('u',
+                        indicies=['${var_name}', 'j'],
+                        dimensions=(Ns, test_size),
+                        order=loopy_opts.order)
+
+    cp_lp, cp_str, map_result = lp_utils.get_loopy_arg('cp',
+                        indicies=['${var_name}', 'j'],
+                        dimensions=(Ns, test_size),
+                        order=loopy_opts.order)
+
+    cv_lp, cv_str, map_result = lp_utils.get_loopy_arg('cv',
+                        indicies=['${var_name}', 'j'],
+                        dimensions=(Ns, test_size),
+                        order=loopy_opts.order)
+
+    concs_lp, concs_str, map_result = lp_utils.get_loopy_arg('conc',
+                        indicies=['${var_name}', 'j'],
+                        dimensions=(Ns, test_size),
+                        order=loopy_opts.order)
+
+    omega_dot_lp, omega_dot_str, _ = lp_utils.get_loopy_arg('wdot',
+                        indicies=['${omega_ind}', 'j'],
+                        dimensions=(rate_info['Ns'] + 1, test_size),
+                        order=loopy_opts.order)
+
+    omega_ind = '${var_name} + 1'
+
+    kernel_data_conp.extend([h_lp, cp_lp, concs_lp, omega_dot_lp])
+    kernel_data_conv.extend([u_lp, cv_lp, concs_lp, omega_dot_lp])
+
+    #put together conv/conp terms
+    conp_term = sp_utils.sanitize(conp_term, subs ={
+          'H[k]' : h_str,
+          'dot{omega}[k]' : omega_dot_str,
+          '[C][k]' : concs_str,
+          '{C_p}[k]' : cp_str
+        })
+    conv_term = sp_utils.sanitize(conv_term, subs ={
+          'U[k]' : u_str,
+          'dot{omega}[k]' : omega_dot_str,
+          '[C][k]' : concs_str,
+          '{C_v}[k]' : cv_str
+        })
+    #now split into upper / lower halves
+    factor = -1
+    def separate(term):
+        upper = sp.Mul(*[x for x in sp.Mul.make_args(term) if not x.has(sp.Pow) and x.has(sp.Sum)])
+        lower = factor / (term / upper) #take inverse
+        upper = sp.Mul(*[x if not x.has(sp.Sum) else x.function for x in sp.Mul.make_args(upper)])
+        lower = lower.function
+        return upper, lower
+
+    conp_upper, conp_lower = separate(conp_term)
+    conv_upper, conv_lower = separate(conv_term)
+
+    pre_instructions = """
+    <>upper_sum = simul_reduce(sum, ${var_name}, ${upper_term}) {id=upper, dep=*}
+    <>lower_sum = simul_reduce(sum, ${var_name}, ${lower_term}) {id=lower, dep=*}
+    """
+
+    #<>upper_sum = simul_reduce(sum, ${var_name}, ${upper_term}) {dep=*}
+    #<>lower_sum = simul_reduce(sum, ${var_name}, ${lower_term}) {dep=*}
+    instructions = ''
+
+    #"""
+    #upper_sum = upper_sum + ${upper_term} {id=upper_update, dep=*upper_init}
+    #lower_sum = lower_sum + ${lower_term} {id=lower_update, dep=*lower_init}
+    #"""
+
+    conp_instructions = Template(pre_instructions).safe_substitute(
+        upper_term=conp_upper,
+        lower_term=conp_lower)
+    conp_instructions = Template(conp_instructions).safe_substitute(
+        omega_ind=omega_ind)
+
+    conv_instructions = Template(pre_instructions).safe_substitute(
+        upper_term=conv_upper,
+        lower_term=conv_lower)
+    conv_instructions = Template(conv_instructions).safe_substitute(
+        omega_ind=omega_ind)
+
+    post_instructions = Template("""
+    ${omega_dot_str} = ${factor} * upper_sum / lower_sum {id=final, dep=upper*:lower*}
+    """).safe_substitute(
+        omega_dot_str=omega_dot_str,
+        factor=factor
+    )
+    post_instructions = Template(post_instructions).safe_substitute(omega_ind=0)
+
+    return [rateconst_info(name='temperature_rate_conp',
+                           pre_instructions=[conp_instructions],
+                           instructions='',
+                           post_instructions=[post_instructions],
+                           var_name='i',
+                           kernel_data=kernel_data_conp,
+                           indicies=indicies,
+                           extra_subs = {'spec_ind' : 'ispec'}),
+            rateconst_info(name='temperature_rate_conv',
+                           pre_instructions=[conv_instructions],
+                           instructions='',
+                           post_instructions=[post_instructions],
+                           var_name='i',
+                           kernel_data=kernel_data_conv,
+                           indicies=indicies,
+                           extra_subs = {'spec_ind' : 'ispec'})]
+
+
 def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the net species rate
     kernel

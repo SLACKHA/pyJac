@@ -6,11 +6,11 @@ import logging
 logging.getLogger('root').setLevel(logging.WARNING)
 
 #local imports
-from ..core.rate_subs import (write_rateconst_kernel, get_rate_eqn, assign_rates,
+from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
     get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
-    get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates)
+    get_rxn_pres_mod, get_rop, get_rop_net, get_temperature_rate)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call)
 from ..utils import create_dir
@@ -690,11 +690,45 @@ class SubTest(TestClass):
         #test regularly
         self.__generic_rate_tester(get_spec_rates, kc, do_spec_per_reac=True)
 
+    @attr('long'):
+    def test_temperature_rates(self):
+        wdot = np.concatenate((np.zeros((1, test_size)), species_rates))
+        args={'wdot' : lambda x: self.store.wdot.copy() if x == 'F'
+                            else self.store.wdot.T.copy(),
+                'conc' : lambda x: self.store.concs.copy() if x == 'F'
+                            else self.store.concs.T.copy(),
+                'cp' : lambda x: self.store.spec_cp.copy() if x == 'F'
+                            else self.store.spec_cp.T.copy(),
+                'h' : lambda x: self.store.spec_h.copy() if x == 'F'
+                            else self.store.spec_h.T.copy()
+                'cv' : lambda x: self.store.spec_cv.copy() if x == 'F'
+                            else self.store.spec_cv.T.copy(),
+                'u' : lambda x: self.store.spec_u.copy() if x == 'F'
+                            else self.store.spec_u.T.copy()}
+        Tdot_cp = np.concatenate((self.store.conp_temperature_rates.reshape((1, -1)),
+                       np.zeros((self.store.gas.n_species, self.store.test_size))),
+                       axis=0)
+        Tdot_cv = np.concatenate((self.store.conv_temperature_rates.reshape((1, -1)),
+                       np.zeros((self.store.gas.n_species, self.store.test_size))),
+                       axis=0)
+
+        kc = [kernel_call('temperature_rate_conp', [Tdot_cp],
+                input_mask=['cv', 'u'],
+                compare_mask=[0], **args),
+            kernel_call('temperature_rate_conv', [Tdot_cv],
+                input_mask=['cp', 'h'],
+                compare_mask=[0], **args)]
+
+        assert False, 'XFail: Need to fix parallel reductions for temperature rates'
+
+        #test regularly
+        self.__generic_rate_tester(get_spec_rates, kc, do_spec_per_reac=True)
+
     def test_write_rateconst_knl(self):
         script_dir = os.path.abspath(os.path.dirname(__file__))
         build_dir = os.path.join(script_dir, 'out')
         create_dir(build_dir)
-        write_rateconst_kernel(build_dir,
+        write_specrates_kernel(build_dir,
                 {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 self.store.reacs, self.store.specs,
                 loopy_options(lang='opencl',

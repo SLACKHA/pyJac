@@ -1,5 +1,5 @@
-#ifndef RXN_RATES_OCLH
-#define RXN_RATES_OCLH
+#ifndef SPEC_RATES_OCLH
+#define SPEC_RATES_OCLH
 #include <cl.h>
 #include "mechanism.oclh"
 __kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) eval_rate_constants(int const n, __global double const *restrict T_arr, __global double const *restrict P_arr)

@@ -1,4 +1,4 @@
-#include "rxn_rates.oclh"
+#include "spec_rates.oclh"
 #if __OPENCL_C_VERSION__ < 120
 #pragma OPENCL EXTENSION cl_khr_fp64: enable
 #endif

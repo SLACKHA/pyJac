@@ -503,21 +503,17 @@ __kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_temperat
 {
   double acc_i;
   double acc_i_0;
-  double lower_sum;
-  double upper_sum;
 
   for (int j = 0; j <= -1 + n; ++j)
   {
-    acc_i = 0.0;
     acc_i_0 = 0.0;
+    acc_i = 0.0;
     for (int i = 0; i <= 30; ++i)
     {
-      acc_i = acc_i + h[31 * j + i] * wdot[32 * j + 1 + i];
       acc_i_0 = acc_i_0 + conc[31 * j + i] * cp[31 * j + i];
+      acc_i = acc_i + h[31 * j + i] * wdot[32 * j + 1 + i];
     }
-    upper_sum = acc_i;
-    lower_sum = acc_i_0;
-    wdot[32 * j] = -1.0 * upper_sum / lower_sum;
+    wdot[32 * j] = -1.0 * acc_i / acc_i_0;
   }
 }
 
@@ -525,20 +521,16 @@ __kernel void __attribute__ ((reqd_work_group_size(1, 1, 1))) rateconst_temperat
 {
   double acc_i;
   double acc_i_0;
-  double lower_sum;
-  double upper_sum;
 
   for (int j = 0; j <= -1 + n; ++j)
   {
-    acc_i = 0.0;
     acc_i_0 = 0.0;
+    acc_i = 0.0;
     for (int i = 0; i <= 30; ++i)
     {
-      acc_i = acc_i + u[31 * j + i] * wdot[32 * j + 1 + i];
       acc_i_0 = acc_i_0 + conc[31 * j + i] * cv[31 * j + i];
+      acc_i = acc_i + u[31 * j + i] * wdot[32 * j + 1 + i];
     }
-    upper_sum = acc_i;
-    lower_sum = acc_i_0;
-    wdot[32 * j] = -1.0 * upper_sum / lower_sum;
+    wdot[32 * j] = -1.0 * acc_i / acc_i_0;
   }
 }

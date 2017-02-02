@@ -653,6 +653,8 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     var_name = 'i'
     kernel_data = []
+    if test_size != 'n':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
     extra_inames =[]
     maps = {}
     maplist = []
@@ -881,6 +883,9 @@ def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
         for kernel in kernel_list:
             __add_data(kernel, data)
 
+    if test_size == 'n':
+        __add_to_all(lp.ValueArg('n', dtype=np.int32))
+
 
     indicies['fwd'] = __handle_indicies(np.arange(rate_info['Nr']), '', None, kernel_data)
     if separated_kernels:
@@ -1099,6 +1104,8 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
 
         #indicies
         kernel_data = []
+        if test_size == 'n':
+            kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
         indicies = __handle_indicies(np.arange(rate_info[direction]['num']), '${reac_ind}', mapname, kernel_data)
 
         #we need species lists, nu lists, etc.
@@ -1267,6 +1274,8 @@ def get_rxn_pres_mod(eqs, loopy_opts, rate_info, test_size=None):
     #rate info and reac ind
     reac_ind = 'i'
     kernel_data = []
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg('n', dtype=np.int32))
 
     #set of eqn's doesn't matter
     conp_eqs = eqs['conp']
@@ -1325,6 +1334,8 @@ ${pres_mod} = ${thd_conc} {dep=decl}
 
     #and now the falloff kernel
     kernel_data = []
+    if test_size == 'n':
+        kernel_data.append(lp.ValueArg('n', dtype=np.int32))
     fall_maplist = []
     fall_map = {}
     indicies = __handle_indicies(np.arange(rate_info['fall']['num'], dtype=np.int32),

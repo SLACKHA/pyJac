@@ -375,11 +375,13 @@ def assign_rates(reacs, specs, rate_spec):
 
 class rateconst_info(object):
     def __init__(self, name, instructions, pre_instructions=[],
-        post_instructions=[],
-        var_name='i', kernel_data=None,
-        maps=[], extra_inames=[], indicies=[],
-        assumptions=[], parameters={},
-        extra_subs={}):
+            post_instructions=[],
+            var_name='i', kernel_data=None,
+            maps=[], extra_inames=[], indicies=[],
+            assumptions=[], parameters={},
+            extra_subs={},
+            can_vectorize=True,
+            vectorization_specializer=None):
         self.name = name
         self.instructions = instructions
         self.pre_instructions = pre_instructions[:]
@@ -392,6 +394,8 @@ class rateconst_info(object):
         self.assumptions = assumptions[:]
         self.parameters = parameters.copy()
         self.extra_subs = extra_subs
+        self.can_vectorize = can_vectorize
+        self.vectorization_specializer = vectorization_specializer
 
 __TINV_PREINST_KEY = 'Tinv'
 __TLOG_PREINST_KEY = 'logT'
@@ -3232,10 +3236,14 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     target = lp_utils.get_target(loopy_opts.lang)
     for i, info in enumerate(kernels):
         #create kernel from rateconst_info
-        knl = make_rateconst_kernel(info, target, test_size)
-        #apply vectorization
-        kernels[i] = apply_rateconst_vectorization(loopy_opts,
-            info.var_name, knl)
+        kernels[i] = make_rateconst_kernel(info, target, test_size)
+        #apply vectorization if possible
+        if info.can_vectorize:
+            kernels[i] = apply_rateconst_vectorization(loopy_opts,
+                info.var_name, kernels[i])
+        #apply any specializations if supplied
+        if info.vectorization_specializer:
+            kernels[i] = info.vectorization_specializer(kernels[i])
         #and add a mangler
         #func_manglers.append(create_function_mangler(kernels[i]))
 

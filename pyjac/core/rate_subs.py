@@ -494,8 +494,6 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
         The generated infos for feeding into the kernel generator for both equation types
     """
 
-    #TODO: fix for parallel reductions
-
     #here, the equation form _does_ matter
     conp_term = next(x for x in eqs['conp'] if str(x) == 'frac{text{d} T }{text{d} t }')
     conp_term = eqs['conp'][conp_term]
@@ -573,19 +571,14 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
     conp_upper, conp_lower = separate(conp_term)
     conv_upper, conv_lower = separate(conv_term)
 
-    pre_instructions = """
-    <>upper_sum = simul_reduce(sum, ${var_name}, ${upper_term}) {id=upper, dep=*}
-    <>lower_sum = simul_reduce(sum, ${var_name}, ${lower_term}) {id=lower, dep=*}
-    """
+    pre_instructions = Template("""
+    ${omega_dot_str} = ${factor} * simul_reduce(sum, ${var_name}, ${upper_term}) / simul_reduce(sum, ${var_name}, ${lower_term}) {id=sum, dep=*}
+    """).safe_substitute(
+        omega_dot_str=omega_dot_str,
+        factor=factor)
+    pre_instructions = Template(pre_instructions).safe_substitute(omega_ind=0)
 
-    #<>upper_sum = simul_reduce(sum, ${var_name}, ${upper_term}) {dep=*}
-    #<>lower_sum = simul_reduce(sum, ${var_name}, ${lower_term}) {dep=*}
     instructions = ''
-
-    #"""
-    #upper_sum = upper_sum + ${upper_term} {id=upper_update, dep=*upper_init}
-    #lower_sum = lower_sum + ${lower_term} {id=lower_update, dep=*lower_init}
-    #"""
 
     conp_instructions = Template(pre_instructions).safe_substitute(
         upper_term=conp_upper,
@@ -599,30 +592,40 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
     conv_instructions = Template(conv_instructions).safe_substitute(
         omega_ind=omega_ind)
 
-    post_instructions = Template("""
-    ${omega_dot_str} = ${factor} * upper_sum / lower_sum {id=final, dep=upper*:lower*}
-    """).safe_substitute(
-        omega_dot_str=omega_dot_str,
-        factor=factor
-    )
-    post_instructions = Template(post_instructions).safe_substitute(omega_ind=0)
+    #finally do vectorization ability and specializer
+    can_vectorize = loopy_opts.depth is None
+    vec_spec = None
+    if loopy_opts.width is not None:
+        def __vec_spec(knl):
+            name = 'sum_i_update' if not loopy_opts.unr else 'sum_i_outer_i_inner_update'
+            #split the reduction
+            knl = lp.split_reduction_outward(knl, 'j_outer')
+            #and aremove the sum_0 barrier
+            knl = lp.preprocess_kernel(knl)
+            for insn in knl.instructions:
+                if insn.id == 'sum_0':
+                    insn.no_sync_with |= frozenset([(name, 'any')])
+            return knl
+        vec_spec = __vec_spec
 
     return [rateconst_info(name='temperature_rate_conp',
                            pre_instructions=[conp_instructions],
                            instructions='',
-                           post_instructions=[post_instructions],
                            var_name='i',
                            kernel_data=kernel_data_conp,
                            indicies=indicies,
-                           extra_subs = {'spec_ind' : 'ispec'}),
+                           extra_subs = {'spec_ind' : 'ispec'},
+                           can_vectorize=can_vectorize,
+                           vectorization_specializer=vec_spec),
             rateconst_info(name='temperature_rate_conv',
                            pre_instructions=[conv_instructions],
                            instructions='',
-                           post_instructions=[post_instructions],
                            var_name='i',
                            kernel_data=kernel_data_conv,
                            indicies=indicies,
-                           extra_subs = {'spec_ind' : 'ispec'})]
+                           extra_subs = {'spec_ind' : 'ispec'},
+                           can_vectorize=can_vectorize,
+                           vectorization_specializer=vec_spec)]
 
 
 def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):

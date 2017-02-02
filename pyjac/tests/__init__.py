@@ -106,12 +106,19 @@ class storage(object):
             self.ref_thd[:, i] = np.dot(thd_eff_maps, self.concs[:, i])
             #species thermo props
             for j in range(gas.n_species):
-                self.spec_cv[j, i] = gas.species(j).thermo.cp(self.T[i]) - ct.gas_constant
-                self.spec_cp[j, i] = gas.species(j).thermo.cp(self.T[i])
-                self.spec_b[j, i] = gas.species(j).thermo.s(self.T[i]) / ct.gas_constant -\
-                                gas.species(j).thermo.h(self.T[i]) / (ct.gas_constant * self.T[i]) - np.log(self.T[i])
-                self.spec_u[j, i] = gas.species(j).thermo.h(self.T[i]) - self.T[i] * ct.gas_constant
-                self.spec_h[j, i] = gas.species(j).thermo.h(self.T[i])
+                cp = gas.species(j).thermo.cp(self.T[i])
+                s = gas.species(j).thermo.s(self.T[i])
+                h = gas.species(j).thermo.h(self.T[i])
+                self.spec_cv[j, i] = cp - ct.gas_constant
+                self.spec_cp[j, i] = cp
+                self.spec_b[j, i] = s / ct.gas_constant - h / (ct.gas_constant * self.T[i]) - np.log(self.T[i])
+                self.spec_u[j, i] = h - self.T[i] * ct.gas_constant
+                self.spec_h[j, i] = h
+
+            self.conp_temperature_rates[i] = (-np.dot(self.spec_h[:, i], self.species_rates[:, i])
+                                                / np.dot(self.spec_cp[:, i], self.concs[:, i]))
+            self.conv_temperature_rates[i] = (-np.dot(self.spec_u[:, i], self.species_rates[:, i])
+                                                / np.dot(self.spec_cv[:, i], self.concs[:, i]))
             for j in range(self.fall_inds.size):
                 arrhen_temp[j] = pr_eval(i, j)
             self.ref_Pr[:, i] = self.ref_thd[thd_to_fall_map, i] * arrhen_temp

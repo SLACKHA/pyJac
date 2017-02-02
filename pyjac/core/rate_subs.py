@@ -3337,7 +3337,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     additional_kernels = '\n'.join([lp_utils.get_code(k) for k in kernels])
 
     #create the file
-    with filew.get_file(os.path.join(path, file_prefix + 'rxn_rates'
+    with filew.get_file(os.path.join(path, file_prefix + 'spec_rates'
                              + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
         instructions = __find_indent(file_str, 'body', instructions)
         lines = file_src.safe_substitute(
@@ -3352,7 +3352,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
 
     #and the header file
     headers = [lp_utils.get_header(knl) for knl in kernels]
-    with filew.get_header_file(os.path.join(path, file_prefix + 'rxn_rates'
+    with filew.get_header_file(os.path.join(path, file_prefix + 'spec_rates'
                              + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
 
         lines = '\n'.join([defn_str] + headers).split('\n')

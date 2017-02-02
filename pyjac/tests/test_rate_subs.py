@@ -747,7 +747,7 @@ class SubTest(TestClass):
                     width=None, depth=None, ilp=False,
                     unr=None, order='C'))
 
-        assert filecmp.cmp(os.path.join(build_dir, 'rxn_rates.oclh'),
-                        os.path.join(script_dir, 'blessed', 'rxn_rates.oclh'))
-        assert filecmp.cmp(os.path.join(build_dir, 'rxn_rates.ocl'),
-                        os.path.join(script_dir, 'blessed', 'rxn_rates.ocl'))
+        assert filecmp.cmp(os.path.join(build_dir, 'spec_rates.oclh'),
+                        os.path.join(script_dir, 'blessed', 'spec_rates.oclh'))
+        assert filecmp.cmp(os.path.join(build_dir, 'spec_rates.ocl'),
+                        os.path.join(script_dir, 'blessed', 'spec_rates.ocl'))

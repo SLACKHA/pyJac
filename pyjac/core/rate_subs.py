@@ -653,7 +653,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     var_name = 'i'
     kernel_data = []
-    if test_size != 'n':
+    if test_size == 'n':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
     extra_inames =[]
     maps = {}

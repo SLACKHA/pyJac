@@ -3330,10 +3330,10 @@ def write_specrates_kernel(path, eqs, reacs, specs,
                              + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
         instructions = __find_indent(file_str, 'body', instructions)
         lines = file_src.safe_substitute(
-                    rc_defines=defines,
-                    rc_func_define=defn_str,
-                    rc_body=instructions,
-                    rc_additional_kernels=additional_kernels).split('\n')
+                    defines=defines,
+                    func_define=defn_str,
+                    body=instructions,
+                    additional_kernels=additional_kernels).split('\n')
 
         if auto_diff:
             lines = [x.replace('double', 'adouble') for x in lines]

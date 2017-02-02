@@ -23,8 +23,9 @@ def sanitize(eqn, subs={}, symlist={}):
     """
     #first we replace values with regular symbols for easy working
     #if an equivalent value is not found in the symlist the str conversion of the symbol will be used
+    tosubs = [x for x in eqn.free_symbols if not any(y.has(x) and x != y for y in eqn.free_symbols)]
     indexed = [(x, next((sym for name, sym in symlist.items()
-                if name == str(x)), Symbol(str(x)))) for x in eqn.free_symbols]
+                if name == str(x)), Symbol(str(x)))) for x in tosubs]
     eqn = eqn.subs(indexed)
     #next we do any complex user specified substitution
     eqn = eqn.subs([(k, v) for k, v in subs.items()])

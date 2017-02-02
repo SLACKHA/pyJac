@@ -511,27 +511,27 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
 
     h_lp, h_str, map_result = lp_utils.get_loopy_arg('h',
                         indicies=['${var_name}', 'j'],
-                        dimensions=(Ns, test_size),
+                        dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
 
     u_lp, u_str, map_result = lp_utils.get_loopy_arg('u',
                         indicies=['${var_name}', 'j'],
-                        dimensions=(Ns, test_size),
+                        dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
 
     cp_lp, cp_str, map_result = lp_utils.get_loopy_arg('cp',
                         indicies=['${var_name}', 'j'],
-                        dimensions=(Ns, test_size),
+                        dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
 
     cv_lp, cv_str, map_result = lp_utils.get_loopy_arg('cv',
                         indicies=['${var_name}', 'j'],
-                        dimensions=(Ns, test_size),
+                        dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
 
     concs_lp, concs_str, map_result = lp_utils.get_loopy_arg('conc',
                         indicies=['${var_name}', 'j'],
-                        dimensions=(Ns, test_size),
+                        dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
 
     omega_dot_lp, omega_dot_str, _ = lp_utils.get_loopy_arg('wdot',

@@ -432,10 +432,12 @@ def populate(knl, kernel_calls, device='0'):
         else:
             out_ref = [None]
 
+        found = False
         #run kernels
         for k in knl:
             #test that we want to run this one
             if kc.is_my_kernel(k):
+                found = True
                 #set the editor to avoid intel bugs
                 test_knl = set_editor(k)
                 if isinstance(test_knl.target, lp.PyOpenCLTarget):
@@ -457,6 +459,7 @@ def populate(knl, kernel_calls, device='0'):
                         copy_inds = np.where(np.logical_not(np.isinf(out[ind])))
                         out_ref[ind][copy_inds] = out[ind][copy_inds]
         output.append(out_ref)
+        assert found, 'No kernels could be found to match kernel call {}'.format(kc.name)
     return output
 
 def auto_run(knl, kernel_calls, device='0'):

@@ -736,7 +736,7 @@ class SubTest(TestClass):
         #test regularly
         self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True)
 
-    def test_write_rateconst_knl(self):
+    def test_write_specrates_knl(self):
         script_dir = os.path.abspath(os.path.dirname(__file__))
         build_dir = os.path.join(script_dir, 'out')
         create_dir(build_dir)

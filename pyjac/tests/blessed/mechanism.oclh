@@ -1,0 +1,7 @@
+#ifndef MECHANISM_OCLH
+#define MECHANISM_OCLH
+#include "mechanism.oclh"
+#define NS (30)
+#define NR (15)
+#define NN (31)
+#endif

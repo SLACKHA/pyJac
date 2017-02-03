@@ -2776,7 +2776,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     #various specializations of the rate form
     specializations = {}
     i_a_only = rateconst_info(name='a_only{}'.format(name_mod),
-        instructions=kf_assign.safe_substitute(rate='${a_name}[i]'),
+        instructions=kf_assign.safe_substitute(rate='${A_name}[i]'),
         **extra_args)
     i_beta_int = rateconst_info(name='beta_int{}'.format(name_mod),
         pre_instructions=[__TINV_PREINST_KEY],
@@ -2786,7 +2786,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         if negval
             T_val = T_inv {id=a2, dep=a1}
         end
-        ${kf_str} = ${a_name}[i] * T_val {id=a3, dep=a2}
+        ${kf_str} = ${A_name}[i] * T_val {id=a3, dep=a2}
         ${beta_iter}
         """,
         **extra_args)

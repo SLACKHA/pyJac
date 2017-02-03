@@ -1483,7 +1483,8 @@ def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
                                                    dtype=rate_info['net']['num_spec'].dtype,
                                                    map_name=rev_map)
     #species offsets
-    net_spec_offsets = np.cumsum(rate_info['net']['num_spec']) - rate_info['net']['num_spec']
+    net_spec_offsets = np.array(
+        np.cumsum(rate_info['net']['num_spec']) - rate_info['net']['num_spec'], dtype=np.int32)
     num_spec_offsets_lp, num_spec_offsets_str, map_result = lp_utils.get_loopy_arg('total_spec_per_reac_offset',
                                                    ['${reac_ind}'],
                                                    dimensions=net_spec_offsets.shape,

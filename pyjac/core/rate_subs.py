@@ -3288,6 +3288,19 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         kernel_data += [lp.ValueArg(test_size, dtype=np.int32)]
     kernel_data.extend([T_arr, P_arr])
 
+    #Finally, turn various needed into ours
+    defines = [arg for knl in kernels for arg in knl.args if
+                    not isinstance(arg, lp.TemporaryVariable)
+                    and arg not in kernel_data]
+    nameset = set(d.name for d in defines)
+    args = []
+    for name in nameset:
+        #check for dupes
+        same_name = [x for x in defines if x.name == name]
+        assert all(same_name[0] == y for y in same_name[1:])
+        same_name = same_name[0]
+        kernel_data.append(same_name)
+
     vec_width = loopy_opts.depth
     if vec_width is None:
         vec_width = loopy_opts.width
@@ -3305,10 +3318,11 @@ def write_specrates_kernel(path, eqs, reacs, specs,
 
     #next create the call instructions
     def __gen_call(knl, idx, condition=None):
-        call = Template('${name}(${args})').safe_substitute(
+        call = Template('${name}(${args})${end}').safe_substitute(
                 name=knl.name,
                 args=','.join([arg.name for arg in knl.args
                         if not isinstance(arg, lp.TemporaryVariable)]),
+                end=utils.line_end[loopy_opts.lang]
                 #dep='id=call_{}{}'.format(idx, ', dep=call_{}'.format(idx - 1) if idx > 0 else '')
             )
         if condition:
@@ -3327,25 +3341,6 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     instructions = '\n'.join(__gen_call(knl, i, conditions[i])
         for i, knl in enumerate(kernels))
 
-    #Finally, turn outside arguements into local defines
-    defines = [arg for knl in kernels for arg in knl.args if
-                    not isinstance(arg, lp.TemporaryVariable)
-                    and arg not in kernel_data]
-    nameset = set(d.name for d in defines)
-    new_temp_vars = []
-    for name in nameset:
-        #check for dupes
-        same_name = [x for x in defines if x.name == name]
-        assert all(same_name[0] == y for y in same_name[1:])
-        same_name = same_name[0]
-        #convert to global variable and add to kernel data
-        new_temp_vars.append(lp.TemporaryVariable(
-            name, dtype=same_name.dtype,
-            scope=scopes.GLOBAL))
-
-    defines = '\n'.join([utils.get_global_declaration(loopy_opts.lang, arg) for arg in
-                            sorted(new_temp_vars, key=lambda x:x.name)])
-
     #and finally, generate the additional kernels
     additional_kernels = '\n'.join([lp_utils.get_code(k) for k in kernels])
 
@@ -3354,7 +3349,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
                              + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
         instructions = __find_indent(file_str, 'body', instructions)
         lines = file_src.safe_substitute(
-                    defines=defines,
+                    defines='',
                     func_define=defn_str,
                     body=instructions,
                     additional_kernels=additional_kernels).split('\n')
@@ -3364,18 +3359,19 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         file.add_lines(lines)
 
     #and the header file
-    headers = [lp_utils.get_header(knl) for knl in kernels]
+    headers = [lp_utils.get_header(knl) + utils.line_end[loopy_opts.lang]
+                    for knl in kernels] + [defn_str + utils.line_end[loopy_opts.lang]]
     with filew.get_header_file(os.path.join(path, file_prefix + 'spec_rates'
                              + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
 
-        lines = '\n'.join([defn_str] + headers).split('\n')
+        lines = '\n'.join(headers).split('\n')
         if auto_diff:
             file.add_headers('adept.h')
             file.add_lines('using adept::adouble;\n')
             lines = [x.replace('double', 'adouble') for x in lines]
         file.add_lines(lines)
 
-    return new_temp_vars
+    return kernel_data
 
 def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential

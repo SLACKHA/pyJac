@@ -2,8 +2,6 @@
 import os
 import filecmp
 from collections import OrderedDict, defaultdict
-import logging
-logging.getLogger('root').setLevel(logging.WARNING)
 
 #local imports
 from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
@@ -13,7 +11,6 @@ from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates
     get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates, get_temperature_rate)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call)
-from ..utils import create_dir
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
 
@@ -737,17 +734,14 @@ class SubTest(TestClass):
         self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True)
 
     def test_write_specrates_knl(self):
-        script_dir = os.path.abspath(os.path.dirname(__file__))
-        build_dir = os.path.join(script_dir, 'out')
-        create_dir(build_dir)
-        write_specrates_kernel(build_dir,
+        write_specrates_kernel(self.store.build_dir,
                 {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 self.store.reacs, self.store.specs,
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
                     unr=None, order='C'))
 
-        assert filecmp.cmp(os.path.join(build_dir, 'spec_rates.oclh'),
-                        os.path.join(script_dir, 'blessed', 'spec_rates.oclh'))
-        assert filecmp.cmp(os.path.join(build_dir, 'spec_rates.ocl'),
-                        os.path.join(script_dir, 'blessed', 'spec_rates.ocl'))
+        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.oclh'),
+                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates.oclh'))
+        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.ocl'),
+                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates.ocl'))

@@ -71,9 +71,8 @@ class SubTest(TestClass):
             'b', self.store.conp_eqs)
 
     def test_write_chem_utils(self):
-        script_dir = os.path.abspath(os.path.dirname(__file__))
-        build_dir = os.path.join(script_dir, 'out')
-        create_dir(build_dir)
+        script_dir = self.store.script_dir
+        build_dir = self.store.build_dir
         write_chem_utils(build_dir, self.store.specs,
             {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 loopy_options(lang='opencl',

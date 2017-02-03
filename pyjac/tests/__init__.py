@@ -10,8 +10,17 @@ import os
 #local imports
 from ..sympy.sympy_interpreter import load_equations
 from ..core.mech_interpret import read_mech_ct
+import logging
 
+logging.getLogger('root').setLevel(logging.WARNING)
+
+from .. import utils
+
+#various testing globals
 test_size = 10000
+script_dir = os.path.abspath(os.path.dirname(__file__))
+build_dir = os.path.join(script_dir, 'out')
+utils.create_dir(build_dir)
 
 class storage(object):
     def __init__(self, conp_vars, conp_eqs, conv_vars,
@@ -24,6 +33,8 @@ class storage(object):
         self.specs = specs
         self.reacs = reacs
         self.test_size = test_size
+        self.script_dir = script_dir
+        self.build_dir = build_dir
 
         #create states
         self.T = np.random.uniform(600, 2200, size=test_size)

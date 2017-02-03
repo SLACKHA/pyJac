@@ -21,9 +21,13 @@ def get_standard_headers(lang):
 
     utils.check_lang(lang)
     if lang == 'opencl':
-        return ['cl.h']
+        return []
     elif lang == 'cuda':
-        return ['cuda.h']
+        return []
+    return []
+
+def get_preamble(lang):
+    utils.check_lang(lang)
     return []
 
 
@@ -97,6 +101,7 @@ class FileWriter(object):
             self.filter = lambda x: x
         else:
             self.filter = self.preamble_filter
+            self.preamble = get_preamble(lang)
         self.lines = []
         self.defines = []
 
@@ -150,6 +155,7 @@ class FileWriter(object):
             lines.append('#define {}_{}'.format(filename, ext))
         else:
             self.headers.append(filename)
+            self.lines.extend(self.preamble)
 
         ext = utils.header_ext[self.lang]
         for header in self.std_headers:

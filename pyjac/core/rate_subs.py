@@ -2697,11 +2697,11 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     #find options, sizes, etc.
     if falloff:
         tag = 'fall'
-        kf_name = 'kf_fall'
+        name_mod = '_fall'
         Nr = rate_info['fall']['num']
     else:
         tag = 'simple'
-        kf_name = 'kf'
+        name_mod = ''
         Nr = rate_info['Nr']
 
     #first assign the reac types, parameters
@@ -2715,13 +2715,16 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
             'disabling...')
 
     #define loopy arrays
-    A_lp = lp.TemporaryVariable('A', shape=lp.auto,
+    A_name = 'A{}'.format(name_mod)
+    A_lp = lp.TemporaryVariable(A_name, shape=lp.auto,
         initializer=rate_info[tag]['A'],
         read_only=True, scope=scopes.GLOBAL)
-    b_lp = lp.TemporaryVariable('beta', shape=lp.auto,
+    b_name = 'beta{}'.format(name_mod)
+    b_lp = lp.TemporaryVariable(b_name, shape=lp.auto,
         initializer=rate_info[tag]['b'],
         read_only=True, scope=scopes.GLOBAL)
-    Ta_lp = lp.TemporaryVariable('Ta', shape=lp.auto,
+    Ta_name = 'Ta{}'.format(name_mod)
+    Ta_lp = lp.TemporaryVariable(Ta_name, shape=lp.auto,
         initializer=rate_info[tag]['Ta'],
         read_only=True, scope=scopes.GLOBAL)
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
@@ -2732,7 +2735,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
 
     #if we need the rtype array, add it
     if not separated_kernels and not fixed:
-        rtype_lp = lp.TemporaryVariable('rtype', shape=lp.auto,
+        rtype_lp = lp.TemporaryVariable('rtype{}'.format(name_mod), shape=lp.auto,
             initializer=rate_info[tag]['type'],
             read_only=True, scope=scopes.PRIVATE)
         simple_arrhenius_data.append(rtype_lp)
@@ -2751,6 +2754,12 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                                             oldname=reac_ind))
     #get rate equations
     rate_eqn_pre = get_rate_eqn(eqs)
+    rate_eqn_pre = sp_utils.sanitize(rate_eqn_pre,
+                        symlist= {
+                            'A[i]' : A_name + '[i]',
+                            'Ta[i]' : Ta_name + '[i]',
+                            'beta[i]' : b_name + '[i]',
+                            })
 
     #put rateconst info args in dict for unpacking convenience
     extra_args = {'kernel_data' : simple_arrhenius_data,
@@ -2766,30 +2775,30 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
 
     #various specializations of the rate form
     specializations = {}
-    i_a_only = rateconst_info(name='a_only',
-        instructions=kf_assign.safe_substitute(rate='A[i]'),
+    i_a_only = rateconst_info(name='a_only{}'.format(name_mod),
+        instructions=kf_assign.safe_substitute(rate='${a_name}[i]'),
         **extra_args)
-    i_beta_int = rateconst_info(name='beta_int',
+    i_beta_int = rateconst_info(name='beta_int{}'.format(name_mod),
         pre_instructions=[__TINV_PREINST_KEY],
         instructions="""
         <> T_val = T_arr[j] {id=a1}
-        <> negval = beta[i] < 0
+        <> negval = ${b_name}[i] < 0
         if negval
             T_val = T_inv {id=a2, dep=a1}
         end
-        ${kf_str} = A[i] * T_val {id=a3, dep=a2}
+        ${kf_str} = ${a_name}[i] * T_val {id=a3, dep=a2}
         ${beta_iter}
         """,
         **extra_args)
-    i_beta_exp = rateconst_info('beta_exp',
-        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs('Ta[i]', 0))),
+    i_beta_exp = rateconst_info('beta_exp{}'.format(name_mod),
+        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(Ta_name, 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
-    i_ta_exp = rateconst_info('ta_exp',
-        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs('beta[i]', 0))),
+    i_ta_exp = rateconst_info('ta_exp{}'.format(name_mod),
+        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(b_name, 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
-    i_full = rateconst_info('full',
+    i_full = rateconst_info('full{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre)),
         pre_instructions=default_preinstructs,
         **extra_args)
@@ -2853,7 +2862,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                     #add an extra iname, and the resulting iteraton loop
                     info.extra_inames.append(('k', '1 <= maxb < {}'.format(maxb)))
                     beta_iter = """
-                <> btest = abs(beta[i])
+                <> btest = abs(${b_name}[i])
                 for k
                     <>inbounds = k < btest
                     if inbounds
@@ -2886,7 +2895,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                       alternate_indicies=alt_inds)
 
         #get the proper kf indexing / array
-        kf_arr, kf_str, map_result = lp_utils.get_loopy_arg(kf_name,
+        kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf' + name_mod,
                         indicies=[info.var_name, 'j'],
                         dimensions=[Nr, test_size],
                         map_name=out_map,
@@ -2901,7 +2910,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         info.instructions = Template(
                         Template(info.instructions).safe_substitute(
                             beta_iter=beta_iter)
-                    ).safe_substitute(kf_str=kf_str)
+                    ).safe_substitute(kf_str=kf_str,
+                                      A_name=A_name,
+                                      b_name=b_name,
+                                      Ta_name=Ta_name)
 
     return list(specializations.values())
 

@@ -30,7 +30,7 @@ from ..loopy import loopy_utils as lp_utils
 from .. import utils
 from . import chem_model as chem
 from . import mech_interpret as mech
-from . import file_writers as filew
+from ..file_utils import file_writers as filew
 from ..sympy import sympy_utils as sp_utils
 from . reaction_types import reaction_type, falloff_form, thd_body_type, reversible_type
 
@@ -3269,7 +3269,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
 
     #first, load the wrapper as a template
     script_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(script_dir, os.pardir, 'file_templates',
+    with open(os.path.join(script_dir, os.pardir, 'file_utils', 'opencl',
                 'wrapping_kernel.ocl.in'), 'r') as file:
         file_str = file.read()
         file_src = Template(file_str)

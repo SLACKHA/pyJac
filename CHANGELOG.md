@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
  - Fix for SRI Falloff functions with non-default third bodies ([issue #12](https://github.com/SLACKHA/pyJac/issues/12))
  - Fixed removal of jac/rate lists before libgen of functional_tester
 
+### Changed
+ - Issue warning in Cantera parsing if the installed version doesn't have access to species thermo properties.
+
 ## [1.0.2] - 2017.01.18
 ### Added
  - Added CHANGELOG

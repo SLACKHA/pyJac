@@ -25,6 +25,7 @@ try:
     version = ct.__version__.split('.')
     if int(version[0]) < 2 or int(version[1]) < 3:
         print('Parsing of Cantera mechanisms requires at least version 2.3.0 in order to access species thermo properties...')
+        print('Detected version is only {}'.format(ct.__version__))
         sys.exit(1)
     CANTERA_FLAG = True
 except ImportError:

@@ -3292,7 +3292,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     defines = [arg for knl in kernels for arg in knl.args if
                     not isinstance(arg, lp.TemporaryVariable)
                     and arg not in kernel_data]
-    nameset = set(d.name for d in defines)
+    nameset = sorted(set(d.name for d in defines))
     args = []
     for name in nameset:
         #check for dupes

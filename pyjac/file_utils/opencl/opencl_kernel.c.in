@@ -20,55 +20,25 @@ int main(int argc, char* argv[])
     cl_int return_code;
 
     //check args
-    // argv[1] == filename
-    // argv[2] == platform id
-    // argv[3] == output file name
-    // argv[4] == build options (optional)
-    assert(argc >= 4);
+    assert(argc >= 3);
 
-    char* filename = (char*)malloc(strlen(argv[1]) * sizeof(char));
-    sprintf(filename, argv[1]);
+    //arglist is:
+    //#0 - the program name
+    //#1 - the problem size
+    //#2 - the number of devices
 
-    char* platform_check = (char*)malloc(strlen(argv[2]) * sizeof(char));
-    sprintf(platform_check, argv[2]);
+    char* kernel = "${kernel}"
 
-    char* outname = (char*)malloc(strlen(argv[3]) * sizeof(char));
-    sprintf(outname, argv[3]);
+    int problem_size = atoi(argv[1]);
+    int num_devices = atoi(argv[2]);
 
-    char* build_options = NULL;
-    if (argc >= 5)
-    {
-        size_t len = 0;
-        //all further options are build options
-        //first find total len
-        for(int argi = 4; argi < argc; ++argi)
-        {
-            len += strlen(argv[argi]);
-            if (argi != argc - 1)
-            {
-                len += 1; //for space separator
-            }
-        }
-        build_options = (char*)malloc(len * sizeof(char));
-        //next place into build options
-        size_t offset = 0;
-        for(int argi = 4; argi < argc; ++argi)
-        {
-            sprintf(&build_options[offset], argv[argi]);
-            offset += strlen(argv[argi]);
-            if (argi != argc - 1)
-            {
-                build_options[offset] = ' ';
-                offset += 1;
-            }
-        }
-    }
+    char* platform_check = "${platform}";
 
     FILE *fp;
     char *source_str;
 
     /* Load kernel source code */
-    fp = fopen(filename, "r");
+    fp = fopen(filename, "rb");
     if (!fp) {
         exit(-1);
     }

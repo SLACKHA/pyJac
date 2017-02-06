@@ -74,3 +74,5 @@ Figures/
 # generated wrappers
 pyjacob_wrapper.c
 pytchem_wrapper.c
+
+site_conf.py

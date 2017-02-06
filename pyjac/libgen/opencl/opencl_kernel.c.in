@@ -1,36 +1,89 @@
+/*
+OpenCL_kernel.c
+
+A skeleton for pyJac opencl kernel execution
+
+Based on https://www.olcf.ornl.gov/tutorials/opencl-vector-addition/
+and https://www.fixstars.com/en/opencl/book/OpenCLProgrammingBook/calling-the-kernel/
+
+Nicholas Curtis - 2017
+*/
+
 #include "ocl_errorcheck.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <CL/cl.h>
 #include <assert.h>
+#include <bool.h>
 
-#define NUM_PLATFORMS (10)
-#define MAX_DEVICE (10)
+#define NUM_PLATFORMS (16)
+#define MAX_DEVICE (16)
 
-int main(int argc, char* argv[])
+void read_initial_conditions(const char* filename, int NUM, double** conc_host, double** var_host,
+                                const char order);
+
+/* declare host/cl buffers */
+${mem_declares}
+
+/*
+Execute the built opencl kernel
+
+Parameters
+----------
+problem_size : cl_uint
+    The number of conditions to execute for
+kernel : cl_kernel
+    The built kernel
+queue : cl_command_queue
+    The command queue
+${knl_args_doc}
+*/
+void execute_kernel(cl_uint problem_size,
+    cl_kernel kernel, cl_command_queue queue, ${knl_args})
+{
+    /* Memory Transfers into the kernel, if any */
+    ${mem_transfers_in}
+
+    size_t global_work_size[3] = {problem_size, 0, 0};
+    size_t local_work_size[3] = {${vec_width}, 0, 0};
+
+    /* run kernel */
+    check_err(clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_work_size, local_work_size, 0, NULL, NULL));
+
+    // Wait for the command queue to get serviced before reading back results
+    clFinish(queue);
+
+    /* Memory Transfers out */
+    ${mem_transfers_out}
+}
+
+/*
+Create opencl kernel
+
+Parameters
+----------
+num_devices : uint
+    The number of devices to use.  If for GPUs/accelerators, this is the # of GPUs to use
+    If for CPUs, this is the number of logical cores to use
+kernel : cl_kernel [out]
+    The kernel output will be stored here
+program : cl_program [out]
+    The built OpenCL program will be stored here
+context : cl_context [out]
+    The opencl context for execution
+queue : cl_command_queue [out]
+    The opencl execution queue
+*/
+void init(cl_uint num_devices, cl_kernel kernel, cl_program program, cl_context context,
+            cl_command_queue queue)
 {
     cl_platform_id platform_id[NUM_PLATFORMS];
     cl_device_id device_ids[MAX_DEVICE];
-    cl_context context = NULL;
-    cl_command_queue command_queue = NULL;
-    cl_program program = NULL;
     cl_uint ret_num_platforms;
     cl_uint ret_num_devices;
     cl_uint num_cores;
-
     cl_int return_code;
-
-    //check args
-    assert(argc >= 3 && "Missing arguements...");
-
-    //arglist is:
-    //#0 - the program name
-    //#1 - the problem size
-    //#2 - the number of cores [CPU only] or number of GPUs / accelerators [GPU only]
-
-    cl_uint problem_size = atoi(argv[1]);
-    cl_uint num_devices = atoi(argv[2]);
 
     char* kernel_path = "${kernel}";
     char* platform_check = "${platform}";
@@ -62,8 +115,8 @@ int main(int argc, char* argv[])
     for (int i = 0; i < ret_num_platforms; ++i)
     {
         //check if intel
-        char pvendor[500];
-        size_t psize = 500 * sizeof(char);
+        char pvendor[100];
+        size_t psize = 100 * sizeof(char);
         check_err(clGetPlatformInfo(platform_id[i], CL_PLATFORM_VENDOR, psize, pvendor, NULL));
         if(strstr(pvendor, platform_check) != NULL)
         {
@@ -123,7 +176,7 @@ int main(int argc, char* argv[])
     check_err(return_code);
 
     //create queue
-    command_queue = clCreateCommandQueue(context, device_ids, 0, &return_code);
+    queue = clCreateCommandQueue(context, device_ids, 0, &return_code);
     check_err(return_code);
 
     /* Create Kernel program from the read in source binary */
@@ -155,40 +208,64 @@ int main(int argc, char* argv[])
           check_err(return_code);
     }
 
-    //now build the kernel
-
-    /* declare buffers */
-    ${mem_declares}
-
     /* Alloc buffers */
     ${mem_allocs}
 
-    /* Memory Transfers, if any */
-    ${mem_transfers}
-
     /* Create OpenCL Kernel */
-    check_err(clCreateKernel(program, "${kernel_name}", &ret));
+    kernel = clCreateKernel(program, "${kernel_name}", &ret);
+    check_err(ret);
 
     /* Kernel arg setting */
     ${kernel_arg_set}
 
-    size_t global_work_size[3] = {problem_size, 0, 0};
-    size_t local_work_size[3] = {${vec_width}, 0, 0};
+    free(source_bin);
+}
 
-    /* run kernel */
-    check_err(clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, global_work_size, local_work_size, 0, NULL, NULL));
-
+/*
+Cleanup the opencl kernel
+*/
+void finalize(cl_command_queue queue, cl_context context,
+                cl_kernel kernel, cl_program program)
+{
     /* Finalization */
-    check_err(clFlush(command_queue));
-    check_err(clFinish(command_queue));
+    check_err(clFlush(queue));
+    check_err(clFinish(queue));
     check_err(clReleaseKernel(kernel));
     check_err(clReleaseProgram(program));
 
     /* Memory Frees */
     ${mem_frees}
 
-    check_err(clReleaseCommandQueue(command_queue));
+    check_err(clReleaseCommandQueue(queue));
     check_err(clReleaseContext(context));
+}
 
-    free(source_bin);
+int main(int argc, char* argv[])
+{
+
+    //check args
+    assert(argc >= 3 && "Missing arguements...");
+
+    //arglist is:
+    //#0 - the program name
+    //#1 - the problem size
+    //#2 - the number of cores [CPU only] or number of GPUs / accelerators [GPU only]
+
+    cl_uint problem_size = atoi(argv[1]);
+    cl_uint num_devices = atoi(argv[2]);
+
+    cl_kernel kernel = NULL;
+    cl_program program = NULL;
+    cl_context context = NULL;
+    cl_command_queue = NULL;
+    init(num_devices, kernel, program, context, queue);
+
+    //read input data
+    read_initial_conditions("${data_filename", problem_size,
+                                T_host, conc_host, var_host,
+                                ${order});
+
+    execute_kernel(problem_size, kernel, queue, ${knl_args});
+
+    finalize(queue, context, kernel, program);
 }

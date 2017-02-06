@@ -3269,8 +3269,9 @@ def write_specrates_kernel(path, eqs, reacs, specs,
 
     #first, load the wrapper as a template
     script_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(script_dir, os.pardir, 'file_utils', 'opencl',
-                'wrapping_kernel.ocl.in'), 'r') as file:
+    with open(os.path.join(script_dir, os.pardir, 'libgen', loopy_opts.lang,
+                'wrapping_kernel.{}.in'.format(utils.file_ext[loopy_opts.lang])),
+             'r') as file:
         file_str = file.read()
         file_src = Template(file_str)
 

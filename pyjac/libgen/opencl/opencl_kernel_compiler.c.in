@@ -5,11 +5,12 @@
 #include <CL/cl.h>
 #include <assert.h>
 
-#define MAX_DEVICE (100)
+#define MAX_DEVICE (16)
+#define MAX_PLATFORM (16)
 
 int main(int argc, char* argv[])
 {
-    cl_platform_id platform_id[10];
+    cl_platform_id platform_id[MAX_PLATFORM];
     cl_device_id device_id = NULL;
     cl_context context = NULL;
     cl_command_queue command_queue = NULL;
@@ -45,7 +46,7 @@ int main(int argc, char* argv[])
     fclose(fp);
 
     /* Get platform/device information */
-    check_err(clGetPlatformIDs(10, platform_id, &ret_num_platforms));
+    check_err(clGetPlatformIDs(MAX_PLATFORM, platform_id, &ret_num_platforms));
     cl_platform_id pid = NULL;
     for (int i = 0; i < ret_num_platforms; ++i)
     {

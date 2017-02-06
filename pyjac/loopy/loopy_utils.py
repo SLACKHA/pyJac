@@ -68,7 +68,10 @@ class loopy_options(object):
         Hence, we supply both.
         *  Note that if True, and deep vectorization is passed this switch will be ignored
         and a warning will be issued
-
+    platform : {'CPU', 'GPU', or other vendor specific name}
+        The OpenCL platform to run on.
+        *   If 'CPU' or 'GPU', the first available matching platform will be used
+        *   If a vendor specific string, it will be passed to pyopencl to get the platform
     """
     def __init__(self, width=None, depth=None, ilp=False,
                     unr=None, lang='opencl', order='C',
@@ -76,7 +79,8 @@ class loopy_options(object):
                     rate_spec_kernels=False,
                     rop_net_kernels=False,
                     species_rates_perspec=True,
-                    spec_rates_sum_over_reac=True):
+                    spec_rates_sum_over_reac=True,
+                    platform=''):
         self.width = width
         self.depth = depth
         self.ilp = ilp
@@ -89,6 +93,28 @@ class loopy_options(object):
         self.rate_spec_kernels = rate_spec_kernels
         self.rop_net_kernels = rop_net_kernels
         self.spec_rates_sum_over_reac = spec_rates_sum_over_reac
+        self.platform = None
+
+        if platform not in ['CPU', 'GPU']:
+            #get platform info, check vendor
+            platforms = cl.get_platforms()
+            for p in platforms:
+                if platform.lower() in p.get_info(cl.platform_info.VENDOR):
+                    self.platform = platform
+        else:
+            #need to find the first platform that has the device of the correct
+            #type
+            d_type = cl.device_type.CPU if platform.lower() == 'cpu' else cl.device_type.GPU
+            for p in platforms:
+                try:
+                    ctx = cl.Context(
+                            dev_type=d_type,
+                            properties=[(cl.context_properties.PLATFORM, p)])
+                    if ctx:
+                        self.platform = p
+                        break
+                except pyopencl.cffi_cl.RuntimeError:
+                    pass
 
 def get_device_list():
     """

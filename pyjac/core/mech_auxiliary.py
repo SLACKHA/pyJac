@@ -12,7 +12,7 @@ import itertools
 
 # Local imports
 from .. import utils
-from ..file_utils import file_writers as filew
+from ..kernel_utils import file_writers as filew
 
 def write_mechanism_header(path, lang, specs, reacs):
     with filew.get_header_file(os.path.join(path,

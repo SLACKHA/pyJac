@@ -36,6 +36,11 @@ class storage(object):
         self.script_dir = script_dir
         self.build_dir = build_dir
 
+        #clean out build dir
+        for f in os.path.listdir(build_dir):
+            if os.path.isfile(os.path.join(build_dir, f)):
+                os.remove(os.path.join(build_dir, f))
+
         #create states
         self.T = np.random.uniform(600, 2200, size=test_size)
         self.P = np.random.uniform(0.5, 50, size=test_size) * ct.one_atm

@@ -75,4 +75,4 @@ Figures/
 pyjacob_wrapper.c
 pytchem_wrapper.c
 
-site_conf.py
+pyjac/site_conf.py

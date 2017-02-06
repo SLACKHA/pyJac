@@ -16,7 +16,6 @@ import os
 import re
 import logging
 from string import Template
-import textwrap
 from collections import OrderedDict
 
 # Non-standard librarys
@@ -30,7 +29,7 @@ from ..loopy import loopy_utils as lp_utils
 from .. import utils
 from . import chem_model as chem
 from . import mech_interpret as mech
-from ..file_utils import file_writers as filew
+from ..kernel_utils import kernel_gen as k_gen
 from ..sympy import sympy_utils as sp_utils
 from . reaction_types import reaction_type, falloff_form, thd_body_type, reversible_type
 
@@ -373,83 +372,6 @@ def assign_rates(reacs, specs, rate_spec):
             'Nr' : len(reacs),
             'Ns' : len(specs)}
 
-class rateconst_info(object):
-    def __init__(self, name, instructions, pre_instructions=[],
-            post_instructions=[],
-            var_name='i', kernel_data=None,
-            maps=[], extra_inames=[], indicies=[],
-            assumptions=[], parameters={},
-            extra_subs={},
-            can_vectorize=True,
-            vectorization_specializer=None):
-        self.name = name
-        self.instructions = instructions
-        self.pre_instructions = pre_instructions[:]
-        self.post_instructions = post_instructions[:]
-        self.var_name = var_name
-        self.kernel_data = kernel_data[:]
-        self.maps = maps[:]
-        self.extra_inames = extra_inames[:]
-        self.indicies = indicies[:]
-        self.assumptions = assumptions[:]
-        self.parameters = parameters.copy()
-        self.extra_subs = extra_subs
-        self.can_vectorize = can_vectorize
-        self.vectorization_specializer = vectorization_specializer
-
-__TINV_PREINST_KEY = 'Tinv'
-__TLOG_PREINST_KEY = 'logT'
-__PLOG_PREINST_KEY = 'logP'
-
-def __handle_indicies(indicies, reac_ind, out_map, kernel_data,
-                        outmap_name='out_map', alternate_indicies=None,
-                        force_zero=False, force_map=False, scope=scopes.PRIVATE):
-    """Consolidates the commonly used indicies mapping steps
-
-    Parameters
-    ----------
-    indicies: :class:`numpy.ndarray`
-        The list of indicies
-    reac_ind : str
-        The reaction index variable (used in mapping)
-    out_map : dict
-        The dictionary to store the mapping result in (if any)
-    kernel_data : list of :class:`loopy.KernelArgument`
-        The data to pass to the kernel (may be added to)
-    outmap_name : str, optional
-        The name to use in mapping
-    alternate_indicies : :class:`numpy.ndarray`
-        An alternate list of indicies that can be substituted in to the mapping
-    force_zero : bool
-        If true, any indicies that don't start with zero require a map (e.g. for
-            smaller arrays)
-    force_map : bool
-        If true, forces use of a map
-    scope : :class:`loopy.temp_var_scope`
-        The scope of the temporary variable definition, if necessary
-    Returns
-    -------
-    indicies : :class:`numpy.ndarray` OR tuple of int
-        The transformed indicies
-    """
-
-    check = indicies if alternate_indicies is None else alternate_indicies
-    if check[0] + check.size - 1 == check[-1] and \
-            (not force_zero or check[0] == 0) and \
-            not force_map:
-        #if the indicies are contiguous, we can get away with an
-        check = (check[0], check[0] + check.size)
-    else:
-        #need an output map
-        out_map[reac_ind] = outmap_name
-        #add to kernel data
-        outmap_lp = lp.TemporaryVariable(outmap_name,
-            shape=lp.auto,
-            initializer=check.astype(dtype=np.int32),
-            read_only=True, scope=scope)
-        kernel_data.append(outmap_lp)
-
-    return check
 
 def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     """
@@ -490,7 +412,7 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator for both equation types
     """
 
@@ -509,7 +431,7 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
         kernel_data_conv.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #figure out if we need to do all species rates
-    indicies = __handle_indicies(np.arange(rate_info['Ns']), '${var_name}', None, kernel_data_conp)
+    indicies = k_gen.handle_indicies(np.arange(rate_info['Ns']), '${var_name}', None, kernel_data_conp)
 
     h_lp, h_str, map_result = lp_utils.get_loopy_arg('h',
                         indicies=['${var_name}', 'j'],
@@ -608,7 +530,7 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
             return knl
         vec_spec = __vec_spec
 
-    return [rateconst_info(name='temperature_rate_conp',
+    return [k_gen.knl_info(name='temperature_rate_conp',
                            pre_instructions=[conp_instructions],
                            instructions='',
                            var_name='i',
@@ -617,7 +539,7 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
                            extra_subs = {'spec_ind' : 'ispec'},
                            can_vectorize=can_vectorize,
                            vectorization_specializer=vec_spec),
-            rateconst_info(name='temperature_rate_conv',
+            k_gen.knl_info(name='temperature_rate_conv',
                            pre_instructions=[conv_instructions],
                            instructions='',
                            var_name='i',
@@ -646,7 +568,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
     """
 
@@ -670,7 +592,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
         reac_ind = var_name
         omega_ind = 'spec_ind'
 
-        indicies = __handle_indicies(np.arange(rate_info['Nr']), '${var_name}', maps, kernel_data)
+        indicies = k_gen.handle_indicies(np.arange(rate_info['Nr']), '${var_name}', maps, kernel_data)
 
         #create species rates kernel
         #all species in reaction
@@ -711,7 +633,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
         reac_ind = 'reac_ind'
         omega_ind = var_name
 
-        indicies = __handle_indicies(rate_info['net_per_spec']['map'], '${var_name}', maps, kernel_data,
+        indicies = k_gen.handle_indicies(rate_info['net_per_spec']['map'], '${var_name}', maps, kernel_data,
                                     outmap_name='nonzero_specs', scope=scopes.GLOBAL)
         #reaction per species
         spec_to_reac = rate_info['net_per_spec']['reacs']
@@ -825,7 +747,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
         instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
         extra_inames = [('irxn', '0 <= irxn < num_rxn')]
 
-    return rateconst_info(name='spec_rates',
+    return k_gen.knl_info(name='spec_rates',
                            instructions=instructions,
                            var_name=var_name,
                            kernel_data=kernel_data,
@@ -854,7 +776,7 @@ def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
     """
 
@@ -894,13 +816,13 @@ def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
         __add_to_all(lp.ValueArg('n', dtype=np.int32))
 
 
-    indicies['fwd'] = __handle_indicies(np.arange(rate_info['Nr']), '', None, kernel_data)
+    indicies['fwd'] = k_gen.handle_indicies(np.arange(rate_info['Nr']), '', None, kernel_data)
     if separated_kernels:
         if rate_info['rev']['num']:
-            indicies['rev'] = __handle_indicies(np.arange(rate_info['rev']['num'], dtype=np.int32),
+            indicies['rev'] = k_gen.handle_indicies(np.arange(rate_info['rev']['num'], dtype=np.int32),
                 '', None, kernel_data)
         if rate_info['thd']['num']:
-            indicies['pres_mod'] = __handle_indicies(np.arange(rate_info['thd']['num'], dtype=np.int32),
+            indicies['pres_mod'] = k_gen.handle_indicies(np.arange(rate_info['thd']['num'], dtype=np.int32),
                 '', None, kernel_data)
 
     #create the fwd rop array / str
@@ -1039,7 +961,7 @@ def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
 
         instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
 
-        return rateconst_info(name='rop_net',
+        return k_gen.knl_info(name='rop_net',
                            instructions=instructions,
                            var_name='i',
                            kernel_data=kernel_data['fwd'],
@@ -1070,7 +992,7 @@ def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
                                          rop_net_str=rop_strs['pres_mod'])
 
             instructions = '\n'.join([x for x in instructions.split('\n') if x.strip()])
-            infos.append(rateconst_info(name='rop_net_{}'.format(kernel),
+            infos.append(k_gen.knl_info(name='rop_net_{}'.format(kernel),
                            instructions=instructions,
                            var_name='i',
                            kernel_data=kernel_data[kernel],
@@ -1098,7 +1020,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
     """
 
@@ -1113,7 +1035,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
         kernel_data = []
         if test_size == 'n':
             kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
-        indicies = __handle_indicies(np.arange(rate_info[direction]['num']), '${reac_ind}', mapname, kernel_data)
+        indicies = k_gen.handle_indicies(np.arange(rate_info[direction]['num']), '${reac_ind}', mapname, kernel_data)
 
         #we need species lists, nu lists, etc.
         #first create offsets for map
@@ -1239,7 +1161,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
                         ('inu', '0 <= inu < nu')]
 
         #and return the rateconst
-        return rateconst_info(name='rop_{}'.format(direction),
+        return k_gen.knl_info(name='rop_{}'.format(direction),
                        instructions=rop_instructions,
                        var_name=reac_ind,
                        kernel_data=kernel_data,
@@ -1273,7 +1195,7 @@ def get_rxn_pres_mod(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
     """
 
@@ -1296,7 +1218,7 @@ def get_rxn_pres_mod(eqs, loopy_opts, rate_info, test_size=None):
 
     thd_map = {}
     thd_maplist = []
-    indicies = __handle_indicies(non_fall_thd, '${reac_ind}', thd_map, kernel_data,
+    indicies = k_gen.handle_indicies(non_fall_thd, '${reac_ind}', thd_map, kernel_data,
                         outmap_name='thd_only_ind')
 
     #next the thd_body_conc's
@@ -1331,7 +1253,7 @@ ${pres_mod} = ${thd_conc} {dep=decl}
 
     #add to the info list
     info_list = [
-        rateconst_info(name='ci_thd',
+        k_gen.knl_info(name='ci_thd',
                    instructions=thd_instructions,
                    var_name=reac_ind,
                    kernel_data=kernel_data,
@@ -1345,7 +1267,7 @@ ${pres_mod} = ${thd_conc} {dep=decl}
         kernel_data.append(lp.ValueArg('n', dtype=np.int32))
     fall_maplist = []
     fall_map = {}
-    indicies = __handle_indicies(np.arange(rate_info['fall']['num'], dtype=np.int32),
+    indicies = k_gen.handle_indicies(np.arange(rate_info['fall']['num'], dtype=np.int32),
                         '${reac_ind}', fall_map, kernel_data,
                         outmap_name='fall_inds', scope=scopes.GLOBAL)
 
@@ -1405,7 +1327,7 @@ ${pres_mod} = ci_temp {dep=ci_update}
 
     #add to the info list
     info_list.append(
-        rateconst_info(name='ci_fall',
+        k_gen.knl_info(name='ci_fall',
                    instructions=fall_instructions,
                    var_name=reac_ind,
                    kernel_data=kernel_data,
@@ -1434,7 +1356,7 @@ def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
     """
     #start developing the Kc kernel
@@ -1451,7 +1373,7 @@ def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
     #add the reverse map
     maps = []
     rev_map = {}
-    indicies = __handle_indicies(rate_info['rev']['map'], '${reac_ind}', rev_map, kernel_data)
+    indicies = k_gen.handle_indicies(rate_info['rev']['map'], '${reac_ind}', rev_map, kernel_data)
 
     #find Kc equation
     Kc_sym = next(x for x in conp_eqs if str(x) == '{K_c}[i]')
@@ -1616,7 +1538,7 @@ ${kr_val} = ${rev_eqn}
 
 
     #and return the rateinfo
-    return rateconst_info(name='Kc',
+    return k_gen.knl_info(name='Kc',
                    instructions=instructions,
                    var_name=reac_ind,
                    kernel_data=kernel_data,
@@ -1643,7 +1565,7 @@ def get_thd_body_concs(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
     """
 
@@ -1728,7 +1650,7 @@ def get_thd_body_concs(eqs, loopy_opts, rate_info, test_size=None):
     out_map = {}
     outmap_name = 'out_map'
     indicies = rate_info['thd']['map'].astype(dtype=np.int32)
-    indicies = __handle_indicies(indicies, reac_ind, out_map, kernel_data)
+    indicies = k_gen.handle_indicies(indicies, reac_ind, out_map, kernel_data)
     #extra loops
     extra_inames = [('k', '0 <= k < num')]
 
@@ -1768,7 +1690,7 @@ ${thd_str} = thd_temp {dep=thd*}
 
 
     #create info
-    info = rateconst_info('thd',
+    info = k_gen.knl_info('thd',
                          instructions=instructions,
                          var_name=reac_ind,
                          kernel_data=kernel_data,
@@ -1795,7 +1717,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
 
     """
@@ -1904,7 +1826,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     indicies = rate_info['cheb']['map'].astype(dtype=np.int32)
     Nr = rate_info['Nr']
 
-    indicies = __handle_indicies(indicies, reac_ind,
+    indicies = k_gen.handle_indicies(indicies, reac_ind,
                       out_map, kernel_data, outmap_name=outmap_name)
 
     #get the proper kf indexing / array
@@ -1991,7 +1913,7 @@ ${kf_str} = exp10(kf_temp) {dep=kf}
                     kf_eval=str(cheb_form),
                     num_cheb=num_cheb)).safe_substitute(reac_ind=reac_ind)
 
-    return rateconst_info('cheb', instructions=instructions, pre_instructions=preinstructs,
+    return k_gen.knl_info('cheb', instructions=instructions, pre_instructions=preinstructs,
                      var_name=reac_ind, kernel_data=kernel_data, maps=maps,
                      extra_inames=extra_inames, indicies=indicies,
                      extra_subs={'reac_ind' : reac_ind})
@@ -2014,7 +1936,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
 
     """
@@ -2095,7 +2017,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     P_arr = lp.GlobalArg('P_arr', shape=(test_size,), dtype=np.float64)
 
-    #start creating the rateconst_info's
+    #start creating the k_gen.knl_info's
     #data
     kernel_data = [plog_params_lp, num_params_lp, T_arr,
                         P_arr, low_lp, hi_lp]
@@ -2114,7 +2036,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     indicies = rate_info['plog']['map'].astype(dtype=np.int32)
     Nr = rate_info['Nr']
 
-    indicies = __handle_indicies(indicies, reac_ind, out_map,
+    indicies = k_gen.handle_indicies(indicies, reac_ind, out_map,
                     kernel_data, outmap_name='plog_inds')
 
     #get the proper kf indexing / array
@@ -2178,7 +2100,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     ).safe_substitute(reac_ind=reac_ind)
 
     #and return
-    return [rateconst_info(name='plog', instructions=instructions,
+    return [k_gen.knl_info(name='plog', instructions=instructions,
         pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY, __PLOG_PREINST_KEY],
         var_name=reac_ind, kernel_data=kernel_data,
         maps=maps, extra_inames=extra_inames, indicies=indicies,
@@ -2203,7 +2125,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
 
     """
@@ -2220,7 +2142,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
 
     #falloff index mapping
     indicies = ['${reac_ind}', 'j']
-    __handle_indicies(rate_info['fall']['map'], '${reac_ind}', inmaps, kernel_data,
+    k_gen.handle_indicies(rate_info['fall']['map'], '${reac_ind}', inmaps, kernel_data,
                             outmap_name='fall_map',
                             force_zero=True)
 
@@ -2260,7 +2182,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
         thd_map_name = 'thd_map'
         thd_map = np.where(np.in1d(thd_inds, fall_inds))[0].astype(np.int32)
 
-        __handle_indicies(thd_map, thd_indexing_str, thd_index_map,
+        k_gen.handle_indicies(thd_map, thd_indexing_str, thd_index_map,
             kernel_data, outmap_name=thd_map_name, force_map=True)
 
     #create the array
@@ -2315,7 +2237,7 @@ ${Pr_str} = ${Pr_eq} {dep=k*}
         reac_ind=reac_ind)
 
     #and finally return the resulting info
-    return [rateconst_info('red_pres',
+    return [k_gen.knl_info('red_pres',
                      instructions=pr_instructions,
                      var_name=reac_ind,
                      kernel_data=kernel_data,
@@ -2341,7 +2263,7 @@ def get_troe_kernel(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
 
     """
@@ -2361,7 +2283,7 @@ def get_troe_kernel(eqs, loopy_opts, rate_info, test_size=None):
     out_map = {}
     outmap_name = 'out_map'
     indicies = np.array(rate_info['fall']['troe']['map'], dtype=np.int32)
-    indicies = __handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
+    indicies = k_gen.handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
                                 force_zero=True)
 
     #create the Pr loopy array / string
@@ -2509,7 +2431,7 @@ def get_troe_kernel(eqs, loopy_opts, rate_info, test_size=None):
                      Fi_pow_eq=Fi_pow_eq)
     troe_instructions = Template(troe_instructions).safe_substitute(reac_ind=reac_ind)
 
-    return [rateconst_info('fall_troe',
+    return [k_gen.knl_info('fall_troe',
                      instructions=troe_instructions,
                      var_name=reac_ind,
                      kernel_data=kernel_data,
@@ -2536,7 +2458,7 @@ def get_sri_kernel(eqs, loopy_opts, rate_info, test_size=None):
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
 
     """
@@ -2556,7 +2478,7 @@ def get_sri_kernel(eqs, loopy_opts, rate_info, test_size=None):
     out_map = {}
     outmap_name = 'out_map'
     indicies = np.array(rate_info['fall']['sri']['map'], dtype=np.int32)
-    indicies = __handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
+    indicies = k_gen.handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
                                 force_zero=True)
 
     #start creating SRI kernel
@@ -2658,7 +2580,7 @@ ${X_str} = X_temp
                      Fi_str=Fi_str)).safe_substitute(
                             reac_ind=reac_ind)
 
-    return [rateconst_info('fall_sri',
+    return [k_gen.knl_info('fall_sri',
                      instructions=sri_instructions,
                      var_name=reac_ind,
                      kernel_data=kernel_data,
@@ -2690,7 +2612,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
 
     Returns
     -------
-    rate_list : list of :class:`rateconst_info`
+    rate_list : list of :class:`knl_info`
         The generated infos for feeding into the kernel generator
 
     """
@@ -2776,10 +2698,10 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
 
     #various specializations of the rate form
     specializations = {}
-    i_a_only = rateconst_info(name='a_only{}'.format(name_mod),
+    i_a_only = k_gen.knl_info(name='a_only{}'.format(name_mod),
         instructions=kf_assign.safe_substitute(rate='${A_name}[i]'),
         **extra_args)
-    i_beta_int = rateconst_info(name='beta_int{}'.format(name_mod),
+    i_beta_int = k_gen.knl_info(name='beta_int{}'.format(name_mod),
         pre_instructions=[__TINV_PREINST_KEY],
         instructions="""
         <> T_val = T_arr[j] {id=a1}
@@ -2791,15 +2713,15 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         ${beta_iter}
         """,
         **extra_args)
-    i_beta_exp = rateconst_info('beta_exp{}'.format(name_mod),
+    i_beta_exp = k_gen.knl_info('beta_exp{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(Ta_name, 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
-    i_ta_exp = rateconst_info('ta_exp{}'.format(name_mod),
+    i_ta_exp = k_gen.knl_info('ta_exp{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(b_name, 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
-    i_full = rateconst_info('full{}'.format(name_mod),
+    i_full = k_gen.knl_info('full{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre)),
         pre_instructions=default_preinstructs,
         **extra_args)
@@ -2828,7 +2750,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                 instruction_list.extend(['\t' + x for x in specializations[i].instructions.split('\n')])
                 instruction_list.append('end')
         #and combine them
-        specializations = {-1 : rateconst_info('singlekernel',
+        specializations = {-1 : k_gen.knl_info('singlekernel',
             instructions='\n'.join(instruction_list),
             pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY],
             **extra_args)}
@@ -2891,7 +2813,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         alt_inds = None
         if not falloff:
             alt_inds = rate_info[tag]['map'][info.indicies]
-        info.indicies = __handle_indicies(info.indicies, info.var_name,
+        info.indicies = k_gen.handle_indicies(info.indicies, info.var_name,
                       out_map, info.kernel_data, outmap_name=outmap_name,
                       alternate_indicies=alt_inds)
 
@@ -2918,194 +2840,6 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
 
     return list(specializations.values())
 
-
-def __find_indent(template_str, key, value):
-    """
-    Finds and returns a formatted value containing the appropriate
-    whitespace to put 'value' in place of 'key' for template_str
-
-    Parameters
-    ----------
-    template_str : str
-        The string to sub into
-    key : str
-        The key in the template string
-    value : str
-        The string to format
-
-    Returns
-    -------
-    formatted_value : str
-        The formatted string
-    """
-
-    #find the instance of ${key} in kernel_str
-    whitespace = None
-    for i, line in enumerate(template_str.split('\n')):
-        if key in line:
-            #get whitespace
-            whitespace = re.match(r'\s*', line).group()
-            break
-    result = [line if i == 0 else whitespace + line for i, line in
-                enumerate(textwrap.dedent(value).splitlines())]
-    return '\n'.join(result)
-
-
-def make_rateconst_kernel(info, target, test_size):
-    """
-    Convience method to create kernels for rate constant evaluation
-
-    Parameters
-    ----------
-    info : :class:`rateconst_info`
-        The rate contstant info to generate the kernel from
-    target : :class:`loopy.TargetBase`
-        The target to generate code for
-    test_size : int/str
-        The integer (or symbolic) problem size
-
-    Returns
-    -------
-    knl : :class:`loopy.LoopKernel`
-        The generated loopy kernel
-    """
-
-    #various precomputes
-    pre_inst = {__TINV_PREINST_KEY : '<> T_inv = 1 / T_arr[j]',
-                __TLOG_PREINST_KEY : '<> logT = log(T_arr[j])',
-                __PLOG_PREINST_KEY : '<> logP = log(P_arr[j])'}
-
-    #and the skeleton kernel
-    skeleton = """
-    for j
-        ${pre}
-        for ${var_name}
-            ${main}
-        end
-        ${post}
-    end
-    """
-
-    #convert instructions into a list for convienence
-    instructions = info.instructions
-    if isinstance(instructions, str):
-        instructions = textwrap.dedent(info.instructions)
-        instructions = [x for x in instructions.split('\n') if x.strip()]
-
-    #load inames
-    inames = [info.var_name, 'j']
-
-    #add map instructions
-    instructions = info.maps + instructions
-
-    #look for extra inames, ranges
-    iname_range = []
-
-    assumptions = info.assumptions[:]
-
-    #find the start index for 'i'
-    if isinstance(info.indicies, tuple):
-        i_start = info.indicies[0]
-        i_end = info.indicies[1]
-    else:
-        i_start = 0
-        i_end = info.indicies.size
-
-    #add to ranges
-    iname_range.append('{}<={}<{}'.format(i_start, info.var_name, i_end))
-    iname_range.append('{}<=j<{}'.format(0, test_size))
-
-    if isinstance(test_size, str):
-        assumptions.append('{0} > 0'.format(test_size))
-
-    for iname, irange in info.extra_inames:
-        inames.append(iname)
-        iname_range.append(irange)
-
-    #construct the kernel args
-    pre_instructions = [pre_inst[k] if k in pre_inst else k
-                            for k in info.pre_instructions]
-
-    post_instructions = info.post_instructions[:]
-
-    def subs_preprocess(key, value):
-        #find the instance of ${key} in kernel_str
-        result = __find_indent(skeleton, key, value)
-        return Template(result).safe_substitute(var_name=info.var_name)
-
-    kernel_str = Template(skeleton).safe_substitute(
-        var_name=info.var_name,
-        pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
-        post=subs_preprocess('${post}', '\n'.join(post_instructions)),
-        main=subs_preprocess('${main}', '\n'.join(instructions)))
-
-    #finally do extra subs
-    if info.extra_subs:
-        kernel_str = Template(kernel_str).safe_substitute(
-            **info.extra_subs)
-
-    iname_arr = []
-    #generate iname strings
-    for iname, irange in zip(*(inames,iname_range)):
-        iname_arr.append(Template(
-            '{[${iname}]:${irange}}').safe_substitute(
-            iname=iname,
-            irange=irange
-            ))
-
-    #make the kernel
-    knl = lp.make_kernel(iname_arr,
-        kernel_str,
-        kernel_data=info.kernel_data,
-        name='rateconst_' + info.name,
-        target=target,
-        assumptions=' and '.join(assumptions)
-    )
-    #fix parameters
-    if info.parameters:
-        knl = lp.fix_parameters(knl, **info.parameters)
-    #prioritize and return
-    knl = lp.prioritize_loops(knl, inames)
-    return knl
-
-def apply_rateconst_vectorization(loopy_opts, reac_ind, knl):
-    """
-    Applies wide / deep vectorization to a generic rateconst kernel
-
-    Parameters
-    ----------
-    loopy_opts : :class:`loopy_options` object
-        A object containing all the loopy options to execute
-    reac_ind : str
-        The reaction index variable
-    knl : :class:`loopy.LoopKernel`
-        The kernel to transform
-
-    Returns
-    -------
-    knl : :class:`loopy.LoopKernel`
-        The transformed kernel
-    """
-    #now apply specified optimizations
-    if loopy_opts.depth is not None:
-        #and assign the l0 axis to 'i'
-        knl = lp.split_iname(knl, reac_ind, loopy_opts.depth, inner_tag='l.0')
-        #assign g0 to 'j'
-        knl = lp.tag_inames(knl, [('j', 'g.0')])
-    elif loopy_opts.width is not None:
-        #make the kernel a block of specifed width
-        knl = lp.split_iname(knl, 'j', loopy_opts.width, inner_tag='l.0')
-        #assign g0 to 'i'
-        knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
-
-    #now do unr / ilp
-    i_tag = reac_ind + '_outer' if loopy_opts.depth is not None else reac_ind
-    if loopy_opts.unr is not None:
-        knl = lp.split_iname(knl, i_tag, loopy_opts.unr, inner_tag='unr')
-    elif loopy_opts.ilp:
-        knl = lp.tag_inames(knl, [(i_tag, 'ilp')])
-
-    return knl
 
 class MangleGen(object):
     def __init__(self, name, arg_dtypes, result_dtypes):
@@ -3172,16 +2906,12 @@ def write_specrates_kernel(path, eqs, reacs, specs,
 
     Returns
     -------
-    global_defines : list of :class:`loopy.TemporaryVariable`
-        The global variables for this kernel that need definition in the memory manager
+    kernel_gen : :class:`wrapping_kernel_generator`
+        The generator responsible for creating the resulting code
 
     """
 
     rate_info = assign_rates(reacs, specs, loopy_opts.rate_spec)
-
-    file_prefix = ''
-    if auto_diff:
-        file_prefix = 'ad_'
 
     if test_size is None:
         test_size = 'n'
@@ -3196,7 +2926,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         except:
             kernels.append(knls)
 
-    #get the simple arrhenius rateconst_info's
+    #get the simple arrhenius k_gen.knl_info's
     __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
         rate_info, test_size=test_size))
 
@@ -3251,11 +2981,11 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     #now create the kernels!
     target = lp_utils.get_target(loopy_opts.lang)
     for i, info in enumerate(kernels):
-        #create kernel from rateconst_info
-        kernels[i] = make_rateconst_kernel(info, target, test_size)
+        #create kernel from k_gen.knl_info
+        kernels[i] = k_gen.make_kernel(info, target, test_size)
         #apply vectorization if possible
         if info.can_vectorize:
-            kernels[i] = apply_rateconst_vectorization(loopy_opts,
+            kernels[i] = k_gen.apply_vectorization(loopy_opts,
                 info.var_name, kernels[i])
         #apply any specializations if supplied
         if info.vectorization_specializer:
@@ -3267,112 +2997,17 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     #for func in func_manglers:
     #    knl = lp.register_function_manglers(knl, [func])
 
-    #first, load the wrapper as a template
-    script_dir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(script_dir, os.pardir, 'libgen', loopy_opts.lang,
-                'wrapping_kernel.{}.in'.format(utils.file_ext[loopy_opts.lang])),
-             'r') as file:
-        file_str = file.read()
-        file_src = Template(file_str)
-
-    #create T / P arrays
-    kernel_data = []
-    T_arr = lp.GlobalArg('T_arr',
-                    shape=(test_size),
-                    order=loopy_opts.order,
-                    dtype=np.float64)
-    P_arr = lp.GlobalArg('P_arr',
-                    shape=(test_size),
-                    order=loopy_opts.order,
-                    dtype=np.float64)
-    if test_size == 'n':
-        kernel_data += [lp.ValueArg(test_size, dtype=np.int32)]
-    kernel_data.extend([T_arr, P_arr])
-
-    #Finally, turn various needed into ours
-    defines = [arg for knl in kernels for arg in knl.args if
-                    not isinstance(arg, lp.TemporaryVariable)
-                    and arg not in kernel_data]
-    nameset = sorted(set(d.name for d in defines))
-    args = []
-    for name in nameset:
-        #check for dupes
-        same_name = [x for x in defines if x.name == name]
-        assert all(same_name[0] == y for y in same_name[1:])
-        same_name = same_name[0]
-        kernel_data.append(same_name)
-
-    vec_width = loopy_opts.depth
-    if vec_width is None:
-        vec_width = loopy_opts.width
-    if vec_width is None:
-        vec_width = 0
-    #create a dummy kernel to get the defn
-    knl = lp.make_kernel('{{[i, j]: 0 <= i,j < {}}}'.format(vec_width),
-        '',
-        kernel_data,
-        name='eval_rate_constants',
-        target=target
+    return k_gen.wrapping_kernel_generator(
+        loopy_opts=loopy_opts,
+        name='spec_rates',
+        kernels=kernels,
+        input_arrays=['T_arr', 'P_arr', 'conc'],
+        output_array=['wdot'],
+        init_arrays={'wdot' : 0,
+                     'Fi' : 1},
+        test_size=test_size,
+        auto_diff=auto_diff
         )
-    knl = apply_rateconst_vectorization(loopy_opts, 'i', knl)
-    defn_str = lp_utils.get_header(knl)
-
-    #next create the call instructions
-    def __gen_call(knl, idx, condition=None):
-        call = Template('${name}(${args})${end}').safe_substitute(
-                name=knl.name,
-                args=','.join([arg.name for arg in knl.args
-                        if not isinstance(arg, lp.TemporaryVariable)]),
-                end=utils.line_end[loopy_opts.lang]
-                #dep='id=call_{}{}'.format(idx, ', dep=call_{}'.format(idx - 1) if idx > 0 else '')
-            )
-        if condition:
-            call = Template(
-"""
-#ifdef ${cond}
-    ${call}
-#endif
-"""            ).safe_substitute(cond=condition, call=call)
-        return call
-
-    conditions = [None for knl in kernels]
-    for i in range(len(kernels)):
-        if 'conp' in kernels[i].name or 'conv' in kernels[i].name:
-            conditions[i] = kernels[i].name.split('_')[-1].upper()
-    instructions = '\n'.join(__gen_call(knl, i, conditions[i])
-        for i, knl in enumerate(kernels))
-
-    #and finally, generate the additional kernels
-    additional_kernels = '\n'.join([lp_utils.get_code(k) for k in kernels])
-
-    #create the file
-    with filew.get_file(os.path.join(path, file_prefix + 'spec_rates'
-                             + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
-        instructions = __find_indent(file_str, 'body', instructions)
-        lines = file_src.safe_substitute(
-                    defines='',
-                    func_define=defn_str,
-                    body=instructions,
-                    additional_kernels=additional_kernels).split('\n')
-
-        if auto_diff:
-            lines = [x.replace('double', 'adouble') for x in lines]
-        file.add_lines(lines)
-
-    #and the header file
-    headers = [lp_utils.get_header(knl) + utils.line_end[loopy_opts.lang]
-                    for knl in kernels] + [defn_str + utils.line_end[loopy_opts.lang]]
-    with filew.get_header_file(os.path.join(path, file_prefix + 'spec_rates'
-                             + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
-
-        lines = '\n'.join(headers).split('\n')
-        if auto_diff:
-            file.add_headers('adept.h')
-            file.add_lines('using adept::adouble;\n')
-            lines = [x.replace('double', 'adouble') for x in lines]
-        file.add_lines(lines)
-
-    return kernel_data
 
 def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential
@@ -3654,733 +3289,6 @@ def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
 
     return new_temp_vars
 
-
-def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
-    """Writes derivative function file and header.
-
-    Parameters
-    ----------
-    path : str
-        Path to build directory for file.
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
-        Programming language.
-    specs : list of `SpecInfo`
-        List of species in the mechanism.
-    reacs : list of `ReacInfo`
-        List of reactions in the mechanism.
-    specs_nonzero : list of bool
-        List of `bool` indicating species with zero net production
-    auto_diff : bool, optional
-        If ``True``, generate files for Adept autodifferention library.
-
-    Returns
-    -------
-    None
-
-    """
-
-
-    file_prefix = ''
-    double_type = 'double'
-    pres_ref = ''
-    if auto_diff:
-        file_prefix = 'ad_'
-        double_type = 'adouble'
-        pres_ref = '&'
-
-    pre = ''
-    if lang == 'cuda': pre = '__device__ '
-
-    # first write header file
-    file = open(os.path.join(path, file_prefix + 'dydt' +
-                            utils.header_ext[lang]), 'w')
-    file.write('#ifndef DYDT_HEAD\n'
-               '#define DYDT_HEAD\n'
-               '\n'
-               '#include "header{}"\n'.format(utils.header_ext[lang]) +
-               '\n'
-               )
-    if auto_diff:
-        file.write('#include "adept.h"\n'
-                   'using adept::adouble;\n')
-    file.write('{0}void dydt (const double, const {1}{2}, '
-               'const {1} * {3}, {1} * {3}'.format(pre, double_type, pres_ref,
-                                utils.restrict[lang]) +
-               ('' if lang == 'c' else
-                    ', const mechanism_memory * {}'.format(utils.restrict[lang])) +
-               ');\n'
-               '\n'
-               '#endif\n'
-               )
-    file.close()
-
-    filename = file_prefix + 'dydt' + utils.file_ext[lang]
-    file = open(os.path.join(path, filename), 'w')
-
-    file.write('#include "header{}"\n'.format(utils.header_ext[lang]))
-
-    file.write('#include "{0}chem_utils{1}"\n'
-               '#include "{0}rates{1}"\n'.format(file_prefix,
-                                            utils.header_ext[lang]))
-    if lang == 'cuda':
-        file.write('#include "gpu_memory.cuh"\n'
-                   )
-    file.write('\n')
-    if auto_diff:
-        file.write('#include "adept.h"\n'
-                   'using adept::adouble;\n')
-
-    ##################################################################
-    # constant pressure
-    ##################################################################
-    file.write('#if defined(CONP)\n\n')
-
-    line = (pre + 'void dydt (const double t, const {0}{1} pres, '
-                  'const {0} * {2} y, {0} * {2} dy{3}) {{\n\n'.format(
-                  double_type, pres_ref, utils.restrict[lang],
-                  ', const mechanism_memory * {} d_mem'.format(utils.restrict[lang])
-                  if lang == 'cuda' else '')
-            )
-    file.write(line)
-
-    # calculation of species molar concentrations
-    file.write('  // species molar concentrations\n')
-    file.write(('  {0} conc[{1}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double * {} conc = d_mem->conc'.format(utils.restrict[lang]))
-               + utils.line_end[lang]
-               )
-
-    file.write('  {0} y_N;\n'.format(double_type))
-    file.write('  {0} mw_avg;\n'.format(double_type))
-    file.write('  {0} rho;\n'.format(double_type))
-
-    # Simply call subroutine
-    file.write('  eval_conc (' + utils.get_array(lang, 'y', 0) +
-               ', pres, &' + (utils.get_array(lang, 'y', 1) if lang != 'cuda'
-                                else 'y[GRID_DIM]') + ', '
-               '&y_N, &mw_avg, &rho, conc);\n\n'
-               )
-
-    # evaluate reaction rates
-    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
-    if lang == 'cuda':
-        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang])
-                   + utils.line_end[lang])
-    else:
-        file.write('  // local arrays holding reaction rates\n'
-                   '  {} fwd_rates[{}];\n'.format(double_type, len(reacs))
-                   )
-    if rev_reacs and lang == 'cuda':
-        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang])
-                   + utils.line_end[lang])
-    elif rev_reacs:
-        file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
-    else:
-        file.write('  {}* rev_rates = 0;\n'.format(double_type))
-    cheb = False
-    if any(rxn.cheb for rxn in reacs) and lang == 'cuda':
-        cheb = True
-        file.write('  double * {} dot_prod = d_mem->dot_prod'.format(utils.restrict[lang])
-                   + utils.line_end[lang])
-    file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) +
-               ', pres, conc, fwd_rates, rev_rates{});\n\n'.format(', dot_prod'
-                    if cheb else '')
-               )
-
-    # reaction pressure dependence
-    num_dep_reacs = sum([rxn.thd_body or rxn.pdep for rxn in reacs])
-    if num_dep_reacs > 0:
-        file.write('  // get pressure modifications to reaction rates\n')
-        if lang == 'cuda':
-            file.write('  double * {} pres_mod = d_mem->pres_mod'.format(utils.restrict[lang]) +
-                   utils.line_end[lang])
-        else:
-            file.write('  {} pres_mod[{}];\n'.format(double_type, num_dep_reacs))
-        file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) +
-                   ', pres, conc, pres_mod);\n'
-                   )
-    else:
-        file.write('  {}* pres_mod = 0;\n'.format(double_type))
-    file.write('\n')
-
-    if lang == 'cuda':
-        file.write('  double * {} spec_rates = d_mem->spec_rates'.format(utils.restrict[lang]) +
-                   utils.line_end[lang])
-
-    # species rate of change of molar concentration
-    file.write('  // evaluate species molar net production rates\n')
-    if lang != 'cuda':
-        file.write('  {} dy_N;\n'.format(double_type))
-    file.write('  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
-    if lang == 'c':
-        file.write('&' + utils.get_array(lang, 'dy', 1) + ', &dy_N)')
-    elif lang == 'cuda':
-        file.write('spec_rates, &' + utils.get_array(lang, 'spec_rates', len(specs) - 1) +
-                    ')')
-    file.write(utils.line_end[lang])
-
-    # evaluate specific heat
-    file.write('  // local array holding constant pressure specific heat\n')
-    file.write(('  {} cp[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double * {} cp = d_mem->cp'.format(utils.restrict[lang]))
-               + utils.line_end[lang])
-    file.write('  eval_cp (' + utils.get_array(lang, 'y', 0) + ', cp)'
-               + utils.line_end[lang] + '\n')
-
-    file.write('  // constant pressure mass-average specific heat\n')
-    line = '  {} cp_avg = '.format(double_type)
-    isfirst = True
-    for isp, sp in enumerate(specs[:-1]):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '             '
-
-        if not isfirst: line += ' + '
-
-        line += '(' + utils.get_array(lang, 'cp', isp) + \
-                ' * ' + utils.get_array(lang, 'y', isp + 1) + ')'
-
-        isfirst = False
-
-    if not isfirst: line += ' + '
-    line += '(' + utils.get_array(lang, 'cp', len(specs) - 1) + ' * y_N)'
-    file.write(line + utils.line_end[lang] + '\n')
-
-    file.write('  // local array for species enthalpies\n' +
-              ('  {} h[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double * {} h = d_mem->h'.format(utils.restrict[lang]))
-               + utils.line_end[lang])
-    file.write('  eval_h(' + utils.get_array(lang, 'y', 0) + ', h);\n')
-
-    # energy equation
-    file.write('  // rate of change of temperature\n')
-    line = ('  ' + utils.get_array(lang, 'dy', 0) +
-            ' = (-1.0 / (rho * cp_avg)) * ('
-            )
-    isfirst = True
-    for isp, sp in enumerate(specs):
-        if not specs_nonzero[isp]:
-            continue
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '       '
-
-        if not isfirst: line += ' + '
-
-        if lang == 'c':
-            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
-        elif lang == 'cuda':
-            arr = utils.get_array(lang, 'spec_rates', isp)
-        line += ('(' + arr + ' * ' +
-                 utils.get_array(lang, 'h', isp) + ' * {:.16e})'.format(sp.mw)
-                 )
-
-        isfirst = False
-    line += ')' + utils.line_end[lang] + '\n'
-    file.write(line)
-
-
-    line = ''
-    # rate of change of species mass fractions
-    file.write('  // calculate rate of change of species mass fractions\n')
-    for isp, sp in enumerate(specs[:-1]):
-        if lang == 'c':
-            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                   ' *= ({:.16e} / rho);\n'.format(sp.mw)
-                   )
-        elif lang == 'cuda':
-            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                       ' = ' + utils.get_array(lang, 'spec_rates', isp) +
-                       ' * ({:.16e} / rho);\n'.format(sp.mw)
-                       )
-    file.write('\n')
-
-    file.write('} // end dydt\n\n')
-
-    ##################################################################
-    # constant volume
-    ##################################################################
-    file.write('#elif defined(CONV)\n\n')
-
-    file.write(pre + 'void dydt (const double t, const {0} rho, '
-                     'const {0} * {1} y, {0} * {1} dy{2}) {{\n\n'.format(double_type,
-                     utils.restrict[lang],
-                     '' if lang != 'cuda' else
-                     ', mechanism_memory * {} d_mem'.format(utils.restrict[lang]))
-               )
-
-    # calculation of species molar concentrations
-    file.write('  // species molar concentrations\n')
-    file.write(('  {0} conc[{1}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double * {} conc = d_mem->conc'.format(utils.restrict[lang]))
-               + utils.line_end[lang]
-               )
-
-    file.write('  {} y_N;\n'.format(double_type))
-    file.write('  {} mw_avg;\n'.format(double_type))
-    file.write('  {} pres;\n'.format(double_type))
-
-    # Simply call subroutine
-    file.write('  eval_conc_rho (' + utils.get_array(lang, 'y', 0) +
-               'rho, &' + (utils.get_array(lang, 'y', 1) if lang != 'cuda'
-                                else 'y[GRID_DIM]') + ', ' +
-               '&y_N, &mw_avg, &pres, conc);\n\n'
-               )
-
-    # evaluate reaction rates
-    rev_reacs = [i for i, rxn in enumerate(reacs) if rxn.rev]
-    if lang == 'cuda':
-        file.write('  double * {} fwd_rates = d_mem->fwd_rates'.format(utils.restrict[lang])
-                   + utils.line_end[lang])
-    else:
-        file.write('  // local arrays holding reaction rates\n'
-                   '  {} fwd_rates[{}];\n'.format(double_type, len(reacs))
-                   )
-    if rev_reacs and lang == 'cuda':
-        file.write('  double * {} rev_rates = d_mem->rev_rates'.format(utils.restrict[lang])
-                   + utils.line_end[lang])
-    elif rev_reacs:
-        file.write('  {} rev_rates[{}];\n'.format(double_type, len(rev_reacs)))
-    else:
-        file.write('  {}* rev_rates = 0;\n'.format(double_type))
-    file.write('  eval_rxn_rates (' + utils.get_array(lang, 'y', 0) + ', '
-               'pres, conc, fwd_rates, rev_rates);\n\n'
-               )
-
-    # reaction pressure dependence
-    num_dep_reacs = sum([rxn.thd_body or rxn.pdep for rxn in reacs])
-    if num_dep_reacs > 0:
-        file.write('  // get pressure modifications to reaction rates\n')
-        if lang == 'cuda':
-            file.write('  double * {} pres_mod = d_mem->pres_mod'.format(utils.restrict[lang]) +
-                   utils.line_end[lang])
-        else:
-            file.write('  {} pres_mod[{}];\n'.format(double_type, num_dep_reacs))
-        file.write('  get_rxn_pres_mod (' + utils.get_array(lang, 'y', 0) +
-                   ', pres, conc, pres_mod);\n'
-                   )
-    else:
-        file.write('  {}* pres_mod = 0;\n'.format(double_type))
-    file.write('\n')
-
-    # species rate of change of molar concentration
-    file.write('  // evaluate species molar net production rates\n'
-               '  {} dy_N;'.format(double_type) +
-               '  eval_spec_rates (fwd_rates, rev_rates, pres_mod, ')
-    file.write('&' + utils.get_array(lang, 'dy', 1) if lang != 'cuda'
-           else '&dy[GRID_DIM]')
-    file.write(', &dy_N)' + utils.line_end[lang] + '\n')
-
-    # evaluate specific heat
-    file.write(('  {} cv[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double * {} cv = d_mem->cp'.format(utils.restrict[lang]))
-               + utils.line_end[lang])
-    file.write('  eval_cv(' + utils.get_array(lang, 'y', 0) + ', cv);\n\n')
-
-    file.write('  // constant volume mass-average specific heat\n')
-    line = '  {} cv_avg = '.format(double_type)
-    isfirst = True
-    for idx, sp in enumerate(specs[:-1]):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '             '
-        line += ' + ' if not isfirst else ''
-        line += ('(' + utils.get_array(lang, 'cv', idx) + ' * ' +
-                 utils.get_array(lang, 'y', idx + 1) + ')'
-                 )
-
-        isfirst = False
-    line += '(' + utils.get_array(lang, 'cv', len(specs) - 1) + ' * y_N)'
-    file.write(line + utils.line_end[lang] + '\n')
-
-    # evaluate internal energy
-    file.write('  // local array for species internal energies\n' +
-              ('  {} u[{}]'.format(double_type, len(specs)) if lang != 'cuda'
-               else '  double * {} u = d_mem->h'.format(utils.restrict[lang]))
-               + utils.line_end[lang])
-    file.write('  eval_u (' + utils.get_array(lang, 'y', 0) + ', u);\n\n')
-
-    # energy equation
-    file.write('  // rate of change of temperature\n')
-    line = ('  ' + utils.get_array(lang, 'dy', 0) +
-            ' = (-1.0 / (rho * cv_avg)) * ('
-            )
-    isfirst = True
-    for isp, sp in enumerate(specs):
-        if not specs_nonzero[isp]:
-            continue
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '       '
-
-        if not isfirst: line += ' + '
-
-        if lang == 'c':
-            arr = utils.get_array(lang, 'dy', isp + 1) if isp < len(specs) - 1 else 'dy_N'
-        elif lang == 'cuda':
-            arr = utils.get_array(lang, 'spec_rates', isp)
-        line += ('(' + arr + ' * ' +
-                 utils.get_array(lang, 'u', isp) + ' * {:.16e})'.format(sp.mw)
-                 )
-
-        isfirst = False
-    line += ')' + utils.line_end[lang] + '\n'
-    file.write(line)
-
-
-    # rate of change of species mass fractions
-    file.write('  // calculate rate of change of species mass fractions\n')
-    for isp, sp in enumerate(specs[:-1]):
-        if lang == 'c':
-            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                   ' *= ({:.16e} / rho);\n'.format(sp.mw)
-                   )
-        elif lang == 'cuda':
-            file.write('  ' + utils.get_array(lang, 'dy', isp + 1) +
-                       ' = ' + utils.get_array(lang, 'spec_rates', isp) +
-                       ' * ({:.16e} / rho);\n'.format(sp.mw)
-                       )
-
-    file.write('\n')
-
-    file.write('} // end dydt\n\n')
-
-    file.write('#endif\n')
-
-    file.close()
-    return
-
-
-def write_mass_mole(path, lang, specs):
-    """Write files for mass/molar concentration and density conversion utility.
-
-    Parameters
-    ----------
-    path : str
-        Path to build directory for file.
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
-        Programming language.
-    specs : list of `SpecInfo`
-        List of species in mechanism.
-
-    Returns
-    -------
-    None
-
-    """
-
-    # Create header file
-    if lang in ['c', 'cuda']:
-        arr_lang = 'c'
-        file = open(os.path.join(path, 'mass_mole{}'.format(
-            utils.header_ext[lang])), 'w')
-
-        file.write(
-            '#ifndef MASS_MOLE_HEAD\n'
-            '#define MASS_MOLE_HEAD\n'
-            '\n'
-            '#include "header{0}"\n'
-            '\n'
-            'void mole2mass (const double*, double*);\n'
-            'void mass2mole (const double*, double*);\n'
-            'double getDensity (const double, const double, const double*);\n'
-            '\n'
-            '#endif\n'.format(utils.header_ext[lang])
-            )
-        file.close()
-
-    # Open file; both C and CUDA programs use C file (only used on host)
-    filename = 'mass_mole' + utils.file_ext[lang]
-    file = open(os.path.join(path, filename), 'w')
-
-    if lang in ['c', 'cuda']:
-        file.write('#include "mass_mole{}"\n\n'.format(
-            utils.header_ext[lang]))
-
-    ###################################################
-    # Documentation and function/subroutine initializaton for mole2mass
-    if lang in ['c', 'cuda']:
-        file.write('/** Function converting species mole fractions to '
-                   'mass fractions.\n'
-                   ' *\n'
-                   ' * \param[in]  X  array of species mole fractions\n'
-                   ' * \param[out] Y  array of species mass fractions\n'
-                   ' */\n'
-                   'void mole2mass (const double * X, double * Y) {\n'
-                   '\n'
-                   )
-    elif lang == 'fortran':
-        file.write(
-        '!-----------------------------------------------------------------\n'
-        '!> Subroutine converting species mole fractions to mass fractions.\n'
-        '!! @param[in]  X  array of species mole fractions\n'
-        '!! @param[out] Y  array of species mass fractions\n'
-        '!-----------------------------------------------------------------\n'
-        'subroutine mole2mass (X, Y)\n'
-        '  implicit none\n'
-        '  double, dimension(:), intent(in) :: X\n'
-        '  double, dimension(:), intent(out) :: X\n'
-        '  double :: mw_avg\n'
-        '\n'
-        )
-
-    file.write('  // mole fraction of final species\n')
-    file.write(utils.line_start + 'double X_N' + utils.line_end[lang])
-    line = '  X_N = 1.0 - ('
-    isfirst = True
-    for isp in range(len(specs) - 1):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst: line += ' + '
-
-        line += utils.get_array(arr_lang, 'X', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # calculate molecular weight
-    if lang in ['c', 'cuda']:
-        file.write('  // average molecular weight\n'
-                   '  double mw_avg = 0.0;\n'
-                   )
-        for isp in range(len(specs) - 1):
-            sp = specs[isp]
-            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'X', isp) +
-                       ' * {:.16e};\n'.format(sp.mw)
-                       )
-        file.write(utils.line_start + 'mw_avg += X_N * ' +
-                       '{:.16e};\n'.format(specs[-1].mw)
-                       )
-    elif lang == 'fortran':
-        file.write('  ! average molecular weight\n'
-                   '  mw_avg = 0.0\n'
-                   )
-        for isp, sp in enumerate(specs):
-            file.write('  mw_avg = mw_avg + '
-                       'X({}) * '.format(isp + 1) +
-                       '{:.16e}\n'.format(sp.mw)
-                       )
-    file.write('\n')
-
-    # calculate mass fractions
-    if lang in ['c', 'cuda']:
-        file.write('  // calculate mass fractions\n')
-        for isp in range(len(specs) - 1):
-            sp = specs[isp]
-            file.write('  ' + utils.get_array(arr_lang, 'Y', isp) +
-                        ' = ' +
-                        utils.get_array(arr_lang, 'X', isp) +
-                       ' * {:.16e} / mw_avg;\n'.format(sp.mw)
-                       )
-        file.write('\n'
-                   '} // end mole2mass\n'
-                   '\n'
-                   )
-    elif lang == 'fortran':
-        file.write('  ! calculate mass fractions\n')
-        for isp, sp in enumerate(specs):
-            file.write('  Y({0}) = X({0}) * '.format(isp + 1) +
-                       '{:.16e} / mw_avg\n'.format(sp.mw)
-                       )
-        file.write('\n'
-                   'end subroutine mole2mass\n'
-                   '\n'
-                   )
-
-    ################################
-    # Documentation and function/subroutine initialization for mass2mole
-
-    if lang in ['c', 'cuda']:
-        file.write('/** Function converting species mass fractions to mole '
-                   'fractions.\n'
-                   ' *\n'
-                   ' * \param[in]  Y  array of species mass fractions\n'
-                   ' * \param[out] X  array of species mole fractions\n'
-                   ' */\n'
-                   'void mass2mole (const double * Y, double * X) {\n'
-                   '\n'
-                   )
-    elif lang == 'fortran':
-        file.write('!-------------------------------------------------------'
-                   '----------\n'
-                   '!> Subroutine converting species mass fractions to mole '
-                   'fractions.\n'
-                   '!! @param[in]  Y  array of species mass fractions\n'
-                   '!! @param[out] X  array of species mole fractions\n'
-                   '!-------------------------------------------------------'
-                   '----------\n'
-                   'subroutine mass2mole (Y, X)\n'
-                   '  implicit none\n'
-                   '  double, dimension(:), intent(in) :: Y\n'
-                   '  double, dimension(:), intent(out) :: X\n'
-                   '  double :: mw_avg\n'
-                   '\n'
-                   )
-
-    # calculate Y_N
-    file.write('  // mass fraction of final species\n')
-    file.write(utils.line_start + 'double Y_N' + utils.line_end[lang])
-    line = '  Y_N = 1.0 - ('
-    isfirst = True
-    for isp in range(len(specs) - 1):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst: line += ' + '
-
-        line += utils.get_array(arr_lang, 'Y', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # calculate average molecular weight
-    if lang in ['c', 'cuda']:
-        file.write('  // average molecular weight\n')
-        file.write('  double mw_avg = 0.0;\n')
-        for isp in range(len(specs) - 1):
-            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'Y', isp) +
-                       ' / {:.16e};\n'.format(specs[isp].mw)
-                       )
-        file.write('  mw_avg += Y_N / ' +
-                       '{:.16e};\n'.format(specs[-1].mw)
-                       )
-        file.write('  mw_avg = 1.0 / mw_avg;\n')
-    elif lang == 'fortran':
-        file.write('  ! average molecular weight\n')
-        file.write('  mw_avg = 0.0\n')
-        for isp, sp in enumerate(specs):
-            file.write('  mw_avg = mw_avg + '
-                       'Y({}) / '.format(isp + 1) +
-                       '{:.16e}\n'.format(sp.mw)
-                       )
-    file.write('\n')
-
-    # calculate mole fractions
-    if lang in ['c', 'cuda']:
-        file.write('  // calculate mole fractions\n')
-        for isp in range(len(specs) - 1):
-            file.write('  ' + utils.get_array(arr_lang, 'X', isp)
-                      + ' = ' +
-                      utils.get_array(arr_lang, 'Y', isp) +
-                       ' * mw_avg / {:.16e};\n'.format(specs[isp].mw)
-                       )
-        file.write('\n'
-                   '} // end mass2mole\n'
-                   '\n'
-                   )
-    elif lang == 'fortran':
-        file.write('  ! calculate mass fractions\n')
-        for isp, sp in enumerate(specs):
-            file.write('  X({0}) = Y({0}) * '.format(isp + 1) +
-                       'mw_avg / {:.16e}\n'.format(sp.mw)
-                       )
-        file.write('\n'
-                   'end subroutine mass2mole\n'
-                   '\n'
-                   )
-
-    ###############################
-    # Documentation and subroutine/function initialization for getDensity
-
-    if lang in ['c', 'cuda']:
-        file.write('/** Function calculating density from mole fractions.\n'
-                   ' *\n'
-                   ' * \param[in]  temp  temperature\n'
-                   ' * \param[in]  pres  pressure\n'
-                   ' * \param[in]  X     array of species mole fractions\n'
-                   r' * \return     rho  mixture mass density' + '\n'
-                   ' */\n'
-                   'double getDensity (const double temp, const double '
-                   'pres, '
-                   'const double * X) {\n'
-                   '\n'
-                   )
-    elif lang == 'fortran':
-        file.write('!-------------------------------------------------------'
-                   '----------\n'
-                   '!> Function calculating density from mole fractions.\n'
-                   '!! @param[in]  temp  temperature\n'
-                   '!! @param[in]  pres  pressure\n'
-                   '!! @param[in]  X     array of species mole fractions\n'
-                   '!! @return     rho   mixture mass density' + '\n'
-                   '!-------------------------------------------------------'
-                   '----------\n'
-                   'function mass2mole (temp, pres, X) result(rho)\n'
-                   '  implicit none\n'
-                   '  double, intent(in) :: temp, pres\n'
-                   '  double, dimension(:), intent(in) :: X\n'
-                   '  double :: mw_avg, rho\n'
-                   '\n'
-                   )
-
-    file.write('  // mole fraction of final species\n')
-    file.write(utils.line_start + 'double X_N' + utils.line_end[lang])
-    line = '  X_N = 1.0 - ('
-    isfirst = True
-    for isp in range(len(specs) - 1):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst: line += ' + '
-
-        line += utils.get_array(arr_lang, 'X', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # get molecular weight
-    if lang in ['c', 'cuda']:
-        file.write('  // average molecular weight\n'
-                   '  double mw_avg = 0.0;\n'
-                   )
-        for isp in range(len(specs) - 1):
-            file.write('  mw_avg += ' + utils.get_array(arr_lang, 'X', isp) +
-                       ' * {:.16e};\n'.format(specs[isp].mw)
-                       )
-        file.write(utils.line_start + 'mw_avg += X_N * ' +
-               '{:.16e};\n'.format(specs[-1].mw))
-        file.write('\n')
-    elif lang == 'fortran':
-        file.write('  ! average molecular weight\n'
-                   '  mw_avg = 0.0\n'
-                   )
-        for isp, sp in enumerate(specs):
-            file.write('  mw_avg = mw_avg + '
-                       'X({}) * '.format(isp + 1) +
-                       '{:.16e}\n'.format(sp.mw)
-                       )
-        file.write('\n')
-
-    # calculate density
-    if lang in ['c', 'cuda']:
-        file.write('  return pres * mw_avg / ({:.8e} * temp);'.format(chem.RU))
-        file.write('\n')
-    else:
-        line = '  rho = pres * mw_avg / ({:.8e} * temp)'.format(chem.RU)
-        line += utils.line_end[lang]
-        file.write(line)
-
-    if lang in ['c', 'cuda']:
-        file.write('} // end getDensity\n\n')
-    elif lang == 'fortran':
-        file.write('end function getDensity\n\n')
-
-    file.close()
-    return
 
 if __name__ == "__main__":
     from . import create_jacobian

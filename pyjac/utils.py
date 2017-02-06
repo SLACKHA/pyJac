@@ -27,7 +27,7 @@ comment = dict(c='//', cuda='//',
                )
 """dict: comment characters for each language"""
 
-langs = ['c', 'cuda', 'opencl']
+langs = ['c', 'opencl'] #, 'cuda'
 """list(`str`): list of supported languages"""
 
 file_ext = dict(c='.c', cuda='.cu', opencl='.ocl')
@@ -329,6 +329,9 @@ def check_lang(lang):
     if not lang in langs:
         raise NotImplementedError('Language {} not supported'.format(lang))
 
+type_map = {lp.types.to_loopy_type(np.float64) : 'double',
+            lp.types.to_loopy_type(np.int32) : 'int'}
+
 def get_global_declaration(lang, variable):
     """
     Returns a global memory declaration for the
@@ -346,9 +349,6 @@ def get_global_declaration(lang, variable):
     defn : str
         The string declaration
     """
-
-    type_map = {lp.types.to_loopy_type(np.float64) : 'double',
-                lp.types.to_loopy_type(np.int32) : 'int'}
 
     assert variable.dtype in type_map, 'Missing type map for loopy type {}'.format(variable.dtype)
     assert lang in decl_map, 'Missing declaration map for language {}'.format(lang)

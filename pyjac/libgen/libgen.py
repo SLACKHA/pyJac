@@ -11,6 +11,7 @@ import multiprocessing
 import platform
 
 from .. import utils
+from ... import siteconf as site
 
 def lib_ext(shared):
     """Returns the appropriate library extension based on the shared flag"""
@@ -18,42 +19,38 @@ def lib_ext(shared):
 
 
 cmd_compile = dict(c='gcc',
-                   icc='icc',
-                   cuda='nvcc'
+                   opencl='gcc',
+                   #cuda='nvcc'
                    )
 
 
 def cmd_lib(lang, shared):
     """Returns the appropriate compilation command for creation of the library based on the
     language and shared flag"""
-    if lang == 'c':
+    if lang in ['c', 'opencl']:
         return ['ar', 'rcs'] if not shared else ['gcc', '-shared']
-    elif lang == 'cuda':
-        return ['nvcc', '-lib'] if not shared else ['nvcc', '-shared']
-    elif lang == 'icc':
-        return ['ar', 'rcs'] if not shared else ['icc', '-shared']
+    #elif lang == 'cuda':
+    #    return ['nvcc', '-lib'] if not shared else ['nvcc', '-shared']
 
 
-includes = dict(c=['/usr/local/include/'], icc=['/usr/local/include/'],
-                cuda=['/usr/local/cuda/include/',
-                      '/usr/local/cuda/samples/common/inc/'
-                      ]
+includes = dict(c=['/usr/local/include/'],
+                opencl=site.CL_INC_DIR
                 )
-
-flags = dict(c=['-std=c99', '-O3', '-mtune=native'],
-             icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
-             cuda=['-O3', '-arch=sm_20']
-             )
 
 shared_flags = dict(c=['-fPIC'],
                     icc=['-fPIC'],
                     cuda=['-Xcompiler', '"-fPIC"']
                     )
 
-libs = dict(c=['-lm', '-std=c99'],
-            cuda=['-lcudart'],
-            icc=['-m64', '-ipo', '-lm', '-std=c99']
+flags = dict(c=site.CC_FLAGS + ['-fopenmp'],
+             opencl=site.CC_FLAGS + ['-cl-std=CL{}'.format(site.CL_VERSION)])
+
+libs = dict(c=['-lm'],
+            opencl=['-l' + site.CL_LIBNAME]
             )
+
+lib_dirs = dict(c=[],
+                opencl=site.CL_PATHS)
 
 
 def which(file):
@@ -146,7 +143,8 @@ def get_cuda_path():
     return cuda_path
 
 
-def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
+def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff,
+            ocl_vendor=None):
     """Create a library from a list of compiled files
 
     Parameters
@@ -163,12 +161,14 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
         The list of object files to include in the library
     auto_diff : Optional[bool]
         Optional; if ``True``, include autodifferentiation
+    ocl_vendor : Optional[str]
+        Optional; if specified the OpenCL Vendor to compile for
 
     """
     command = cmd_lib(lang, shared)
 
-    if lang == 'cuda':
-        desc = 'cu'
+    if lang == 'opencl':
+        desc = 'ocl'
     elif lang == 'c':
         if auto_diff:
             desc = 'ad'
@@ -200,6 +200,9 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
         if lang == 'cuda':
             command += ['-L{}'.format(get_cuda_path())]
+        elif lang == 'opencl':
+            assert vendor in lib_dirs
+            command += ['-L{}'.format(path) for path in lib_dirs[vendor]]
         command.extend(libs[lang])
 
     try:
@@ -253,15 +256,13 @@ class file_struct(object):
         self.auto_diff=False
 
 
-def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
+def get_file_list(source_dir, lang, FD=False, AD=False):
     """
 
     Parameters
     ----------
     source_dir : str
         Path with source files
-    pmod : bool
-        ``True`` if pressure dependent reactions present in mechanism
     lang : {'c', 'cuda'}
         Programming language
     FD : Optional[bool]
@@ -279,18 +280,10 @@ def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
     """
     i_dirs = [source_dir]
     if AD:
-        files = ['ad_dydt', 'ad_rxn_rates', 'ad_spec_rates',
-                'ad_chem_utils', 'ad_jac'
-                ]
-        if pmod:
-            files += ['ad_rxn_rates_pres_mod']
+        files = ['ad_spec_rates']
         return i_dirs, files
 
-    files = ['chem_utils', 'dydt', 'spec_rates',
-             'rxn_rates', 'mechanism', 'mass_mole'
-             ]
-    if pmod:
-        files += ['rxn_rates_pres_mod']
+    files = ['spec_rates',]
 
     if FD:
         files += ['fd_jacob']
@@ -375,20 +368,8 @@ def generate_library(lang, source_dir, obj_dir=None,
     obj_dir = os.path.abspath(obj_dir)
     out_dir = os.path.abspath(out_dir)
 
-    pmod = False
-    #figure out whether there's pressure mod reactions or not
-    with open(os.path.join(source_dir,
-              'mechanism{}'.format(utils.header_ext[build_lang])), 'r'
-              ) as file:
-        for line in file.readlines():
-            line = line.strip()
-            match = re.search(r'\s*#define PRES_MOD_RATES (\d+)', line)
-            if match is not None:
-                pmod = int(match.group(1)) > 0
-                break
-
     #get file lists
-    i_dirs, files = get_file_list(source_dir, pmod, build_lang,
+    i_dirs, files = get_file_list(source_dir, build_lang,
                                   FD=finite_difference, AD=auto_diff
                                   )
 

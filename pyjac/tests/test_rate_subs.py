@@ -6,11 +6,11 @@ from collections import OrderedDict, defaultdict
 #local imports
 from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
-    make_rateconst_kernel, apply_rateconst_vectorization, get_thd_body_concs,
-    get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel, get_rev_rates,
-    get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates, get_temperature_rate)
+    get_thd_body_concs, get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel,
+    get_rev_rates, get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates, get_temperature_rate)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call)
+from .. import kernel_utils as k_utils
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
 
@@ -394,11 +394,11 @@ class SubTest(TestClass):
             kernels = []
             for info in infos:
                 #create kernel
-                knl = make_rateconst_kernel(info, target, self.store.test_size)
+                knl = k_utils.make_kernel(info, target, self.store.test_size)
 
                 #apply vectorization
                 if info.can_vectorize:
-                    knl = apply_rateconst_vectorization(opt, info.var_name, knl)
+                    knl = k_utils.apply_vectorization(opt, info.var_name, knl)
 
                 #apply any specializations if supplied
                 if info.vectorization_specializer:
@@ -511,10 +511,10 @@ class SubTest(TestClass):
                 knl_list = []
                 for info in infos:
                     #make kernel
-                    knl = make_rateconst_kernel(info, target, test_size)
+                    knl = k_utils.make_kernel(info, target, test_size)
                     #apply vectorization if possible
                     if info.can_vectorize:
-                        knl = apply_rateconst_vectorization(loopy_opts,
+                        knl = k_utils.apply_vectorization(loopy_opts,
                             info.var_name, knl)
                     #apply any specializations if supplied
                     if info.vectorization_specializer:
@@ -530,9 +530,9 @@ class SubTest(TestClass):
                 knl_list = []
                 for info in infos:
                     #make kernel
-                    knl = make_rateconst_kernel(info, target, test_size)
+                    knl = k_utils.make_kernel(info, target, test_size)
                     #apply vectorization
-                    knl = apply_rateconst_vectorization(loopy_opts, info.var_name, knl)
+                    knl = k_utils.apply_vectorization(loopy_opts, info.var_name, knl)
                     #and add to list
                     knl_list.append(knl)
                 kc = kernel_call('rateconst_kf', [], **{'T_arr' : T})
@@ -734,12 +734,15 @@ class SubTest(TestClass):
         self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True)
 
     def test_write_specrates_knl(self):
-        write_specrates_kernel(self.store.build_dir,
+        kgen = write_specrates_kernel(self.store.build_dir,
                 {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 self.store.reacs, self.store.specs,
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
                     unr=None, order='C'))
+
+        #generate the kernels
+        kgen._generate_wrapping_kernel(self.store.build_dir)
 
         assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.oclh'),
                         os.path.join(self.store.script_dir, 'blessed', 'spec_rates.oclh'))

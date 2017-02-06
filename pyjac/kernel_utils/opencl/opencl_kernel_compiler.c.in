@@ -51,8 +51,8 @@ int main(int argc, char* argv[])
     for (int i = 0; i < ret_num_platforms; ++i)
     {
         //check if intel
-        char pvendor[500];
-        size_t psize = 500 * sizeof(char);
+        char pvendor[100];
+        size_t psize = 100 * sizeof(char);
         check_err(clGetPlatformInfo(platform_id[i], CL_PLATFORM_VENDOR, psize, pvendor, NULL));
         if(strstr(pvendor, platform_check) != NULL)
         {
@@ -123,10 +123,6 @@ int main(int argc, char* argv[])
     }
     assert(fwrite(binary, bin_size, 1, fp) == 1);
 
-    free(filename);
-    free(platform_check);
-    free(outname);
-    free(build_options);
     free(source_str);
     free(binary);
 }

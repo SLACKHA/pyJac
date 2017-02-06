@@ -13,7 +13,6 @@ from __future__ import print_function
 import sys
 import math
 import os
-import re
 import logging
 from string import Template
 from collections import OrderedDict
@@ -1842,7 +1841,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     kernel_data.append(kf_arr)
 
     #preinstructions
-    preinstructs = [__PLOG_PREINST_KEY, __TINV_PREINST_KEY]
+    preinstructs = [k_gen.__PLOG_PREINST_KEY, k_gen.__TINV_PREINST_KEY]
 
     #extra loops
     pres_poly_ind = 'k'
@@ -2101,7 +2100,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     #and return
     return [k_gen.knl_info(name='plog', instructions=instructions,
-        pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY, __PLOG_PREINST_KEY],
+        pre_instructions=[k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY, k_gen.__PLOG_PREINST_KEY],
         var_name=reac_ind, kernel_data=kernel_data,
         maps=maps, extra_inames=extra_inames, indicies=indicies,
         extra_subs={'reac_ind' : reac_ind})]
@@ -2690,7 +2689,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                   'maps' : maps,
                   'extra_subs' : {'reac_ind' : reac_ind}}
 
-    default_preinstructs = [__TINV_PREINST_KEY, __TLOG_PREINST_KEY]
+    default_preinstructs = [k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY]
 
     #generic kf assigment str
     kf_assign = Template("${kf_str} = ${rate}")
@@ -2702,7 +2701,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         instructions=kf_assign.safe_substitute(rate='${A_name}[i]'),
         **extra_args)
     i_beta_int = k_gen.knl_info(name='beta_int{}'.format(name_mod),
-        pre_instructions=[__TINV_PREINST_KEY],
+        pre_instructions=[k_gen.__TINV_PREINST_KEY],
         instructions="""
         <> T_val = T_arr[j] {id=a1}
         <> negval = ${b_name}[i] < 0
@@ -2752,7 +2751,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         #and combine them
         specializations = {-1 : k_gen.knl_info('singlekernel',
             instructions='\n'.join(instruction_list),
-            pre_instructions=[__TINV_PREINST_KEY, __TLOG_PREINST_KEY],
+            pre_instructions=[k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY],
             **extra_args)}
 
     spec_copy = specializations.copy()
@@ -3002,7 +3001,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         name='spec_rates',
         kernels=kernels,
         input_arrays=['T_arr', 'P_arr', 'conc'],
-        output_array=['wdot'],
+        output_arrays=['wdot'],
         init_arrays={'wdot' : 0,
                      'Fi' : 1},
         test_size=test_size,

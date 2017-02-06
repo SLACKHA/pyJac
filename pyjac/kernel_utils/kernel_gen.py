@@ -3,12 +3,19 @@ kernel_gen.py - generators used for kernel creation
 """
 
 import textwrap
+import os
+import re
+from string import Template
 
 import loopy as lp
+import numpy as np
+from loopy.kernel.data import temp_var_scope as scopes
 
-from .file_writers import file_writer as fwrite
+from . import file_writers as filew
 from .memory_manager import memory_manager
 from .. import site_conf as site
+from .. import utils
+from ..loopy import loopy_utils as lp_utils
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -44,10 +51,11 @@ class wrapping_kernel_generator(object):
         self.name = name
         self.kernels = kernels
         self.test_size = test_size
+        self.auto_diff = auto_diff
 
         #update the memory manager
-        self.mem.add_arrays(input_arrays=input_arrays,
-            output_arrays=output_arrays, has_init=init_arrays)
+        self.mem.add_arrays(in_arrays=input_arrays,
+            out_arrays=output_arrays, has_init=init_arrays)
 
         self.kernel_arg_set_template = Template(self.mem.get_check_err_call('clSetKernelArg(kernel,'
                                         '${arg_index}, ${arg_size}, ${arg_value})'))
@@ -142,9 +150,8 @@ ${name} : ${type}
                     'kernel.c.in'), 'r') as file:
             file_src = Template(file.read())
 
-        with filew.get_file(os.path.join(path, self.name +
-            utils.file_ext[self.loopy_opts.lang]),
-                            self.loopy_opts.lang) as file:
+        with filew.get_file(os.path.join(path, self.name + utils.file_ext[self.lang]),
+                            self.lang) as file:
                 file.add_lines(file_src.safe_substitute(
                     mem_declares=mem_declares,
                     outname=self.filename + '.bin',
@@ -214,8 +221,8 @@ ${name} : ${type}
             self.build_options = ' '.join(build_options)
 
             with filew.get_file(os.path.join(path, self.name + '_compiler'
-                                 + utils.file_ext[self.loopy_opts.lang]),
-                            self.loopy_opts.lang) as file:
+                                 + utils.file_ext[self.lang]),
+                            self.lang) as file:
                 file.add_lines(file_src.safe_substitute(
                     filename=self.filename,
                     outname=self.filename + '.bin',
@@ -243,37 +250,15 @@ ${name} : ${type}
 
         #first, load the wrapper as a template
         with open(os.path.join(script_dir, self.lang,
-                    'wrapping_kernel.{}.in'.format(utils.file_ext[self.lang])),
+                    'wrapping_kernel{}.in'.format(utils.file_ext[self.lang])),
                  'r') as file:
             file_str = file.read()
             file_src = Template(file_str)
 
-        #create T / P arrays
         kernel_data = []
-        T_arr = lp.GlobalArg('T_arr',
-                        shape=(test_size),
-                        order=self.loopy_opts.order,
-                        dtype=np.float64,
-                        read_only=True)
-        P_arr = lp.GlobalArg('P_arr',
-                        shape=(test_size),
-                        order=self.loopy_opts.order,
-                        dtype=np.float64,
-                        read_only=True)
-        concs_arr = lp.GlobalArg('conc',
-                        shape=('Ns', test_size),
-                        order=self.loopy_opts.order,
-                        dtype=np.float64,
-                        read_only=True)
-        if test_size == 'n':
-            kernel_data += [lp.ValueArg(test_size, dtype=np.int32)]
-        kernel_data.extend([T_arr, P_arr, concs_arr])
-        self.mem.add_arrays(in_arrays=[T_arr.name, P_arr.name, concs_arr.name])
-
-        #Finally, turn various needed into ours
-        defines = [arg for knl in kernels for arg in knl.args if
-                        not isinstance(arg, lp.TemporaryVariable)
-                        and arg not in kernel_data]
+        #turn various needed into ours
+        defines = [arg for knl in self.kernels for arg in knl.args if
+                        not isinstance(arg, lp.TemporaryVariable)]
         nameset = sorted(set(d.name for d in defines))
         args = []
         for name in nameset:
@@ -285,17 +270,17 @@ ${name} : ${type}
             kernel_data.append(same_name)
 
         #generate the kernel definition
-        self.vec_width = self.self.loopy_opts.depth
+        self.vec_width = self.loopy_opts.depth
         if self.vec_width is None:
             self.vec_width = self.loopy_opts.width
         if self.vec_width is None:
             self.vec_width = 0
         #create a dummy kernel to get the defn
-        knl = lp.make_kernel('{{[i, j]: 0 <= i,j < {}}}'.format(vec_width),
+        knl = lp.make_kernel('{{[i, j]: 0 <= i,j < {}}}'.format(self.vec_width),
             '',
             kernel_data,
             name=self.name,
-            target=target
+            target=lp_utils.get_target(self.lang)
             )
         knl = apply_vectorization(self.loopy_opts, 'i', knl)
         defn_str = lp_utils.get_header(knl)
@@ -306,7 +291,7 @@ ${name} : ${type}
                     name=knl.name,
                     args=','.join([arg.name for arg in knl.args
                             if not isinstance(arg, lp.TemporaryVariable)]),
-                    end=utils.line_end[self.loopy_opts.lang]
+                    end=utils.line_end[self.lang]
                     #dep='id=call_{}{}'.format(idx, ', dep=call_{}'.format(idx - 1) if idx > 0 else '')
                 )
             if condition:
@@ -318,36 +303,38 @@ ${name} : ${type}
     """            ).safe_substitute(cond=condition, call=call)
             return call
 
-        conditions = [None for knl in kernels]
-        for i in range(len(kernels)):
+        conditions = [None for knl in self.kernels]
+        for i in range(len(self.kernels)):
             conditions[i] = next((x for x in ['conp', 'conv']
-                                    if x in kernels[i].name), None).upper()
+                                    if x in self.kernels[i].name), None)
+            if conditions[i]:
+                conditions[i] = conditions[i].upper()
         instructions = '\n'.join(__gen_call(knl, i, conditions[i])
-            for i, knl in enumerate(kernels))
+            for i, knl in enumerate(self.kernels))
 
         #and finally, generate the additional kernels
-        additional_kernels = '\n'.join([lp_utils.get_code(k) for k in kernels])
+        additional_kernels = '\n'.join([lp_utils.get_code(k) for k in self.kernels])
 
         self.filename = os.path.join(path,
-                            file_prefix + self.name + utils.file_ext[self.loopy_opts.lang])
+                            file_prefix + self.name + utils.file_ext[self.lang])
         #create the file
-        with filew.get_file(self.filename, self.loopy_opts.lang) as file:
-            instructions = __find_indent(file_str, 'body', instructions)
+        with filew.get_file(self.filename, self.lang) as file:
+            instructions = _find_indent(file_str, 'body', instructions)
             lines = file_src.safe_substitute(
                         defines='',
                         func_define=defn_str,
                         body=instructions,
                         additional_kernels=additional_kernels).split('\n')
 
-            if auto_diff:
+            if self.auto_diff:
                 lines = [x.replace('double', 'adouble') for x in lines]
             file.add_lines(lines)
 
         #and the header file
-        headers = [lp_utils.get_header(knl) + utils.line_end[self.loopy_opts.lang]
-                        for knl in kernels] + [defn_str + utils.line_end[self.loopy_opts.lang]]
+        headers = [lp_utils.get_header(knl) + utils.line_end[self.lang]
+                        for knl in self.kernels] + [defn_str + utils.line_end[self.lang]]
         with filew.get_header_file(os.path.join(path, file_prefix + self.name
-                                 + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
+                                 + utils.header_ext[self.lang]), self.lang) as file:
 
             lines = '\n'.join(headers).split('\n')
             if self.auto_diff:
@@ -506,7 +493,7 @@ class knl_info(object):
         self.can_vectorize = can_vectorize
         self.vectorization_specializer = vectorization_specializer
 
-def __find_indent(template_str, key, value):
+def _find_indent(template_str, key, value):
     """
     Finds and returns a formatted value containing the appropriate
     whitespace to put 'value' in place of 'key' for template_str
@@ -620,7 +607,7 @@ def make_kernel(info, target, test_size):
 
     def subs_preprocess(key, value):
         #find the instance of ${key} in kernel_str
-        result = __find_indent(skeleton, key, value)
+        result = _find_indent(skeleton, key, value)
         return Template(result).safe_substitute(var_name=info.var_name)
 
     kernel_str = Template(skeleton).safe_substitute(

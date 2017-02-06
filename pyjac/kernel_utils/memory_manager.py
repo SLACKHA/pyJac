@@ -54,11 +54,11 @@ class memory_manager(object):
 
     def get_check_err_call(self, call):
         if self.lang == 'opencl':
-            return Template('check_err(${call})').safe_substitute(call)
+            return Template('check_err(${call})').safe_substitute(call=call)
         else:
             return call
 
-    def add_arrays(self, arrays, has_init={}, in_arrays=[],
+    def add_arrays(self, arrays=[], has_init={}, in_arrays=[],
         out_arrays=[]):
         """
         Adds arrays to the manager
@@ -144,7 +144,7 @@ class memory_manager(object):
                 return_list.append(self.get_check_err_call('return_code'))
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
 
-        alloc_list = [__get_alloc(arr.name, self.lang) for arr in self.arrays] +
+        alloc_list = [__get_alloc(arr.name, self.lang) for arr in self.arrays] + \
             [__get_alloc(arr, self.host_lang) for arr in self.host_arrays]
 
         #do memsets where applicable
@@ -172,7 +172,7 @@ class memory_manager(object):
         if subs_n:
             size = [x if x != 'n' else subs_n for x in size]
         else:
-            size = [x if x != 'n' for x in size]
+            size = [x for x in size if x != 'n']
         return np.cumprod(size, dtype=np.int32)[-1]
 
     def _mem_transfers(self, to_device=True):

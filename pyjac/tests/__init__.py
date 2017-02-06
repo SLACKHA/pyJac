@@ -37,7 +37,7 @@ class storage(object):
         self.build_dir = build_dir
 
         #clean out build dir
-        for f in os.path.listdir(build_dir):
+        for f in os.listdir(build_dir):
             if os.path.isfile(os.path.join(build_dir, f)):
                 os.remove(os.path.join(build_dir, f))
 

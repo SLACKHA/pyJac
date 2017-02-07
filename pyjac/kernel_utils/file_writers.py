@@ -104,7 +104,8 @@ class FileWriter(object):
         self.is_header = is_header
         self.include_own_header = include_own_header
         if self.is_header:
-            self.headers = ['mechanism'] if self.name != 'mechanism' + utils.header_ext[lang] else []
+            self.headers = ['mechanism'] if not self.name.endswith('mechanism' +
+                utils.header_ext[lang]) else []
             self.std_headers = get_standard_headers(lang)
             self.filter = lambda x: x
             assert not self.include_own_header, 'Cannot include this file in itself'

@@ -25,7 +25,7 @@ class SubTest(TestClass):
             #generate
             kgen.generate(build_dir)
             #write header
-            write_mechanism_header(build_dir, 'opencl', self.store.specs, self.store.reacs)
+            write_mechanism_header(build_dir, opts.lang, self.store.specs, self.store.reacs)
             #compile
             generate_library(opts.lang, build_dir, obj_dir=None,
                          out_dir=out_dir, shared=None,

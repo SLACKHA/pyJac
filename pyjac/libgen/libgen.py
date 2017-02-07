@@ -281,7 +281,7 @@ def get_file_list(source_dir, lang, FD=False, AD=False):
         return i_dirs, files
 
     if lang == 'opencl':
-        files = ['spec_rates_compiler']
+        files = ['spec_rates_compiler', 'spec_rates_main']
     else:
         files = ['spec_rates']
 

@@ -152,7 +152,7 @@ class memory_manager(object):
             [__get_alloc(arr, self.host_lang) for arr in self.host_arrays]
 
         #do memsets where applicable
-        for arr in self.has_init:
+        for arr in sorted(self.has_init):
             assert arr in self.host_arrays, 'Cannot initialize device memory to a constant'
             prefix = 'h_'
             #find initial value
@@ -258,4 +258,4 @@ class memory_manager(object):
             [self.get_check_err_call(self.free_template[self.host_lang].safe_substitute(
                 name=arr)) for arr in self.host_arrays])
 
-        return '\n'.join(set(frees))
+        return '\n'.join(sorted(set(frees)))

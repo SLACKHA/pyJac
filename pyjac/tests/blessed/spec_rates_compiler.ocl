@@ -1,0 +1,134 @@
+#include "ocl_errorcheck.h"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <CL/cl.h>
+#include <assert.h>
+
+#define MAX_DEVICE (16)
+#define MAX_PLATFORM (16)
+
+void compiler()
+{
+    cl_platform_id platform_id[MAX_PLATFORM];
+    cl_device_id device_id = NULL;
+    cl_context context = NULL;
+    cl_command_queue command_queue = NULL;
+    cl_program program = NULL;
+    cl_uint ret_num_platforms;
+    cl_uint ret_num_devices;
+
+    cl_int return_code;
+
+    char* filename[1] = {"/home/nick/spyJac/pyjac/tests/out/spec_rates.ocl"};
+    char* platform_check = "Intel(R) Corporation";
+    char* outname = "/home/nick/spyJac/pyjac/tests/out/spec_rates.ocl.bin";
+
+    char* build_options = "-I/opt/opencl-headers/ -I/home/nick/spyJac/pyjac/tests/out -O3 -cl-std=CL1.2";
+
+    FILE *fp;
+    char* source_str[1];
+    size_t source_size[1];
+
+    /* Load kernel source code */
+    for (int i = 0; i < 1; ++i)
+    {
+        fp = fopen(filename[i], "r");
+        if (!fp) {
+            exit(-1);
+        }
+        //find file size
+        fseek(fp, 0L, SEEK_END);
+        source_size[i] = ftell(fp);
+        rewind(fp);
+
+        //read file
+        source_str[i] = (char*)malloc(source_size[i]);
+        assert(fread(source_str[i], 1, source_size[i], fp) == source_size[i]);
+        fclose(fp);
+    }
+
+    /* Get platform/device information */
+    check_err(clGetPlatformIDs(MAX_PLATFORM, platform_id, &ret_num_platforms));
+    cl_platform_id pid = NULL;
+    for (int i = 0; i < ret_num_platforms; ++i)
+    {
+        //check if intel
+        char pvendor[100];
+        size_t psize = 100 * sizeof(char);
+        check_err(clGetPlatformInfo(platform_id[i], CL_PLATFORM_VENDOR, psize, pvendor, NULL));
+        if(strstr(pvendor, platform_check) != NULL)
+        {
+            pid = platform_id[i];
+            break;
+        }
+    }
+
+
+    //get the device to compile for
+    cl_uint num_devices = 1; //only need one for compilation
+    check_err(clGetDeviceIDs(pid, CL_DEVICE_TYPE_ALL, num_devices, &device_id, &ret_num_devices));
+
+    //create context
+    context = clCreateContext(NULL, num_devices, &device_id, NULL, NULL, &return_code);
+    check_err(return_code);
+
+    //create queue
+    command_queue = clCreateCommandQueue(context, device_id, 0, &return_code);
+    check_err(return_code);
+
+    /* Create Kernel program from the read in source */
+    program = clCreateProgramWithSource(context, 1, (const char **)source_str, (const size_t *)source_size, &return_code);
+    check_err(return_code);
+
+    /* Build Kernel Program */
+    return_code = clBuildProgram(program, num_devices, &device_id, build_options, NULL, NULL);
+    if (return_code != CL_SUCCESS)
+    {
+          printf("OpenCL failed to build the program...\n");
+          size_t len;
+          char *buffer;
+          check_err(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(char*), NULL, &len));
+          buffer = calloc(len, sizeof(char));
+          check_err(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, len * sizeof(char), buffer, NULL));
+          printf("%s\n", buffer);
+          free(buffer);
+
+          clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_STATUS, sizeof(char*), NULL, &len);
+          buffer = calloc(len, sizeof(char));
+          clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_STATUS, len * sizeof(char), buffer, NULL);
+          printf("%s\n", buffer);
+          free(buffer);
+          check_err(return_code);
+    }
+
+    // Get compiled binary from runtime
+
+    //get # of programs
+    size_t num_prog;
+    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), NULL, &num_prog));
+    num_prog /= sizeof(size_t);
+    assert(num_prog == 1);
+
+    //get program size
+    size_t bin_size[1];
+    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, num_prog * sizeof(size_t), bin_size, NULL));
+
+    //get binary
+    unsigned char* binary[1];
+    for (int i = 0; i < 1; ++i)
+        binary[i] = (unsigned char*)malloc(bin_size[i]);
+    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARIES, num_prog * sizeof(unsigned char*), binary, NULL));
+
+    for (int i = 0; i < 1; ++i)
+    {
+        // Then write binary to file
+        fp = fopen(outname, "wb");
+        if (!fp) {
+            exit(-1);
+        }
+        assert(fwrite(binary[i], bin_size[i], 1, fp) == 1);
+        free(binary[i]);
+        free(source_str[i]);
+    }
+}

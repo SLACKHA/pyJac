@@ -143,7 +143,7 @@ class wrapping_kernel_generator(object):
         #finally, copy any dependencies to the path
         lang_dir = os.path.join(script_dir, self.lang)
         deps = [x for x in os.listdir(lang_dir) if os.path.isfile(
-            os.path.join(lang_dir, x))]
+            os.path.join(lang_dir, x)) and not x.endswith('.in')]
         for dep in deps:
             shutil.copyfile(os.path.join(lang_dir, dep),
                 os.path.join(path, dep))

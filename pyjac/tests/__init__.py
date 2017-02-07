@@ -173,16 +173,16 @@ class TestClass(unittest.TestCase):
     _store = None
     @property
     def store(self):
-        return self._store
+        return TestClass._store
     @store.setter
     def store(self, val):
-        self._store = val
+        TestClass._store = val
     @property
     def is_setup(self):
-        return self._is_setup
+        return TestClass._is_setup
     @is_setup.setter
     def is_setup(self, val):
-        self._is_setup = val
+        TestClass._is_setup = val
 
     def setUp(self):
         lp.set_caching_enabled(False)

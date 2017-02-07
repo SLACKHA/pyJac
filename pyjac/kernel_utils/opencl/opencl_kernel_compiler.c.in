@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
 
     char* filename = "${filename}";
     char* platform_check = "${platform}";
-    char* outname = "${outname}"
+    char* outname = "${outname}";
     sprintf(outname, argv[3]);
 
     char* build_options = "${build_options}";

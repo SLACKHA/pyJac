@@ -261,7 +261,7 @@ int main(int argc, char* argv[])
     init(num_devices, kernel, program, context, queue);
 
     //read input data
-    read_initial_conditions("${data_filename", problem_size,
+    read_initial_conditions("${data_filename}", problem_size,
                                 T_host, conc_host, var_host,
                                 ${order});
 

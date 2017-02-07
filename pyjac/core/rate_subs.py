@@ -425,7 +425,7 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
     kernel_data_conp = []
     kernel_data_conv = []
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data_conp.append(lp.ValueArg(test_size, dtype=np.int32))
         kernel_data_conv.append(lp.ValueArg(test_size, dtype=np.int32))
 
@@ -581,7 +581,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     var_name = 'i'
     kernel_data = []
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
     extra_inames =[]
     maps = {}
@@ -811,8 +811,8 @@ def get_rop_net(eqs, loopy_opts, rate_info, test_size=None):
         for kernel in kernel_list:
             __add_data(kernel, data)
 
-    if test_size == 'n':
-        __add_to_all(lp.ValueArg('n', dtype=np.int32))
+    if test_size == 'problem_size':
+        __add_to_all(lp.ValueArg('problem_size', dtype=np.int32))
 
 
     indicies['fwd'] = k_gen.handle_indicies(np.arange(rate_info['Nr']), '', None, kernel_data)
@@ -1032,7 +1032,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
 
         #indicies
         kernel_data = []
-        if test_size == 'n':
+        if test_size == 'problem_size':
             kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
         indicies = k_gen.handle_indicies(np.arange(rate_info[direction]['num']), '${reac_ind}', mapname, kernel_data)
 
@@ -1202,8 +1202,8 @@ def get_rxn_pres_mod(eqs, loopy_opts, rate_info, test_size=None):
     #rate info and reac ind
     reac_ind = 'i'
     kernel_data = []
-    if test_size == 'n':
-        kernel_data.append(lp.ValueArg('n', dtype=np.int32))
+    if test_size == 'problem_size':
+        kernel_data.append(lp.ValueArg('problem_size', dtype=np.int32))
 
     #set of eqn's doesn't matter
     conp_eqs = eqs['conp']
@@ -1262,8 +1262,8 @@ ${pres_mod} = ${thd_conc} {dep=decl}
 
     #and now the falloff kernel
     kernel_data = []
-    if test_size == 'n':
-        kernel_data.append(lp.ValueArg('n', dtype=np.int32))
+    if test_size == 'problem_size':
+        kernel_data.append(lp.ValueArg('problem_size', dtype=np.int32))
     fall_maplist = []
     fall_map = {}
     indicies = k_gen.handle_indicies(np.arange(rate_info['fall']['num'], dtype=np.int32),
@@ -1363,7 +1363,7 @@ def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
     reac_ind = 'i'
     kernel_data = []
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #set of eqn's doesn't matter
@@ -1816,7 +1816,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     kernel_data = [params_lp, numP_lp, numT_lp, plim_lp, tlim_lp,
                     pres_poly_lp, temp_poly_lp, T_arr, P_arr]
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     reac_ind = 'i'
@@ -2021,7 +2021,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     kernel_data = [plog_params_lp, num_params_lp, T_arr,
                         P_arr, low_lp, hi_lp]
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #reac ind
@@ -2274,7 +2274,7 @@ def get_troe_kernel(eqs, loopy_opts, rate_info, test_size=None):
     reac_ind = 'i'
     kernel_data = []
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #add the troe map
@@ -2470,7 +2470,7 @@ def get_sri_kernel(eqs, loopy_opts, rate_info, test_size=None):
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     kernel_data = [T_arr]
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #figure out if we need to do any mapping of the input variable
@@ -2652,7 +2652,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     simple_arrhenius_data = [A_lp, b_lp, Ta_lp, T_arr]
 
-    if test_size == 'n':
+    if test_size == 'problem_size':
         simple_arrhenius_data += [lp.ValueArg(test_size, dtype=np.int32)]
 
     #if we need the rtype array, add it
@@ -2913,7 +2913,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     rate_info = assign_rates(reacs, specs, loopy_opts.rate_spec)
 
     if test_size is None:
-        test_size = 'n'
+        test_size = 'problem_size'
 
     kernels = []
 
@@ -3000,7 +3000,7 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         loopy_opts=loopy_opts,
         name='spec_rates',
         kernels=kernels,
-        input_arrays=['T_arr', 'P_arr', 'conc'],
+        input_arrays=['T_arr', 'P_arr', 'conc', 'Fi'],
         output_arrays=['wdot'],
         init_arrays={'wdot' : 0,
                      'Fi' : 1},
@@ -3092,7 +3092,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     """
 
     if test_size is None:
-        test_size = 'n'
+        test_size = 'problem_size'
 
     if loopy_opts.width is not None and loopy_opts.depth is not None:
         raise Exception('Cannot specify both SIMD/SIMT width and depth')
@@ -3139,8 +3139,8 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
 
     knl_data = [a_lo_lp, a_hi_lp, T_mid_lp, T_lp, out_lp]
 
-    if test_size == 'n':
-        knl_data = [lp.ValueArg('n', dtype=np.int32)] + knl_data
+    if test_size == 'problem_size':
+        knl_data = [lp.ValueArg('problem_size', dtype=np.int32)] + knl_data
 
     #first we generate the kernel
     knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns,
@@ -3242,7 +3242,7 @@ def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
     #Finally, turn arguements into local defines
     defines = [arg for knl in kernels for arg in knl.args if
                     not isinstance(arg, lp.TemporaryVariable)
-                    and arg.name not in ['T_arr', 'n']]
+                    and arg.name not in ['T_arr', 'problem_size']]
     nameset = set(d.name for d in defines)
     new_temp_vars = []
     for name in nameset:

@@ -31,7 +31,7 @@ def get_preamble(lang):
     return []
 
 
-def get_header_file(name, lang, mode='w'):
+def get_header_file(name, lang, mode='w', **kwargs):
     """
     Returns the appropriate FileWriter class for a header file for the given language
 
@@ -45,9 +45,9 @@ def get_header_file(name, lang, mode='w'):
         The file mode, 'w' by default
     """
 
-    return FileWriter(name, lang, mode=mode, is_header=True)
+    return FileWriter(name, lang, mode=mode, is_header=True, **kwargs)
 
-def get_file(name, lang, mode='w'):
+def get_file(name, lang, mode='w', **kwargs):
     """
     Returns the appropriate FileWriter class for a regular file for the given language
 
@@ -61,7 +61,7 @@ def get_file(name, lang, mode='w'):
         The file mode, 'w' by default
     """
 
-    return FileWriter(name, lang, mode=mode, is_header=False)
+    return FileWriter(name, lang, mode=mode, is_header=False, **kwargs)
 
 class FileWriter(object):
     """
@@ -85,9 +85,12 @@ class FileWriter(object):
         The lines to write
     is_header : bool
         If true, this is a header file
+    include_own_header : bool
+        If true, include a header of the same name.  Cannot be header file
     """
 
-    def __init__(self, name, lang, mode='w', is_header=False):
+    def __init__(self, name, lang, mode='w', is_header=False,
+                    include_own_header=False):
         self.name = name
         self.mode = mode
         self.lang = lang
@@ -95,10 +98,12 @@ class FileWriter(object):
         self.headers = []
         self.std_headers = []
         self.is_header = is_header
+        self.include_own_header = include_own_header
         if self.is_header:
             self.headers = ['mechanism']
             self.std_headers = get_standard_headers(lang)
             self.filter = lambda x: x
+            assert not self.include_own_header, 'Cannot include this file in itself'
         else:
             self.filter = self.preamble_filter
             self.preamble = get_preamble(lang)
@@ -154,7 +159,8 @@ class FileWriter(object):
             lines.append('#ifndef {}_{}'.format(filename, ext))
             lines.append('#define {}_{}'.format(filename, ext))
         else:
-            self.headers.append(filename)
+            if self.include_own_header:
+                self.headers.append(filename)
             self.lines.extend(self.preamble)
 
         ext = utils.header_ext[self.lang]

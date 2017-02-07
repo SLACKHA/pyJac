@@ -7,6 +7,7 @@ from .. import utils
 
 from string import Template
 import numpy as np
+import loopy as lp
 
 class memory_manager(object):
     """
@@ -31,23 +32,23 @@ class memory_manager(object):
                            'c' : 'c'}
         self.alloc_templates = {'opencl' :
                     Template('${name} = clCreateBuffer(context, ${memflag},'
-                    ' problem_size * sizeof(double),'
+                    ' ${buff_size} * sizeof(double),'
                     ' NULL, &return_code)'),
-                'c' : Template('${name} = (double*)malloc(problem_size * sizeof(double))')}
+                'c' : Template('${name} = (double*)malloc(${buff_size} * sizeof(double))')}
         self.copy_in_templates = {'opencl' :
                     Template('clEnqueueWriteBuffer(queue, ${name}, CL_TRUE,'
-                        ' 0, ${buff_size} * problem_size * sizeof(double),'
+                        ' 0, ${buff_size} * sizeof(double),'
                         ' ${host_buff}, NULL, NULL)'),
                     'c' :
                     Template('memcpy(${name}, ${host_buff},'
-                             ' ${buff_size} * problem_size * sizeof(double))')}
+                             ' ${buff_size} * sizeof(double))')}
         self.copy_out_templates = {'opencl' :
                     Template('clEnqueueReadBuffer(queue, ${name}, CL_TRUE,'
-                        ' 0, ${buff_size} * problem_size * sizeof(double),'
+                        ' 0, ${buff_size} * sizeof(double),'
                         ' ${host_buff}, NULL, NULL)'),
                     'c' :
                     Template('memcpy(${host_buff}, ${name},'
-                             ' ${buff_size} * problem_size * sizeof(double))')}
+                             ' ${buff_size} * sizeof(double))')}
         self.free_template = {'opencl' :
                     Template('clReleaseMemObject(${name})'),
                     'c' : Template('free(${name})')}
@@ -138,8 +139,11 @@ class memory_manager(object):
             memflag = None
             if lang == 'opencl':
                 memflag = 'CL_MEM_READ_WRITE'
+            dev_arr = next(x for x in self.arrays if x.name == name)
+            if isinstance(dev_arr, lp.ValueArg):
+                return ''
             return_list = [self.alloc_templates[lang].safe_substitute(
-                name=name, memflag=memflag)]
+                name=name, memflag=memflag, buff_size=self._get_size(dev_arr))]
             if lang == 'opencl':
                 return_list.append(self.get_check_err_call('return_code'))
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
@@ -157,23 +161,37 @@ class memory_manager(object):
             dev_arr = next(x for x in self.arrays if x.name == arr)
             if init_v == 0:
                 alloc_list.append(Template('memset(${prefix}${name}, 0, '
-                                    'problem_size * ${buff_size} * sizeof(double*))${end}').safe_substitute(
+                                    '${buff_size} * sizeof(double*))${end}').safe_substitute(
                                     prefix=prefix,
                                     name=arr,
                                     buff_size=self._get_size(dev_arr),
                                     end=utils.line_end[self.lang] + '\n'
                                     ))
+            else:
+                alloc_list.append(Template('for(int i_setter = 0; i_setter < ${buff_size}; ++i_setter)\n'
+                                           '    ${prefix}${name}[i] = ${value}${end}').safe_substitute(
+                                            prefix=prefix,
+                                            name=arr,
+                                            buff_size=self._get_size(dev_arr),
+                                            value=init_v,
+                                            end=utils.line_end[self.lang] + '\n'))
 
         return '\n'.join(alloc_list)
 
-    def _get_size(arr, subs_n=None):
+    def _get_size(self, arr, subs_n='problem_size'):
         size = arr.shape
-        #remove 'n' from shape if present, as it's baked into the various defns
-        if subs_n:
-            size = [x if x != 'n' else subs_n for x in size]
-        else:
-            size = [x for x in size if x != 'n']
-        return np.cumprod(size, dtype=np.int32)[-1]
+        str_size = []
+        #remove 'problem_size' from shape if present, as it's baked into the various defns
+        for x in size:
+            #but allow for substitutions
+            if str(x) == 'problem_size' and subs_n:
+                str_size.append(subs_n)
+        size = [x for x in size if str(x) != 'problem_size']
+
+        if size:
+            size = str(np.cumprod(size, dtype=np.int32)[-1])
+            str_size.append(size)
+        return ' * '.join(str_size)
 
     def _mem_transfers(self, to_device=True):
         arr_list = self.in_arrays if to_device else self.out_arrays
@@ -182,7 +200,8 @@ class memory_manager(object):
 
         return '\n'.join([templates[self.lang].safe_substitute(
             name='d_' + arr, host_buff='h_' + arr,
-            buff_size=_get_size(arr_maps[arr])) + utils.line_end[self.lang] for arr in arr_list])
+            buff_size=self._get_size(arr_maps[arr])) +
+                utils.line_end[self.lang] for arr in arr_list])
 
     def get_mem_transfers_in(self):
         """
@@ -198,7 +217,7 @@ class memory_manager(object):
             The string to perform the memory transfers before execution
         """
 
-        return _mem_transfers(to_device=True)
+        return self._mem_transfers(to_device=True)
 
     def get_mem_transfers_out(self):
         """
@@ -214,7 +233,7 @@ class memory_manager(object):
             The string to perform the memory transfers back to the host after execution
         """
 
-        return _mem_transfers(to_device=False)
+        return self._mem_transfers(to_device=False)
 
     def get_mem_frees(self):
         """

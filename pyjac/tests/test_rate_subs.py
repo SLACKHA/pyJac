@@ -21,11 +21,6 @@ import numpy as np
 from nose.plugins.attrib import attr
 
 class SubTest(TestClass):
-    def __populate(self):
-        T = self.store.T
-        ref_const = self.store.fwd_rate_constants
-        return T, ref_const, ref_const.T.copy()
-
     def test_get_rate_eqs(self):
         eqs = {'conp' : self.store.conp_eqs,
                 'conv' : self.store.conv_eqs}

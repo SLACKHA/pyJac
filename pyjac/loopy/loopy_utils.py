@@ -98,18 +98,19 @@ class loopy_options(object):
         self.device_type = None
         #need to find the first platform that has the device of the correct
         #type
-        self.device_type = cl.device_type.CPU if platform.lower() == 'cpu' else cl.device_type.GPU
-        platforms = cl.get_platforms()
-        for p in platforms:
-            try:
-                ctx = cl.Context(
-                        dev_type=self.device_type,
-                        properties=[(cl.context_properties.PLATFORM, p)])
-                if ctx:
-                    self.platform = p
-                    break
-            except pyopencl.cffi_cl.RuntimeError:
-                pass
+        if self.platform:
+            self.device_type = cl.device_type.CPU if platform.lower() == 'cpu' else cl.device_type.GPU
+            platforms = cl.get_platforms()
+            for p in platforms:
+                try:
+                    ctx = cl.Context(
+                            dev_type=self.device_type,
+                            properties=[(cl.context_properties.PLATFORM, p)])
+                    if ctx:
+                        self.platform = p
+                        break
+                except cl.cffi_cl.RuntimeError:
+                    pass
 
 def get_device_list():
     """

@@ -386,20 +386,14 @@ class SubTest(TestClass):
                 except:
                     infos = [infos]
 
-            kernels = []
-            for info in infos:
-                #create kernel
-                knl = k_utils.make_kernel(info, target, self.store.test_size)
-
-                #apply vectorization
-                if info.can_vectorize:
-                    knl = k_utils.apply_vectorization(opt, info.var_name, knl)
-
-                #apply any specializations if supplied
-                if info.vectorization_specializer:
-                    knl = info.vectorization_specializer(knl)
-
-                kernels.append(knl)
+            #create a dummy kernel generator
+            knl = k_gen.wrapping_kernel_generator(
+                    name='spec_rates',
+                    loopy_opts=opt,
+                    kernels=infos,
+                    test_size=test_size
+                    )
+            knl._make_kernels()
 
             #create a list of answers to check
             try:
@@ -408,7 +402,7 @@ class SubTest(TestClass):
             except:
                 kernel_calls.set_state(state['order'])
 
-            assert auto_run(kernels, kernel_calls, device=state['device']), \
+            assert auto_run(knl.kernels, kernel_calls, device=state['device']), \
                 'Evaluate {} rates failed'.format(func.__name__)
 
     def __test_rateconst_type(self, rtype):
@@ -734,7 +728,7 @@ class SubTest(TestClass):
                 self.store.reacs, self.store.specs,
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
-                    unr=None, order='C'))
+                    unr=None, order='C', platform='CPU'))
 
         #generate the kernels
         kgen.generate(self.store.build_dir)

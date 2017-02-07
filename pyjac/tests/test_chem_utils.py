@@ -10,6 +10,7 @@ from collections import OrderedDict
 from ..core.rate_subs import polyfit_kernel_gen, write_chem_utils
 from ..loopy.loopy_utils import auto_run, loopy_options, get_device_list, kernel_call
 from ..utils import create_dir
+from ..kernel_utils import kernel_gen as k_gen
 from . import TestClass
 
 #modules
@@ -39,8 +40,19 @@ class SubTest(TestClass):
                 opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
                 knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
                                             opt, test_size=test_size)
+
+                #create a dummy kernel generator
+                knl = k_gen.wrapping_kernel_generator(
+                    name='chem_utils',
+                    loopy_opts=opt,
+                    kernels=[knl],
+                    test_size=test_size
+                    )
+                knl._make_kernels()
+
+                #now run
                 kc.set_state(state['order'])
-                assert auto_run(knl, kc, device=state['device'])
+                assert auto_run(knl.kernels, kc, device=state['device'])
             except Exception as e:
                 if not(state['width'] and state['depth']):
                     raise e
@@ -73,11 +85,13 @@ class SubTest(TestClass):
     def test_write_chem_utils(self):
         script_dir = self.store.script_dir
         build_dir = self.store.build_dir
-        write_chem_utils(build_dir, self.store.specs,
+        k = write_chem_utils(build_dir, self.store.specs,
             {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
-                    unr=None, order='C'))
+                    unr=None, order='C', platform='CPU'))
+        k._make_kernels()
+        k._generate_wrapping_kernel()
 
         assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oclh'),
                         os.path.join(script_dir, 'blessed', 'chem_utils.oclh'))

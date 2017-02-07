@@ -11,7 +11,7 @@ import multiprocessing
 import platform
 
 from .. import utils
-from ... import siteconf as site
+from .. import site_conf as site
 
 def lib_ext(shared):
     """Returns the appropriate library extension based on the shared flag"""
@@ -38,15 +38,15 @@ includes = dict(c=['/usr/local/include/'],
                 )
 
 shared_flags = dict(c=['-fPIC'],
-                    icc=['-fPIC'],
+                    opencl=['-fPIC'],
                     cuda=['-Xcompiler', '"-fPIC"']
                     )
 
-flags = dict(c=site.CC_FLAGS + ['-fopenmp'],
-             opencl=site.CC_FLAGS + ['-cl-std=CL{}'.format(site.CL_VERSION)])
+flags = dict(c=site.CC_FLAGS + ['-fopenmp', '-std=c99'],
+             opencl=site.CL_FLAGS + ['-xc', '-std=c99'])
 
-libs = dict(c=['-lm'],
-            opencl=['-l' + site.CL_LIBNAME]
+libs = dict(c=['-lm', '-fopenmp'],
+            opencl=['-l' + x for x in site.CL_LIBNAME]
             )
 
 lib_dirs = dict(c=[],
@@ -143,8 +143,7 @@ def get_cuda_path():
     return cuda_path
 
 
-def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff,
-            ocl_vendor=None):
+def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
     """Create a library from a list of compiled files
 
     Parameters
@@ -161,8 +160,6 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff,
         The list of object files to include in the library
     auto_diff : Optional[bool]
         Optional; if ``True``, include autodifferentiation
-    ocl_vendor : Optional[str]
-        Optional; if specified the OpenCL Vendor to compile for
 
     """
     command = cmd_lib(lang, shared)
@@ -283,16 +280,20 @@ def get_file_list(source_dir, lang, FD=False, AD=False):
         files = ['ad_spec_rates']
         return i_dirs, files
 
-    files = ['spec_rates',]
-
-    if FD:
-        files += ['fd_jacob']
-        flists = []
+    if lang == 'opencl':
+        files = ['spec_rates_compiler']
     else:
-        files += ['jacob']
-        flists = [('jacobs', 'jac_list_{}')]
+        files = ['spec_rates']
 
-    flists += [('rates', 'rate_list_{}')]
+    #if FD:
+        #files += ['fd_jacob']
+        #flists = []
+    #else:
+        #files += ['jacob']
+        #flists = [('jacobs', 'jac_list_{}')]
+
+    flists = []
+    #flists += [('rates', 'rate_list_{}')]
     for flist in flists:
         try:
             with open(os.path.join(source_dir,

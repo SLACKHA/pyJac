@@ -23,6 +23,9 @@ Nicholas Curtis - 2017
 void read_initial_conditions(const char* filename, int NUM, double** conc_host, double** var_host,
                                 const char order);
 
+//the source -> binary compiler is separate
+void compiler();
+
 /* declare host/cl buffers */
 ${mem_declares}
 
@@ -250,6 +253,9 @@ int main(int argc, char* argv[])
     //#0 - the program name
     //#1 - the problem size
     //#2 - the number of cores [CPU only] or number of GPUs / accelerators [GPU only]
+
+    //first compile to binary
+    compiler();
 
     cl_uint problem_size = atoi(argv[1]);
     cl_uint num_devices = atoi(argv[2]);

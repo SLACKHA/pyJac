@@ -2840,51 +2840,8 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     return list(specializations.values())
 
 
-class MangleGen(object):
-    def __init__(self, name, arg_dtypes, result_dtypes):
-        self.name = name
-        self.arg_dtypes = arg_dtypes
-        self.result_dtypes = result_dtypes
-
-    def __call__(self, kernel, name, arg_dtypes):
-        if name != self.name:
-            return None
-        assert arg_dtypes == self.arg_dtypes
-        from loopy.kernel.data import CallMangleInfo
-        return CallMangleInfo(
-            target_name=self.name,
-            result_dtypes=self.result_dtypes,
-            arg_dtypes=self.arg_dtypes)
-
-
-def create_function_mangler(kernel, return_dtypes=()):
-    """
-    Returns a function mangler to interface loopy kernels with function calls
-    to other kernels (e.g. falloff rates from the rate kernel, etc.)
-
-    Parameters
-    ----------
-    kernel : :class:`loopy.LoopKernel`
-        The kernel to create an interface for
-    return_dtypes : list :class:`numpy.dtype` returned from the kernel, optional
-        Most likely an empty list
-    Returns
-    -------
-    func : :method:`MangleGen`.__call__
-        A function that will return a :class:`loopy.kernel.data.CallMangleInfo` to
-        interface with the calling :class:`loopy.LoopKernel`
-    """
-
-    dtypes = []
-    for arg in kernel.args:
-        if not isinstance(arg, lp.TemporaryVariable):
-            dtypes.append(arg.dtype)
-    mg = MangleGen(kernel.name, tuple(dtypes), return_dtypes)
-    return mg.__call__
-
 def write_specrates_kernel(path, eqs, reacs, specs,
-                            loopy_opts, test_size=None,
-                            auto_diff=False):
+                            loopy_opts, auto_diff=False, test_size=None):
     """Helper function that generates kernels for
        evaluation of reaction rates / rate constants / and species rates
 
@@ -2901,7 +2858,9 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     loopy_opts : :class:`loopy_options` object
         A object containing all the loopy options to execute
     test_size : int
-        If not None, this kernel is being used for testing. Hence we need to size the arrays accordingly
+        If not None, this kernel is being used for testing.
+    auto_diff : bool
+        If ``True``, generate files for Adept autodifferention library.
 
     Returns
     -------
@@ -2974,28 +2933,6 @@ def write_specrates_kernel(path, eqs, reacs, specs,
     __add_knl(get_temperature_rate(eqs, loopy_opts,
         rate_info, test_size))
 
-    #TODO: need to update loopy to allow pointer args
-    #to functions, in the meantime use a OpenCL Template
-
-    #now create the kernels!
-    target = lp_utils.get_target(loopy_opts.lang)
-    for i, info in enumerate(kernels):
-        #create kernel from k_gen.knl_info
-        kernels[i] = k_gen.make_kernel(info, target, test_size)
-        #apply vectorization if possible
-        if info.can_vectorize:
-            kernels[i] = k_gen.apply_vectorization(loopy_opts,
-                info.var_name, kernels[i])
-        #apply any specializations if supplied
-        if info.vectorization_specializer:
-            kernels[i] = info.vectorization_specializer(kernels[i])
-        #and add a mangler
-        #func_manglers.append(create_function_mangler(kernels[i]))
-
-    #and finally register functions
-    #for func in func_manglers:
-    #    knl = lp.register_function_manglers(knl, [func])
-
     return k_gen.wrapping_kernel_generator(
         loopy_opts=loopy_opts,
         name='spec_rates',
@@ -3004,7 +2941,6 @@ def write_specrates_kernel(path, eqs, reacs, specs,
         output_arrays=['wdot'],
         init_arrays={'wdot' : 0,
                      'Fi' : 1},
-        test_size=test_size,
         auto_diff=auto_diff
         )
 
@@ -3133,7 +3069,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     #create the input arrays arrays
     T_lp = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
     out_lp, out_str, _ = lp_utils.get_loopy_arg(nicename,
-                    indicies=['k', 'i'],
+                    indicies=['k', 'j'],
                     dimensions=(Ns, test_size),
                     order=loopy_opts.order)
 
@@ -3142,12 +3078,9 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
     if test_size == 'problem_size':
         knl_data = [lp.ValueArg('problem_size', dtype=np.int32)] + knl_data
 
-    #first we generate the kernel
-    knl = lp.make_kernel('{{[k, i]: 0<=k<{} and 0<=i<{}}}'.format(Ns,
-        test_size),
-        Template("""
-        for i
-            <> T = T_arr[i]
+    return k_gen.knl_info(instructions=Template("""
+        for j
+            <> T = T_arr[j]
             for k
                 if T < T_mid[k]
                     ${out_str} = ${lo_eq}
@@ -3157,39 +3090,15 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
             end
         end
         """).safe_substitute(out_str=out_str, lo_eq=lo_eq_str, hi_eq=hi_eq_str),
-        target=target,
         kernel_data=knl_data,
-        name='eval_{}'.format(nicename)
-        )
-
-    knl = lp.prioritize_loops(knl, ['i', 'k'])
-
-
-    if loopy_opts.depth is not None:
-        #and assign the l0 axis to 'k'
-        knl = lp.split_iname(knl, 'k', loopy_opts.depth, inner_tag='l.0')
-        #assign g0 to 'i'
-        knl = lp.tag_inames(knl, [('i', 'g.0')])
-    elif loopy_opts.width is not None:
-        #make the kernel a block of specifed width
-        knl = lp.split_iname(knl, 'i', loopy_opts.width, inner_tag='l.0')
-        #assign g0 to 'i'
-        knl = lp.tag_inames(knl, [('i_outer', 'g.0')])
-
-    #specify R
-    knl = lp.fix_parameters(knl, R_u=chem.RU)
-
-    #now do unr / ilp
-    k_tag = 'k_outer' if loopy_opts.depth is not None else 'k'
-    if loopy_opts.unr is not None:
-        knl = lp.split_iname(knl, k_tag, loopy_opts.unr, inner_tag='unr')
-    elif loopy_opts.ilp:
-        knl = lp.tag_inames(knl, [(k_tag, 'ilp')])
-
-    return knl
+        name='eval_{}'.format(nicename),
+        parameters={'R_u' : chem.RU},
+        var_name='k',
+        indicies=k_gen.handle_indicies(np.arange(Ns, dtype=np.int32), 'k', None, []))
 
 
-def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
+def write_chem_utils(path, specs, eqs, loopy_opts,
+                        test_size=None, auto_diff=False):
     """Write subroutine to evaluate species thermodynamic properties.
 
     Notes
@@ -3207,6 +3116,8 @@ def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
         Sympy equations / variables for constant pressure / constant volume systems
     loopy_opts : `loopy_options` object
         A object containing all the loopy options to execute
+    test_size : int
+        If not None, this kernel is being used for testing.
     auto_diff : bool
         If ``True``, generate files for Adept autodifferention library.
 
@@ -3216,6 +3127,9 @@ def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
         The global variables for this kernel that need definition in the memory manager
 
     """
+
+    if test_size is None:
+        test_size = 'problem_size'
 
     file_prefix = ''
     if auto_diff:
@@ -3227,66 +3141,27 @@ def write_chem_utils(path, specs, eqs, loopy_opts, auto_diff=False):
     conp_eqs = eqs['conp']
     conv_eqs = eqs['conv']
 
-
-    namelist = ['cp', 'cv', 'h', 'u']
+    nicenames = []
     kernels = []
     headers = []
     code = []
     for varname, nicename in [('{C_p}[k]', 'cp'),
         ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
         ('U[k]', 'u'), ('B[k]', 'b')]:
+        nicenames.append(nicename)
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
         kernels.append(polyfit_kernel_gen(varname, nicename,
             eq, specs, loopy_opts))
 
-    #Finally, turn arguements into local defines
-    defines = [arg for knl in kernels for arg in knl.args if
-                    not isinstance(arg, lp.TemporaryVariable)
-                    and arg.name not in ['T_arr', 'problem_size']]
-    nameset = set(d.name for d in defines)
-    new_temp_vars = []
-    for name in nameset:
-        #check for dupes
-        same_name = [x for x in defines if x.name == name]
-        assert all(same_name[0] == y for y in same_name[1:])
-        same_name = same_name[0]
-        #convert to global variable and add to kernel data
-        new_temp_vars.append(lp.TemporaryVariable(
-            name, dtype=same_name.dtype,
-            scope=scopes.GLOBAL))
-
-    defines = '\n'.join([utils.get_global_declaration(loopy_opts.lang, arg) for arg in
-                            sorted(new_temp_vars, key=lambda x:x.name)])
-
-    #get headers
-    for i in range(len(namelist)):
-        headers.append(lp_utils.get_header(kernels[i]) + utils.line_end[loopy_opts.lang])
-
-    #and code
-    for i in range(len(namelist)):
-        code.append(lp_utils.get_code(kernels[i]))
-
-    #now write
-    with filew.get_header_file(os.path.join(path, file_prefix + 'chem_utils'
-                             + utils.header_ext[loopy_opts.lang]), loopy_opts.lang) as file:
-
-        lines = '\n'.join(headers).split('\n')
-        if auto_diff:
-            file.add_headers('adept.h')
-            lines = [x.replace('double', 'adouble') for x in lines]
-        file.add_lines(lines)
-
-
-    with filew.get_file(os.path.join(path, file_prefix + 'chem_utils'
-                             + utils.file_ext[loopy_opts.lang]), loopy_opts.lang) as file:
-        lines = defines.split('\n')
-        lines = '\n'.join(lines + code).split('\n')
-        if auto_diff:
-            file.add_lines('using adept::adouble;\n')
-            lines = [x.replace('double', 'adouble') for x in lines]
-        file.add_lines(lines)
-
-    return new_temp_vars
+    return k_gen.wrapping_kernel_generator(
+        loopy_opts=loopy_opts,
+        name='chem_utils',
+        kernels=kernels,
+        input_arrays=['T_arr'],
+        output_arrays=nicenames,
+        auto_diff=auto_diff,
+        test_size=test_size
+        )
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 kernel_gen.py - generators used for kernel creation
 """
 
+import shutil
 import textwrap
 import os
 import re
@@ -23,7 +24,7 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 class wrapping_kernel_generator(object):
     def __init__(self, loopy_opts, name, kernels,
         input_arrays=[], output_arrays=[], init_arrays={},
-        test_size=None, auto_diff=False):
+        test_size=None, auto_diff=False, depends_on=[]):
         """
         Parameters
         ----------
@@ -44,6 +45,8 @@ class wrapping_kernel_generator(object):
             If specified, the # of conditions to test
         auto_diff : bool
             If true, this will be used for automatic differentiation
+        depends_on : list of :class:`wrapping_kernel_generator`
+            If supplied, this kernel depends on the supplied depencies
         """
 
         self.loopy_opts = loopy_opts
@@ -66,6 +69,58 @@ class wrapping_kernel_generator(object):
         self.filename = ''
         self.bin_name = ''
 
+        self.depends_on = depends_on
+
+    def add_depencencies(self, k_gens):
+        """
+        Adds the supplied :class:`wrapping_kernel_generator`s to this
+        one's dependency list.  Functionally this means that this kernel generator
+        will know how to compile and execute functions from the dependencies
+
+        Parameters
+        ----------
+        k_gens : list of :class:`wrapping_kernel_generator`
+            The dependencies to add to this kernel
+        """
+
+        self.depends_on.extend(k_gens)
+
+    def _make_kernels(self):
+        """
+        Turns the supplied kernel infos into loopy kernels,
+        and vectorizes them!
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+
+        #TODO: need to update loopy to allow pointer args
+        #to functions, in the meantime use a OpenCL Template
+
+        #now create the kernels!
+        target = lp_utils.get_target(self.lang)
+        for i, info in enumerate(self.kernels):
+            #create kernel from k_gen.knl_info
+            self.kernels[i] = make_kernel(info, target, self.test_size)
+            #apply vectorization if possible
+            if info.can_vectorize:
+                self.kernels[i] = apply_vectorization(self.loopy_opts,
+                    info.var_name, self.kernels[i])
+            #apply any specializations if supplied
+            if info.vectorization_specializer:
+                self.kernels[i] = info.vectorization_specializer(self.kernels[i])
+            #and add a mangler
+            #func_manglers.append(create_function_mangler(kernels[i]))
+
+        #and finally register functions
+        #for func in func_manglers:
+        #    knl = lp.register_function_manglers(knl, [func])
+
     def generate(self, path):
         """
         Generates wrapping kernel, compiling program (if necessary) and
@@ -80,9 +135,18 @@ class wrapping_kernel_generator(object):
         -------
         None
         """
+        self._make_kernels()
         self._generate_wrapping_kernel(path)
         self._generate_compiling_program(path)
         self._generate_calling_program(path)
+
+        #finally, copy any dependencies to the path
+        lang_dir = os.path.join(script_dir, self.lang)
+        deps = [x for x in os.listdir(lang_dir) if os.path.isfile(
+            os.path.join(lang_dir, x))]
+        for dep in deps:
+            shutil.copyfile(os.path.join(lang_dir, dep),
+                os.path.join(path, dep))
 
     def _generate_calling_program(self, path):
         """
@@ -165,7 +229,7 @@ ${name} : ${type}
             file_src = Template(file.read())
 
         with filew.get_file(os.path.join(path, self.name + '_main' + utils.file_ext[self.lang]),
-                            self.lang) as file:
+                            self.lang, use_filter=False) as file:
                 file.add_lines(file_src.safe_substitute(
                     mem_declares=mem_declares,
                     outname=self.filename + '.bin',
@@ -236,6 +300,9 @@ ${name} : ${type}
         """
 
         assert self.filename, 'Cannot generate compiler before wrapping kernel is generated...'
+        if self.depends_on:
+            assert [x.filename for x in self.depends_on], ('Cannot generate compiler before wrapping kernel '
+                'for dependencies are generated...')
 
         self.build_options = ''
         if self.lang == 'opencl':
@@ -254,14 +321,18 @@ ${name} : ${type}
             self.build_options.append('-cl-std=CL{}'.format(site.CL_VERSION))
             self.build_options = ' '.join(self.build_options)
 
+            file_list = [self.filename] + [x.filename for x in self.depends_on]
+            file_list = ', '.join('"{}"'.format(x) for x in file_list)
+
             with filew.get_file(os.path.join(path, self.name + '_compiler'
                                  + utils.file_ext[self.lang]),
-                            self.lang) as file:
+                            self.lang, use_filter=False) as file:
                 file.add_lines(file_src.safe_substitute(
-                    filename=self.filename,
+                    filenames=file_list,
                     outname=self.filename + '.bin',
                     platform=platform_str,
-                    build_options=self.build_options
+                    build_options=self.build_options,
+                    num_source=1+len(self.depends_on)
                     ))
 
 
@@ -278,6 +349,15 @@ ${name} : ${type}
         -------
         None
         """
+
+        assert all(isinstance(x, lp.LoopKernel) for x in self.kernels), (
+            'Cannot generate wrapper before calling _make_kernels')
+
+        if self.depends_on:
+            #generate wrappers for dependencies
+            for x in self.depends_on:
+                x._generate_wrapping_kernel(path)
+
         file_prefix = ''
         if self.auto_diff:
             file_prefix = 'ad_'
@@ -354,7 +434,8 @@ ${name} : ${type}
         self.filename = os.path.join(path,
                             file_prefix + self.name + utils.file_ext[self.lang])
         #create the file
-        with filew.get_file(self.filename, self.lang, include_own_header=True) as file:
+        with filew.get_file(self.filename, self.lang, include_own_header=True,
+                                use_filter=False) as file:
             instructions = _find_indent(file_str, 'body', instructions)
             lines = file_src.safe_substitute(
                         defines='',
@@ -680,3 +761,45 @@ def make_kernel(info, target, test_size):
     #prioritize and return
     knl = lp.prioritize_loops(knl, inames)
     return knl
+
+class MangleGen(object):
+    def __init__(self, name, arg_dtypes, result_dtypes):
+        self.name = name
+        self.arg_dtypes = arg_dtypes
+        self.result_dtypes = result_dtypes
+
+    def __call__(self, kernel, name, arg_dtypes):
+        if name != self.name:
+            return None
+        assert arg_dtypes == self.arg_dtypes
+        from loopy.kernel.data import CallMangleInfo
+        return CallMangleInfo(
+            target_name=self.name,
+            result_dtypes=self.result_dtypes,
+            arg_dtypes=self.arg_dtypes)
+
+
+def create_function_mangler(kernel, return_dtypes=()):
+    """
+    Returns a function mangler to interface loopy kernels with function calls
+    to other kernels (e.g. falloff rates from the rate kernel, etc.)
+
+    Parameters
+    ----------
+    kernel : :class:`loopy.LoopKernel`
+        The kernel to create an interface for
+    return_dtypes : list :class:`numpy.dtype` returned from the kernel, optional
+        Most likely an empty list
+    Returns
+    -------
+    func : :method:`MangleGen`.__call__
+        A function that will return a :class:`loopy.kernel.data.CallMangleInfo` to
+        interface with the calling :class:`loopy.LoopKernel`
+    """
+
+    dtypes = []
+    for arg in kernel.args:
+        if not isinstance(arg, lp.TemporaryVariable):
+            dtypes.append(arg.dtype)
+    mg = MangleGen(kernel.name, tuple(dtypes), return_dtypes)
+    return mg.__call__

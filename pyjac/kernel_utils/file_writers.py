@@ -87,10 +87,14 @@ class FileWriter(object):
         If true, this is a header file
     include_own_header : bool
         If true, include a header of the same name.  Cannot be header file
+    use_filter : bool
+        If true, use the default filter for this file type:
+            None for header files
+            Preamble filters for source files
     """
 
     def __init__(self, name, lang, mode='w', is_header=False,
-                    include_own_header=False):
+                    include_own_header=False, use_filter=True):
         self.name = name
         self.mode = mode
         self.lang = lang
@@ -107,6 +111,8 @@ class FileWriter(object):
         else:
             self.filter = self.preamble_filter
             self.preamble = get_preamble(lang)
+        if not use_filter:
+            self.filter = lambda x: x
         self.lines = []
         self.defines = []
 

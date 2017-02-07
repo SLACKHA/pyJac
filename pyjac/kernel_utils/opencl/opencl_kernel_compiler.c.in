@@ -8,7 +8,7 @@
 #define MAX_DEVICE (16)
 #define MAX_PLATFORM (16)
 
-int main(int argc, char* argv[])
+void compiler()
 {
     cl_platform_id platform_id[MAX_PLATFORM];
     cl_device_id device_id = NULL;
@@ -20,30 +20,33 @@ int main(int argc, char* argv[])
 
     cl_int return_code;
 
-    char* filename = "${filename}";
+    char* filename[${num_source}] = {${filenames}};
     char* platform_check = "${platform}";
     char* outname = "${outname}";
-    sprintf(outname, argv[3]);
 
     char* build_options = "${build_options}";
 
     FILE *fp;
-    char *source_str;
+    char* source_str[${num_source}];
+    size_t source_size[${num_source}];
 
     /* Load kernel source code */
-    fp = fopen(filename, "r");
-    if (!fp) {
-        exit(-1);
-    }
-    //find file size
-    fseek(fp, 0L, SEEK_END);
-    size_t source_size = ftell(fp);
-    rewind(fp);
+    for (int i = 0; i < ${num_source}; ++i)
+    {
+        fp = fopen(filename[i], "r");
+        if (!fp) {
+            exit(-1);
+        }
+        //find file size
+        fseek(fp, 0L, SEEK_END);
+        source_size[i] = ftell(fp);
+        rewind(fp);
 
-    //read file
-    source_str = (char*)malloc(source_size);
-    assert(fread(source_str, 1, source_size, fp) == source_size);
-    fclose(fp);
+        //read file
+        source_str[i] = (char*)malloc(source_size[i]);
+        assert(fread(source_str[i], 1, source_size[i], fp) == source_size[i]);
+        fclose(fp);
+    }
 
     /* Get platform/device information */
     check_err(clGetPlatformIDs(MAX_PLATFORM, platform_id, &ret_num_platforms));
@@ -63,10 +66,11 @@ int main(int argc, char* argv[])
 
 
     //get the device to compile for
-    check_err(clGetDeviceIDs(pid, CL_DEVICE_TYPE_ALL, 1, &device_id, &ret_num_devices));
+    cl_uint num_devices = 1; //only need one for compilation
+    check_err(clGetDeviceIDs(pid, CL_DEVICE_TYPE_ALL, num_devices, &device_id, &ret_num_devices));
 
     //create context
-    context = clCreateContext(NULL, 1, &device_id, NULL, NULL, &return_code);
+    context = clCreateContext(NULL, num_devices, &device_id, NULL, NULL, &return_code);
     check_err(return_code);
 
     //create queue
@@ -74,15 +78,14 @@ int main(int argc, char* argv[])
     check_err(return_code);
 
     /* Create Kernel program from the read in source */
-    program = clCreateProgramWithSource(context, 1, (const char **)&source_str, (const size_t *)&source_size, &return_code);
+    program = clCreateProgramWithSource(context, ${num_source}, (const char **)source_str, (const size_t *)source_size, &return_code);
     check_err(return_code);
 
     /* Build Kernel Program */
-    return_code = clBuildProgram(program, 1, &device_id, build_options, NULL, NULL);
+    return_code = clBuildProgram(program, num_devices, &device_id, build_options, NULL, NULL);
     if (return_code != CL_SUCCESS)
     {
           printf("OpenCL failed to build the program...\n");
-
           size_t len;
           char *buffer;
           check_err(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(char*), NULL, &len));
@@ -96,7 +99,6 @@ int main(int argc, char* argv[])
           clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_STATUS, len * sizeof(char), buffer, NULL);
           printf("%s\n", buffer);
           free(buffer);
-
           check_err(return_code);
     }
 
@@ -106,23 +108,27 @@ int main(int argc, char* argv[])
     size_t num_prog;
     check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), NULL, &num_prog));
     num_prog /= sizeof(size_t);
-    assert(num_prog == 1);
+    assert(num_prog == ${num_source});
 
     //get program size
-    size_t bin_size;
-    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, num_prog * sizeof(size_t), &bin_size, NULL));
+    size_t bin_size[${num_source}];
+    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, num_prog * sizeof(size_t), bin_size, NULL));
 
     //get binary
-    unsigned char *binary = malloc(bin_size);
-    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARIES, num_prog * sizeof(unsigned char*), &binary, NULL));
+    unsigned char* binary[${num_source}];
+    for (int i = 0; i < ${num_source}; ++i)
+        binary[i] = (unsigned char*)malloc(bin_size[i]);
+    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARIES, num_prog * sizeof(unsigned char*), binary, NULL));
 
-    // Then write binary to file
-    fp = fopen(outname, "wb");
-    if (!fp) {
-        exit(-1);
+    for (int i = 0; i < ${num_source}; ++i)
+    {
+        // Then write binary to file
+        fp = fopen(outname, "wb");
+        if (!fp) {
+            exit(-1);
+        }
+        assert(fwrite(binary[i], bin_size[i], 1, fp) == 1);
+        free(binary[i]);
+        free(source_str[i]);
     }
-    assert(fwrite(binary, bin_size, 1, fp) == 1);
-
-    free(source_str);
-    free(binary);
 }

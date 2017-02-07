@@ -751,7 +751,7 @@ def make_kernel(info, target, test_size):
     knl = lp.make_kernel(iname_arr,
         kernel_str,
         kernel_data=info.kernel_data,
-        name='rateconst_' + info.name,
+        name=info.name,
         target=target,
         assumptions=' and '.join(assumptions)
     )

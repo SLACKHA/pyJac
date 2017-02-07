@@ -2939,7 +2939,8 @@ def write_specrates_kernel(eqs, reacs, specs,
         output_arrays=['wdot'],
         init_arrays={'wdot' : 0,
                      'Fi' : 1},
-        auto_diff=auto_diff
+        auto_diff=auto_diff,
+        test_size=test_size
         )
 
 def get_rate_eqn(eqs, index='i'):

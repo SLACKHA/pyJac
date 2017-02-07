@@ -94,7 +94,7 @@ class loopy_options(object):
         self.rate_spec_kernels = rate_spec_kernels
         self.rop_net_kernels = rop_net_kernels
         self.spec_rates_sum_over_reac = spec_rates_sum_over_reac
-        self.platform = None
+        self.platform = platform
         self.device_type = None
         #need to find the first platform that has the device of the correct
         #type

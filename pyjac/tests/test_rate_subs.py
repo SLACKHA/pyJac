@@ -13,6 +13,7 @@ from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, ge
 from .. import kernel_utils as k_utils
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
+from ..kernel_utils import kernel_gen as k_gen
 
 #modules
 from optionloop import OptionLoop
@@ -391,7 +392,7 @@ class SubTest(TestClass):
                     name='spec_rates',
                     loopy_opts=opt,
                     kernels=infos,
-                    test_size=test_size
+                    test_size=self.store.test_size
                     )
             knl._make_kernels()
 
@@ -438,7 +439,7 @@ class SubTest(TestClass):
         compare_mask, rate_func = masks[rtype]
 
         #create the kernel call
-        kc = kernel_call('rateconst_' + rtype,
+        kc = kernel_call(rtype,
                             ref_const, compare_mask=compare_mask, **args)
 
         self.__generic_rate_tester(rate_func, kc, rtype == 'simple')
@@ -468,7 +469,7 @@ class SubTest(TestClass):
                             else concs.T.copy()}
 
         #create the kernel call
-        kc = kernel_call('rateconst_thd', ref_ans, **args)
+        kc = kernel_call('thd', ref_ans, **args)
         self.__generic_rate_tester(get_thd_body_concs, kc)
 
     @attr('long')
@@ -497,42 +498,38 @@ class SubTest(TestClass):
                 #first with falloff parameters
                 infos = get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size,
                         falloff=True)
-                knl_list = []
-                for info in infos:
-                    #make kernel
-                    knl = k_utils.make_kernel(info, target, test_size)
-                    #apply vectorization if possible
-                    if info.can_vectorize:
-                        knl = k_utils.apply_vectorization(loopy_opts,
-                            info.var_name, knl)
-                    #apply any specializations if supplied
-                    if info.vectorization_specializer:
-                        knl = info.vectorization_specializer(knl)
-                    #and add to list
-                    knl_list.append(knl)
-                kc = kernel_call('rateconst_kf_fall', [], **{'T_arr' : T})
+
+                #create a dummy generator
+                gen = k_gen.wrapping_kernel_generator(
+                    name='dummy',
+                    loopy_opts=loopy_opts,
+                    kernels=infos,
+                    test_size=self.store.test_size
+                    )
+                gen._make_kernels()
+                kc = kernel_call('kf_fall', [], **{'T_arr' : T})
                 kc.set_state(loopy_opts.order)
-                kf_fall_vals[loopy_opts.order] = populate(knl_list, kc, device=device)[0][0]
+                kf_fall_vals[loopy_opts.order] = populate(gen.kernels, kc, device=device)[0][0]
 
                 #next with regular parameters
                 infos = get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size)
-                knl_list = []
-                for info in infos:
-                    #make kernel
-                    knl = k_utils.make_kernel(info, target, test_size)
-                    #apply vectorization
-                    knl = k_utils.apply_vectorization(loopy_opts, info.var_name, knl)
-                    #and add to list
-                    knl_list.append(knl)
-                kc = kernel_call('rateconst_kf', [], **{'T_arr' : T})
+                #create a dummy generator
+                gen = k_gen.wrapping_kernel_generator(
+                    name='dummy',
+                    loopy_opts=loopy_opts,
+                    kernels=infos,
+                    test_size=self.store.test_size
+                    )
+                gen._make_kernels()
+                kc = kernel_call('kf', [], **{'T_arr' : T})
                 kc.set_state(loopy_opts.order)
-                kf_vals[loopy_opts.order] = populate(knl_list, kc, device=device)[0][0]
+                kf_vals[loopy_opts.order] = populate(gen.kernels, kc, device=device)[0][0]
 
             #finally we can call the reduced pressure evaluator
             return get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size)
 
         #create the kernel call
-        kc = kernel_call('rateconst_pred', ref_ans, **args)
+        kc = kernel_call('pred', ref_ans, **args)
         self.__generic_rate_tester(__tester, kc)
 
     @attr('long')
@@ -548,7 +545,7 @@ class SubTest(TestClass):
         #get SRI reaction mask
         sri_mask = np.where(np.in1d(self.store.fall_inds, self.store.sri_inds))[0]
         #create the kernel call
-        kc = kernel_call('rateconst_fall_sri', ref_ans, out_mask=[0],
+        kc = kernel_call('fall_sri', ref_ans, out_mask=[0],
                                     compare_mask=sri_mask, **args)
         self.__generic_rate_tester(get_sri_kernel, kc)
 
@@ -565,7 +562,7 @@ class SubTest(TestClass):
         #get Troe reaction mask
         troe_mask = np.where(np.in1d(self.store.fall_inds, self.store.troe_inds))[0]
         #create the kernel call
-        kc = kernel_call('rateconst_fall_troe', ref_ans, out_mask=[0],
+        kc = kernel_call('fall_troe', ref_ans, out_mask=[0],
                                     compare_mask=troe_mask, **args)
         self.__generic_rate_tester(get_troe_kernel, kc)
 
@@ -579,7 +576,7 @@ class SubTest(TestClass):
                 'kf' : lambda x: ref_fwd_rates.copy() if x == 'F' else ref_fwd_rates.T.copy()}
 
         #create the kernel call
-        kc = kernel_call('rateconst_Kc', [ref_kc, ref_rev],
+        kc = kernel_call('Kc', [ref_kc, ref_rev],
                                     out_mask=[0, 1], **args)
 
         self.__generic_rate_tester(get_rev_rates, kc)
@@ -604,12 +601,12 @@ class SubTest(TestClass):
         fall_rxn_inds = self.store.fall_inds[:]
 
         #create the kernel call
-        kc = [kernel_call('rateconst_ci_thd', [ref_pres_mod],
+        kc = [kernel_call('ci_thd', [ref_pres_mod],
                         out_mask=[0],
                         compare_mask=[thd_only_inds],
                         input_mask=['Fi', 'Pr'],
                         strict_name_match=True, **args),
-              kernel_call('rateconst_ci_fall', [ref_pres_mod],
+              kernel_call('ci_fall', [ref_pres_mod],
                         out_mask=[0],
                         compare_mask=[fall_only_inds],
                         input_mask=['thd_conc'],
@@ -628,10 +625,10 @@ class SubTest(TestClass):
                 'kr' : lambda x: rev_rate_constants.copy() if x == 'F' else rev_rate_constants.T.copy(),
                 'conc' : lambda x: concs.copy() if x == 'F' else concs.T.copy()}
 
-        kc = [kernel_call('rateconst_rop_fwd', [fwd_rxn_rate],
+        kc = [kernel_call('rop_fwd', [fwd_rxn_rate],
                         input_mask=['kr'],
                         strict_name_match=True, **args),
-              kernel_call('rateconst_rop_rev', [rev_rxn_rate],
+              kernel_call('rop_rev', [rev_rxn_rate],
                         input_mask=['kf'],
                         strict_name_match=True, **args)]
         self.__generic_rate_tester(get_rop, kc)
@@ -650,7 +647,7 @@ class SubTest(TestClass):
                                         self.store.ref_pres_mod.T.copy()}
 
         #first test w/o the splitting
-        kc = kernel_call('rateconst_rop_net', [self.store.rxn_rates], **args)
+        kc = kernel_call('rop_net', [self.store.rxn_rates], **args)
         #self.__generic_rate_tester(get_rop_net, kc)
 
         def __input_mask(self, arg_name):
@@ -661,13 +658,13 @@ class SubTest(TestClass):
             self.kernel_args['rop_net'] = out_vals[-1][0]
 
         #next test with splitting
-        kc = [kernel_call('rateconst_rop_net_fwd', [self.store.rxn_rates],
+        kc = [kernel_call('rop_net_fwd', [self.store.rxn_rates],
             input_mask=__input_mask, strict_name_match=True,
             check=False, **args),
-              kernel_call('rateconst_rop_net_rev', [self.store.rxn_rates],
+              kernel_call('rop_net_rev', [self.store.rxn_rates],
             input_mask=__input_mask, strict_name_match=True,
             check=False, chain=__chainer, **args),
-              kernel_call('rateconst_rop_net_pres_mod', [self.store.rxn_rates],
+              kernel_call('rop_net_pres_mod', [self.store.rxn_rates],
             input_mask=__input_mask, strict_name_match=True,
             chain=__chainer, **args)]
         self.__generic_rate_tester(get_rop_net, kc, do_ropsplit=True)
@@ -680,7 +677,7 @@ class SubTest(TestClass):
               'wdot' : lambda x: wdot_init.copy() if x == 'F' else wdot_init.T.copy()}
         wdot = np.concatenate((np.zeros((1, self.store.test_size)),
             self.store.species_rates))
-        kc = kernel_call('rateconst_spec_rates', [wdot],
+        kc = kernel_call('spec_rates', [wdot],
             compare_mask=[1 + np.arange(self.store.gas.n_species)], **args)
 
         #test regularly
@@ -708,12 +705,12 @@ class SubTest(TestClass):
                        np.zeros((self.store.gas.n_species, self.store.test_size))),
                        axis=0)
 
-        kc = [kernel_call('rateconst_temperature_rate_conp', [Tdot_cp],
+        kc = [kernel_call('temperature_rate_conp', [Tdot_cp],
                 input_mask=['cv', 'u'],
                 compare_mask=[0],
                 strict_name_match=True,
                 **args),
-            kernel_call('rateconst_temperature_rate_conv', [Tdot_cv],
+            kernel_call('temperature_rate_conv', [Tdot_cv],
                 input_mask=['cp', 'h'],
                 compare_mask=[0],
                 strict_name_match=True,
@@ -723,7 +720,7 @@ class SubTest(TestClass):
         self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True)
 
     def test_write_specrates_knl(self):
-        kgen = write_specrates_kernel(self.store.build_dir,
+        kgen = write_specrates_kernel(
                 {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 self.store.reacs, self.store.specs,
                 loopy_options(lang='opencl',

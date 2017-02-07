@@ -1,10 +1,4 @@
-#ifndef OCL_ERR_CHECK_H
-#define OCL_ERR_CHECK_H
-
-#include <CL/cl.h>
-#include <stdio.h>
-
-#define check_err(ans) { cpu_assert((ans), __FILE__, __LINE__); }
+#include "ocl_errorcheck.oclh"
 
 const char* getErrorString(cl_int error)
 {
@@ -90,5 +84,3 @@ void cpu_assert(cl_int x, const char *file, int line) {
         exit(x);
     }
 }
-
-#endif

@@ -9,22 +9,17 @@ and https://www.fixstars.com/en/opencl/book/OpenCLProgrammingBook/calling-the-ke
 Nicholas Curtis - 2017
 */
 
-#include "mechanism.oclh"
-#include "ocl_errorcheck.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <CL/cl.h>
-#include <assert.h>
-#include <stdbool.h>
-
-#define NUM_PLATFORMS (16)
-#define MAX_DEVICE (16)
-#define MAX_CORES (100)
+#include "${kernel_name}.h"
 
 void read_initial_conditions(const char* filename, int NUM, double** T_host,
                                 double** conc_host, double** var_host,
                                 const char order);
+
+//global kernel vars
+cl_kernel kernel = NULL;
+cl_program program = NULL;
+cl_context context = NULL;
+cl_command_queue queue = NULL;
 
 //the source -> binary compiler is separate
 void compiler();
@@ -39,14 +34,9 @@ Parameters
 ----------
 problem_size : cl_uint
     The number of conditions to execute for
-kernel : cl_kernel
-    The built kernel
-queue : cl_command_queue
-    The command queue
 ${knl_args_doc}
 */
-void execute_kernel(cl_uint problem_size,
-    cl_kernel kernel, cl_command_queue queue, ${knl_args})
+void execute_kernel(cl_uint problem_size, ${knl_args})
 {
     /* Memory Transfers into the kernel, if any */
     ${mem_transfers_in}
@@ -71,18 +61,8 @@ Parameters
 ----------
 problem_size : cl_uint
     The number of conditions to execute for
-num_devices : uint
-    The number of devices to use.  If for GPUs/accelerators, this is the # of GPUs to use
-    If for CPUs, this is the number of logical cores to use
-kernel : cl_kernel [out]
-    The kernel output will be stored here
-program : cl_program
-    The built OpenCL program
-context : cl_context
-    The opencl context for execution
 */
-void mem_init(cl_uint problem_size, cl_kernel kernel, cl_program program,
-                    cl_context context)
+void mem_init(cl_uint problem_size)
 {
     cl_int return_code;
     /* Alloc buffers */
@@ -106,17 +86,8 @@ problem_size : cl_uint
 num_devices : uint
     The number of devices to use.  If for GPUs/accelerators, this is the # of GPUs to use
     If for CPUs, this is the number of logical cores to use
-kernel : cl_kernel [out]
-    The kernel output will be stored here
-program : cl_program [out]
-    The built OpenCL program will be stored here
-context : cl_context [out]
-    The opencl context for execution
-queue : cl_command_queue [out]
-    The opencl execution queue
 */
-void init(cl_uint problem_size, cl_uint num_devices, cl_kernel kernel,
-            cl_program program, cl_context context, cl_command_queue queue)
+void init(cl_uint problem_size, cl_uint num_devices)
 {
     cl_platform_id platform_id[NUM_PLATFORMS];
     cl_device_id device_ids[MAX_DEVICE];
@@ -259,13 +230,13 @@ void init(cl_uint problem_size, cl_uint num_devices, cl_kernel kernel,
     for(int i = 0; i <= ${num_source}; ++i)
         free(source_bins[i]);
 
-    mem_init(problem_size, kernel, program, context);
+    mem_init(problem_size);
 }
 
 /*
 Resets the program for a change in problem size
 */
-void newsize_finalize(cl_command_queue queue, cl_kernel kernel)
+void newsize_finalize()
 {
     /* Finalization */
     check_err(clFlush(queue));
@@ -279,8 +250,7 @@ void newsize_finalize(cl_command_queue queue, cl_kernel kernel)
 /*
 Completely cleanup the opencl kernel
 */
-void finalize(cl_command_queue queue, cl_context context,
-                cl_kernel kernel, cl_program program)
+void finalize()
 {
     //flush & free memory
     newsize_finalize(queue, kernel);
@@ -295,31 +265,27 @@ void finalize(cl_command_queue queue, cl_context context,
 bool ${knl_name}_init = false;
 cl_uint problem_size_store = 0;
 cl_uint num_devices_store = 0;
-cl_kernel kernel = NULL;
-cl_program program = NULL;
-cl_context context = NULL;
-cl_command_queue queue = NULL;
 void ${knl_name}(cl_uint problem_size, cl_uint num_devices,
-                    double* h_T_arr, double* h_P_arr, double* h_conc)
+                    ${knl_args})
 {
     if (num_devices != num_devices_store && ${knl_name}_init)
     {
         //check to see if we need to completely reset (i.e. on device change)
-        finalize(queue, context, kernel, program);
+        finalize();
         ${knl_name}_init = false;
     }
     else if (problem_size != problem_size_store && ${knl_name}_init)
     {
         //check to see if the problem size changed, if so we need to realloc memory
-        newsize_finalize(queue, kernel);
-        mem_init(problem_size, kernel, program, context);
+        newsize_finalize();
+        mem_init(problem_size);
     }
     if(!${knl_name}_init)
     {
-        init(problem_size, num_devices, kernel, program, context, queue);
+        init(problem_size, num_devices);
         ${knl_name}_init = true;
     }
-    execute_kernel(problem_size, kernel, queue, ${knl_args_pass});
+    execute_kernel(problem_size, ${input_args});
 }
 
 int main(int argc, char* argv[])
@@ -344,13 +310,13 @@ int main(int argc, char* argv[])
     h_conc = (double*)malloc(problem_size * NS * sizeof(double));
 
     //init memory & program
-    init(problem_size, num_devices, kernel, program, context, queue);
+    init(problem_size, num_devices);
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
                                 &h_T_arr, &h_conc, &h_P_arr,
                                 '${order}');
 
-    execute_kernel(problem_size, kernel, queue, ${knl_args_pass});
+    execute_kernel(problem_size, ${input_args});
 
-    finalize(queue, context, kernel, program);
+    finalize();
 }

@@ -1,0 +1,35 @@
+/*
+OpenCL_kernel.h
+
+A skeleton for pyJac opencl kernel header
+
+
+Nicholas Curtis - 2017
+*/
+
+#ifndef KERNEL_H
+#define KERNEL_H
+
+#include "mechanism.oclh"
+#include "ocl_errorcheck.oclh"
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <CL/cl.h>
+#include <assert.h>
+#include <stdbool.h>
+
+#define NUM_PLATFORMS (16)
+#define MAX_DEVICE (16)
+#define MAX_CORES (100)
+
+
+/*
+Completely cleanup the opencl kernel
+*/
+void finalize();
+
+void ${knl_name}(cl_uint problem_size, cl_uint num_devices,
+                    ${input_args});
+
+#endif

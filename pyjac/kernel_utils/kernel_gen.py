@@ -73,6 +73,8 @@ class wrapping_kernel_generator(object):
 
         self.filename = ''
         self.bin_name = ''
+        self.header_name = ''
+        self.file_prefix = ''
 
         self.depends_on = depends_on[:]
         self.array_props = array_props.copy()
@@ -149,6 +151,7 @@ class wrapping_kernel_generator(object):
         self._generate_wrapping_kernel(path)
         self._generate_compiling_program(path)
         self._generate_calling_program(path)
+        self._generate_calling_header(path)
 
         #finally, copy any dependencies to the path
         lang_dir = os.path.join(script_dir, self.lang)
@@ -157,6 +160,26 @@ class wrapping_kernel_generator(object):
         for dep in deps:
             shutil.copyfile(os.path.join(lang_dir, dep),
                 os.path.join(path, dep))
+
+    def _get_pass(self, argv, include_type=True):
+            return '{type}h_{name}'.format(
+                type=utils.type_map[argv.dtype] + '* ' if include_type else '',
+                name=argv.name)
+
+    def _generate_calling_header(self, path):
+        assert self.filename or self.bin_name, 'Cannot generate calling header before wrapping kernel is generated...'
+        with open(os.path.join(script_dir, self.lang,
+                    'kernel.h.in'), 'r') as file:
+            file_src = Template(file.read())
+
+        self.header_name = os.path.join(path,
+                            self.file_prefix + self.name + utils.header_ext[self.mem.host_lang])
+        with filew.get_file(os.path.join(path, self.header_name), self.lang,
+            use_filter=False) as file:
+            file.add_lines(file_src.safe_substitute(
+                input_args=', '.join([self._get_pass(next(x for x in self.mem.arrays if x.name == a))
+            for a in self.mem.in_arrays]),
+                knl_name=self.name))
 
     def _generate_calling_program(self, path):
         """
@@ -173,19 +196,16 @@ class wrapping_kernel_generator(object):
         None
         """
 
-        assert self.filename or self.bin_name, 'Cannot generate compiler before wrapping kernel is generated...'
+        assert self.filename or self.bin_name, 'Cannot generate calling program before wrapping kernel is generated...'
 
         #find definitions
         mem_declares = self.mem.get_defns()
-        def __get_pass(argv, include_type=True):
-            return '{type}h_{name}'.format(
-                type=utils.type_map[argv.dtype] + '* ' if include_type else '',
-                name=argv.name)
+
         #and input args
-        knl_args = ', '.join([__get_pass(next(x for x in self.mem.arrays if x.name == a))
-            for a in self.mem.in_arrays + self.mem.out_arrays])
-        knl_args_pass = ', '.join([__get_pass(next(x for x in self.mem.arrays if x.name == a), False)
-            for a in self.mem.in_arrays + self.mem.out_arrays])
+        knl_args = ', '.join([self._get_pass(next(x for x in self.mem.arrays if x.name == a))
+            for a in self.mem.in_arrays])
+        input_args = ', '.join([self._get_pass(next(x for x in self.mem.arrays if x.name == a), False)
+            for a in self.mem.in_arrays])
         #create doc str
         knl_args_doc = []
         knl_args_doc_template = Template(
@@ -193,7 +213,7 @@ class wrapping_kernel_generator(object):
 ${name} : ${type}
     ${desc}
 """)
-        for x in self.mem.in_arrays + self.mem.out_arrays:
+        for x in self.mem.in_arrays:
             if x == 'T_arr':
                 knl_args_doc.append(knl_args_doc_template.safe_substitute(
                     name=x, type='double*', desc='The array of temperatures'))
@@ -207,11 +227,6 @@ ${name} : ${type}
             elif x == 'wdot':
                 knl_args_doc.append(knl_args_doc_template.safe_substitute(
                     name=x, type='double*', desc='The array of species rates, in {}-order').format(
-                    self.loopy_opts.order))
-            elif x == 'Fi':
-                knl_args_doc.append(knl_args_doc_template.safe_substitute(
-                    name=x, type='double*', desc='The array of pressure-blending terms, in {}-order.'
-                    '  Needed in order to set Fi terms to unity.').format(
                     self.loopy_opts.order))
             else:
                 raise Exception('Argument documentation not found for arg {}'.format(x))
@@ -253,7 +268,7 @@ ${name} : ${type}
                     build_options=self.build_options,
                     knl_args=knl_args,
                     knl_args_doc=knl_args_doc,
-                    knl_args_pass=knl_args_pass,
+                    input_args=input_args,
                     mem_transfers_in=mem_in,
                     mem_transfers_out=mem_out,
                     vec_width=vec_width,
@@ -376,9 +391,9 @@ ${name} : ${type}
             for x in self.depends_on:
                 x._generate_wrapping_kernel(path)
 
-        file_prefix = ''
+        self.file_prefix = ''
         if self.auto_diff:
-            file_prefix = 'ad_'
+            self.file_prefix = 'ad_'
 
         #first, load the wrapper as a template
         with open(os.path.join(script_dir, self.lang,
@@ -450,7 +465,7 @@ ${name} : ${type}
         additional_kernels = '\n'.join([lp_utils.get_code(k) for k in self.kernels])
 
         self.filename = os.path.join(path,
-                            file_prefix + self.name + utils.file_ext[self.lang])
+                            self.file_prefix + self.name + utils.file_ext[self.lang])
         #create the file
         with filew.get_file(self.filename, self.lang, include_own_header=True,
                                 use_filter=False) as file:
@@ -468,7 +483,7 @@ ${name} : ${type}
         #and the header file
         headers = [lp_utils.get_header(knl) + utils.line_end[self.lang]
                         for knl in self.kernels] + [defn_str + utils.line_end[self.lang]]
-        with filew.get_header_file(os.path.join(path, file_prefix + self.name
+        with filew.get_header_file(os.path.join(path, self.file_prefix + self.name
                                  + utils.header_ext[self.lang]), self.lang) as file:
 
             lines = '\n'.join(headers).split('\n')

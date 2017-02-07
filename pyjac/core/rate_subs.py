@@ -2935,13 +2935,12 @@ def write_specrates_kernel(eqs, reacs, specs,
             loopy_opts=loopy_opts,
             name='spec_rates',
             kernels=kernels,
-            input_arrays=['T_arr', 'P_arr', 'conc', 'Fi'],
+            input_arrays=['T_arr', 'P_arr', 'conc', 'wdot'],
             output_arrays=['wdot'],
             init_arrays={'wdot' : 0,
                          'Fi' : 1},
             auto_diff=auto_diff,
-            test_size=test_size,
-            array_props={'doesnt_need_init' : ['T_arr', 'P_arr', 'conc']})
+            test_size=test_size)
 
 
 def get_rate_eqn(eqs, index='i'):

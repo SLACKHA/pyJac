@@ -53,6 +53,8 @@ class memory_manager(object):
                     Template('clReleaseMemObject(${name})'),
                     'c' : Template('free(${name})')}
 
+        self.host_inits = []
+
     def get_check_err_call(self, call):
         if self.lang == 'opencl':
             return Template('check_err(${call})').safe_substitute(call=call)
@@ -87,7 +89,7 @@ class memory_manager(object):
 
     @property
     def host_arrays(self):
-        return self.in_arrays + self.out_arrays
+        return self.in_arrays + self.out_arrays + self.host_inits
 
     @property
     def host_lang(self):
@@ -115,6 +117,11 @@ class memory_manager(object):
         defns = []
         #get all 'device' defns
         __add([x.name for x in self.arrays], self.lang, 'd_', defns)
+
+        #process any host array that needs init but isn't an input array
+        for arr in sorted(self.has_init):
+            if not arr in self.host_arrays:
+                self.host_inits.append(arr)
 
         #get host defns
         __add(self.host_arrays, self.host_lang, 'h_', defns)
@@ -151,13 +158,14 @@ class memory_manager(object):
                 return_list.append(self.get_check_err_call('return_code'))
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
 
-        alloc_list = [__get_alloc(arr.name, self.lang, 'd_') for arr in self.arrays] + \
-            [__get_alloc(arr, self.host_lang, 'h_', do_not_init) for arr in self.host_arrays]
+        alloc_list = [__get_alloc(arr.name, self.lang, 'd_') for arr in self.arrays]
 
         #do memsets where applicable
         for arr in sorted(self.has_init):
             assert arr in self.host_arrays, 'Cannot initialize device memory to a constant'
             prefix = 'h_'
+            if arr not in self.in_arrays:
+                alloc_list.append(__get_alloc(arr, self.host_lang, prefix))
             #find initial value
             init_v = self.has_init[arr]
             #find corresponding device array

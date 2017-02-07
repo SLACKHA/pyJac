@@ -1,0 +1,10 @@
+#ifndef OCL_ERR_CHECK_H
+#define OCL_ERR_CHECK_H
+
+#include <CL/cl.h>
+#include <stdio.h>
+
+void cpu_assert(cl_int x, const char *file, int line);
+#define check_err(ans) { cpu_assert((ans), __FILE__, __LINE__); }
+
+#endif

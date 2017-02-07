@@ -197,9 +197,9 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
         if lang == 'cuda':
             command += ['-L{}'.format(get_cuda_path())]
-        elif lang == 'opencl':
-            assert vendor in lib_dirs
-            command += ['-L{}'.format(path) for path in lib_dirs[vendor]]
+        #elif lang == 'opencl':
+            #assert vendor in lib_dirs
+            #command += ['-L{}'.format(path) for path in lib_dirs[vendor]]
         command.extend(libs[lang])
 
     try:
@@ -281,7 +281,7 @@ def get_file_list(source_dir, lang, FD=False, AD=False):
         return i_dirs, files
 
     if lang == 'opencl':
-        files = ['spec_rates_compiler', 'spec_rates_main']
+        files = ['spec_rates_compiler', 'spec_rates_main', 'ocl_errorcheck']
     else:
         files = ['spec_rates']
 

@@ -19,5 +19,8 @@ class SubTest(TestClass):
         kgen.generate(self.store.build_dir)
 
         generate_library(opts.lang, self.store.build_dir, obj_dir=None,
-                     out_dir=None, shared=None,
+                     out_dir=self.store.build_dir, shared=None,
                      finite_difference=False, auto_diff=False)
+
+    def test_specrates_pywrap(self):
+        pass

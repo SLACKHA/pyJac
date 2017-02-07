@@ -196,7 +196,7 @@ void init(cl_uint problem_size, cl_uint num_devices, cl_kernel kernel,
 
     /* Create Kernel program from the read in source binary */
     cl_int bin_status;
-    program = clCreateProgramWithBinary(context, ret_num_devices, (const unsigned char**)&device_ids[0], source_sizes, source_bins, &bin_status, &return_code);
+    program = clCreateProgramWithBinary(context, ret_num_devices, &device_ids[0], source_sizes, (const unsigned char**)source_bins, &bin_status, &return_code);
     check_err(bin_status);
     check_err(return_code);
 

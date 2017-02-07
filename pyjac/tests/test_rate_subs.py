@@ -737,9 +737,13 @@ class SubTest(TestClass):
                     unr=None, order='C'))
 
         #generate the kernels
-        kgen._generate_wrapping_kernel(self.store.build_dir)
+        kgen.generate(self.store.build_dir)
 
         assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.oclh'),
                         os.path.join(self.store.script_dir, 'blessed', 'spec_rates.oclh'))
         assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.ocl'),
                         os.path.join(self.store.script_dir, 'blessed', 'spec_rates.ocl'))
+        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_compiler.ocl'),
+                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates_compiler.ocl'))
+        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_main.ocl'),
+                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates_main.ocl'))

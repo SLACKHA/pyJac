@@ -85,13 +85,13 @@ class SubTest(TestClass):
     def test_write_chem_utils(self):
         script_dir = self.store.script_dir
         build_dir = self.store.build_dir
-        k = write_chem_utils(build_dir, self.store.specs,
+        k = write_chem_utils(self.store.specs,
             {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
                     unr=None, order='C', platform='CPU'))
         k._make_kernels()
-        k._generate_wrapping_kernel()
+        k._generate_wrapping_kernel(build_dir)
 
         assert filecmp.cmp(os.path.join(build_dir, 'chem_utils.oclh'),
                         os.path.join(script_dir, 'blessed', 'chem_utils.oclh'))

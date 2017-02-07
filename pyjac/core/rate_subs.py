@@ -2840,15 +2840,13 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     return list(specializations.values())
 
 
-def write_specrates_kernel(path, eqs, reacs, specs,
+def write_specrates_kernel(eqs, reacs, specs,
                             loopy_opts, auto_diff=False, test_size=None):
     """Helper function that generates kernels for
        evaluation of reaction rates / rate constants / and species rates
 
     Parameters
     ----------
-    path : str
-        The output path
     eqs : dict
         Sympy equations / variables for constant pressure / constant volume systems
     reacs : list of :class:`ReacInfo`
@@ -3097,7 +3095,7 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
         indicies=k_gen.handle_indicies(np.arange(Ns, dtype=np.int32), 'k', None, []))
 
 
-def write_chem_utils(path, specs, eqs, loopy_opts,
+def write_chem_utils(specs, eqs, loopy_opts,
                         test_size=None, auto_diff=False):
     """Write subroutine to evaluate species thermodynamic properties.
 
@@ -3108,8 +3106,6 @@ def write_chem_utils(path, specs, eqs, loopy_opts,
 
     Parameters
     ----------
-    path : str
-        Path to build directory for file.
     specs : list of `SpecInfo`
         List of species in the mechanism.
     eqs : dict

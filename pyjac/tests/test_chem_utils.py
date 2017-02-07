@@ -20,7 +20,7 @@ import numpy as np
 from nose.plugins.attrib import attr
 
 class SubTest(TestClass):
-    def __subtest(self, T, ref_ans, varname, nicename, eqs):
+    def __subtest(self, T, ref_ans, nicename, eqs):
         oploop = OptionLoop(OrderedDict([('lang', ['opencl']),
             ('width', [4, None]),
             ('depth', [4, None]),
@@ -38,7 +38,7 @@ class SubTest(TestClass):
         for i, state in enumerate(oploop):
             try:
                 opt = loopy_options(**{x : state[x] for x in state if x != 'device'})
-                knl = polyfit_kernel_gen(varname, nicename, eqs, specs,
+                knl = polyfit_kernel_gen(nicename, eqs, specs,
                                             opt, test_size=test_size)
 
                 #create a dummy kernel generator
@@ -59,27 +59,27 @@ class SubTest(TestClass):
 
     @attr('long')
     def test_cp(self):
-        self.__subtest(self.store.T, self.store.spec_cp, '{C_p}[k]',
+        self.__subtest(self.store.T, self.store.spec_cp,
             'cp', self.store.conp_eqs)
 
     @attr('long')
     def test_cv(self):
-        self.__subtest(self.store.T, self.store.spec_cv, '{C_v}[k]',
+        self.__subtest(self.store.T, self.store.spec_cv,
             'cv', self.store.conp_eqs)
 
     @attr('long')
     def test_h(self):
-        self.__subtest(self.store.T, self.store.spec_h, 'H[k]',
+        self.__subtest(self.store.T, self.store.spec_h,
             'h', self.store.conp_eqs)
 
     @attr('long')
     def test_u(self):
-        self.__subtest(self.store.T, self.store.spec_u, 'U[k]',
+        self.__subtest(self.store.T, self.store.spec_u,
             'u', self.store.conv_eqs)
 
     @attr('long')
     def test_b(self):
-        self.__subtest(self.store.T, self.store.spec_b, 'B[k]',
+        self.__subtest(self.store.T, self.store.spec_b,
             'b', self.store.conp_eqs)
 
     def test_write_chem_utils(self):

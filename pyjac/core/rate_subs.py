@@ -393,7 +393,7 @@ def __1Dcreator(name, numpy_arg, index='${reac_ind}', scope=scopes.PRIVATE):
     arg_str = name + '[{}]'.format(index)
     return arg_lp, arg_str
 
-def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
+def get_temperature_rate(eqs, loopy_opts, rate_info, conp=True, test_size=None):
     """Generates instructions, kernel arguements, and data for the temperature derivative
     kernel
 
@@ -405,6 +405,9 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
         A object containing all the loopy options to execute
     rate_info : dict
         The output of :method:`assign_rates` for this mechanism
+    conp : bool
+        If true, generate equations using constant pressure assumption
+        If false, use constant volume equations
     test_size : int
         If not none, this kernel is being used for testing.
         Hence we need to size the arrays accordingly
@@ -416,41 +419,42 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
     """
 
     #here, the equation form _does_ matter
-    conp_term = next(x for x in eqs['conp'] if str(x) == 'frac{text{d} T }{text{d} t }')
-    conp_term = eqs['conp'][conp_term]
-    conv_term = next(x for x in eqs['conv'] if str(x) == 'frac{text{d} T }{text{d} t }')
-    conv_term = eqs['conv'][conv_term]
+    if conp:
+        term = next(x for x in eqs['conp'] if str(x) == 'frac{text{d} T }{text{d} t }')
+        term = eqs['conp'][term]
+    else:
+        term = next(x for x in eqs['conv'] if str(x) == 'frac{text{d} T }{text{d} t }')
+        term = eqs['conv'][term]
 
     #first, create all arrays
-    kernel_data_conp = []
-    kernel_data_conv = []
+    kernel_data = []
 
     if test_size == 'problem_size':
-        kernel_data_conp.append(lp.ValueArg(test_size, dtype=np.int32))
-        kernel_data_conv.append(lp.ValueArg(test_size, dtype=np.int32))
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     #figure out if we need to do all species rates
-    indicies = k_gen.handle_indicies(np.arange(rate_info['Ns']), '${var_name}', None, kernel_data_conp)
+    indicies = k_gen.handle_indicies(np.arange(rate_info['Ns']), '${var_name}', None, kernel_data)
 
-    h_lp, h_str, map_result = lp_utils.get_loopy_arg('h',
+    if conp:
+        h_lp, h_str, map_result = lp_utils.get_loopy_arg('h',
+                            indicies=['${var_name}', 'j'],
+                            dimensions=(rate_info['Ns'], test_size),
+                            order=loopy_opts.order)
+        cp_lp, cp_str, map_result = lp_utils.get_loopy_arg('cp',
                         indicies=['${var_name}', 'j'],
                         dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
-
-    u_lp, u_str, map_result = lp_utils.get_loopy_arg('u',
+        kernel_data.extend([h_lp, cp_lp])
+    else:
+        u_lp, u_str, map_result = lp_utils.get_loopy_arg('u',
                         indicies=['${var_name}', 'j'],
                         dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
-
-    cp_lp, cp_str, map_result = lp_utils.get_loopy_arg('cp',
+        cv_lp, cv_str, map_result = lp_utils.get_loopy_arg('cv',
                         indicies=['${var_name}', 'j'],
                         dimensions=(rate_info['Ns'], test_size),
                         order=loopy_opts.order)
-
-    cv_lp, cv_str, map_result = lp_utils.get_loopy_arg('cv',
-                        indicies=['${var_name}', 'j'],
-                        dimensions=(rate_info['Ns'], test_size),
-                        order=loopy_opts.order)
+        kernel_data.extend([u_lp, cv_lp])
 
     concs_lp, concs_str, map_result = lp_utils.get_loopy_arg('conc',
                         indicies=['${var_name}', 'j'],
@@ -464,22 +468,23 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
 
     omega_ind = '${var_name} + 1'
 
-    kernel_data_conp.extend([h_lp, cp_lp, concs_lp, omega_dot_lp])
-    kernel_data_conv.extend([u_lp, cv_lp, concs_lp, omega_dot_lp])
+    kernel_data.extend([concs_lp, omega_dot_lp])
 
     #put together conv/conp terms
-    conp_term = sp_utils.sanitize(conp_term, subs ={
-          'H[k]' : h_str,
-          'dot{omega}[k]' : omega_dot_str,
-          '[C][k]' : concs_str,
-          '{C_p}[k]' : cp_str
-        })
-    conv_term = sp_utils.sanitize(conv_term, subs ={
-          'U[k]' : u_str,
-          'dot{omega}[k]' : omega_dot_str,
-          '[C][k]' : concs_str,
-          '{C_v}[k]' : cv_str
-        })
+    if conp:
+        term = sp_utils.sanitize(term, subs ={
+              'H[k]' : h_str,
+              'dot{omega}[k]' : omega_dot_str,
+              '[C][k]' : concs_str,
+              '{C_p}[k]' : cp_str
+            })
+    else:
+        term = sp_utils.sanitize(term, subs ={
+              'U[k]' : u_str,
+              'dot{omega}[k]' : omega_dot_str,
+              '[C][k]' : concs_str,
+              '{C_v}[k]' : cv_str
+            })
     #now split into upper / lower halves
     factor = -1
     def separate(term):
@@ -489,8 +494,7 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
         lower = lower.function
         return upper, lower
 
-    conp_upper, conp_lower = separate(conp_term)
-    conv_upper, conv_lower = separate(conv_term)
+    upper, lower = separate(term)
 
     pre_instructions = Template("""
     ${omega_dot_str} = ${factor} * simul_reduce(sum, ${var_name}, ${upper_term}) / simul_reduce(sum, ${var_name}, ${lower_term}) {id=sum, dep=*}
@@ -501,16 +505,10 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
 
     instructions = ''
 
-    conp_instructions = Template(pre_instructions).safe_substitute(
-        upper_term=conp_upper,
-        lower_term=conp_lower)
-    conp_instructions = Template(conp_instructions).safe_substitute(
-        omega_ind=omega_ind)
-
-    conv_instructions = Template(pre_instructions).safe_substitute(
-        upper_term=conv_upper,
-        lower_term=conv_lower)
-    conv_instructions = Template(conv_instructions).safe_substitute(
+    instructions = Template(pre_instructions).safe_substitute(
+        upper_term=upper,
+        lower_term=lower)
+    instructions = Template(instructions).safe_substitute(
         omega_ind=omega_ind)
 
     #finally do vectorization ability and specializer
@@ -529,25 +527,15 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, test_size=None):
             return knl
         vec_spec = __vec_spec
 
-    return [k_gen.knl_info(name='temperature_rate_conp',
-                           pre_instructions=[conp_instructions],
+    return k_gen.knl_info(name='temperature_rate',
+                           pre_instructions=[instructions],
                            instructions='',
                            var_name='i',
-                           kernel_data=kernel_data_conp,
+                           kernel_data=kernel_data,
                            indicies=indicies,
                            extra_subs = {'spec_ind' : 'ispec'},
                            can_vectorize=can_vectorize,
-                           vectorization_specializer=vec_spec),
-            k_gen.knl_info(name='temperature_rate_conv',
-                           pre_instructions=[conv_instructions],
-                           instructions='',
-                           var_name='i',
-                           kernel_data=kernel_data_conv,
-                           indicies=indicies,
-                           extra_subs = {'spec_ind' : 'ispec'},
-                           can_vectorize=can_vectorize,
-                           vectorization_specializer=vec_spec)]
-
+                           vectorization_specializer=vec_spec)
 
 def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
     """Generates instructions, kernel arguements, and data for the net species rate
@@ -2841,7 +2829,8 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
 
 
 def write_specrates_kernel(eqs, reacs, specs,
-                            loopy_opts, auto_diff=False, test_size=None):
+                            loopy_opts, conp=True,
+                            test_size=None, auto_diff=False):
     """Helper function that generates kernels for
        evaluation of reaction rates / rate constants / and species rates
 
@@ -2855,6 +2844,9 @@ def write_specrates_kernel(eqs, reacs, specs,
         List of species in the mechanism.
     loopy_opts : :class:`loopy_options` object
         A object containing all the loopy options to execute
+    conp : bool
+        If true, generate equations using constant pressure assumption
+        If false, use constant volume equations
     test_size : int
         If not None, this kernel is being used for testing.
     auto_diff : bool
@@ -2927,21 +2919,30 @@ def write_specrates_kernel(eqs, reacs, specs,
     #add spec rates
     __add_knl(get_spec_rates(eqs, loopy_opts,
         rate_info, test_size))
-    #and temperature rate
+    if conp:
+        #get h / cp evals
+        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts))
+    else:
+        #and u / cv
+        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts))
+    #and temperature rates
     __add_knl(get_temperature_rate(eqs, loopy_opts,
-        rate_info, test_size))
+        rate_info, test_size=test_size, conp=conp))
 
     return k_gen.wrapping_kernel_generator(
-        loopy_opts=loopy_opts,
-        name='spec_rates',
-        kernels=kernels,
-        input_arrays=['T_arr', 'P_arr', 'conc', 'Fi'],
-        output_arrays=['wdot'],
-        init_arrays={'wdot' : 0,
-                     'Fi' : 1},
-        auto_diff=auto_diff,
-        test_size=test_size
-        )
+            loopy_opts=loopy_opts,
+            name='spec_rates',
+            kernels=kernels,
+            input_arrays=['T_arr', 'P_arr', 'conc', 'Fi'],
+            output_arrays=['wdot'],
+            init_arrays={'wdot' : 0,
+                         'Fi' : 1},
+            auto_diff=auto_diff,
+            test_size=test_size,
+            array_props={'doesnt_need_init' : ['T_arr', 'P_arr', 'conc']})
+
 
 def get_rate_eqn(eqs, index='i'):
     """Helper routine that returns the Arrenhius rate constant in exponential
@@ -2997,15 +2998,13 @@ def get_rate_eqn(eqs, index='i'):
     return rate_eqn_pre
 
 
-def polyfit_kernel_gen(varname, nicename, eqs, specs,
+def polyfit_kernel_gen(nicename, eqs, specs,
                             loopy_opts, test_size=None):
     """Helper function that generates kernels for
        evaluation of various thermodynamic species properties
 
     Parameters
     ----------
-    varname : str
-        The variable to generate the kernel for
     nicename : str
         The variable name to use in generated code
     eqs : dict of `sympy.Symbol`
@@ -3031,6 +3030,12 @@ def polyfit_kernel_gen(varname, nicename, eqs, specs,
 
     if loopy_opts.width is not None and loopy_opts.depth is not None:
         raise Exception('Cannot specify both SIMD/SIMT width and depth')
+
+    #mapping of nicename -> varname
+    var_maps = {'cp' : '{C_p}[k]',
+        'h' : 'H[k]', 'cv' : '{C_v}[k]',
+        'u' : 'U[k]', 'b' : 'B[k]'}
+    varname = var_maps[nicename]
 
     var = next(v for v in eqs.keys() if str(v) == varname)
     eq = eqs[var]
@@ -3138,16 +3143,13 @@ def write_chem_utils(specs, eqs, loopy_opts,
     conp_eqs = eqs['conp']
     conv_eqs = eqs['conv']
 
-    nicenames = []
+    nicenames = ['cp', 'h', 'cv', 'u', 'b']
     kernels = []
     headers = []
     code = []
-    for varname, nicename in [('{C_p}[k]', 'cp'),
-        ('H[k]', 'h'), ('{C_v}[k]', 'cv'),
-        ('U[k]', 'u'), ('B[k]', 'b')]:
-        nicenames.append(nicename)
+    for nicename in nicenames:
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
-        kernels.append(polyfit_kernel_gen(varname, nicename,
+        kernels.append(polyfit_kernel_gen(nicename,
             eq, specs, loopy_opts))
 
     return k_gen.wrapping_kernel_generator(

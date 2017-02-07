@@ -80,7 +80,7 @@ class memory_manager(object):
         -------
         None
         """
-        self.arrays.extend(arrays)
+        self.arrays.extend([x for x in arrays if not isinstance(x, lp.ValueArg)])
         self.in_arrays.extend(in_arrays)
         self.out_arrays.extend(out_arrays)
         self.has_init.update(has_init)
@@ -122,26 +122,29 @@ class memory_manager(object):
         #return defn string
         return '\n'.join(defns)
 
-    def get_mem_allocs(self):
+    def get_mem_allocs(self, do_not_init=[]):
         """
         Returns the allocation strings for this memory manager's arrays
 
         Parameters
         ----------
-        None
+        do_not_init : list of str
+            List of host arrays that do not need initialization
 
         Returns
         alloc_str : str
             The string of memory allocations
         """
 
-        def __get_alloc(name, lang, prefix):
+        def __get_alloc(name, lang, prefix, dni=[]):
+            #check do not init
+            if name in dni:
+                assert lang == self.host_lang
+                return ''
             memflag = None
             if lang == 'opencl':
                 memflag = 'CL_MEM_READ_WRITE'
             dev_arr = next(x for x in self.arrays if x.name == name)
-            if isinstance(dev_arr, lp.ValueArg):
-                return ''
             return_list = [self.alloc_templates[lang].safe_substitute(
                 name=prefix + name, memflag=memflag, buff_size=self._get_size(dev_arr))]
             if lang == 'opencl':
@@ -149,7 +152,7 @@ class memory_manager(object):
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
 
         alloc_list = [__get_alloc(arr.name, self.lang, 'd_') for arr in self.arrays] + \
-            [__get_alloc(arr, self.host_lang, 'h_') for arr in self.host_arrays]
+            [__get_alloc(arr, self.host_lang, 'h_', do_not_init) for arr in self.host_arrays]
 
         #do memsets where applicable
         for arr in sorted(self.has_init):

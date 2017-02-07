@@ -322,7 +322,7 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec'], thd_sp)
 
     def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False, do_ropsplit=None,
-            do_spec_per_reac=False):
+            do_spec_per_reac=False, **kw_args):
         """
         A generic testing method that can be used for rate constants, third bodies, ...
 
@@ -379,7 +379,7 @@ class SubTest(TestClass):
             rate_info = assign_rates(reacs, specs, opt.rate_spec)
             #create the kernel info
             infos = func(eqs, opt, rate_info,
-                        test_size=self.store.test_size)
+                        test_size=self.store.test_size, **kw_args)
 
             if not isinstance(infos, list):
                 try:
@@ -705,36 +705,49 @@ class SubTest(TestClass):
                        np.zeros((self.store.gas.n_species, self.store.test_size))),
                        axis=0)
 
-        kc = [kernel_call('temperature_rate_conp', [Tdot_cp],
+        kc = [kernel_call('temperature_rate', [Tdot_cp],
                 input_mask=['cv', 'u'],
                 compare_mask=[0],
-                strict_name_match=True,
-                **args),
-            kernel_call('temperature_rate_conv', [Tdot_cv],
-                input_mask=['cp', 'h'],
-                compare_mask=[0],
-                strict_name_match=True,
                 **args)]
 
-        #test regularly
-        self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True)
+        #test conp
+        self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True,
+            conp=True)
+
+        #test conv
+        kc = [kernel_call('temperature_rate', [Tdot_cv],
+                input_mask=['cp', 'h'],
+                compare_mask=[0],
+                **args)]
+        #test conv
+        self.__generic_rate_tester(get_temperature_rate, kc, do_spec_per_reac=True,
+            conp=False)
 
     def test_write_specrates_knl(self):
-        kgen = write_specrates_kernel(
+        kgen_cp = write_specrates_kernel(
                 {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
                 self.store.reacs, self.store.specs,
                 loopy_options(lang='opencl',
                     width=None, depth=None, ilp=False,
-                    unr=None, order='C', platform='CPU'))
+                    unr=None, order='C', platform='CPU'),
+                conp=True)
+        kgen_cv = write_specrates_kernel(
+                {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs},
+                self.store.reacs, self.store.specs,
+                loopy_options(lang='opencl',
+                    width=None, depth=None, ilp=False,
+                    unr=None, order='C', platform='CPU'),
+                conp=False)
 
         #generate the kernels
-        kgen.generate(self.store.build_dir)
+        for kgen, postfix in [(kgen_cp, 'conp'), (kgen_cv, 'conv')]:
+            kgen.generate(self.store.build_dir)
 
-        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.oclh'),
-                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates.oclh'))
-        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.ocl'),
-                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates.ocl'))
-        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_compiler.ocl'),
-                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates_compiler.ocl'))
-        assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_main.ocl'),
-                        os.path.join(self.store.script_dir, 'blessed', 'spec_rates_main.ocl'))
+            assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.oclh'),
+                            os.path.join(self.store.script_dir, 'blessed', 'spec_rates_{}.oclh'.format(postfix)))
+            assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates.ocl'),
+                            os.path.join(self.store.script_dir, 'blessed', 'spec_rates_{}.ocl'.format(postfix)))
+            assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_compiler.ocl'),
+                            os.path.join(self.store.script_dir, 'blessed', 'spec_rates_{}_compiler.ocl'.format(postfix)))
+            assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_main.ocl'),
+                            os.path.join(self.store.script_dir, 'blessed', 'spec_rates_{}_main.ocl'.format(postfix)))

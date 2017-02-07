@@ -24,7 +24,8 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 class wrapping_kernel_generator(object):
     def __init__(self, loopy_opts, name, kernels,
         input_arrays=[], output_arrays=[], init_arrays={},
-        test_size=None, auto_diff=False, depends_on=[]):
+        test_size=None, auto_diff=False, depends_on=[],
+        array_props={}):
         """
         Parameters
         ----------
@@ -47,6 +48,10 @@ class wrapping_kernel_generator(object):
             If true, this will be used for automatic differentiation
         depends_on : list of :class:`wrapping_kernel_generator`
             If supplied, this kernel depends on the supplied depencies
+        array_props : dict
+            Mapping of various switches to array names:
+                doesnt_need_init
+                    * Arrays in this list do not need initialization [defined for host arrays only]
         """
 
         self.loopy_opts = loopy_opts
@@ -70,6 +75,7 @@ class wrapping_kernel_generator(object):
         self.bin_name = ''
 
         self.depends_on = depends_on[:]
+        self.array_props = array_props.copy()
 
     def add_depencencies(self, k_gens):
         """
@@ -224,7 +230,8 @@ ${name} : ${type}
         #build options
         build_options = self.build_options
         #memory allocations
-        mem_allocs = self.mem.get_mem_allocs()
+        mem_allocs = self.mem.get_mem_allocs(self.array_props['doesnt_need_init'] if 'doesnt_need_init'
+            in self.array_props else [])
         #kernel arg setting
         kernel_arg_sets = self.get_kernel_arg_setting()
         #memory frees
@@ -257,7 +264,8 @@ ${name} : ${type}
                     mem_frees=mem_frees,
                     order=self.loopy_opts.order,
                     device_type=str(self.loopy_opts.device_type),
-                    num_source=1+len(self.depends_on)
+                    num_source=1+len(self.depends_on),
+                    knl_name=self.name
                     ))
 
 

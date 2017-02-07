@@ -9,6 +9,7 @@ and https://www.fixstars.com/en/opencl/book/OpenCLProgrammingBook/calling-the-ke
 Nicholas Curtis - 2017
 */
 
+#include "mechanism.oclh"
 #include "ocl_errorcheck.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -61,6 +62,38 @@ void execute_kernel(cl_uint problem_size,
 
     /* Memory Transfers out */
     ${mem_transfers_out}
+}
+
+/*
+Initialize memory & assign kernel args for the kernel
+
+Parameters
+----------
+problem_size : cl_uint
+    The number of conditions to execute for
+num_devices : uint
+    The number of devices to use.  If for GPUs/accelerators, this is the # of GPUs to use
+    If for CPUs, this is the number of logical cores to use
+kernel : cl_kernel [out]
+    The kernel output will be stored here
+program : cl_program
+    The built OpenCL program
+context : cl_context
+    The opencl context for execution
+*/
+void mem_init(cl_uint problem_size, cl_kernel kernel, cl_program program,
+                    cl_context context)
+{
+    cl_int return_code;
+    /* Alloc buffers */
+    ${mem_allocs}
+
+    /* Create OpenCL Kernel */
+    kernel = clCreateKernel(program, "${kernel_name}", &return_code);
+    check_err(return_code);
+
+    /* Kernel arg setting */
+    ${kernel_arg_set}
 }
 
 /*
@@ -223,37 +256,70 @@ void init(cl_uint problem_size, cl_uint num_devices, cl_kernel kernel,
           check_err(return_code);
     }
 
-    /* Alloc buffers */
-    ${mem_allocs}
-
-    /* Create OpenCL Kernel */
-    kernel = clCreateKernel(program, "${kernel_name}", &return_code);
-    check_err(return_code);
-
-    /* Kernel arg setting */
-    ${kernel_arg_set}
-
     for(int i = 0; i <= ${num_source}; ++i)
         free(source_bins[i]);
+
+    mem_init(problem_size, kernel, program, context);
 }
 
 /*
-Cleanup the opencl kernel
+Resets the program for a change in problem size
+*/
+void newsize_finalize(cl_command_queue queue, cl_kernel kernel)
+{
+    /* Finalization */
+    check_err(clFlush(queue));
+    check_err(clReleaseKernel(kernel));
+    check_err(clFinish(queue));
+
+    /* Memory Frees */
+    ${mem_frees}
+}
+
+/*
+Completely cleanup the opencl kernel
 */
 void finalize(cl_command_queue queue, cl_context context,
                 cl_kernel kernel, cl_program program)
 {
-    /* Finalization */
-    check_err(clFlush(queue));
-    check_err(clFinish(queue));
-    check_err(clReleaseKernel(kernel));
+    //flush & free memory
+    newsize_finalize(queue, kernel);
+
+    //release programs and contexts
     check_err(clReleaseProgram(program));
-
-    /* Memory Frees */
-    ${mem_frees}
-
     check_err(clReleaseCommandQueue(queue));
     check_err(clReleaseContext(context));
+}
+
+//knl specific vars
+bool ${knl_name}_init = false;
+cl_uint problem_size_store = 0;
+cl_uint num_devices_store = 0;
+cl_kernel kernel = NULL;
+cl_program program = NULL;
+cl_context context = NULL;
+cl_command_queue queue = NULL;
+void ${knl_name}(cl_uint problem_size, cl_uint num_devices,
+                    double* h_T_arr, double* h_P_arr, double* h_conc)
+{
+    if (num_devices != num_devices_store && ${knl_name}_init)
+    {
+        //check to see if we need to completely reset (i.e. on device change)
+        finalize(queue, context, kernel, program);
+        ${knl_name}_init = false;
+    }
+    else if (problem_size != problem_size_store && ${knl_name}_init)
+    {
+        //check to see if the problem size changed, if so we need to realloc memory
+        newsize_finalize(queue, kernel);
+        mem_init(problem_size, kernel, program, context);
+    }
+    if(!${knl_name}_init)
+    {
+        init(problem_size, num_devices, kernel, program, context, queue);
+        ${knl_name}_init = true;
+    }
+    execute_kernel(problem_size, kernel, queue, ${knl_args_pass});
 }
 
 int main(int argc, char* argv[])
@@ -273,12 +339,12 @@ int main(int argc, char* argv[])
     cl_uint problem_size = atoi(argv[1]);
     cl_uint num_devices = atoi(argv[2]);
 
-    cl_kernel kernel = NULL;
-    cl_program program = NULL;
-    cl_context context = NULL;
-    cl_command_queue queue = NULL;
-    init(problem_size, num_devices, kernel, program, context, queue);
+    h_T_arr = (double*)malloc(problem_size * sizeof(double));
+    h_P_arr = (double*)malloc(problem_size * sizeof(double));
+    h_conc = (double*)malloc(problem_size * NS * sizeof(double));
 
+    //init memory & program
+    init(problem_size, num_devices, kernel, program, context, queue);
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
                                 &h_T_arr, &h_conc, &h_P_arr,

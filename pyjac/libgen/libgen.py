@@ -182,7 +182,7 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
 
     libname += lib_ext(shared)
 
-    if not shared and lang == 'c':
+    if not shared and lang != 'cuda':
         command += [os.path.join(out_dir, libname)]
 
     #add the files

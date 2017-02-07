@@ -69,7 +69,7 @@ class wrapping_kernel_generator(object):
         self.filename = ''
         self.bin_name = ''
 
-        self.depends_on = depends_on
+        self.depends_on = depends_on[:]
 
     def add_depencencies(self, k_gens):
         """
@@ -121,6 +121,10 @@ class wrapping_kernel_generator(object):
         #for func in func_manglers:
         #    knl = lp.register_function_manglers(knl, [func])
 
+        #need to call make_kernels on dependencies
+        for x in self.depends_on:
+            x._make_kernels()
+
     def generate(self, path):
         """
         Generates wrapping kernel, compiling program (if necessary) and
@@ -167,12 +171,15 @@ class wrapping_kernel_generator(object):
 
         #find definitions
         mem_declares = self.mem.get_defns()
-        def __get_pass(argv):
-            return '{}* h_{}'.format(utils.type_map[argv.dtype], argv.name)
+        def __get_pass(argv, include_type=True):
+            return '{type}h_{name}'.format(
+                type=utils.type_map[argv.dtype] + '* ' if include_type else '',
+                name=argv.name)
         #and input args
-        knl_args = self.mem.in_arrays + self.mem.out_arrays
         knl_args = ', '.join([__get_pass(next(x for x in self.mem.arrays if x.name == a))
-            for a in knl_args])
+            for a in self.mem.in_arrays + self.mem.out_arrays])
+        knl_args_pass = ', '.join([__get_pass(next(x for x in self.mem.arrays if x.name == a), False)
+            for a in self.mem.in_arrays + self.mem.out_arrays])
         #create doc str
         knl_args_doc = []
         knl_args_doc_template = Template(
@@ -222,6 +229,9 @@ ${name} : ${type}
         kernel_arg_sets = self.get_kernel_arg_setting()
         #memory frees
         mem_frees = self.mem.get_mem_frees()
+        #kernel list
+        klist = [self.bin_name] + [x.bin_name for x in self.depends_on]
+        klist = ', '.join('"{}"'.format(x) for x in klist)
 
         #get template
         with open(os.path.join(script_dir, self.lang,
@@ -232,22 +242,22 @@ ${name} : ${type}
                             self.lang, use_filter=False) as file:
                 file.add_lines(file_src.safe_substitute(
                     mem_declares=mem_declares,
-                    outname=self.filename + '.bin',
                     platform=platform_str,
                     build_options=self.build_options,
                     knl_args=knl_args,
                     knl_args_doc=knl_args_doc,
+                    knl_args_pass=knl_args_pass,
                     mem_transfers_in=mem_in,
                     mem_transfers_out=mem_out,
                     vec_width=vec_width,
-                    kernel=kernel_path,
+                    kernels=klist,
                     kernel_name=self.name,
-                    platform_str=platform_str,
                     mem_allocs=mem_allocs,
                     kernel_arg_set=kernel_arg_sets,
                     mem_frees=mem_frees,
                     order=self.loopy_opts.order,
-                    device_type=str(self.loopy_opts.device_type)
+                    device_type=str(self.loopy_opts.device_type),
+                    num_source=1+len(self.depends_on)
                     ))
 
 
@@ -273,14 +283,14 @@ ${name} : ${type}
                         arg_index=i,
                         arg_size=self.mem._get_size(arg) +
                             ' * sizeof({})'.format(utils.type_map[arg.dtype]),
-                        arg_value=arg.name)
+                        arg_value='d_' + arg.name)
                         )
             else:
                 kernel_arg_sets.append(
                     self.set_knl_arg_value_template.safe_substitute(
                         arg_index=i,
                         arg_size='sizeof({})'.format(utils.type_map[arg.dtype]),
-                        arg_value=arg.name))
+                        arg_value='d_' + arg.name))
 
         return '\n'.join([x + utils.line_end[self.lang] for x in kernel_arg_sets])
 

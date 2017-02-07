@@ -15,12 +15,14 @@ Nicholas Curtis - 2017
 #include <string.h>
 #include <CL/cl.h>
 #include <assert.h>
-#include <bool.h>
+#include <stdbool.h>
 
 #define NUM_PLATFORMS (16)
 #define MAX_DEVICE (16)
+#define MAX_CORES (100)
 
-void read_initial_conditions(const char* filename, int NUM, double** conc_host, double** var_host,
+void read_initial_conditions(const char* filename, int NUM, double** T_host,
+                                double** conc_host, double** var_host,
                                 const char order);
 
 //the source -> binary compiler is separate
@@ -66,6 +68,8 @@ Create opencl kernel
 
 Parameters
 ----------
+problem_size : cl_uint
+    The number of conditions to execute for
 num_devices : uint
     The number of devices to use.  If for GPUs/accelerators, this is the # of GPUs to use
     If for CPUs, this is the number of logical cores to use
@@ -78,8 +82,8 @@ context : cl_context [out]
 queue : cl_command_queue [out]
     The opencl execution queue
 */
-void init(cl_uint num_devices, cl_kernel kernel, cl_program program, cl_context context,
-            cl_command_queue queue)
+void init(cl_uint problem_size, cl_uint num_devices, cl_kernel kernel,
+            cl_program program, cl_context context, cl_command_queue queue)
 {
     cl_platform_id platform_id[NUM_PLATFORMS];
     cl_device_id device_ids[MAX_DEVICE];
@@ -88,29 +92,33 @@ void init(cl_uint num_devices, cl_kernel kernel, cl_program program, cl_context 
     cl_uint num_cores;
     cl_int return_code;
 
-    char* kernel_path = "${kernel}";
+    char* kernel_paths[${num_source}] = {${kernels}};
     char* platform_check = "${platform}";
     char* build_options = "${build_options}";
+    size_t source_sizes[${num_source}];
 
     cl_device_type device_type = ${device_type};
 
     FILE *fp;
-    unsigned char *source_bin;
+    unsigned char* source_bins[${num_source}];
 
-    /* Load kernel source code */
-    fp = fopen(kernel_path, "rb");
-    if (!fp) {
-        exit(-1);
+    for (int i = 0; i < ${num_source}; ++i)
+    {
+        /* Load kernel source code */
+        fp = fopen(kernel_paths[i], "rb");
+        if (!fp) {
+            exit(-1);
+        }
+        //find file size
+        fseek(fp, 0L, SEEK_END);
+        source_sizes[i] = ftell(fp);
+        rewind(fp);
+
+        //read file
+        source_bins[i] = (unsigned char*)malloc(source_sizes[i]);
+        assert(fread(source_bins[i], 1, source_sizes[i], fp) == source_sizes[i] && "Error reading source binary...");
+        fclose(fp);
     }
-    //find file size
-    fseek(fp, 0L, SEEK_END);
-    size_t source_size = ftell(fp);
-    rewind(fp);
-
-    //read file
-    source_bin = (char*)malloc(source_size);
-    assert(fread(source_bin, 1, source_size, fp) == source_size && "Error reading source binary...");
-    fclose(fp);
 
     /* Get platform/device information */
     check_err(clGetPlatformIDs(NUM_PLATFORMS, platform_id, &ret_num_platforms));
@@ -151,7 +159,8 @@ void init(cl_uint num_devices, cl_kernel kernel, cl_program program, cl_context 
         cl_uint num_compute;
         //first get the maximum number of sub partitions (i.e. logical threads)
         check_err(clGetDeviceInfo(device_ids[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(num_compute), &num_compute, NULL));
-        assert(num_cores <= num_compute && "Too many cores used...");
+        assert(num_cores <= num_compute &&
+                num_cores <= MAX_CORES && "Too many cores used...");
 
         //ok, now we know we're ok
         //let's create a subdevice with the required number of compute units
@@ -169,42 +178,45 @@ void init(cl_uint num_devices, cl_kernel kernel, cl_program program, cl_context 
         // Provides a buffer for the generated subdevices with a number of elements specified by num_sub_devices
         cl_device_id sub_device_ids;
         // Create the subdevices for the device_id device
-        check_err(clCreateSubDevices(device_ids, properties, num_sub_devices, &sub_device_ids, &ret_num_devices));
+        check_err(clCreateSubDevices(device_ids[0], properties, num_sub_devices, &sub_device_ids, &ret_num_devices));
         //and assign to the device_ids
-        device_ids = sub_device_ids;
+        device_ids[0] = sub_device_ids;
     }
 
+    //for the moment, limit to one device
+    assert(ret_num_devices == 1 && "Currently limited to a single device");
+
     //create context
-    context = clCreateContext(NULL, ret_num_devices, &device_ids, NULL, NULL, &return_code);
+    context = clCreateContext(NULL, ret_num_devices, &device_ids[0], NULL, NULL, &return_code);
     check_err(return_code);
 
     //create queue
-    queue = clCreateCommandQueue(context, device_ids, 0, &return_code);
+    queue = clCreateCommandQueue(context, device_ids[0], 0, &return_code);
     check_err(return_code);
 
     /* Create Kernel program from the read in source binary */
     cl_int bin_status;
-    program = clCreateProgramWithBinary(context, ret_num_devices, &device_ids, &source_size, &source_bin, &bin_status, &return_code)
+    program = clCreateProgramWithBinary(context, ret_num_devices, (const unsigned char**)&device_ids[0], source_sizes, source_bins, &bin_status, &return_code);
     check_err(bin_status);
     check_err(return_code);
 
     /* Build Program */
-    return_code = clBuildProgram(program, 1, &device_id, build_options, NULL, NULL);
+    return_code = clBuildProgram(program, ret_num_devices, &device_ids[0], build_options, NULL, NULL);
     if (return_code != CL_SUCCESS)
     {
           printf("OpenCL failed to build the program...\n");
 
           size_t len;
           char *buffer;
-          check_err(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(char*), NULL, &len));
+          check_err(clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_LOG, sizeof(char*), NULL, &len));
           buffer = calloc(len, sizeof(char));
-          check_err(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, len * sizeof(char), buffer, NULL));
+          check_err(clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_LOG, len * sizeof(char), buffer, NULL));
           printf("%s\n", buffer);
           free(buffer);
 
-          clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_STATUS, sizeof(char*), NULL, &len);
+          clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_STATUS, sizeof(char*), NULL, &len);
           buffer = calloc(len, sizeof(char));
-          clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_STATUS, len * sizeof(char), buffer, NULL);
+          clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_STATUS, len * sizeof(char), buffer, NULL);
           printf("%s\n", buffer);
           free(buffer);
 
@@ -215,13 +227,14 @@ void init(cl_uint num_devices, cl_kernel kernel, cl_program program, cl_context 
     ${mem_allocs}
 
     /* Create OpenCL Kernel */
-    kernel = clCreateKernel(program, "${kernel_name}", &ret);
-    check_err(ret);
+    kernel = clCreateKernel(program, "${kernel_name}", &return_code);
+    check_err(return_code);
 
     /* Kernel arg setting */
     ${kernel_arg_set}
 
-    free(source_bin);
+    for(int i = 0; i <= ${num_source}; ++i)
+        free(source_bins[i]);
 }
 
 /*
@@ -263,15 +276,15 @@ int main(int argc, char* argv[])
     cl_kernel kernel = NULL;
     cl_program program = NULL;
     cl_context context = NULL;
-    cl_command_queue = NULL;
-    init(num_devices, kernel, program, context, queue);
+    cl_command_queue queue = NULL;
+    init(problem_size, num_devices, kernel, program, context, queue);
 
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
-                                T_host, conc_host, var_host,
-                                ${order});
+                                &h_T_arr, &h_conc, &h_P_arr,
+                                '${order}');
 
-    execute_kernel(problem_size, kernel, queue, ${knl_args});
+    execute_kernel(problem_size, kernel, queue, ${knl_args_pass});
 
     finalize(queue, context, kernel, program);
 }

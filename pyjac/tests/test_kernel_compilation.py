@@ -11,8 +11,7 @@ class SubTest(TestClass):
                     width=None, depth=None, ilp=False,
                     unr=None, order='C', platform='CPU')
         eqs = {'conp' : self.store.conp_eqs, 'conv' : self.store.conv_eqs}
-        kgen = write_specrates_kernel(self.store.build_dir,
-                eqs, self.store.reacs, self.store.specs, opts)
+        kgen = write_specrates_kernel(eqs, self.store.reacs, self.store.specs, opts)
         kgen2 = write_chem_utils(self.store.specs, eqs, opts)
         #add dep
         kgen.add_depencencies([kgen2])

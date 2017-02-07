@@ -26,7 +26,7 @@ class memory_manager(object):
         self.out_arrays = []
         self.lang = lang
         self.has_init = {}
-        self.memory_types = {'c' : 'double',
+        self.memory_types = {'c' : 'double*',
                              'opencl' : 'cl_mem'}
         self.host_langs = {'opencl' : 'c',
                            'c' : 'c'}
@@ -38,14 +38,14 @@ class memory_manager(object):
         self.copy_in_templates = {'opencl' :
                     Template('clEnqueueWriteBuffer(queue, ${name}, CL_TRUE,'
                         ' 0, ${buff_size} * sizeof(double),'
-                        ' ${host_buff}, NULL, NULL)'),
+                        ' ${host_buff}, 0, NULL, NULL)'),
                     'c' :
                     Template('memcpy(${name}, ${host_buff},'
                              ' ${buff_size} * sizeof(double))')}
         self.copy_out_templates = {'opencl' :
                     Template('clEnqueueReadBuffer(queue, ${name}, CL_TRUE,'
                         ' 0, ${buff_size} * sizeof(double),'
-                        ' ${host_buff}, NULL, NULL)'),
+                        ' ${host_buff}, 0, NULL, NULL)'),
                     'c' :
                     Template('memcpy(${host_buff}, ${name},'
                              ' ${buff_size} * sizeof(double))')}
@@ -135,7 +135,7 @@ class memory_manager(object):
             The string of memory allocations
         """
 
-        def __get_alloc(name, lang):
+        def __get_alloc(name, lang, prefix):
             memflag = None
             if lang == 'opencl':
                 memflag = 'CL_MEM_READ_WRITE'
@@ -143,13 +143,13 @@ class memory_manager(object):
             if isinstance(dev_arr, lp.ValueArg):
                 return ''
             return_list = [self.alloc_templates[lang].safe_substitute(
-                name=name, memflag=memflag, buff_size=self._get_size(dev_arr))]
+                name=prefix + name, memflag=memflag, buff_size=self._get_size(dev_arr))]
             if lang == 'opencl':
                 return_list.append(self.get_check_err_call('return_code'))
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
 
-        alloc_list = [__get_alloc(arr.name, self.lang) for arr in self.arrays] + \
-            [__get_alloc(arr, self.host_lang) for arr in self.host_arrays]
+        alloc_list = [__get_alloc(arr.name, self.lang, 'd_') for arr in self.arrays] + \
+            [__get_alloc(arr, self.host_lang, 'h_') for arr in self.host_arrays]
 
         #do memsets where applicable
         for arr in sorted(self.has_init):
@@ -169,7 +169,7 @@ class memory_manager(object):
                                     ))
             else:
                 alloc_list.append(Template('for(int i_setter = 0; i_setter < ${buff_size}; ++i_setter)\n'
-                                           '    ${prefix}${name}[i] = ${value}${end}').safe_substitute(
+                                           '    ${prefix}${name}[i_setter] = ${value}${end}').safe_substitute(
                                             prefix=prefix,
                                             name=arr,
                                             buff_size=self._get_size(dev_arr),
@@ -251,11 +251,11 @@ class memory_manager(object):
 
         #device memory
         frees = [self.get_check_err_call(self.free_template[self.lang].safe_substitute(
-            name=arr.name)) for arr in self.arrays]
+            name='d_' + arr.name)) for arr in self.arrays]
 
         #host memory
         frees.extend(
-            [self.get_check_err_call(self.free_template[self.host_lang].safe_substitute(
-                name=arr)) for arr in self.host_arrays])
+            [self.free_template[self.host_lang].safe_substitute(
+                name='h_' + arr) for arr in self.host_arrays])
 
-        return '\n'.join(sorted(set(frees)))
+        return '\n'.join([x + utils.line_end[self.lang] for x in sorted(set(frees))])

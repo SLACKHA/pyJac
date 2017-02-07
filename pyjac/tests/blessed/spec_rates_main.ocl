@@ -15,7 +15,7 @@ Nicholas Curtis - 2017
 #include <string.h>
 #include <CL/cl.h>
 #include <assert.h>
-#include <bool.h>
+#include <stdbool.h>
 
 #define NUM_PLATFORMS (16)
 #define MAX_DEVICE (16)

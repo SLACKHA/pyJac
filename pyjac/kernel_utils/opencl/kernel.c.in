@@ -149,7 +149,7 @@ void init(cl_uint problem_size, cl_uint num_devices)
     }
     else if (num_devices >= MAX_DEVICE)
     {
-        printf("Cannot create program with %s devices, please update MAX_DEVICE definition.\n");
+        fprintf(stderr, "Cannot create program with %s devices, please update MAX_DEVICE definition.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -207,20 +207,20 @@ void init(cl_uint problem_size, cl_uint num_devices)
     return_code = clBuildProgram(program, ret_num_devices, &device_ids[0], build_options, NULL, NULL);
     if (return_code != CL_SUCCESS)
     {
-          printf("OpenCL failed to build the program...\n");
+          fprintf(stderr, "OpenCL failed to build the program...\n");
 
           size_t len;
           char *buffer;
           check_err(clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_LOG, sizeof(char*), NULL, &len));
           buffer = calloc(len, sizeof(char));
           check_err(clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_LOG, len * sizeof(char), buffer, NULL));
-          printf("%s\n", buffer);
+          fprintf(stderr, "%s\n", buffer);
           free(buffer);
 
           clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_STATUS, sizeof(char*), NULL, &len);
           buffer = calloc(len, sizeof(char));
           clGetProgramBuildInfo(program, device_ids[0], CL_PROGRAM_BUILD_STATUS, len * sizeof(char), buffer, NULL);
-          printf("%s\n", buffer);
+          fprintf(stderr, "%s\n", buffer);
           free(buffer);
 
           check_err(return_code);

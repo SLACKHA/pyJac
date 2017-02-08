@@ -7,7 +7,8 @@ from string import Template
 
 from ..libgen import generate_library
 
-def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
+def generate_setup(setupfile, home_dir, build_dir, out_dir, libname,
+    extra_include_dirs):
     """Helper method to fill in the template .in files
 
     Parameters
@@ -22,6 +23,8 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
         Output directory path
     libname : str
         Library name
+    extra_include_dirs : Optional[list of str]
+        Optional; if supplied, extra include directions for the python wrapper
 
     Returns
     -------
@@ -34,7 +37,9 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
     file_data = {'homepath' : home_dir,
                  'buildpath' : build_dir,
                  'libname' : libname,
-                 'outpath' : out_dir
+                 'outpath' : out_dir,
+                 'extra_include_dirs' :
+                    ', '.join(["'{}'".format(x) for x in extra_include_dirs])
                  }
     src = src.safe_substitute(file_data)
     with open(setupfile[:setupfile.rindex('.in')], 'w') as file:
@@ -63,7 +68,8 @@ def distutils_dir_name(dname):
                     )
 
 
-def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
+def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False,
+    extra_include_dirs=[]):
     """Generates a Python wrapper for the given language and source files
 
     Parameters
@@ -76,6 +82,8 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         Directory path for output files
     auto_diff : Optional[bool]
         Optional; if ``True``, build autodifferentiation library
+    extra_include_dirs : Optional[list of str]
+        Optional; if supplied, extra include directions for the python wrapper
 
     Returns
     -------
@@ -112,12 +120,14 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         setupfile = 'pyjacob_cuda_setup.py.in'
     elif lang == 'tchem':
         setupfile = 'pytchem_setup.py.in'
+    elif lang == 'opencl':
+        setupfile = 'pyocl_setup.py.in'
     else:
         print('Language {} not recognized'.format(lang))
         sys.exit(-1)
 
     generate_setup(os.path.join(home_dir, setupfile), home_dir, source_dir,
-                   distutils_build, lib
+                   distutils_build, lib, extra_include_dirs
                    )
 
     python_str = 'python{}.{}'.format(sys.version_info[0], sys.version_info[1])

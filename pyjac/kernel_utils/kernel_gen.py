@@ -474,12 +474,13 @@ ${name} : ${type}
             self.vec_width = 0
         #create a dummy kernel to get the defn
         knl = lp.make_kernel('{{[i, j]: 0 <= i,j < {}}}'.format(self.vec_width),
-            '',
+            '<>temp = i',
             kernel_data,
             name=self.name,
             target=lp_utils.get_target(self.lang)
             )
-        knl = apply_vectorization(self.loopy_opts, 'i', knl)
+        if self.vec_width:
+            knl = lp.tag_inames(knl, [('i', 'l.0')])
         defn_str = lp_utils.get_header(knl)
 
         #next create the call instructions

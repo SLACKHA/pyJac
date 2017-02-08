@@ -605,20 +605,45 @@ def apply_vectorization(loopy_opts, inner_ind, knl):
     knl : :class:`loopy.LoopKernel`
         The transformed kernel
     """
-    #now apply specified optimizations
-    if loopy_opts.depth is not None:
-        #and assign the l0 axis to 'i'
-        knl = lp.split_iname(knl, inner_ind, loopy_opts.depth, inner_tag='l.0')
-        #assign g0 to 'j'
-        knl = lp.tag_inames(knl, [('j', 'g.0')])
-    elif loopy_opts.width is not None:
-        #make the kernel a block of specifed width
-        knl = lp.split_iname(knl, 'j', loopy_opts.width, inner_tag='l.0')
-        #assign g0 to 'i'
-        knl = lp.tag_inames(knl, [('j_outer', 'g.0')])
+
+
+    #before doing anything, find vec width
+    #and split variable
+    vec_width = None
+    to_split = None
+    i_tag = inner_ind
+    j_tag = 'j'
+    if loopy_opts.depth:
+        to_split = inner_ind
+        vec_width = loopy_opts.depth
+        i_tag += '_outer'
+    elif loopy_opts.width:
+        to_split = 'j'
+        vec_width = loopy_opts.width
+        j_tag += '_outer'
+
+    #fix for variable too small for vectorization
+    clean = knl.copy()
+    def __ggs(insn_ids):
+        import pdb;pdb.set_trace()
+        grid_size, lsize = clean.get_grid_sizes_for_insn_ids(
+            insn_ids)
+        lsize = local_size if vec_width is None else \
+                    vec_width
+        return grid_size, vec_width
+
+    #if we're splitting
+    #apply specified optimizations
+    if to_split:
+        #and assign the l0 axis to the correct variable
+        knl = lp.split_iname(knl, to_split, vec_width, inner_tag='l.0')
+        #and tag the 'j' variable as global
+        knl = lp.tag_inames(knl, [(j_tag, 'g.0')])
+
+        #finally apply the fix above
+        knl = knl.copy(get_grid_sizes_for_insn_ids=__ggs)
 
     #now do unr / ilp
-    i_tag = inner_ind + '_outer' if loopy_opts.depth is not None else inner_ind
     if loopy_opts.unr is not None:
         knl = lp.split_iname(knl, i_tag, loopy_opts.unr, inner_tag='unr')
     elif loopy_opts.ilp:

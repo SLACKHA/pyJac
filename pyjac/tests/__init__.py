@@ -17,7 +17,7 @@ logging.getLogger('root').setLevel(logging.WARNING)
 from .. import utils
 
 #various testing globals
-test_size = 10000
+test_size = 8192 #required to be a power of 2 for the moment
 script_dir = os.path.abspath(os.path.dirname(__file__))
 build_dir = os.path.join(script_dir, 'out')
 obj_dir = os.path.join(script_dir, 'obj')

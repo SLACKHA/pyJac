@@ -781,6 +781,9 @@ class SubTest(TestClass):
         for state in oploop:
             if state['width'] is not None and state['depth'] is not None:
                 continue
+            #due to current issue interacting with loopy, can't generate deep
+            if state['depth'] is not None:
+                continue
             opts = loopy_options(**{x : state[x] for x in
                 state if x not in exceptions})
 
@@ -815,7 +818,6 @@ class SubTest(TestClass):
             #import
             pywrap = importlib.import_module('pyjac_ocl')
 
-            import pdb; pdb.set_trace()
             out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
                 np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))
             if opts.order == 'C':

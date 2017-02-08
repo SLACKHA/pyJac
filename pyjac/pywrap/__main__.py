@@ -1,7 +1,7 @@
 """Main module for pywrap module.
 """
 from argparse import ArgumentParser
-from pywrap_gen import generate_wrapper
+from .pywrap_gen import generate_wrapper
 
 from .. import utils
 

@@ -20,6 +20,8 @@ from .. import utils
 test_size = 10000
 script_dir = os.path.abspath(os.path.dirname(__file__))
 build_dir = os.path.join(script_dir, 'out')
+obj_dir = os.path.join(script_dir, 'obj')
+lib_dir = os.path.join(script_dir, 'lib')
 utils.create_dir(build_dir)
 
 class storage(object):
@@ -35,6 +37,8 @@ class storage(object):
         self.test_size = test_size
         self.script_dir = script_dir
         self.build_dir = build_dir
+        self.obj_dir = obj_dir
+        self.lib_dir = lib_dir
 
         #clean out build dir
         for f in os.listdir(build_dir):

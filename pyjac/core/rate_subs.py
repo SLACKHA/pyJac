@@ -1077,7 +1077,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
                                                         order=loopy_opts.order)
 
         #and finally the ROP values
-        rop_arr, rop_str, _ = lp_utils.get_loopy_arg('rop_{}'.format(direction),
+        rop_arr, rop_str, _ = lp_utils.get_loopy_arg('ropeval_{}'.format(direction),
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info[direction]['num'], test_size],
                         order=loopy_opts.order)
@@ -1148,7 +1148,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
                         ('inu', '0 <= inu < nu')]
 
         #and return the rateconst
-        return k_gen.knl_info(name='rop_{}'.format(direction),
+        return k_gen.knl_info(name='rop_eval_{}'.format(direction),
                        instructions=rop_instructions,
                        var_name=reac_ind,
                        kernel_data=kernel_data,
@@ -1525,7 +1525,7 @@ ${kr_val} = ${rev_eqn}
 
 
     #and return the rateinfo
-    return k_gen.knl_info(name='Kc',
+    return k_gen.knl_info(name='rateconst_Kc',
                    instructions=instructions,
                    var_name=reac_ind,
                    kernel_data=kernel_data,
@@ -1900,7 +1900,7 @@ ${kf_str} = exp10(kf_temp) {dep=kf}
                     kf_eval=str(cheb_form),
                     num_cheb=num_cheb)).safe_substitute(reac_ind=reac_ind)
 
-    return k_gen.knl_info('cheb', instructions=instructions, pre_instructions=preinstructs,
+    return k_gen.knl_info('rateconst_cheb', instructions=instructions, pre_instructions=preinstructs,
                      var_name=reac_ind, kernel_data=kernel_data, maps=maps,
                      extra_inames=extra_inames, indicies=indicies,
                      extra_subs={'reac_ind' : reac_ind})
@@ -2087,7 +2087,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     ).safe_substitute(reac_ind=reac_ind)
 
     #and return
-    return [k_gen.knl_info(name='plog', instructions=instructions,
+    return [k_gen.knl_info(name='rateconst_plog', instructions=instructions,
         pre_instructions=[k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY, k_gen.__PLOG_PREINST_KEY],
         var_name=reac_ind, kernel_data=kernel_data,
         maps=maps, extra_inames=extra_inames, indicies=indicies,
@@ -2700,15 +2700,15 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         ${beta_iter}
         """,
         **extra_args)
-    i_beta_exp = k_gen.knl_info('beta_exp{}'.format(name_mod),
+    i_beta_exp = k_gen.knl_info('rateconst_beta_exp{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(Ta_name, 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
-    i_ta_exp = k_gen.knl_info('ta_exp{}'.format(name_mod),
+    i_ta_exp = k_gen.knl_info('rateconst_ta_exp{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(b_name, 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
-    i_full = k_gen.knl_info('full{}'.format(name_mod),
+    i_full = k_gen.knl_info('rateconst_full{}'.format(name_mod),
         instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre)),
         pre_instructions=default_preinstructs,
         **extra_args)
@@ -2868,11 +2868,13 @@ def write_specrates_kernel(eqs, reacs, specs,
 
     func_manglers = []
 
-    def __add_knl(knls):
+    def __add_knl(knls, klist=None):
+        if klist is None:
+            klist = kernels
         try:
-            kernels.extend(knls)
+            klist.extend(knls)
         except:
-            kernels.append(knls)
+            klist.append(knls)
 
     #get the simple arrhenius k_gen.knl_info's
     __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
@@ -2919,22 +2921,29 @@ def write_specrates_kernel(eqs, reacs, specs,
     #add spec rates
     __add_knl(get_spec_rates(eqs, loopy_opts,
         rate_info, test_size))
+
+    external_kernels = []
     if conp:
         #get h / cp evals
-        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts))
-        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts),
+            external_kernels)
+        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts),
+            external_kernels)
     else:
         #and u / cv
-        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts))
-        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts),
+            external_kernels)
+        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts),
+            external_kernels)
     #and temperature rates
     __add_knl(get_temperature_rate(eqs, loopy_opts,
         rate_info, test_size=test_size, conp=conp))
 
     return k_gen.wrapping_kernel_generator(
             loopy_opts=loopy_opts,
-            name='spec_rates',
+            name='species_rates_kernel',
             kernels=kernels,
+            external_kernels=external_kernels,
             input_arrays=['T_arr', 'P_arr', 'conc', 'wdot'],
             output_arrays=['wdot'],
             init_arrays={'wdot' : 0,

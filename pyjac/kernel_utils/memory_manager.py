@@ -129,25 +129,21 @@ class memory_manager(object):
         #return defn string
         return '\n'.join(defns)
 
-    def get_mem_allocs(self, do_not_init=[]):
+    def get_mem_allocs(self, alloc_inputs=False):
         """
         Returns the allocation strings for this memory manager's arrays
 
         Parameters
         ----------
-        do_not_init : list of str
-            List of host arrays that do not need initialization
+        alloc_inputs : bool
+            If true, only define host arrays in self.in_arrays
 
         Returns
         alloc_str : str
             The string of memory allocations
         """
 
-        def __get_alloc(name, lang, prefix, dni=[]):
-            #check do not init
-            if name in dni:
-                assert lang == self.host_lang
-                return ''
+        def __get_alloc(name, lang, prefix):
             memflag = None
             if lang == 'opencl':
                 memflag = 'CL_MEM_READ_WRITE'
@@ -158,34 +154,41 @@ class memory_manager(object):
                 return_list.append(self.get_check_err_call('return_code'))
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
 
-        alloc_list = [__get_alloc(arr.name, self.lang, 'd_') for arr in self.arrays]
+        to_alloc = [next(x for x in self.arrays if x.name == y) for y in self.in_arrays] \
+                    if alloc_inputs else self.arrays
+        prefix = 'h_' if alloc_inputs else 'd_'
+        lang = self.lang if not alloc_inputs else self.host_lang
+        alloc_list = [__get_alloc(arr.name, lang, prefix) for arr in to_alloc]
 
         #do memsets where applicable
-        for arr in sorted(self.has_init):
-            assert arr in self.host_arrays, 'Cannot initialize device memory to a constant'
-            prefix = 'h_'
-            if arr not in self.in_arrays:
-                alloc_list.append(__get_alloc(arr, self.host_lang, prefix))
-            #find initial value
-            init_v = self.has_init[arr]
-            #find corresponding device array
-            dev_arr = next(x for x in self.arrays if x.name == arr)
-            if init_v == 0:
-                alloc_list.append(Template('memset(${prefix}${name}, 0, '
-                                    '${buff_size} * sizeof(double*))${end}').safe_substitute(
-                                    prefix=prefix,
-                                    name=arr,
-                                    buff_size=self._get_size(dev_arr),
-                                    end=utils.line_end[self.lang] + '\n'
-                                    ))
-            else:
-                alloc_list.append(Template('for(int i_setter = 0; i_setter < ${buff_size}; ++i_setter)\n'
-                                           '    ${prefix}${name}[i_setter] = ${value}${end}').safe_substitute(
+        if not alloc_inputs:
+            for arr in sorted(self.has_init):
+                assert arr in self.host_arrays, 'Cannot initialize device memory to a constant'
+                prefix = 'h_'
+                if arr not in self.in_arrays:
+                    #needs to be alloced, since it isn't passed in
+                    alloc_list.append(__get_alloc(arr, self.host_lang, prefix))
+                if not alloc_inputs:
+                    #find initial value
+                    init_v = self.has_init[arr]
+                    #find corresponding device array
+                    dev_arr = next(x for x in self.arrays if x.name == arr)
+                    if init_v == 0:
+                        alloc_list.append(Template('memset(${prefix}${name}, 0, '
+                                            '${buff_size} * sizeof(double))${end}').safe_substitute(
                                             prefix=prefix,
                                             name=arr,
                                             buff_size=self._get_size(dev_arr),
-                                            value=init_v,
-                                            end=utils.line_end[self.lang] + '\n'))
+                                            end=utils.line_end[self.lang] + '\n'
+                                            ))
+                    else:
+                        alloc_list.append(Template('for(int i_setter = 0; i_setter < ${buff_size}; ++i_setter)\n'
+                                                   '    ${prefix}${name}[i_setter] = ${value}${end}').safe_substitute(
+                                                    prefix=prefix,
+                                                    name=arr,
+                                                    buff_size=self._get_size(dev_arr),
+                                                    value=init_v,
+                                                    end=utils.line_end[self.lang] + '\n'))
 
         return '\n'.join(alloc_list)
 

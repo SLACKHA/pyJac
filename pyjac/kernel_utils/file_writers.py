@@ -5,6 +5,7 @@ Module that maintains abstract file classes that ease file I/O
 
 #system imports
 import os
+import subprocess
 
 #local imports
 from .. import utils
@@ -124,6 +125,12 @@ class FileWriter(object):
     def __exit__(self, type, value, traceback):
         self.write()
         self.file.close()
+        #try indenting w/ gnu's indent
+        try:
+            subprocess.check_call(['indent', self.name])
+        except subprocess.CalledProcessError:
+            #missing indent, no big deal
+            pass
 
     def preamble_filter(self, lines):
         #check things outside of function definitions for duplicated lines

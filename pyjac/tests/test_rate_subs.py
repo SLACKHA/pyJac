@@ -2,22 +2,28 @@
 import os
 import filecmp
 from collections import OrderedDict, defaultdict
+import importlib
 
 #local imports
 from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     get_thd_body_concs, get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel,
-    get_rev_rates, get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates, get_temperature_rate)
+    get_rev_rates, get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates, get_temperature_rate,
+    write_chem_utils)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
-    get_target, get_device_list, populate, kernel_call)
+    get_target, get_device_list, populate, kernel_call, get_context)
 from .. import kernel_utils as k_utils
 from . import TestClass
 from ..core.reaction_types import reaction_type, falloff_form, thd_body_type
 from ..kernel_utils import kernel_gen as k_gen
+from ..core.mech_auxiliary import write_mechanism_header
+from ..pywrap.pywrap_gen import generate_wrapper
+from .. import site_conf as site
 
 #modules
 from optionloop import OptionLoop
 import cantera as ct
+import pyopencl as cl
 import numpy as np
 from nose.plugins.attrib import attr
 
@@ -321,6 +327,38 @@ class SubTest(TestClass):
         assert np.allclose(result['thd']['spec_num'], thd_sp_num)
         assert np.allclose(result['thd']['spec'], thd_sp)
 
+
+    def __get_eqs_and_oploop(self, do_ratespec=False, do_ropsplit=None,
+            do_spec_per_reac=False, use_platform_instead=False, do_conp=False):
+        eqs = {'conp' : self.store.conp_eqs,
+                'conv' : self.store.conv_eqs}
+        oploop = [('lang', ['opencl']),
+            ('width', [4, None]),
+            ('depth', [4, None]),
+            ('order', ['C', 'F']),
+            ('ilp', [False]),
+            ('unr', [None, 4]),
+            ]
+        if do_ratespec:
+            oploop += [
+            ('rate_spec', [x for x in RateSpecialization]),
+            ('rate_spec_kernels', [True, False])]
+        if do_ropsplit:
+            oploop += [
+            ('rop_net_kernels', [True])]
+        if do_spec_per_reac:
+            oploop += [
+            ('spec_rates_sum_over_reac', [True, False])]
+        if use_platform_instead:
+            oploop += [('platform', ['CPU', 'GPU'])]
+        else:
+            oploop += [('device', get_device_list())]
+        if do_conp:
+            oploop += [('conp', [True, False])]
+        oploop = OptionLoop(OrderedDict(oploop))
+
+        return eqs, oploop
+
     def __generic_rate_tester(self, func, kernel_calls, do_ratespec=False, do_ropsplit=None,
             do_spec_per_reac=False, **kw_args):
         """
@@ -340,30 +378,7 @@ class SubTest(TestClass):
             If true, test species rates summing over reactions as well
         """
 
-        eqs = {'conp' : self.store.conp_eqs,
-                'conv' : self.store.conv_eqs}
-        oploop = [('lang', ['opencl']),
-            ('width', [4, None]),
-            ('depth', [4, None]),
-            ('order', ['C', 'F']),
-            ('ilp', [False]),
-            ('unr', [None, 4]),
-            ('device', get_device_list()),
-            ]
-        ratespec_loop = [
-            ('rate_spec', [x for x in RateSpecialization]),
-            ('rate_spec_kernels', [True, False])]
-        ropsplit_loop = [
-            ('rop_net_kernels', [True])]
-        spec_per_reac_loop = [
-            ('spec_rates_sum_over_reac', [True, False])]
-        if do_ratespec:
-            oploop = oploop + ratespec_loop
-        if do_ropsplit:
-            oploop = oploop + ropsplit_loop
-        if do_spec_per_reac:
-            oploop = oploop + spec_per_reac_loop
-        oploop = OptionLoop(OrderedDict(oploop))
+        eqs, oploop = self.__get_eqs_and_oploop(do_ratespec, do_ropsplit, do_spec_per_reac)
 
         reacs = self.store.reacs
         specs = self.store.specs
@@ -751,3 +766,68 @@ class SubTest(TestClass):
                             os.path.join(self.store.script_dir, 'blessed', 'spec_rates_{}_compiler.ocl'.format(postfix)))
             assert filecmp.cmp(os.path.join(self.store.build_dir, 'spec_rates_main.ocl'),
                             os.path.join(self.store.script_dir, 'blessed', 'spec_rates_{}_main.ocl'.format(postfix)))
+
+    def test_specrates(self):
+        eqs, oploop = self.__get_eqs_and_oploop(True, True, True,
+            use_platform_instead=True, do_conp=True)
+        build_dir = self.store.build_dir
+        obj_dir = self.store.obj_dir
+        lib_dir = self.store.lib_dir
+        T = self.store.T
+        P = self.store.P
+        Tdot_conp = np.reshape(self.store.conp_temperature_rates, (1, -1))
+        Tdot_conv = np.reshape(self.store.conv_temperature_rates, (1, -1))
+        exceptions = ['conp']
+        for state in oploop:
+            if state['width'] is not None and state['depth'] is not None:
+                continue
+            opts = loopy_options(**{x : state[x] for x in
+                state if x not in exceptions})
+
+            conp = state['conp']
+
+            #get arrays
+            concs = (self.store.concs.copy() if opts.order == 'F' else
+                        self.store.concs.T.copy()).flatten('K')
+            #put together species rates
+            spec_rates = np.concatenate((Tdot_conp.copy() if conp else Tdot_conv,
+                    self.store.species_rates.copy()))
+            if opts.order == 'C':
+                spec_rates = spec_rates.T.copy()
+            #and flatten in correct order
+            spec_rates = spec_rates.flatten(order='K')
+            spec_rates_test = np.zeros_like(spec_rates)
+
+            #generate kernel
+            kgen = write_specrates_kernel(eqs, self.store.reacs, self.store.specs, opts,
+                    conp=conp)
+            kgen2 = write_chem_utils(self.store.specs, eqs, opts)
+            #add deps
+            kgen.add_depencencies([kgen2])
+            #generate
+            kgen.generate(build_dir, data_filename=os.path.join(os.getcwd(), 'data.bin'))
+            #write header
+            write_mechanism_header(build_dir, opts.lang, self.store.specs, self.store.reacs)
+
+            #generate wrapper
+            generate_wrapper(opts.lang, build_dir,
+                         out_dir=lib_dir, platform='intel')
+            #import
+            pywrap = importlib.import_module('pyjac_ocl')
+
+            import pdb; pdb.set_trace()
+            out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
+                np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))
+            if opts.order == 'C':
+                out_arr = out_arr.T.copy()
+
+            out_arr.flatten('K').tofile(os.path.join(os.getcwd(), 'data.bin'))
+
+            #test species rates
+            pywrap.species_rates(np.uint32(self.store.test_size),
+                np.uint32(6), T, P, concs, spec_rates_test)
+
+            #and test
+            assert np.allclose(spec_rates, spec_rates_test)
+
+

@@ -9,16 +9,11 @@ from ..pywrap.pywrap_gen import generate_wrapper
 from .. import site_conf as site
 from optionloop import OptionLoop
 from collections import OrderedDict
+import importlib
 
 class SubTest(TestClass):
-    def __get_dirs(self):
-        build_dir = self.store.build_dir
-        out_dir = os.path.realpath(os.path.join(self.store.build_dir,
-                        os.pardir, 'lib'))
-        return build_dir, out_dir
-
     def __get_spec_lib(self, state, eqs, opts):
-        build_dir, out_dir = self.__get_dirs()
+        build_dir = self.store.build_dir
         conp = state['conp']
         kgen = write_specrates_kernel(eqs, self.store.reacs, self.store.specs, opts,
                 conp=conp)
@@ -43,18 +38,26 @@ class SubTest(TestClass):
 
     def test_compile_specrates_knl(self):
         opts, eqs, oploop = self.__get_objs()
-        build_dir, out_dir = self.__get_dirs()
+        build_dir = self.store.build_dir
+        obj_dir = self.store.obj_dir
+        lib_dir = self.store.lib_dir
         for state in oploop:
             self.__get_spec_lib(state, eqs, opts)
             #compile
-            generate_library(opts.lang, build_dir, obj_dir=None,
-                         out_dir=out_dir, shared=state['shared'],
+            generate_library(opts.lang, build_dir, obj_dir=obj_dir,
+                         build_dir=obj_dir,
+                         out_dir=lib_dir, shared=state['shared'],
                          finite_difference=False, auto_diff=False)
 
     def test_specrates_pywrap(self):
         opts, eqs, oploop = self.__get_objs()
-        build_dir, out_dir = self.__get_dirs()
+        build_dir = self.store.build_dir
+        obj_dir = self.store.obj_dir
+        lib_dir = self.store.lib_dir
         for state in oploop:
             self.__get_spec_lib(state, eqs, opts)
-            generate_wrapper(opts.lang, build_dir, out_dir,
-                extra_include_dirs=site.CL_INC_DIR)
+            #test wrapper generation
+            generate_wrapper(opts.lang, build_dir,
+                         out_dir=lib_dir)
+            #test import
+            pywrap = importlib.import_module('pyjac_ocl')

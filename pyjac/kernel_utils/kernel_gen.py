@@ -23,8 +23,13 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 
 class wrapping_kernel_generator(object):
     def __init__(self, loopy_opts, name, kernels,
-        input_arrays=[], output_arrays=[], init_arrays={},
-        test_size=None, auto_diff=False, depends_on=[],
+        external_kernels=[],
+        input_arrays=[],
+        output_arrays=[],
+        init_arrays={},
+        test_size=None,
+        auto_diff=False,
+        depends_on=[],
         array_props={}):
         """
         Parameters
@@ -35,6 +40,8 @@ class wrapping_kernel_generator(object):
             The kernel name to use
         kernels : list of :class:`loopy.LoopKernel`
             The kernels / calls to wrap
+        external_kernels : list of :class:`loopy.LoopKernel`
+            External kernels that must be called, but not implemented in this file
         input_arrays : list of str
             The names of the input arrays of this kernel
         output_arrays : list of str
@@ -59,6 +66,7 @@ class wrapping_kernel_generator(object):
         self.mem = memory_manager(self.lang)
         self.name = name
         self.kernels = kernels
+        self.external_kernels = external_kernels
         self.test_size = test_size
         self.auto_diff = auto_diff
 
@@ -69,7 +77,7 @@ class wrapping_kernel_generator(object):
         self.set_knl_arg_array_template = Template(self.mem.get_check_err_call('clSetKernelArg(kernel,'
                                         '${arg_index}, ${arg_size}, ${arg_value})'))
         self.set_knl_arg_value_template = Template(self.mem.get_check_err_call('clSetKernelArg(kernel,'
-                                        '${arg_index}, ${arg_size}, &${arg_value})'))
+                                        '${arg_index}, ${arg_size}, ${arg_value})'))
 
         self.filename = ''
         self.bin_name = ''
@@ -78,6 +86,7 @@ class wrapping_kernel_generator(object):
 
         self.depends_on = depends_on[:]
         self.array_props = array_props.copy()
+        self.all_arrays = []
 
     def add_depencencies(self, k_gens):
         """
@@ -133,7 +142,7 @@ class wrapping_kernel_generator(object):
         for x in self.depends_on:
             x._make_kernels()
 
-    def generate(self, path):
+    def generate(self, path, data_order=None, data_filename='data.bin'):
         """
         Generates wrapping kernel, compiling program (if necessary) and
         calling / executing program for this kernel
@@ -142,6 +151,12 @@ class wrapping_kernel_generator(object):
         ----------
         path : str
             The output path
+        data_order : {'C', 'F'}
+            If specified, the ordering of the binary input data
+            which may differ from the loopy order
+        data_filename : Optional[str]
+            If specified, the path to the data file for reading / execution
+            via the command line
 
         Returns
         -------
@@ -150,8 +165,9 @@ class wrapping_kernel_generator(object):
         self._make_kernels()
         self._generate_wrapping_kernel(path)
         self._generate_compiling_program(path)
-        self._generate_calling_program(path)
+        self._generate_calling_program(path, data_filename)
         self._generate_calling_header(path)
+        self._generate_common(path)
 
         #finally, copy any dependencies to the path
         lang_dir = os.path.join(script_dir, self.lang)
@@ -160,6 +176,22 @@ class wrapping_kernel_generator(object):
         for dep in deps:
             shutil.copyfile(os.path.join(lang_dir, dep),
                 os.path.join(path, dep))
+
+    def _generate_common(self, path, data_order=None):
+        if data_order is None:
+            data_order = self.loopy_opts.order
+
+        #get the initial condition reader
+        with open(os.path.join(script_dir, 'common',
+                    'read_initial_conditions.c.in'), 'r') as file:
+            file_src = Template(file.read())
+
+        with filew.get_file(os.path.join(path, 'read_initial_conditions'
+                + utils.file_ext[self.lang]), self.lang,
+                    use_filter=False) as file:
+            file.add_lines(file_src.safe_substitute(
+                mechanism='mechanism' + utils.header_ext[self.lang],
+                data_order=data_order))
 
     def _get_pass(self, argv, include_type=True):
             return '{type}h_{name}'.format(
@@ -181,7 +213,7 @@ class wrapping_kernel_generator(object):
             for a in self.mem.in_arrays]),
                 knl_name=self.name))
 
-    def _generate_calling_program(self, path):
+    def _generate_calling_program(self, path, data_filename):
         """
         Needed for all languages, this generates a simple C file that
         reads in data, sets up the kernel call, executes, etc.
@@ -190,6 +222,8 @@ class wrapping_kernel_generator(object):
         ----------
         path : str
             The output path to write files to
+        data_filename : str
+            The path to the data file for command line input
 
         Returns
         -------
@@ -238,22 +272,21 @@ ${name} : ${type}
         mem_out = self.mem.get_mem_transfers_out()
         #vec width
         vec_width = self.vec_width
-        #kernel
-        kernel_path = self.bin_name if self.bin_name else self.filename
         #platform
         platform_str = self.loopy_opts.platform.get_info(cl.platform_info.VENDOR)
         #build options
         build_options = self.build_options
         #memory allocations
-        mem_allocs = self.mem.get_mem_allocs(self.array_props['doesnt_need_init'] if 'doesnt_need_init'
-            in self.array_props else [])
+        mem_allocs = self.mem.get_mem_allocs()
+        #input allocs
+        input_allocs = self.mem.get_mem_allocs(True)
         #kernel arg setting
         kernel_arg_sets = self.get_kernel_arg_setting()
         #memory frees
         mem_frees = self.mem.get_mem_frees()
         #kernel list
-        klist = [self.bin_name] + [x.bin_name for x in self.depends_on]
-        klist = ', '.join('"{}"'.format(x) for x in klist)
+        kernel_paths = [self.bin_name] + [x.bin_name for x in self.depends_on]
+        kernel_paths = ', '.join('"{}"'.format(x) for x in kernel_paths if x.strip())
 
         #get template
         with open(os.path.join(script_dir, self.lang,
@@ -268,19 +301,20 @@ ${name} : ${type}
                     build_options=self.build_options,
                     knl_args=knl_args,
                     knl_args_doc=knl_args_doc,
+                    knl_name=self.name,
                     input_args=input_args,
                     mem_transfers_in=mem_in,
                     mem_transfers_out=mem_out,
                     vec_width=vec_width,
-                    kernels=klist,
-                    kernel_name=self.name,
+                    kernel_paths=kernel_paths,
                     mem_allocs=mem_allocs,
                     kernel_arg_set=kernel_arg_sets,
                     mem_frees=mem_frees,
                     order=self.loopy_opts.order,
                     device_type=str(self.loopy_opts.device_type),
-                    num_source=1+len(self.depends_on),
-                    knl_name=self.name
+                    num_source=1, #only 1 program / binary is built
+                    data_filename=data_filename,
+                    input_allocs=input_allocs
                     ))
 
 
@@ -299,21 +333,20 @@ ${name} : ${type}
         """
 
         kernel_arg_sets = []
-        for i, arg in enumerate(self.mem.arrays):
+        for i, arg in enumerate(self.all_arrays):
             if not isinstance(arg, lp.ValueArg):
                 kernel_arg_sets.append(
                     self.set_knl_arg_array_template.safe_substitute(
                         arg_index=i,
-                        arg_size=self.mem._get_size(arg) +
-                            ' * sizeof({})'.format(utils.type_map[arg.dtype]),
-                        arg_value='d_' + arg.name)
+                        arg_size='sizeof({})'.format('d_' + arg.name),
+                        arg_value='&d_' + arg.name)
                         )
             else:
                 kernel_arg_sets.append(
                     self.set_knl_arg_value_template.safe_substitute(
                         arg_index=i,
-                        arg_size='sizeof({})'.format(utils.type_map[arg.dtype]),
-                        arg_value='d_' + arg.name))
+                        arg_size='sizeof({})'.format(arg.name),
+                        arg_value='&' + arg.name))
 
         return '\n'.join([x + utils.line_end[self.lang] for x in kernel_arg_sets])
 
@@ -357,15 +390,18 @@ ${name} : ${type}
             file_list = [self.filename] + [x.filename for x in self.depends_on]
             file_list = ', '.join('"{}"'.format(x) for x in file_list)
 
+            self.bin_name = self.filename[:self.filename.index(
+                                utils.file_ext[self.lang])] + '.bin'
+
             with filew.get_file(os.path.join(path, self.name + '_compiler'
                                  + utils.file_ext[self.lang]),
                             self.lang, use_filter=False) as file:
                 file.add_lines(file_src.safe_substitute(
                     filenames=file_list,
-                    outname=self.filename + '.bin',
+                    outname=self.bin_name,
                     platform=platform_str,
                     build_options=self.build_options,
-                    num_source=1+len(self.depends_on)
+                    num_source=1+len(self.depends_on) #compiler expects all source strings
                     ))
 
 
@@ -402,9 +438,20 @@ ${name} : ${type}
             file_str = file.read()
             file_src = Template(file_str)
 
+        #Find the list of all arguements needed for this kernel
+        #this may change in the future
+
         kernel_data = []
-        #turn various needed into ours
-        defines = [arg for knl in self.kernels for arg in knl.args if
+        #need to find mapping of externel kernels to depends
+        extern_generated_knls = []
+        for x in self.external_kernels:
+            knl = next((y for dep in self.depends_on for y in dep.kernels if y.name == x.name), None)
+            assert knl, 'Cannot find external kernel {} in any dependencies'.format(x.name)
+            extern_generated_knls.append(knl)
+
+        #now scan through all our (and externel) kernels
+        #and compile the args
+        defines = [arg for knl in self.kernels + extern_generated_knls for arg in knl.args if
                         not isinstance(arg, lp.TemporaryVariable)]
         nameset = sorted(set(d.name for d in defines))
         args = []
@@ -416,6 +463,7 @@ ${name} : ${type}
             same_name.read_only = False
             kernel_data.append(same_name)
 
+        self.all_arrays = kernel_data[:]
         self.mem.add_arrays(kernel_data)
 
         #generate the kernel definition
@@ -452,14 +500,8 @@ ${name} : ${type}
     """            ).safe_substitute(cond=condition, call=call)
             return call
 
-        conditions = [None for knl in self.kernels]
-        for i in range(len(self.kernels)):
-            conditions[i] = next((x for x in ['conp', 'conv']
-                                    if x in self.kernels[i].name), None)
-            if conditions[i]:
-                conditions[i] = conditions[i].upper()
-        instructions = '\n'.join(__gen_call(knl, i, conditions[i])
-            for i, knl in enumerate(self.kernels))
+        instructions = '\n'.join(__gen_call(knl, i)
+            for i, knl in enumerate(self.kernels + extern_generated_knls))
 
         #and finally, generate the additional kernels
         additional_kernels = '\n'.join([lp_utils.get_code(k) for k in self.kernels])
@@ -467,8 +509,7 @@ ${name} : ${type}
         self.filename = os.path.join(path,
                             self.file_prefix + self.name + utils.file_ext[self.lang])
         #create the file
-        with filew.get_file(self.filename, self.lang, include_own_header=True,
-                                use_filter=False) as file:
+        with filew.get_file(self.filename, self.lang, include_own_header=True) as file:
             instructions = _find_indent(file_str, 'body', instructions)
             lines = file_src.safe_substitute(
                         defines='',
@@ -479,6 +520,8 @@ ${name} : ${type}
             if self.auto_diff:
                 lines = [x.replace('double', 'adouble') for x in lines]
             file.add_lines(lines)
+            if self.depends_on:
+                file.add_headers([x.name for x in self.depends_on])
 
         #and the header file
         headers = [lp_utils.get_header(knl) + utils.line_end[self.lang]

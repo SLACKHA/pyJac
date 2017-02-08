@@ -9,11 +9,10 @@ and https://www.fixstars.com/en/opencl/book/OpenCLProgrammingBook/calling-the-ke
 Nicholas Curtis - 2017
 */
 
-#include "${kernel_name}.h"
+#include "${knl_name}.h"
 
-void read_initial_conditions(const char* filename, int NUM, double** T_host,
-                                double** conc_host, double** var_host,
-                                const char order);
+void read_initial_conditions(const char* filename, unsigned int NUM, double* T_host,
+                                double* P_host, double* conc_host, const char order);
 
 //global kernel vars
 cl_kernel kernel = NULL;
@@ -69,7 +68,7 @@ void mem_init(cl_uint problem_size)
     ${mem_allocs}
 
     /* Create OpenCL Kernel */
-    kernel = clCreateKernel(program, "${kernel_name}", &return_code);
+    kernel = clCreateKernel(program, "${knl_name}", &return_code);
     check_err(return_code);
 
     /* Kernel arg setting */
@@ -96,7 +95,7 @@ void init(cl_uint problem_size, cl_uint num_devices)
     cl_uint num_cores;
     cl_int return_code;
 
-    char* kernel_paths[${num_source}] = {${kernels}};
+    char* kernel_paths[${num_source}] = {${kernel_paths}};
     char* platform_check = "${platform}";
     char* build_options = "${build_options}";
     size_t source_sizes[${num_source}];
@@ -227,7 +226,7 @@ void init(cl_uint problem_size, cl_uint num_devices)
           check_err(return_code);
     }
 
-    for(int i = 0; i <= ${num_source}; ++i)
+    for(int i = 0; i < ${num_source}; ++i)
         free(source_bins[i]);
 
     mem_init(problem_size);
@@ -305,15 +304,13 @@ int main(int argc, char* argv[])
     cl_uint problem_size = atoi(argv[1]);
     cl_uint num_devices = atoi(argv[2]);
 
-    h_T_arr = (double*)malloc(problem_size * sizeof(double));
-    h_P_arr = (double*)malloc(problem_size * sizeof(double));
-    h_conc = (double*)malloc(problem_size * NS * sizeof(double));
+    ${input_allocs}
 
     //init memory & program
     init(problem_size, num_devices);
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
-                                &h_T_arr, &h_conc, &h_P_arr,
+                                h_T_arr, h_P_arr, h_conc,
                                 '${order}');
 
     execute_kernel(problem_size, ${input_args});

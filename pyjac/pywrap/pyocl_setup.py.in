@@ -1,0 +1,30 @@
+from distutils.core import setup, Extension
+import distutils.ccompiler
+
+from Cython.Distutils import build_ext
+from Cython.Build import cythonize
+import parallel_compiler as pcc
+import numpy
+import os
+
+sources = ['$homepath/pyocl_wrapper.pyx']
+includes = ['$buildpath/', '$homepath/'] + [${extra_include_dirs}]
+includes = [x for x in includes if x.strip()]
+
+distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
+
+ext_modules=[Extension("pyjac_ocl",
+     sources=sources,
+     include_dirs=includes + [numpy.get_include()],
+     language='c',
+     extra_objects=[os.path.join('$outpath', '$libname')],
+     libraries=[${libs}],
+     library_dirs=[${libdirs}],
+     extra_compile_args=['-O0', '-g']
+     )]
+
+setup(
+    name='pyjac_ocl',
+    ext_modules=ext_modules,
+    cmdclass={'build_ext': build_ext}
+)

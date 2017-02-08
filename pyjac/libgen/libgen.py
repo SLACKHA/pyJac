@@ -41,9 +41,10 @@ shared_flags = dict(c=['-fPIC'],
                     opencl=['-fPIC'],
                     cuda=['-Xcompiler', '"-fPIC"']
                     )
+opt_flags = ['-O0', '-g'] #['-O3']
 
-flags = dict(c=site.CC_FLAGS + ['-fopenmp', '-std=c99'],
-             opencl=site.CL_FLAGS + ['-xc', '-std=c99'])
+flags = dict(c=site.CC_FLAGS + opt_flags + ['-fopenmp', '-std=c99'],
+             opencl=site.CL_FLAGS + opt_flags + ['-xc', '-std=c99'])
 
 libs = dict(c=['-lm', '-fopenmp'],
             opencl=['-l' + x for x in site.CL_LIBNAME]
@@ -280,10 +281,11 @@ def get_file_list(source_dir, lang, FD=False, AD=False):
         files = ['ad_spec_rates']
         return i_dirs, files
 
+    files = ['read_initial_conditions']
     if lang == 'opencl':
-        files = ['spec_rates_compiler', 'spec_rates_main', 'ocl_errorcheck']
+        files += ['species_rates_kernel_compiler', 'species_rates_kernel_main', 'ocl_errorcheck']
     else:
-        files = ['spec_rates']
+        files += ['species_rates']
 
     #if FD:
         #files += ['fd_jacob']

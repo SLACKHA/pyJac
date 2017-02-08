@@ -4,9 +4,9 @@
 
 ${defines}
 
+${additional_kernels}
+
 ${func_define}
 {
     ${body}
 }
-
-${additional_kernels}

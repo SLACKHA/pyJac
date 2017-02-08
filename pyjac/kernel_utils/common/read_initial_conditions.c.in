@@ -1,0 +1,50 @@
+#include "${mechanism}"
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/time.h>
+
+const char data_order = '${data_order}';
+
+void read_initial_conditions(const char* filename, unsigned int NUM, double* T_host, double* P_host,
+    double* conc_host, const char order) {
+    FILE *fp = fopen (filename, "rb");
+    if (fp == NULL)
+    {
+        fprintf(stderr, "Could not open file: %s\\\n", filename);
+        exit(-1);
+    }
+    double buffer[NN + 2];
+
+    // load temperature, pressure and concentrations for all (cells)
+    for (int i = 0; i < NUM; ++i)
+    {
+        // read line from data file
+        int count = fread(buffer, sizeof(double), NN + 2, fp);
+        if (count != (NN + 2))
+        {
+            fprintf(stderr, "File (%s) is incorrectly formatted, %d doubles were expected but only %d were read.\\n", filename, NN + 1, count);
+            exit(-1);
+        }
+
+        //fill T_host, P_host
+        T_host[i] = buffer[0];
+        P_host[i] = buffer[1];
+
+        for (int j = 0; j < NS; j++)
+        {
+            if (order != data_order)
+            {
+                //need to transpose for conc array
+                //instead of sequential value, these will go every NSP
+                conc_host[j * NS + i] = buffer[j + 2];
+            }
+            else
+            {
+                conc_host[i * NS + j] = buffer[j + 2];
+            }
+        }
+
+    }
+    fclose (fp);
+}

@@ -106,28 +106,32 @@ void compiler()
 
     //get # of programs
     size_t num_prog;
+    size_t expected_progs = 1;
     check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), NULL, &num_prog));
     num_prog /= sizeof(size_t);
-    assert(num_prog == ${num_source});
+    assert(num_prog == expected_progs);
 
     //get program size
-    size_t bin_size[${num_source}];
+    size_t bin_size[expected_progs];
     check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, num_prog * sizeof(size_t), bin_size, NULL));
 
     //get binary
-    unsigned char* binary[${num_source}];
-    for (int i = 0; i < ${num_source}; ++i)
+    unsigned char* binary[expected_progs];
+    for (int i = 0; i < expected_progs; ++i)
         binary[i] = (unsigned char*)malloc(bin_size[i]);
-    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARIES, num_prog * sizeof(unsigned char*), binary, NULL));
+    check_err(clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(binary), binary, NULL));
 
-    for (int i = 0; i < ${num_source}; ++i)
+    for (int i = 0; i < expected_progs; ++i)
     {
         // Then write binary to file
         fp = fopen(outname, "wb");
         if (!fp) {
             exit(-1);
         }
-        assert(fwrite(binary[i], bin_size[i], 1, fp) == 1);
+        size_t bytes = bin_size[i] / sizeof(unsigned char);
+        assert(fwrite(binary[i], sizeof(unsigned char), bytes, fp) == bytes);
+        //close file
+        fclose(fp);
         free(binary[i]);
         free(source_str[i]);
     }

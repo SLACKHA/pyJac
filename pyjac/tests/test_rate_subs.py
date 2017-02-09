@@ -827,7 +827,7 @@ class SubTest(TestClass):
 
             #test species rates
             pywrap.species_rates(np.uint32(self.store.test_size),
-                np.uint32(6), T, P, concs, spec_rates_test)
+                np.uint32(1), T, P, concs, spec_rates_test)
 
             #and test
             assert np.allclose(spec_rates, spec_rates_test)

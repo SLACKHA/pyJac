@@ -280,10 +280,14 @@ ${name} : ${type}
         mem_allocs = self.mem.get_mem_allocs()
         #input allocs
         input_allocs = self.mem.get_mem_allocs(True)
+        #local inputs
+        local_inputs = ', '.join([x + '_local' for x in self.mem.in_arrays])
         #kernel arg setting
         kernel_arg_sets = self.get_kernel_arg_setting()
         #memory frees
         mem_frees = self.mem.get_mem_frees()
+        #input frees
+        input_frees = self.mem.get_mem_frees(True)
         #kernel list
         kernel_paths = [self.bin_name] + [x.bin_name for x in self.depends_on]
         kernel_paths = ', '.join('"{}"'.format(x) for x in kernel_paths if x.strip())
@@ -310,6 +314,8 @@ ${name} : ${type}
                     mem_allocs=mem_allocs,
                     kernel_arg_set=kernel_arg_sets,
                     mem_frees=mem_frees,
+                    input_frees=input_frees,
+                    local_inputs=local_inputs,
                     order=self.loopy_opts.order,
                     device_type=str(self.loopy_opts.device_type),
                     num_source=1, #only 1 program / binary is built

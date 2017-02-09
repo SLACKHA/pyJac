@@ -271,13 +271,14 @@ class memory_manager(object):
 
         return self._mem_transfers(to_device=False)
 
-    def get_mem_frees(self):
+    def get_mem_frees(self, free_inputs=False):
         """
         Returns code to free the allocated buffers
 
         Parameters
         ----------
-        None
+        free_inputs : bool
+            If true, we're freeing the local version of the input arrays
 
         Returns
         -------
@@ -285,13 +286,17 @@ class memory_manager(object):
             The generated code
         """
 
-        #device memory
-        frees = [self.get_check_err_call(self.free_template[self.lang].safe_substitute(
-            name='d_' + arr.name)) for arr in self.arrays]
+        if not free_inputs:
+            #device memory
+            frees = [self.get_check_err_call(self.free_template[self.lang].safe_substitute(
+                name='d_' + arr.name)) for arr in self.arrays]
 
-        #host memory
-        frees.extend(
-            [self.free_template[self.host_lang].safe_substitute(
-                name='h_' + arr) for arr in self.host_arrays])
+            #host memory
+            frees.extend(
+                [self.free_template[self.host_lang].safe_substitute(
+                    name='h_' + arr) for arr in self.host_inits])
+        else:
+            frees = [self.free_template[self.host_lang].safe_substitute(
+                    name='h_' + arr) for arr in self.in_arrays]
 
         return '\n'.join([x + utils.line_end[self.lang] for x in sorted(set(frees))])

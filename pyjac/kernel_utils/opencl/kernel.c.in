@@ -310,10 +310,12 @@ int main(int argc, char* argv[])
     init(problem_size, num_devices);
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
-                                h_T_arr, h_P_arr, h_conc,
+                                ${local_args},
                                 '${order}');
 
     execute_kernel(problem_size, ${input_args});
+
+    ${input_frees}
 
     finalize();
 }

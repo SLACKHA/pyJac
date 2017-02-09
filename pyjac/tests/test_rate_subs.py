@@ -4,6 +4,7 @@ import filecmp
 from collections import OrderedDict, defaultdict
 from string import Template
 import subprocess
+import sys
 
 #local imports
 from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
@@ -847,20 +848,24 @@ class SubTest(TestClass):
             with open(os.path.join(lib_dir, 'test.py'), 'w') as file:
                 file.write(mod_test.safe_substitute(
                     package='pyjac_ocl',
-                    input_args=', '.join('{}'.format(x) for x in args),
-                    test_arrays=', '.join('{}'.format(x) for x in tests),
-                    non_array_args='{}, 6'.format(self.store.test_size)))
+                    input_args=', '.join('"{}"'.format(x) for x in args),
+                    test_arrays=', '.join('"{}"'.format(x) for x in tests),
+                    non_array_args='{}, 6'.format(self.store.test_size),
+                    call_name='species_rates'))
 
             #and call
             try:
-                subprocess.check_call([os.path.join(lib_dir, 'test.py')])
+                subprocess.check_call([
+                    'python{}.{}'.format(sys.version_info[0], sys.version_info[1]),
+                    os.path.join(lib_dir, 'test.py')])
             except:
                 assert False
             finally:
+                pass
                 #cleanup
-                for x in args + tests:
-                    os.remove(x)
-                os.remove(os.path.join(lib_dir, 'test.py'))
+                #for x in args + tests:
+                #    os.remove(x)
+                #os.remove(os.path.join(lib_dir, 'test.py'))
 
             # out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
             #     np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))

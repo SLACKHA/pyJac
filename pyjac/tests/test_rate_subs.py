@@ -588,7 +588,7 @@ class SubTest(TestClass):
         lind_mask = np.where(np.in1d(self.store.fall_inds, self.store.lind_inds))[0]
         #create the kernel call
         kc = kernel_call('fall_lind', {},
-                                    compare_mask=lind_mask, **args)
+                                    compare_mask=lind_mask)
         self.__generic_rate_tester(get_lind_kernel, kc)
 
     @attr('long')
@@ -602,7 +602,7 @@ class SubTest(TestClass):
 
         #create the kernel call
         kc = kernel_call('Kc', [ref_kc, ref_rev],
-                                    out_mask=[0, 1])
+                                    out_mask=[0, 1], **args)
 
         self.__generic_rate_tester(get_rev_rates, kc)
 

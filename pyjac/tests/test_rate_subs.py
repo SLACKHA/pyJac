@@ -608,7 +608,6 @@ class SubTest(TestClass):
 
     @attr('long')
     def test_pressure_mod(self):
-        ref_fwd_rates = self.store.fwd_rate_constants.copy()
         ref_pres_mod = self.store.ref_pres_mod.copy()
         ref_Pr = self.store.ref_Pr.copy()
         ref_Fi = self.store.ref_Fall.copy()

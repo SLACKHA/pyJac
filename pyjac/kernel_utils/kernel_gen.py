@@ -577,37 +577,6 @@ ${name} : ${type}
                 lines = [x.replace('double', 'adouble') for x in lines]
             file.add_lines(lines)
 
-    def _find_indent(template_str, key, value):
-        """
-        Finds and returns a formatted value containing the appropriate
-        whitespace to put 'value' in place of 'key' for template_str
-
-        Parameters
-        ----------
-        template_str : str
-            The string to sub into
-        key : str
-            The key in the template string
-        value : str
-            The string to format
-
-        Returns
-        -------
-        formatted_value : str
-            The formatted string
-        """
-
-        #find the instance of ${key} in kernel_str
-        whitespace = None
-        for i, line in enumerate(template_str.split('\n')):
-            if key in line:
-                #get whitespace
-                whitespace = re.match(r'\s*', line).group()
-                break
-        result = [line if i == 0 else whitespace + line for i, line in
-                    enumerate(textwrap.dedent(value).splitlines())]
-        return '\n'.join(result)
-
     def make_kernel(self, info, target, test_size):
         """
         Convience method to create loopy kernels from kernel_info
@@ -947,3 +916,34 @@ def create_function_mangler(kernel, return_dtypes=()):
             dtypes.append(arg.dtype)
     mg = MangleGen(kernel.name, tuple(dtypes), return_dtypes)
     return mg.__call__
+
+def _find_indent(template_str, key, value):
+    """
+    Finds and returns a formatted value containing the appropriate
+    whitespace to put 'value' in place of 'key' for template_str
+
+    Parameters
+    ----------
+    template_str : str
+        The string to sub into
+    key : str
+        The key in the template string
+    value : str
+        The string to format
+
+    Returns
+    -------
+    formatted_value : str
+        The formatted string
+    """
+
+    #find the instance of ${key} in kernel_str
+    whitespace = None
+    for i, line in enumerate(template_str.split('\n')):
+        if key in line:
+            #get whitespace
+            whitespace = re.match(r'\s*', line).group()
+            break
+    result = [line if i == 0 else whitespace + line for i, line in
+                enumerate(textwrap.dedent(value).splitlines())]
+    return '\n'.join(result)

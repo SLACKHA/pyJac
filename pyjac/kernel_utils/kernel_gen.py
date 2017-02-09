@@ -648,7 +648,7 @@ ${name} : ${type}
             if self.loopy_opts.depth or self.loopy_opts.width:
                 vec_width = self.loopy_opts.depth if self.loopy_opts.depth else self.loopy_opts.width
             if vec_width:
-                assumptions.append(' and {0} mod {1} = 0'.format(
+                assumptions.append('{0} mod {1} = 0'.format(
                     test_size, vec_width))
 
         for iname, irange in info.extra_inames:

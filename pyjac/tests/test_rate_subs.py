@@ -814,10 +814,6 @@ class SubTest(TestClass):
             #generate kernel
             kgen = write_specrates_kernel(eqs, self.store.reacs, self.store.specs, opts,
                     conp=conp)#, test_size=self.store.test_size)
-            kgen2 = write_chem_utils(self.store.specs, eqs, opts)#,
-                #test_size=self.store.test_size)
-            #add deps
-            kgen.add_depencencies([kgen2])
             #generate
             kgen.generate(build_dir, data_filename=os.path.join(os.getcwd(), 'data.bin'))
             #write header

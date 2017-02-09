@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
     ${input_allocs}
 
     //init memory & program
-    init(problem_size, num_devices${input_initialized_args});
+    init(problem_size, num_devices${input_initialized_args_local});
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
                                 ${read_args},

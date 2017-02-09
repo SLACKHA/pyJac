@@ -277,8 +277,14 @@ ${name} : ${type}
         input_initialized_args = ', ' + ', '.join([
             self._get_pass(next(x for x in self.mem.arrays if x.name == a), False)
             for a in self.mem.in_arrays if a in self.mem.has_init])
+        #and the type included form thereof (for defn's)
         input_initialized_args_defn = ', ' + ', '.join([
             self._get_pass(next(x for x in self.mem.arrays if x.name == a))
+            for a in self.mem.in_arrays if a in self.mem.has_init])
+        #and finally the local versions
+        input_initialized_args_local = ', ' + ', '.join([
+            self._get_pass(next(x for x in self.mem.arrays if x.name == a), False,
+                '_local')
             for a in self.mem.in_arrays if a in self.mem.has_init])
         #memory transfers in
         mem_in = self.mem.get_mem_transfers_in()
@@ -325,6 +331,7 @@ ${name} : ${type}
                     local_input_args=local_input_args,
                     input_initialized_args=input_initialized_args,
                     input_initialized_args_defn=input_initialized_args_defn,
+                    input_initialized_args_local=input_initialized_args_local,
                     mem_transfers_in=mem_in,
                     mem_transfers_out=mem_out,
                     vec_width=vec_width,

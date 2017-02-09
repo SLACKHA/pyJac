@@ -1630,9 +1630,13 @@ def get_thd_body_concs(eqs, loopy_opts, rate_info, test_size=None):
     thd_offset_lp, thd_offset_str = __1Dcreator('thd_offset', offsets)
 
     #kernel data
-    kernel_data = [T_arr, P_arr, concs_lp, thd_lp, thd_type_lp,
+    kernel_data = []
+    if test_size == 'problem_size':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+
+    kernel_data.extend([T_arr, P_arr, concs_lp, thd_lp, thd_type_lp,
                    thd_eff_lp, thd_spec_lp, thd_num_spec_lp, thd_offset_lp,
-                   thd_eff_ns_lp]
+                   thd_eff_ns_lp])
 
     #maps
     out_map = {}

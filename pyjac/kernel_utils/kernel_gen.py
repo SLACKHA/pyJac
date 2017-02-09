@@ -274,8 +274,12 @@ ${name} : ${type}
         knl_args_doc = '\n'.join(knl_args_doc)
         #these are args passed in (from main, or python)
         #that require initialization, and hence must be passed to mem_init
-        input_initialized_args = ', '.join([x for x in self.mem.in_arrays
-            if x in self.mem.has_init])
+        input_initialized_args = ', ' + ', '.join([
+            self._get_pass(next(x for x in self.mem.arrays if x.name == a), False)
+            for a in self.mem.in_arrays if a in self.mem.has_init])
+        input_initialized_args_defn = ', ' + ', '.join([
+            self._get_pass(next(x for x in self.mem.arrays if x.name == a))
+            for a in self.mem.in_arrays if a in self.mem.has_init])
         #memory transfers in
         mem_in = self.mem.get_mem_transfers_in()
         #memory transfers out
@@ -320,6 +324,7 @@ ${name} : ${type}
                     input_args=input_args,
                     local_input_args=local_input_args,
                     input_initialized_args=input_initialized_args,
+                    input_initialized_args_defn=input_initialized_args_defn,
                     mem_transfers_in=mem_in,
                     mem_transfers_out=mem_out,
                     vec_width=vec_width,

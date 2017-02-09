@@ -61,7 +61,7 @@ Parameters
 problem_size : cl_uint
     The number of conditions to execute for
 */
-void mem_init(cl_uint problem_size)
+void mem_init(cl_uint problem_size${input_initialized_args_defn})
 {
     cl_int return_code;
     /* Alloc buffers */
@@ -86,7 +86,7 @@ num_devices : uint
     The number of devices to use.  If for GPUs/accelerators, this is the # of GPUs to use
     If for CPUs, this is the number of logical cores to use
 */
-void init(cl_uint problem_size, cl_uint num_devices, ${input_initialized_args})
+void init(cl_uint problem_size, cl_uint num_devices${input_initialized_args_defn})
 {
     cl_platform_id platform_id[NUM_PLATFORMS];
     cl_device_id device_ids[MAX_DEVICE];
@@ -229,7 +229,7 @@ void init(cl_uint problem_size, cl_uint num_devices, ${input_initialized_args})
     for(int i = 0; i < ${num_source}; ++i)
         free(source_bins[i]);
 
-    mem_init(problem_size, ${input_initialized_args});
+    mem_init(problem_size${input_initialized_args});
 }
 
 /*
@@ -277,11 +277,11 @@ void ${knl_name}(cl_uint problem_size, cl_uint num_devices,
     {
         //check to see if the problem size changed, if so we need to realloc memory
         newsize_finalize();
-        mem_init(problem_size, ${input_initialized_args});
+        mem_init(problem_size${input_initialized_args});
     }
     if(!${knl_name}_init)
     {
-        init(problem_size, num_devices, ${input_initialized_args});
+        init(problem_size, num_devices${input_initialized_args});
         ${knl_name}_init = true;
     }
     execute_kernel(problem_size, ${input_args});
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
     ${input_allocs}
 
     //init memory & program
-    init(problem_size, num_devices);
+    init(problem_size, num_devices${input_initialized_args});
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
                                 ${read_args},

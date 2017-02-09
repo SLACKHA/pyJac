@@ -457,8 +457,8 @@ ${name} : ${type}
         None
         """
 
-        assert all(isinstance(x, lp.LoopKernel) or x in self.external_kernels for x in self.kernels), (
-            'Cannot generate wrapper before calling _make_kernels')
+        assert all(isinstance(x, lp.LoopKernel) or next((y for y in self.external_kernels if x.name == y.name), None)
+            for x in self.kernels), 'Cannot generate wrapper before calling _make_kernels'
 
         if self.depends_on:
             #generate wrappers for dependencies

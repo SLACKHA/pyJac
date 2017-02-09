@@ -275,6 +275,8 @@ def assign_rates(reacs, specs, rate_spec):
     blend_type = np.array([next(int(y) for y in x.type if isinstance(
         y, falloff_form)) for x in fall_reacs], dtype=np.int32)
     #seperate parameters based on blending type
+    #lindeman
+    lind_map = np.where(blend_type == int(falloff_form.lind))[0].astype(dtype=np.int32)
     #sri
     sri_map = np.where(blend_type == int(falloff_form.sri))[0].astype(dtype=np.int32)
     sri_reacs = [reacs[fall_map[i]] for i in sri_map]
@@ -352,6 +354,9 @@ def assign_rates(reacs, specs, rate_spec):
                      'T1' : troe_T1,
                      'T2' : troe_T2
                     }
+                'lind':
+                    {'map' : lind_map
+                     'num' : lind_map.size}
                 },
             'thd' : {'map' : thd_map, 'num' : num_thd,
                 'type' : thd_type, 'spec_num' : thd_spec_num,

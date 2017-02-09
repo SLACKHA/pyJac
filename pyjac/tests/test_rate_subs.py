@@ -602,7 +602,7 @@ class SubTest(TestClass):
 
         #create the kernel call
         kc = kernel_call('Kc', [ref_kc, ref_rev],
-                                    out_mask=[0, 1], **args)
+                                    out_mask=[0, 1])
 
         self.__generic_rate_tester(get_rev_rates, kc)
 

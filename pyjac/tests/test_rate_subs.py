@@ -849,7 +849,7 @@ class SubTest(TestClass):
                     package='pyjac_ocl',
                     input_args=', '.join('{}'.format(x) for x in args),
                     test_arrays=', '.join('{}'.format(x) for x in tests),
-                    non_array_args='{}, 6'.format(self..store.test_size)))
+                    non_array_args='{}, 6'.format(self.store.test_size)))
 
             #and call
             try:

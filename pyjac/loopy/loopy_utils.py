@@ -347,7 +347,7 @@ class kernel_call(object):
 
         self.kernel_args = args_copy
         self.transformed_ref_ans = [ans.T.copy() if order == 'C' else ans.copy()
-            for ans in self.ref_answer ]
+            for ans in self.ref_answer]
 
 
     def __call__(self, knl, queue):

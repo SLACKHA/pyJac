@@ -587,7 +587,7 @@ class SubTest(TestClass):
         #get lindeman reaction mask
         lind_mask = np.where(np.in1d(self.store.fall_inds, self.store.lind_inds))[0]
         #create the kernel call
-        kc = kernel_call('fall_lind', {},
+        kc = kernel_call('fall_lind', ref_ans,
                                     compare_mask=lind_mask)
         self.__generic_rate_tester(get_lind_kernel, kc)
 

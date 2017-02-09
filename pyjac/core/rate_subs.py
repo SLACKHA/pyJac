@@ -2917,7 +2917,7 @@ def write_specrates_kernel(eqs, reacs, specs,
             rate_info, test_size=test_size, falloff=True))
         #and the reduced pressure
         __add_knl(get_reduced_pressure_kernel(eqs, loopy_opts,
-            rate_info, test_size=test_size, falloff=True))
+            rate_info, test_size=test_size))
         #and finally any blending functions (depend on reduced pressure)
         if rate_info['fall']['troe']['num']:
             __add_knl(get_troe_kernel(eqs, loopy_opts,

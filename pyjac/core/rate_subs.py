@@ -2926,13 +2926,17 @@ def write_specrates_kernel(eqs, reacs, specs,
     external_kernels = []
     if conp:
         #get h / cp evals
-        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts))
-        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts,
+            test_size))
+        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts,
+            test_size))
         external_kernels.extend(kernels[-2:])
     else:
         #and u / cv
-        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts))
-        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts,
+            test_size))
+        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts,
+            test_size))
         external_kernels.extend(kernels[-2:])
     #and temperature rates
     __add_knl(get_temperature_rate(eqs, loopy_opts,
@@ -3157,7 +3161,7 @@ def write_chem_utils(specs, eqs, loopy_opts,
     for nicename in nicenames:
         eq = conp_eqs if nicename in ['h', 'cp'] else conv_eqs
         kernels.append(polyfit_kernel_gen(nicename,
-            eq, specs, loopy_opts))
+            eq, specs, loopy_opts, test_size))
 
     return k_gen.wrapping_kernel_generator(
         loopy_opts=loopy_opts,

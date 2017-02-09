@@ -831,7 +831,7 @@ class SubTest(TestClass):
             #save args to dir
             def __saver(arr, name, namelist):
                 myname = os.path.join(lib_dir, name + '.npy')
-                np.save(arr, myname)
+                np.save(myname, arr)
                 namelist.append(myname)
 
             args = []

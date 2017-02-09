@@ -113,7 +113,7 @@ void init(cl_uint problem_size, cl_uint num_devices${input_initialized_args_defn
 
         //read file
         source_bins[i] = (unsigned char*)malloc(source_sizes[i]);
-        assert(fread(source_bins[i], 1, source_sizes[i], fp) == source_sizes[i], "Error reading source binary...");
+        cassert(fread(source_bins[i], 1, source_sizes[i], fp) == source_sizes[i], "Error reading source binary...");
         fclose(fp);
     }
 
@@ -156,7 +156,7 @@ void init(cl_uint problem_size, cl_uint num_devices${input_initialized_args_defn
         cl_uint num_compute;
         //first get the maximum number of sub partitions (i.e. logical threads)
         check_err(clGetDeviceInfo(device_ids[0], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(num_compute), &num_compute, NULL));
-        assert(num_cores <= num_compute &&
+        cassert(num_cores <= num_compute &&
                 num_cores <= MAX_CORES, "Too many cores used...");
 
         //ok, now we know we're ok
@@ -181,7 +181,7 @@ void init(cl_uint problem_size, cl_uint num_devices${input_initialized_args_defn
     }
 
     //for the moment, limit to one device
-    assert(ret_num_devices == 1, "Currently limited to a single device");
+    cassert(ret_num_devices == 1, "Currently limited to a single device");
 
     //create context
     context = clCreateContext(NULL, ret_num_devices, &device_ids[0], NULL, NULL, &return_code);
@@ -285,7 +285,7 @@ int main(int argc, char* argv[])
 {
 
     //check args
-    assert(argc >= 3, "Missing arguements...");
+    cassert(argc >= 3, "Missing arguements...");
 
     //arglist is:
     //#0 - the program name

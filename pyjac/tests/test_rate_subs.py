@@ -9,7 +9,7 @@ from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates
     get_simple_arrhenius_rates, get_plog_arrhenius_rates, get_cheb_arrhenius_rates,
     get_thd_body_concs, get_reduced_pressure_kernel, get_sri_kernel, get_troe_kernel,
     get_rev_rates, get_rxn_pres_mod, get_rop, get_rop_net, get_spec_rates, get_temperature_rate,
-    write_chem_utils)
+    write_chem_utils, get_lind_kernel)
 from ..loopy.loopy_utils import (auto_run, loopy_options, RateSpecialization, get_code,
     get_target, get_device_list, populate, kernel_call, get_context)
 from .. import kernel_utils as k_utils
@@ -580,6 +580,16 @@ class SubTest(TestClass):
         kc = kernel_call('fall_troe', ref_ans, out_mask=[0],
                                     compare_mask=troe_mask, **args)
         self.__generic_rate_tester(get_troe_kernel, kc)
+
+    @attr('long')
+    def test_lind_falloff(self):
+        ref_ans = self.store.ref_Lind.copy()
+        #get lindeman reaction mask
+        lind_mask = np.where(np.in1d(self.store.fall_inds, self.store.lind_inds))[0]
+        #create the kernel call
+        kc = kernel_call('fall_lind', {},
+                                    compare_mask=lind_mask, **args)
+        self.__generic_rate_tester(get_lind_kernel, kc)
 
     @attr('long')
     def test_rev_rates(self):

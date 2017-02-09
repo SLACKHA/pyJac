@@ -2582,6 +2582,70 @@ ${X_str} = X_temp
                      maps=maps,
                      extra_subs={'reac_ind' : reac_ind})]
 
+def get_lind_kernel(eqs, loopy_opts, rate_info, test_size=None):
+    """Generates instructions, kernel arguements, and data for the Lindeman
+    falloff evaluation kernel
+
+    Parameters
+    ----------
+    eqs : dict
+        Sympy equations / variables for constant pressure / constant volume systems
+    loopy_opts : `loopy_options` object
+        A object containing all the loopy options to execute
+    rate_info : dict
+        The output of :method:`assign_rates` for this mechanism
+    test_size : int
+        If not none, this kernel is being used for testing.
+        Hence we need to size the arrays accordingly
+
+    Returns
+    -------
+    rate_list : list of :class:`knl_info`
+        The generated infos for feeding into the kernel generator
+
+    """
+
+    #set of equations is irrelevant for non-derivatives
+    conp_eqs = eqs['conp']
+    reac_ind = 'i'
+
+    kernel_data = []
+
+    if test_size == 'problem_size':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+
+    #figure out if we need to do any mapping of the input variable
+    out_map = {}
+    outmap_name = 'out_map'
+    indicies = np.array(rate_info['fall']['lind']['map'], dtype=np.int32)
+    indicies = k_gen.handle_indicies(indicies, '${reac_ind}', out_map, kernel_data,
+                                force_zero=True)
+
+    #create Fi array / mapping
+    Fi_lp, Fi_str, map_result = lp_utils.get_loopy_arg('Fi',
+                        indicies=['${reac_ind}', 'j'],
+                        dimensions=[rate_info['fall']['num'], test_size],
+                        order=loopy_opts.order,
+                        map_name=out_map)
+    kernel_data.append(Fi_lp)
+    maps = []
+    if '${reac_ind}' in map_result:
+        maps.append(map_result['${reac_ind}'])
+
+    #create instruction set
+    lind_instructions = Template(Template("""
+${Fi_str} = 1
+""").safe_substitute(Fi_str=Fi_str)).safe_substitute(
+                            reac_ind=reac_ind)
+
+    return [k_gen.knl_info('fall_lind',
+                     instructions=lind_instructions,
+                     var_name=reac_ind,
+                     kernel_data=kernel_data,
+                     indicies=indicies,
+                     maps=maps,
+                     extra_subs={'reac_ind' : reac_ind})]
+
 
 
 def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,

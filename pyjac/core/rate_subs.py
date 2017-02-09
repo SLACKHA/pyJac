@@ -521,10 +521,11 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, conp=True, test_size=None):
             knl = lp.split_reduction_outward(knl, 'j_outer')
             #and aremove the sum_0 barrier
             knl = lp.preprocess_kernel(knl)
-            for insn in knl.instructions:
-                if insn.id == 'sum_0':
-                    insn.no_sync_with |= frozenset([(name, 'any')])
-            return knl
+            instruction_list = [insn if insn.id != 'sum_0'
+                else insn.copy(no_sync_with=
+                    insn.no_sync_with | frozenset([(name, 'any')]))
+                for insn in knl.instructions]
+            return knl.copy(instructions=instruction_list)
         vec_spec = __vec_spec
 
     return k_gen.knl_info(name='temperature_rate',

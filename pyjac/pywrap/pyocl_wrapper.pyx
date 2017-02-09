@@ -8,7 +8,7 @@ cdef extern from "species_rates_kernel.h":
     void finalize()
     void compiler()
 
-cdef bool compiled = False
+cdef int compiled = 0
 @cython.boundscheck(False)
 @cython.wraparound(False)
 def species_rates(np.uint_t problem_size,
@@ -17,8 +17,10 @@ def species_rates(np.uint_t problem_size,
             np.ndarray[np.float64_t] P,
             np.ndarray[np.float64_t] conc,
             np.ndarray[np.float64_t] wdot):
+    global compiled
     if not compiled:
         compiler()
+        compiled = True
     species_rates_kernel(problem_size, num_devices, &T[0], &P[0], &conc[0], &wdot[0])
     return None
 

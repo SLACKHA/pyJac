@@ -3056,8 +3056,7 @@ def write_specrates_kernel(eqs, reacs, specs,
             depends_on=[thermo_wrap],
             input_arrays=['T_arr', 'P_arr', 'conc', 'wdot'],
             output_arrays=['wdot'],
-            init_arrays={'wdot' : 0,
-                         'Fi' : 1},
+            init_arrays={'wdot' : 0},
             auto_diff=auto_diff,
             test_size=test_size)
 

@@ -2011,11 +2011,11 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     #start creating the k_gen.knl_info's
     #data
-    kernel_data = [plog_params_lp, num_params_lp, T_arr,
-                        P_arr, low_lp, hi_lp]
-
+    kernel_data = []
     if test_size == 'problem_size':
         kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
+    kernel_data.extend([plog_params_lp, num_params_lp, T_arr,
+                        P_arr, low_lp, hi_lp])
 
     #reac ind
     reac_ind = 'i'
@@ -2128,6 +2128,8 @@ def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
     #create the various necessary arrays
 
     kernel_data = []
+    if test_size == 'problem_size':
+        kernel_data.append(lp.ValueArg(test_size, dtype=np.int32))
 
     map_instructs = []
     inmaps = {}
@@ -2881,6 +2883,12 @@ def write_specrates_kernel(eqs, reacs, specs,
         except:
             klist.append(knls)
 
+    #Note:
+    #the order in which these kernels get added is important
+    #the kernel generator uses the input order to generate the wrapping
+    #kernel calls
+    #hence, any data dependencies should be expressed in the order added here
+
     #get the simple arrhenius k_gen.knl_info's
     __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
         rate_info, test_size=test_size))
@@ -2896,11 +2904,21 @@ def write_specrates_kernel(eqs, reacs, specs,
         __add_knl(get_cheb_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size))
 
+    #check for third body terms
+    if rate_info['thd']['num']:
+        #add the initial third body conc eval kernel
+        __add_knl(get_thd_body_concs(eqs, loopy_opts,
+            rate_info, test_size))
 
     #check for falloff
     if rate_info['fall']['num']:
+        #get the falloff rates
         __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size, falloff=True))
+        #and the reduced pressure
+        __add_knl(get_reduced_pressure_kernel(eqs, loopy_opts,
+            rate_info, test_size=test_size, falloff=True))
+        #and finally any blending functions (depend on reduced pressure)
         if rate_info['fall']['troe']['num']:
             __add_knl(get_troe_kernel(eqs, loopy_opts,
                 rate_info, test_size=test_size))
@@ -2913,11 +2931,8 @@ def write_specrates_kernel(eqs, reacs, specs,
         __add_knl(get_rev_rates(eqs, loopy_opts,
                 rate_info, test_size=test_size))
 
-    #check for pressure modification terms
-    if rate_info['thd']['num']:
-        #add the initial third body conc eval kernel
-        __add_knl(get_thd_body_concs(eqs, loopy_opts,
-            rate_info, test_size))
+    #check for falloff
+    if rate_info['fall']['num']:
         #and the Pr evals
         __add_knl(get_rxn_pres_mod(eqs, loopy_opts,
             rate_info, test_size))

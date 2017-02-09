@@ -650,10 +650,10 @@ class SubTest(TestClass):
                 'kr' : lambda x: rev_rate_constants.copy() if x == 'F' else rev_rate_constants.T.copy(),
                 'conc' : lambda x: concs.copy() if x == 'F' else concs.T.copy()}
 
-        kc = [kernel_call('rop_fwd', [fwd_rxn_rate],
+        kc = [kernel_call('rop_eval_fwd', [fwd_rxn_rate],
                         input_mask=['kr'],
                         strict_name_match=True, **args),
-              kernel_call('rop_rev', [rev_rxn_rate],
+              kernel_call('rop_eval_rev', [rev_rxn_rate],
                         input_mask=['kf'],
                         strict_name_match=True, **args)]
         self.__generic_rate_tester(get_rop, kc)

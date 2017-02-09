@@ -297,6 +297,6 @@ class memory_manager(object):
                     name='h_' + arr) for arr in self.host_inits])
         else:
             frees = [self.free_template[self.host_lang].safe_substitute(
-                    name='h_' + arr) for arr in self.in_arrays]
+                    name='h_' + arr + '_local') for arr in self.in_arrays]
 
         return '\n'.join([x + utils.line_end[self.lang] for x in sorted(set(frees))])

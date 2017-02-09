@@ -193,10 +193,10 @@ class wrapping_kernel_generator(object):
                 mechanism='mechanism' + utils.header_ext[self.lang],
                 data_order=data_order))
 
-    def _get_pass(self, argv, include_type=True):
+    def _get_pass(self, argv, include_type=True, postfix=''):
             return '{type}h_{name}'.format(
                 type=utils.type_map[argv.dtype] + '* ' if include_type else '',
-                name=argv.name)
+                name=argv.name  + postfix)
 
     def _generate_calling_header(self, path):
         assert self.filename or self.bin_name, 'Cannot generate calling header before wrapping kernel is generated...'
@@ -236,11 +236,17 @@ class wrapping_kernel_generator(object):
         mem_declares = self.mem.get_defns()
 
         #and input args
+
+        #these are the args in the kernel defn
         knl_args = ', '.join([self._get_pass(next(x for x in self.mem.arrays if x.name == a))
             for a in self.mem.in_arrays])
+        #these are the args passed to the kernel (exclude type)
         input_args = ', '.join([self._get_pass(next(x for x in self.mem.arrays if x.name == a), False)
             for a in self.mem.in_arrays])
-        #create doc str
+        #these are passed from the main method (exclude type, add _local postfix)
+        local_input_args = ', '.join([self._get_pass(next(x for x in self.mem.arrays if x.name == a), False,
+            '_local') for a in self.mem.in_arrays])
+        #create doc strings
         knl_args_doc = []
         knl_args_doc_template = Template(
 """
@@ -266,6 +272,10 @@ ${name} : ${type}
                 raise Exception('Argument documentation not found for arg {}'.format(x))
 
         knl_args_doc = '\n'.join(knl_args_doc)
+        #these are args passed in (from main, or python)
+        #that require initialization, and hence must be passed to mem_init
+        input_initialized_args = ', '.join([x for x in self.mem.in_arrays
+            if x in self.mem.has_init])
         #memory transfers in
         mem_in = self.mem.get_mem_transfers_in()
         #memory transfers out
@@ -280,8 +290,9 @@ ${name} : ${type}
         mem_allocs = self.mem.get_mem_allocs()
         #input allocs
         input_allocs = self.mem.get_mem_allocs(True)
-        #local inputs
-        local_inputs = ', '.join([x + '_local' for x in self.mem.in_arrays])
+        #read args are those that aren't initalized elsewhere
+        read_args = ', '.join(['h_' + x + '_local' for x in self.mem.in_arrays
+            if x not in self.mem.has_init])
         #kernel arg setting
         kernel_arg_sets = self.get_kernel_arg_setting()
         #memory frees
@@ -307,6 +318,8 @@ ${name} : ${type}
                     knl_args_doc=knl_args_doc,
                     knl_name=self.name,
                     input_args=input_args,
+                    local_input_args=local_input_args,
+                    input_initialized_args=input_initialized_args,
                     mem_transfers_in=mem_in,
                     mem_transfers_out=mem_out,
                     vec_width=vec_width,
@@ -315,7 +328,7 @@ ${name} : ${type}
                     kernel_arg_set=kernel_arg_sets,
                     mem_frees=mem_frees,
                     input_frees=input_frees,
-                    local_inputs=local_inputs,
+                    read_args=read_args,
                     order=self.loopy_opts.order,
                     device_type=str(self.loopy_opts.device_type),
                     num_source=1, #only 1 program / binary is built

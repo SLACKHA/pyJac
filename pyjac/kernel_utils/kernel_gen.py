@@ -299,6 +299,9 @@ ${name} : ${type}
         mem_out = self.mem.get_mem_transfers_out()
         #vec width
         vec_width = self.vec_width
+        if not vec_width:
+            #set to default
+            vec_width = 1
         #platform
         platform_str = self.loopy_opts.platform.get_info(cl.platform_info.VENDOR)
         #build options

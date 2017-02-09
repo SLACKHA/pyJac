@@ -863,9 +863,9 @@ class SubTest(TestClass):
             finally:
                 pass
                 #cleanup
-                #for x in args + tests:
-                #    os.remove(x)
-                #os.remove(os.path.join(lib_dir, 'test.py'))
+                for x in args + tests:
+                    os.remove(x)
+                os.remove(os.path.join(lib_dir, 'test.py'))
 
             # out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
             #     np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))

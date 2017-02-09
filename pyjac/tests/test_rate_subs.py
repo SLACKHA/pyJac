@@ -484,7 +484,7 @@ class SubTest(TestClass):
                             else concs.T.copy()}
 
         #create the kernel call
-        kc = kernel_call('thd', ref_ans, **args)
+        kc = kernel_call('eval_thd_body_concs', ref_ans, **args)
         self.__generic_rate_tester(get_thd_body_concs, kc)
 
     @attr('long')

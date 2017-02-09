@@ -1678,7 +1678,7 @@ ${thd_str} = thd_temp {dep=thd*}
 
 
     #create info
-    info = k_gen.knl_info('thd',
+    info = k_gen.knl_info('eval_thd_body_concs',
                          instructions=instructions,
                          var_name=reac_ind,
                          kernel_data=kernel_data,
@@ -2892,6 +2892,7 @@ def write_specrates_kernel(eqs, reacs, specs,
         __add_knl(get_cheb_arrhenius_rates(eqs, loopy_opts,
             rate_info, test_size=test_size))
 
+
     #check for falloff
     if rate_info['fall']['num']:
         __add_knl(get_simple_arrhenius_rates(eqs, loopy_opts,
@@ -2910,6 +2911,10 @@ def write_specrates_kernel(eqs, reacs, specs,
 
     #check for pressure modification terms
     if rate_info['thd']['num']:
+        #add the initial third body conc eval kernel
+        __add_knl(get_thd_body_concs(eqs, loopy_opts,
+            rate_info, test_size))
+        #and the Pr evals
         __add_knl(get_rxn_pres_mod(eqs, loopy_opts,
             rate_info, test_size))
 

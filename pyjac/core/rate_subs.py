@@ -1408,7 +1408,7 @@ def get_rev_rates(eqs, loopy_opts, rate_info, test_size=None):
                                                    dtype=net_spec_offsets.dtype,
                                                    map_name=rev_map)
     #B array
-    B_lp, B_str, _ = lp_utils.get_loopy_arg('B',
+    B_lp, B_str, _ = lp_utils.get_loopy_arg('b',
                                             ['${spec_ind}', 'j'],
                                             dimensions=(rate_info['Ns'], test_size),
                                             order=loopy_opts.order)
@@ -2998,8 +2998,15 @@ def write_specrates_kernel(eqs, reacs, specs,
             __add_knl(get_sri_kernel(eqs, loopy_opts,
                 rate_info, test_size=test_size))
 
+    depends_on = []
     #check for reverse rates
     if rate_info['rev']['num']:
+        #add the 'b' eval
+        __add_knl(polyfit_kernel_gen('b', eqs['conv'], specs, loopy_opts,
+                test_size))
+        #addd the 'b' eval to depnediencies
+        depends_on.append(kernels[-1])
+        #add Kc / rev rates
         __add_knl(get_rev_rates(eqs, loopy_opts,
                 rate_info, test_size=test_size))
 
@@ -3019,27 +3026,20 @@ def write_specrates_kernel(eqs, reacs, specs,
     __add_knl(get_spec_rates(eqs, loopy_opts,
         rate_info, test_size))
 
-    depends_on = []
     if conp:
         #get h / cp evals
         __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts,
             test_size))
         __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts,
             test_size))
-        #add the 'b' eval
-        __add_knl(polyfit_kernel_gen('b', eqs['conp'], specs, loopy_opts,
-                test_size))
     else:
         #and u / cv
         __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts,
             test_size))
         __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts,
             test_size))
-        #add the 'b' eval
-        __add_knl(polyfit_kernel_gen('b', eqs['conv'], specs, loopy_opts,
-                test_size))
     #add the thermo kernels to our dependencies
-    depends_on.extend(kernels[-3:])
+    depends_on.extend(kernels[-2:])
     #and temperature rates
     __add_knl(get_temperature_rate(eqs, loopy_opts,
         rate_info, test_size=test_size, conp=conp))

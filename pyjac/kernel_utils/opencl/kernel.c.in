@@ -43,11 +43,12 @@ void execute_kernel(cl_uint problem_size, ${knl_args})
     size_t global_work_size[3] = {problem_size, 0, 0};
     size_t local_work_size[3] = {${vec_width}, 0, 0};
 
+    cl_event event;
     /* run kernel */
-    check_err(clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_work_size, local_work_size, 0, NULL, NULL));
+    check_err(clEnqueueNDRangeKernel(queue, kernel, 1, NULL, global_work_size, local_work_size, 0, NULL, &event));
 
-    // Wait for the command queue to get serviced before reading back results
-    clFinish(queue);
+    //wait for kernel to finish
+    check_err(clWaitForEvents(1, &event));
 
     /* Memory Transfers out */
     ${mem_transfers_out}

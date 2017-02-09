@@ -1,0 +1,48 @@
+"""
+Once we create a python module using the wrapper it becomes difficult to
+manage reloading the module if recreated frequently during testing.
+
+Hence we create this small testing stub that is designed to read in
+the inputs and outouts to test, and exit with the result
+
+This function is designed to be called as subprocess
+"""
+
+import numpy as np
+import importlib
+import sys
+
+if __name__ == '__main__':
+	#load package
+	package = '${package}'
+	package = importlib.import_module(package)
+
+	#load input data
+	input_args = [${input_args}]
+	#load from filenames
+	for i in range(len(input_args)):
+		input_args[i] = np.load(input_args[i])
+
+	#load test arrays
+	test_arrays = [${test_arrays}]
+	#load from filenames
+	for i in range(len(test_arrays)):
+		test_arrays[i] = np.load(test_arrays[i])
+
+	#create output args in same shape as test arrays
+	output_args = [np.zeros_like(x) for x in test_arrays]
+
+	#get non-arrays
+	non_array_args = [${non_array_args}]
+
+	#put all args together
+	args = non_array_args + input_args + output_args
+
+	#finally call
+	package.${call_name}(*args)
+
+	#and test
+	for i in range(len(output_args)):
+		if not np.allclose(output_args[i], test_arrays[i]):
+			#if not a match, exit
+			sys.exit(-1)

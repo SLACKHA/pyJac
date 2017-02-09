@@ -2,7 +2,8 @@
 import os
 import filecmp
 from collections import OrderedDict, defaultdict
-import importlib
+from string import Template
+import subprocess
 
 #local imports
 from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
@@ -787,7 +788,13 @@ class SubTest(TestClass):
         Tdot_conp = np.reshape(self.store.conp_temperature_rates, (1, -1))
         Tdot_conv = np.reshape(self.store.conv_temperature_rates, (1, -1))
         exceptions = ['conp']
-        for state in oploop:
+
+        #load the module tester template
+        with open(os.path.join(self.store.script_dir, 'test_import.py.in'), 'r') as file:
+            mod_test = Template(file.read())
+
+        #now start test
+        for i, state in enumerate(oploop):
             if state['width'] is not None and state['depth'] is not None:
                 continue
             #due to current issue interacting with loopy, can't generate deep
@@ -797,18 +804,6 @@ class SubTest(TestClass):
                 state if x not in exceptions})
 
             conp = state['conp']
-
-            #get arrays
-            concs = (self.store.concs.copy() if opts.order == 'F' else
-                        self.store.concs.T.copy()).flatten('K')
-            #put together species rates
-            spec_rates = np.concatenate((Tdot_conp.copy() if conp else Tdot_conv,
-                    self.store.species_rates.copy()))
-            if opts.order == 'C':
-                spec_rates = spec_rates.T.copy()
-            #and flatten in correct order
-            spec_rates = spec_rates.flatten(order='K')
-            spec_rates_test = np.zeros_like(spec_rates)
 
             #generate kernel
             kgen = write_specrates_kernel(eqs, self.store.reacs, self.store.specs, opts,
@@ -821,21 +816,61 @@ class SubTest(TestClass):
             #generate wrapper
             generate_wrapper(opts.lang, build_dir,
                          out_dir=lib_dir, platform='intel')
-            #import
-            pywrap = importlib.import_module('pyjac_ocl')
 
-            out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
-                np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))
+            #get arrays
+            concs = (self.store.concs.copy() if opts.order == 'F' else
+                        self.store.concs.T.copy()).flatten('K')
+            #put together species rates
+            spec_rates = np.concatenate((Tdot_conp.copy() if conp else Tdot_conv,
+                    self.store.species_rates.copy()))
             if opts.order == 'C':
-                out_arr = out_arr.T.copy()
+                spec_rates = spec_rates.T.copy()
+            #and flatten in correct order
+            spec_rates = spec_rates.flatten(order='K')
 
-            out_arr.flatten('K').tofile(os.path.join(os.getcwd(), 'data.bin'))
+            #save args to dir
+            def __saver(arr, name, namelist):
+                myname = os.path.join(lib_dir, name + '.npy')
+                np.save(arr, myname)
+                namelist.append(myname)
+
+            args = []
+            __saver(T, 'T', args)
+            __saver(P, 'P', args)
+            __saver(conc, 'conc', args)
+
+            #and now the test values
+            tests = []
+            __saver(spec_rates, 'wdot', tests)
+
+            #write the module tester
+            with open(os.path.join(lib_dir, 'test.py'), 'w') as file:
+                file.write(mod_test.safe_substitute(
+                    package='pyjac_ocl',
+                    input_args=', '.join('{}'.format(x) for x in args),
+                    test_arrays=', '.join('{}'.format(x) for x in tests),
+                    non_array_args='{}, 6'.format(np.store.test_size)))
+
+            #and call
+            try:
+                subprocess.check_call([os.path.join(lib_dir, 'test.py')])
+            except:
+                assert False
+            finally:
+                #cleanup
+                for x in args + tests:
+                    os.remove(x)
+                os.remove(os.path.join(lib_dir, 'test.py'))
+
+            # out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
+            #     np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))
+            # if opts.order == 'C':
+            #     out_arr = out_arr.T.copy()
+
+            # out_arr.flatten('K').tofile(os.path.join(os.getcwd(), 'data.bin'))
 
             #test species rates
-            pywrap.species_rates(np.uint32(self.store.test_size),
-                np.uint32(1), T, P, concs, spec_rates_test)
-
-            #and test
-            assert np.allclose(spec_rates, spec_rates_test)
+            #pywrap.species_rates(np.uint32(self.store.test_size),
+            #    np.uint32(12), T, P, concs, spec_rates_test)
 
 

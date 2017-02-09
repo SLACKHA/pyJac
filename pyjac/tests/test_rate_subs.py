@@ -837,7 +837,7 @@ class SubTest(TestClass):
             args = []
             __saver(T, 'T', args)
             __saver(P, 'P', args)
-            __saver(conc, 'conc', args)
+            __saver(concs, 'conc', args)
 
             #and now the test values
             tests = []

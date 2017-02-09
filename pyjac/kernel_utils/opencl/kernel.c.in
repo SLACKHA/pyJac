@@ -20,9 +20,6 @@ cl_program program = NULL;
 cl_context context = NULL;
 cl_command_queue queue = NULL;
 
-//the source -> binary compiler is separate
-void compiler();
-
 /* declare host/cl buffers */
 ${mem_declares}
 

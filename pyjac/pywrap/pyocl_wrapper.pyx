@@ -5,8 +5,8 @@ cimport numpy as np
 cdef extern from "species_rates_kernel.h":
     void species_rates_kernel(np.uint_t problem_size, np.uint_t num_devices, double* T, double* P,
                         double* conc, double* wdot)
-    void finalize()
-    void compiler()
+    void finalize(void)
+    void compiler(void)
 
 cdef int compiled = 0
 @cython.boundscheck(False)

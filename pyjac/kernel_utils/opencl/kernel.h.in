@@ -26,8 +26,8 @@ Nicholas Curtis - 2017
 /*
 Completely cleanup the opencl kernel
 */
-void finalize();
-void compiler();
+void finalize(void);
+void compiler(void);
 
 void ${knl_name}(cl_uint problem_size, cl_uint num_devices,
                     ${input_args});

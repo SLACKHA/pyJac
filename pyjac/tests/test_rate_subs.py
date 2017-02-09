@@ -568,7 +568,7 @@ class SubTest(TestClass):
     def test_troe_falloff(self):
         T = self.store.T
         ref_Pr = self.store.ref_Pr.copy()
-        ref_ans = self.store.ref_Troe.copy()
+        ref_ans = self.store.ref_Troe.copy().squeeze()
         args = { 'Pr' :  lambda x: ref_Pr.copy() if x == 'F'
                          else ref_Pr.T.copy(),
                  'T_arr' : T

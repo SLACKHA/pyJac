@@ -397,7 +397,7 @@ class kernel_call(object):
             if self.compare_mask[i] is not None:
                 outv = np.take(output_variables[i],
                         self.compare_mask[i], self.compare_axis)
-                if outv.shape != self.transformed_ref_ans[i].shape:
+                if outv.shape != self.transformed_ref_ans[i].squeeze().shape:
                     #apply the same transformation to the answer
                     allclear = allclear and np.allclose(outv,
                         np.take(self.transformed_ref_ans[i],

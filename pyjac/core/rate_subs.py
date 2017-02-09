@@ -3038,11 +3038,21 @@ def write_specrates_kernel(eqs, reacs, specs,
     __add_knl(get_temperature_rate(eqs, loopy_opts,
         rate_info, test_size=test_size, conp=conp))
 
+    #get a wrapper for the dependecies
+    thermo_wrap = k_gen.wrapping_kernel_generator(name='chem_utils_kernel',
+        loopy_opts=loopy_opts,
+        kernels=depends_on,
+        input_arrays=['T_arr'],
+        output_arrays=['h', 'cp'] if conp else ['u', 'cv'],
+        auto_diff=auto_diff,
+        test_size=test_size
+    )
+
     return k_gen.wrapping_kernel_generator(
             loopy_opts=loopy_opts,
             name='species_rates_kernel',
             kernels=kernels,
-            depends_on=depends_on,
+            depends_on=thermo_wrap,
             input_arrays=['T_arr', 'P_arr', 'conc', 'wdot'],
             output_arrays=['wdot'],
             init_arrays={'wdot' : 0,

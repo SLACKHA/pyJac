@@ -1083,7 +1083,7 @@ def get_rop(eqs, loopy_opts, rate_info, test_size=None):
                                                         order=loopy_opts.order)
 
         #and finally the ROP values
-        rop_arr, rop_str, _ = lp_utils.get_loopy_arg('ropeval_{}'.format(direction),
+        rop_arr, rop_str, _ = lp_utils.get_loopy_arg('rop_{}'.format(direction),
                         indicies=['${reac_ind}', 'j'],
                         dimensions=[rate_info[direction]['num'], test_size],
                         order=loopy_opts.order)

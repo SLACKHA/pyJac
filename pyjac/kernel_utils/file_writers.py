@@ -127,7 +127,7 @@ class FileWriter(object):
         self.file.close()
         #try indenting w/ gnu's indent
         try:
-            subprocess.check_call(['indent', self.name])
+            subprocess.check_call(['indent', self.name, '-o', self.name])
         except subprocess.CalledProcessError:
             #missing indent, no big deal
             pass

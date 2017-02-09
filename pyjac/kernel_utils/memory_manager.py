@@ -234,9 +234,10 @@ class memory_manager(object):
         arr_maps = {x : next(y for y in self.arrays if x == y.name) for x in arr_list}
         templates = self.copy_in_templates if to_device else self.copy_out_templates
 
-        return '\n'.join([templates[self.lang].safe_substitute(
-            name='d_' + arr, host_buff='h_' + arr,
-            buff_size=self._get_size(arr_maps[arr])) +
+        return '\n'.join([
+            self.get_check_err_call(templates[self.lang].safe_substitute(
+                name='d_' + arr, host_buff='h_' + arr,
+                buff_size=self._get_size(arr_maps[arr]))) +
                 utils.line_end[self.lang] for arr in arr_list])
 
     def get_mem_transfers_in(self):

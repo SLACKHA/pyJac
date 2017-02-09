@@ -639,7 +639,6 @@ def apply_vectorization(loopy_opts, inner_ind, knl):
         knl = lp.split_iname(knl, to_split, vec_width, inner_tag='l.0')
         #and tag the 'j' variable as global
         knl = lp.tag_inames(knl, [(j_tag, 'g.0')])
-
         #finally apply the fix above
         knl = knl.copy(get_grid_sizes_for_insn_ids=__ggs)
 

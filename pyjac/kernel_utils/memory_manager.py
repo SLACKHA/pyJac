@@ -124,10 +124,10 @@ class memory_manager(object):
                 self.host_inits.append(arr)
 
         #get host defns
-        __add(self.host_arrays, self.host_lang, 'h_', defns)
+        __add(self.host_inits, self.host_lang, 'h_', defns)
 
         #return defn string
-        return '\n'.join(defns)
+        return '\n'.join(sorted(set(defns)))
 
     def get_mem_allocs(self, alloc_inputs=False):
         """
@@ -144,14 +144,36 @@ class memory_manager(object):
         """
 
         def __get_alloc(name, lang, prefix):
+            #if we're allocating inputs, call them something different
+            #than the input args from python
+            post_fix = '_local' if alloc_inputs else ''
+
+            #if it's opencl, we need to declare the buffer type
             memflag = None
             if lang == 'opencl':
                 memflag = 'CL_MEM_READ_WRITE'
+
+            #find the corresponding loopy array, to get sizes
             dev_arr = next(x for x in self.arrays if x.name == name)
-            return_list = [self.alloc_templates[lang].safe_substitute(
-                name=prefix + name, memflag=memflag, buff_size=self._get_size(dev_arr))]
+
+            #generate allocs
+            alloc = self.alloc_templates[lang].safe_substitute(
+                name=prefix + name + post_fix,
+                memflag=memflag,
+                buff_size=self._get_size(dev_arr))
+
+            if alloc_inputs:
+                #add a type
+                alloc = self.memory_types[self.host_lang] + ' ' + alloc
+
+            #generate allocs
+            return_list = [alloc]
+
+            #add error checking
             if lang == 'opencl':
                 return_list.append(self.get_check_err_call('return_code'))
+
+            #return
             return '\n'.join([r + utils.line_end[lang] for r in return_list])
 
         to_alloc = [next(x for x in self.arrays if x.name == y) for y in self.in_arrays] \

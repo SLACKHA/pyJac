@@ -3,8 +3,11 @@
 
 #include <CL/cl.h>
 #include <stdio.h>
+#include <stdbool.h>
 
-void cpu_assert(cl_int x, const char *file, int line);
-#define check_err(ans) { cpu_assert((ans), __FILE__, __LINE__); }
+void ocl_assert(cl_int x, const char *file, int line);
+void cpu_assert(bool ans, const char *message, const char *file, int line);
+#define check_err(ans) { ocl_assert((ans), __FILE__, __LINE__); }
+#define assert(ans, message) { cpu_assert((ans), (message), __FILE__, __LINE__); }
 
 #endif

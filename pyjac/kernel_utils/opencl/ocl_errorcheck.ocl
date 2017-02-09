@@ -77,10 +77,18 @@ const char* getErrorString(cl_int error)
     }
 }
 
-void cpu_assert(cl_int x, const char *file, int line) {
+void ocl_assert(cl_int x, const char *file, int line) {
     if (x != CL_SUCCESS)
     {
-        fprintf(stderr,"cpu_assert: %s %s %d\n", getErrorString(x), file, line);
+        fprintf(stderr,"ocl_assert: %s %s %d\n", getErrorString(x), file, line);
+        exit(x);
+    }
+}
+
+void cpu_assert(bool x, const char* message, const char *file, int line) {
+    if (!x)
+    {
+        fprintf(stderr, "cpu_assert: %s %s %d\n", message, file, line);
         exit(x);
     }
 }

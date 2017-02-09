@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <CL/cl.h>
-#include <assert.h>
 
 #define MAX_DEVICE (16)
 #define MAX_PLATFORM (16)
@@ -44,7 +43,7 @@ void compiler()
 
         //read file
         source_str[i] = (char*)malloc(source_size[i]);
-        assert(fread(source_str[i], 1, source_size[i], fp) == source_size[i]);
+        assert(fread(source_str[i], 1, source_size[i], fp) == source_size[i], "Error reading in source strings.");
         fclose(fp);
     }
 
@@ -109,7 +108,7 @@ void compiler()
     size_t expected_progs = 1;
     check_err(clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(size_t), NULL, &num_prog));
     num_prog /= sizeof(size_t);
-    assert(num_prog == expected_progs);
+    assert(num_prog == expected_progs, "Incorrect number of programs found.");
 
     //get program size
     size_t bin_size[expected_progs];
@@ -129,7 +128,7 @@ void compiler()
             exit(-1);
         }
         size_t bytes = bin_size[i] / sizeof(unsigned char);
-        assert(fwrite(binary[i], sizeof(unsigned char), bytes, fp) == bytes);
+        assert(fwrite(binary[i], sizeof(unsigned char), bytes, fp) == bytes, "Error writing program binaries.");
         //close file
         fclose(fp);
         free(binary[i]);

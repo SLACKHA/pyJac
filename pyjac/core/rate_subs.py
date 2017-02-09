@@ -353,7 +353,7 @@ def assign_rates(reacs, specs, rate_spec):
                      'T3' : troe_T3,
                      'T1' : troe_T1,
                      'T2' : troe_T2
-                    }
+                    },
                 'lind':
                     {'map' : lind_map
                      'num' : lind_map.size}

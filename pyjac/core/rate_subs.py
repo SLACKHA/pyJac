@@ -1830,7 +1830,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     kernel_data.append(kf_arr)
 
     #preinstructions
-    preinstructs = [k_gen.__PLOG_PREINST_KEY, k_gen.__TINV_PREINST_KEY]
+    preinstructs = [k_gen.PLOG_PREINST_KEY, k_gen.TINV_PREINST_KEY]
 
     #extra loops
     pres_poly_ind = 'k'
@@ -2089,7 +2089,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
 
     #and return
     return [k_gen.knl_info(name='rateconst_plog', instructions=instructions,
-        pre_instructions=[k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY, k_gen.__PLOG_PREINST_KEY],
+        pre_instructions=[k_gen.TINV_PREINST_KEY, k_gen.TLOG_PREINST_KEY, k_gen.PLOG_PREINST_KEY],
         var_name=reac_ind, kernel_data=kernel_data,
         maps=maps, extra_inames=extra_inames, indicies=indicies,
         extra_subs={'reac_ind' : reac_ind})]
@@ -2678,7 +2678,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                   'maps' : maps,
                   'extra_subs' : {'reac_ind' : reac_ind}}
 
-    default_preinstructs = [k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY]
+    default_preinstructs = [k_gen.TINV_PREINST_KEY, k_gen.TLOG_PREINST_KEY]
 
     #generic kf assigment str
     kf_assign = Template("${kf_str} = ${rate}")
@@ -2690,7 +2690,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         instructions=kf_assign.safe_substitute(rate='${A_name}[i]'),
         **extra_args)
     i_beta_int = k_gen.knl_info(name='beta_int{}'.format(name_mod),
-        pre_instructions=[k_gen.__TINV_PREINST_KEY],
+        pre_instructions=[k_gen.TINV_PREINST_KEY],
         instructions="""
         <> T_val = T_arr[j] {id=a1}
         <> negval = ${b_name}[i] < 0
@@ -2740,7 +2740,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         #and combine them
         specializations = {-1 : k_gen.knl_info('singlekernel',
             instructions='\n'.join(instruction_list),
-            pre_instructions=[k_gen.__TINV_PREINST_KEY, k_gen.__TLOG_PREINST_KEY],
+            pre_instructions=[k_gen.TINV_PREINST_KEY, k_gen.TLOG_PREINST_KEY],
             **extra_args)}
 
     spec_copy = specializations.copy()

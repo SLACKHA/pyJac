@@ -20,6 +20,9 @@ from .. import utils
 from ..loopy import loopy_utils as lp_utils
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
+TINV_PREINST_KEY = 'Tinv'
+TLOG_PREINST_KEY = 'logT'
+PLOG_PREINST_KEY = 'logP'
 
 class wrapping_kernel_generator(object):
     def __init__(self, loopy_opts, name, kernels,
@@ -125,7 +128,7 @@ class wrapping_kernel_generator(object):
             if info in self.external_kernels:
                 continue
             #create kernel from k_gen.knl_info
-            self.kernels[i] = make_kernel(info, target, self.test_size)
+            self.kernels[i] = self.make_kernel(info, target, self.test_size)
             #apply vectorization if possible
             if info.can_vectorize:
                 self.kernels[i] = apply_vectorization(self.loopy_opts,
@@ -574,6 +577,161 @@ ${name} : ${type}
                 lines = [x.replace('double', 'adouble') for x in lines]
             file.add_lines(lines)
 
+    def _find_indent(template_str, key, value):
+        """
+        Finds and returns a formatted value containing the appropriate
+        whitespace to put 'value' in place of 'key' for template_str
+
+        Parameters
+        ----------
+        template_str : str
+            The string to sub into
+        key : str
+            The key in the template string
+        value : str
+            The string to format
+
+        Returns
+        -------
+        formatted_value : str
+            The formatted string
+        """
+
+        #find the instance of ${key} in kernel_str
+        whitespace = None
+        for i, line in enumerate(template_str.split('\n')):
+            if key in line:
+                #get whitespace
+                whitespace = re.match(r'\s*', line).group()
+                break
+        result = [line if i == 0 else whitespace + line for i, line in
+                    enumerate(textwrap.dedent(value).splitlines())]
+        return '\n'.join(result)
+
+    def make_kernel(self, info, target, test_size):
+        """
+        Convience method to create loopy kernels from kernel_info
+
+        Parameters
+        ----------
+        info : :class:`knl_info`
+            The rate contstant info to generate the kernel from
+        target : :class:`loopy.TargetBase`
+            The target to generate code for
+        test_size : int/str
+            The integer (or symbolic) problem size
+
+        Returns
+        -------
+        knl : :class:`loopy.LoopKernel`
+            The generated loopy kernel
+        """
+
+        #various precomputes
+        pre_inst = {TINV_PREINST_KEY : '<> T_inv = 1 / T_arr[j]',
+                    TLOG_PREINST_KEY : '<> logT = log(T_arr[j])',
+                    PLOG_PREINST_KEY : '<> logP = log(P_arr[j])'}
+
+        #and the skeleton kernel
+        skeleton = """
+        for j
+            ${pre}
+            for ${var_name}
+                ${main}
+            end
+            ${post}
+        end
+        """
+
+        #convert instructions into a list for convienence
+        instructions = info.instructions
+        if isinstance(instructions, str):
+            instructions = textwrap.dedent(info.instructions)
+            instructions = [x for x in instructions.split('\n') if x.strip()]
+
+        #load inames
+        inames = [info.var_name, 'j']
+
+        #add map instructions
+        instructions = info.maps + instructions
+
+        #look for extra inames, ranges
+        iname_range = []
+
+        assumptions = info.assumptions[:]
+
+        #find the start index for 'i'
+        if isinstance(info.indicies, tuple):
+            i_start = info.indicies[0]
+            i_end = info.indicies[1]
+        else:
+            i_start = 0
+            i_end = info.indicies.size
+
+        #add to ranges
+        iname_range.append('{}<={}<{}'.format(i_start, info.var_name, i_end))
+        iname_range.append('{}<=j<{}'.format(0, test_size))
+
+        if isinstance(test_size, str):
+            assumptions.append('{0} > 0'.format(test_size))
+            #get vector width
+            vec_width = None
+            if self.loopy_opts.depth or self.loopy_opts.width:
+                vec_width = self.loopy_opts.depth if self.loopy_opts.depth else self.loopy_opts.width
+            if vec_width:
+                assumptions.append(' and {0} mod {1} = 0'.format(
+                    test_size, vec_width))
+
+        for iname, irange in info.extra_inames:
+            inames.append(iname)
+            iname_range.append(irange)
+
+        #construct the kernel args
+        pre_instructions = [pre_inst[k] if k in pre_inst else k
+                                for k in info.pre_instructions]
+
+        post_instructions = info.post_instructions[:]
+
+        def subs_preprocess(key, value):
+            #find the instance of ${key} in kernel_str
+            result = _find_indent(skeleton, key, value)
+            return Template(result).safe_substitute(var_name=info.var_name)
+
+        kernel_str = Template(skeleton).safe_substitute(
+            var_name=info.var_name,
+            pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
+            post=subs_preprocess('${post}', '\n'.join(post_instructions)),
+            main=subs_preprocess('${main}', '\n'.join(instructions)))
+
+        #finally do extra subs
+        if info.extra_subs:
+            kernel_str = Template(kernel_str).safe_substitute(
+                **info.extra_subs)
+
+        iname_arr = []
+        #generate iname strings
+        for iname, irange in zip(*(inames,iname_range)):
+            iname_arr.append(Template(
+                '{[${iname}]:${irange}}').safe_substitute(
+                iname=iname,
+                irange=irange
+                ))
+
+        #make the kernel
+        knl = lp.make_kernel(iname_arr,
+            kernel_str,
+            kernel_data=info.kernel_data,
+            name=info.name,
+            target=target,
+            assumptions=' and '.join(assumptions)
+        )
+        #fix parameters
+        if info.parameters:
+            knl = lp.fix_parameters(knl, **info.parameters)
+        #prioritize and return
+        knl = lp.prioritize_loops(knl, inames)
+        return knl
+
 def handle_indicies(indicies, reac_ind, out_map, kernel_data,
                         outmap_name='out_map', alternate_indicies=None,
                         force_zero=False, force_map=False, scope=scopes.PRIVATE):
@@ -747,158 +905,6 @@ class knl_info(object):
         self.extra_subs = extra_subs
         self.can_vectorize = can_vectorize
         self.vectorization_specializer = vectorization_specializer
-
-def _find_indent(template_str, key, value):
-    """
-    Finds and returns a formatted value containing the appropriate
-    whitespace to put 'value' in place of 'key' for template_str
-
-    Parameters
-    ----------
-    template_str : str
-        The string to sub into
-    key : str
-        The key in the template string
-    value : str
-        The string to format
-
-    Returns
-    -------
-    formatted_value : str
-        The formatted string
-    """
-
-    #find the instance of ${key} in kernel_str
-    whitespace = None
-    for i, line in enumerate(template_str.split('\n')):
-        if key in line:
-            #get whitespace
-            whitespace = re.match(r'\s*', line).group()
-            break
-    result = [line if i == 0 else whitespace + line for i, line in
-                enumerate(textwrap.dedent(value).splitlines())]
-    return '\n'.join(result)
-
-__TINV_PREINST_KEY = 'Tinv'
-__TLOG_PREINST_KEY = 'logT'
-__PLOG_PREINST_KEY = 'logP'
-
-def make_kernel(info, target, test_size):
-    """
-    Convience method to create loopy kernels from kernel_info
-
-    Parameters
-    ----------
-    info : :class:`knl_info`
-        The rate contstant info to generate the kernel from
-    target : :class:`loopy.TargetBase`
-        The target to generate code for
-    test_size : int/str
-        The integer (or symbolic) problem size
-
-    Returns
-    -------
-    knl : :class:`loopy.LoopKernel`
-        The generated loopy kernel
-    """
-
-    #various precomputes
-    pre_inst = {__TINV_PREINST_KEY : '<> T_inv = 1 / T_arr[j]',
-                __TLOG_PREINST_KEY : '<> logT = log(T_arr[j])',
-                __PLOG_PREINST_KEY : '<> logP = log(P_arr[j])'}
-
-    #and the skeleton kernel
-    skeleton = """
-    for j
-        ${pre}
-        for ${var_name}
-            ${main}
-        end
-        ${post}
-    end
-    """
-
-    #convert instructions into a list for convienence
-    instructions = info.instructions
-    if isinstance(instructions, str):
-        instructions = textwrap.dedent(info.instructions)
-        instructions = [x for x in instructions.split('\n') if x.strip()]
-
-    #load inames
-    inames = [info.var_name, 'j']
-
-    #add map instructions
-    instructions = info.maps + instructions
-
-    #look for extra inames, ranges
-    iname_range = []
-
-    assumptions = info.assumptions[:]
-
-    #find the start index for 'i'
-    if isinstance(info.indicies, tuple):
-        i_start = info.indicies[0]
-        i_end = info.indicies[1]
-    else:
-        i_start = 0
-        i_end = info.indicies.size
-
-    #add to ranges
-    iname_range.append('{}<={}<{}'.format(i_start, info.var_name, i_end))
-    iname_range.append('{}<=j<{}'.format(0, test_size))
-
-    if isinstance(test_size, str):
-        assumptions.append('{0} > 0'.format(test_size))
-
-    for iname, irange in info.extra_inames:
-        inames.append(iname)
-        iname_range.append(irange)
-
-    #construct the kernel args
-    pre_instructions = [pre_inst[k] if k in pre_inst else k
-                            for k in info.pre_instructions]
-
-    post_instructions = info.post_instructions[:]
-
-    def subs_preprocess(key, value):
-        #find the instance of ${key} in kernel_str
-        result = _find_indent(skeleton, key, value)
-        return Template(result).safe_substitute(var_name=info.var_name)
-
-    kernel_str = Template(skeleton).safe_substitute(
-        var_name=info.var_name,
-        pre=subs_preprocess('${pre}', '\n'.join(pre_instructions)),
-        post=subs_preprocess('${post}', '\n'.join(post_instructions)),
-        main=subs_preprocess('${main}', '\n'.join(instructions)))
-
-    #finally do extra subs
-    if info.extra_subs:
-        kernel_str = Template(kernel_str).safe_substitute(
-            **info.extra_subs)
-
-    iname_arr = []
-    #generate iname strings
-    for iname, irange in zip(*(inames,iname_range)):
-        iname_arr.append(Template(
-            '{[${iname}]:${irange}}').safe_substitute(
-            iname=iname,
-            irange=irange
-            ))
-
-    #make the kernel
-    knl = lp.make_kernel(iname_arr,
-        kernel_str,
-        kernel_data=info.kernel_data,
-        name=info.name,
-        target=target,
-        assumptions=' and '.join(assumptions)
-    )
-    #fix parameters
-    if info.parameters:
-        knl = lp.fix_parameters(knl, **info.parameters)
-    #prioritize and return
-    knl = lp.prioritize_loops(knl, inames)
-    return knl
 
 class MangleGen(object):
     def __init__(self, name, arg_dtypes, result_dtypes):

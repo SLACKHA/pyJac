@@ -135,6 +135,8 @@ class wrapping_kernel_generator(object):
                 self.kernels[i] = info.vectorization_specializer(self.kernels[i])
             #and add a mangler
             #func_manglers.append(create_function_mangler(kernels[i]))
+            #set the editor
+            self.kernels[i] = lp_utils.set_editor(self.kernels[i])
 
         #and finally register functions
         #for func in func_manglers:

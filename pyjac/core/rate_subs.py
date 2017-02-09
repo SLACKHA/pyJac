@@ -2926,16 +2926,14 @@ def write_specrates_kernel(eqs, reacs, specs,
     external_kernels = []
     if conp:
         #get h / cp evals
-        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts),
-            external_kernels)
-        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts),
-            external_kernels)
+        __add_knl(polyfit_kernel_gen('h', eqs['conp'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('cp', eqs['conp'], specs, loopy_opts))
+        external_kernels.extend(kernels[-2:])
     else:
         #and u / cv
-        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts),
-            external_kernels)
-        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts),
-            external_kernels)
+        __add_knl(polyfit_kernel_gen('u', eqs['conv'], specs, loopy_opts))
+        __add_knl(polyfit_kernel_gen('cv', eqs['conv'], specs, loopy_opts))
+        external_kernels.extend(kernels[-2:])
     #and temperature rates
     __add_knl(get_temperature_rate(eqs, loopy_opts,
         rate_info, test_size=test_size, conp=conp))

@@ -122,6 +122,8 @@ class wrapping_kernel_generator(object):
         #now create the kernels!
         target = lp_utils.get_target(self.lang)
         for i, info in enumerate(self.kernels):
+            if info in self.external_kernels:
+                continue
             #create kernel from k_gen.knl_info
             self.kernels[i] = make_kernel(info, target, self.test_size)
             #apply vectorization if possible
@@ -450,7 +452,7 @@ ${name} : ${type}
         None
         """
 
-        assert all(isinstance(x, lp.LoopKernel) for x in self.kernels), (
+        assert all(isinstance(x, lp.LoopKernel) or x in self.external_kernels for x in self.kernels), (
             'Cannot generate wrapper before calling _make_kernels')
 
         if self.depends_on:
@@ -474,15 +476,16 @@ ${name} : ${type}
 
         kernel_data = []
         #need to find mapping of externel kernels to depends
-        extern_generated_knls = []
         for x in self.external_kernels:
             knl = next((y for dep in self.depends_on for y in dep.kernels if y.name == x.name), None)
             assert knl, 'Cannot find external kernel {} in any dependencies'.format(x.name)
-            extern_generated_knls.append(knl)
+            my_knl_ind = next((i for i, k in enumerate(self.kernels) if x.name == k.name), None)
+            #now replace
+            self.kernels[my_knl_ind] = knl
 
         #now scan through all our (and externel) kernels
         #and compile the args
-        defines = [arg for knl in self.kernels + extern_generated_knls for arg in knl.args if
+        defines = [arg for knl in self.kernels for arg in knl.args if
                         not isinstance(arg, lp.TemporaryVariable)]
         nameset = sorted(set(d.name for d in defines))
         args = []
@@ -533,10 +536,11 @@ ${name} : ${type}
             return call
 
         instructions = '\n'.join(__gen_call(knl, i)
-            for i, knl in enumerate(self.kernels + extern_generated_knls))
+            for i, knl in enumerate(self.kernels))
 
-        #and finally, generate the additional kernels
-        additional_kernels = '\n'.join([lp_utils.get_code(k) for k in self.kernels])
+        #and finally, generate the additional kernels [excluding additional knls]
+        additional_kernels = '\n'.join([lp_utils.get_code(k) for k in self.kernels
+            if not any(y.name == k.name for y in self.external_kernels)])
 
         self.filename = os.path.join(path,
                             self.file_prefix + self.name + utils.file_ext[self.lang])

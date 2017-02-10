@@ -865,7 +865,7 @@ class SubTest(TestClass):
                     if os.path.isfile(os.path.join(dirname, file)):
                         os.remove(os.path.join(dirname, file))
                 if remove_dir:
-                    os.remove(dirname)
+                    os.rmdir(dirname)
 
             #and call
             try:

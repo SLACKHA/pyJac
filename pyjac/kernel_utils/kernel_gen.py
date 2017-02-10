@@ -717,8 +717,10 @@ ${name} : ${type}
         knl = lp.prioritize_loops(knl, inames)
         return knl
 
-def handle_indicies(indicies, reac_ind, out_map, kernel_data,
-                        outmap_name='out_map', alternate_indicies=None,
+def handle_indicies(indicies, reac_ind, maps, kernel_data,
+                        inmap_name='in_map',
+                        output_indicies=None,
+                        outmap_name='out_map',
                         force_zero=False, force_map=False, scope=scopes.PRIVATE):
     """Consolidates the commonly used indicies mapping steps
 
@@ -728,14 +730,17 @@ def handle_indicies(indicies, reac_ind, out_map, kernel_data,
         The list of indicies
     reac_ind : str
         The reaction index variable (used in mapping)
-    out_map : dict
+    maps : dict
         The dictionary to store the mapping result in (if any)
     kernel_data : list of :class:`loopy.KernelArgument`
         The data to pass to the kernel (may be added to)
+    inmap_name : str, optional
+        The name to use in mapping
+    output_indicies : :class:`numpy.ndarray`, optional
+        Output indicies to check against.  If supplied, and not matching input indicies
+        This will force mapping of both the input and output
     outmap_name : str, optional
         The name to use in mapping
-    alternate_indicies : :class:`numpy.ndarray`
-        An alternate list of indicies that can be substituted in to the mapping
     force_zero : bool
         If true, any indicies that don't start with zero require a map (e.g. for
             smaller arrays)
@@ -749,23 +754,38 @@ def handle_indicies(indicies, reac_ind, out_map, kernel_data,
         The transformed indicies
     """
 
-    check = indicies if alternate_indicies is None else alternate_indicies
-    if check[0] + check.size - 1 == check[-1] and \
-            (not force_zero or check[0] == 0) and \
-            not force_map:
+    need_input_map = indicies[0] + indicies.size - 1 != indicies[-1] or \
+            (force_zero and indicies[0] != 0) or force_map
+    need_output_map = False
+    if output_indicies is not None:
+        need_output_map = not np.array_equal(indicies, output_indicies)
+        need_input_map = need_input_map or need_output_map
+
+    if not need_input_map:
         #if the indicies are contiguous, we can get away with an
-        check = (check[0], check[0] + check.size)
+        #simple for loop
+        indicies = (indicies[0], indicies[0] + indicies.size)
     else:
-        #need an output map
-        out_map[reac_ind] = outmap_name
+        #need an input map
+        maps[reac_ind] = inmap_name
+        #add to kernel data
+        inmap_lp = lp.TemporaryVariable(inmap_name,
+            shape=lp.auto,
+            initializer=indicies.astype(dtype=np.int32),
+            read_only=True, scope=scope)
+        kernel_data.append(inmap_lp)
+
+    if need_output_map:
+        #add the output map
+        maps[reac_ind+'_out'] = outmap_name
         #add to kernel data
         outmap_lp = lp.TemporaryVariable(outmap_name,
             shape=lp.auto,
-            initializer=check.astype(dtype=np.int32),
+            initializer=output_indicies.astype(dtype=np.int32),
             read_only=True, scope=scope)
         kernel_data.append(outmap_lp)
 
-    return check
+    return indicies
 
 def apply_vectorization(loopy_opts, inner_ind, knl):
     """

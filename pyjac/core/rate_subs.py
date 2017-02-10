@@ -629,7 +629,7 @@ def get_spec_rates(eqs, loopy_opts, rate_info, test_size=None):
         omega_ind = var_name
 
         indicies = k_gen.handle_indicies(rate_info['net_per_spec']['map'], '${var_name}', maps, kernel_data,
-                                    outmap_name='nonzero_specs', scope=scopes.GLOBAL)
+                                    inmap_name='nonzero_specs', scope=scopes.GLOBAL)
         #reaction per species
         spec_to_reac = rate_info['net_per_spec']['reacs']
         spec_to_reac_lp, spec_to_reac_str, _ = lp_utils.get_loopy_arg('spec_to_reac',
@@ -1214,7 +1214,7 @@ def get_rxn_pres_mod(eqs, loopy_opts, rate_info, test_size=None):
     thd_map = {}
     thd_maplist = []
     indicies = k_gen.handle_indicies(non_fall_thd, '${reac_ind}', thd_map, kernel_data,
-                        outmap_name='thd_only_ind')
+                        inmap_name='thd_only_ind')
 
     #next the thd_body_conc's
     num_thd = rate_info['thd']['num']
@@ -1264,7 +1264,7 @@ ${pres_mod} = ${thd_conc} {dep=decl}
     fall_map = {}
     indicies = k_gen.handle_indicies(np.arange(rate_info['fall']['num'], dtype=np.int32),
                         '${reac_ind}', fall_map, kernel_data,
-                        outmap_name='fall_inds', scope=scopes.GLOBAL)
+                        inmap_name='fall_inds', scope=scopes.GLOBAL)
 
     #the falloff vs chemically activated indicator
     fall_type = rate_info['fall']['ftype']
@@ -1826,7 +1826,7 @@ def get_cheb_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     Nr = rate_info['Nr']
 
     indicies = k_gen.handle_indicies(indicies, reac_ind,
-                      out_map, kernel_data, outmap_name=outmap_name)
+                      out_map, kernel_data, inmap_name=outmap_name)
 
     #get the proper kf indexing / array
     kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
@@ -2036,7 +2036,7 @@ def get_plog_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None):
     Nr = rate_info['Nr']
 
     indicies = k_gen.handle_indicies(indicies, reac_ind, out_map,
-                    kernel_data, outmap_name='plog_inds')
+                    kernel_data, inmap_name='plog_inds')
 
     #get the proper kf indexing / array
     kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf',
@@ -2144,7 +2144,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
     #falloff index mapping
     indicies = ['${reac_ind}', 'j']
     k_gen.handle_indicies(rate_info['fall']['map'], '${reac_ind}', inmaps, kernel_data,
-                            outmap_name='fall_map',
+                            inmap_name='fall_map',
                             force_zero=True)
 
     #simple arrhenius rates
@@ -2184,7 +2184,7 @@ def get_reduced_pressure_kernel(eqs, loopy_opts, rate_info, test_size=None):
         thd_map = np.where(np.in1d(thd_inds, fall_inds))[0].astype(np.int32)
 
         k_gen.handle_indicies(thd_map, thd_indexing_str, thd_index_map,
-            kernel_data, outmap_name=thd_map_name, force_map=True)
+            kernel_data, inmap_name=thd_map_name, force_map=True)
 
     #create the array
     indicies = ['${reac_ind}', 'j']
@@ -2732,15 +2732,6 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     #the reaction index variable
     reac_ind = 'i'
 
-    maps = []
-    #figure out if we need to do any mapping of the input variable
-    inmap_name = 'in_map'
-    if separated_kernels:
-        reac_ind = 'i_dummy'
-        maps.append(lp_utils.generate_map_instruction(
-                                            newname='i',
-                                            map_arr=inmap_name,
-                                            oldname=reac_ind))
     #get rate equations
     rate_eqn_pre = get_rate_eqn(eqs)
     rate_eqn_pre = sp_utils.sanitize(rate_eqn_pre,
@@ -2753,7 +2744,6 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
     #put rateconst info args in dict for unpacking convenience
     extra_args = {'kernel_data' : simple_arrhenius_data,
                   'var_name' : reac_ind,
-                  'maps' : maps,
                   'extra_subs' : {'reac_ind' : reac_ind}}
 
     default_preinstructs = [k_gen.TINV_PREINST_KEY, k_gen.TLOG_PREINST_KEY]
@@ -2821,9 +2811,9 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
             pre_instructions=[k_gen.TINV_PREINST_KEY, k_gen.TLOG_PREINST_KEY],
             **extra_args)}
 
-    spec_copy = specializations.copy()
+    out_specs = {}
     #and do some finalizations for the specializations
-    for rtype, info in spec_copy.items():
+    for rtype, info in specializations.items():
         #first, get indicies
         if rtype < 0:
             #select all for joined kernel
@@ -2833,8 +2823,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
             info.indicies = np.where(rate_info[tag]['type'] == rtype)[0].astype(dtype=np.int32)
 
         if not info.indicies.size:
-            #kernel doesn't act on anything, remove it
-            del specializations[rtype]
+            #kernel doesn't act on anything, don't add it to output
             continue
 
         #check maxb / iteration
@@ -2859,41 +2848,40 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                     end
                 end"""
 
-        #check if we have an input map
-        if info.var_name != 'i':
-            if info.indicies[0] + info.indicies.size - 1 == info.indicies[-1]:
-                #it'll end up in offset form, hence we don't need a map
-                info.var_name = 'i'
-                info.maps = []
-            else:
-                #need to add the input map to kernel data
-                inmap_lp = lp.TemporaryVariable(inmap_name,
-                    shape=lp.auto,
-                    initializer=info.indicies,
-                    read_only=True, scope=scopes.PRIVATE)
-                info.kernel_data.append(inmap_lp)
+        #check if we need an input map
+        maps = {}
+        dummy_in_index = 'i_in' #used as input map if needed
+        dummy_out_index = 'i_out'
+        inmap_name = 'input_map'
+        outmap_name = 'output_map'
+        #need to store these here for the moment, until
+        # _after_ we check for the output map
+        info.indices = k_gen.handle_indicies(info.indicies, info.var_name,
+                      maps, info.kernel_data, inmap_name=inmap_name,
+                      output_indicies=rate_info[tag]['map'][info.indicies],
+                      outmap_name=outmap_name)
 
-        #check if we need an output map
-        out_map = {}
-        outmap_name = 'out_map'
-        alt_inds = None
-        if not falloff:
-            alt_inds = rate_info[tag]['map'][info.indicies]
-        info.indicies = k_gen.handle_indicies(info.indicies, info.var_name,
-                      out_map, info.kernel_data, outmap_name=outmap_name,
-                      alternate_indicies=alt_inds)
+        kf_ind = info.var_name
+        #handle input mapping info if needed
+        if info.var_name in maps:
+            info.maps.append(lp_utils.generate_map_instruction(
+                dummy_in_index, info.var_name, inmap_name))
+            #change the var_name
+            info.var_name = dummy_in_index
+        #handle output mapping info if needed
+        if kf_ind + '_out' in maps:
+            #need to map from the actual loop index
+            info.maps.append(lp_utils.generate_map_instruction(
+                info.var_name, dummy_out_index, outmap_name))
+            #change the kf_ind
+            kf_ind = dummy_out_index
 
         #get the proper kf indexing / array
         kf_arr, kf_str, map_result = lp_utils.get_loopy_arg('kf' + name_mod,
-                        indicies=[info.var_name, 'j'],
+                        indicies=[kf_ind, 'j'],
                         dimensions=[Nr, test_size],
-                        map_name=out_map,
                         order=loopy_opts.order)
         info.kernel_data.append(kf_arr)
-
-        #handle map info
-        if info.var_name in map_result:
-            info.maps.append(map_result[info.var_name])
 
         #substitute in whatever beta_iter / kf_str we found
         info.instructions = Template(
@@ -2903,8 +2891,9 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                                       A_name=A_name,
                                       b_name=b_name,
                                       Ta_name=Ta_name)
+        out_specs[rtype] = info
 
-    return list(specializations.values())
+    return list(out_specs.values())
 
 
 def write_specrates_kernel(eqs, reacs, specs,

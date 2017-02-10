@@ -406,6 +406,10 @@ class kernel_call(object):
             True IFF the masked output variables match the input
         """
 
+        assert isinstance(self.compare_mask, list) and \
+            len(self.compare_mask) == len(output_variables), (
+                'Compare mask does not match output variables!')
+
         allclear = True
         for i in range(len(output_variables)):
             if self.compare_mask[i] is not None:

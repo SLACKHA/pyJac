@@ -441,13 +441,13 @@ class SubTest(TestClass):
         reacs = self.store.reacs
         masks = {
             'simple' : (
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))]),
+                [np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.elementary,))])],
                 get_simple_arrhenius_rates),
             'plog' : (
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))]),
+                [np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.plog,))])],
                 get_plog_arrhenius_rates),
             'cheb' : (
-                np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.cheb,))]),
+                [np.array([i for i, x in enumerate(reacs) if x.match((reaction_type.cheb,))])],
                 get_cheb_arrhenius_rates)}
 
         args = {'T_arr' : T}

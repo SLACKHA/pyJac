@@ -2856,7 +2856,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         outmap_name = 'output_map'
         #need to store these here for the moment, until
         # _after_ we check for the output map
-        info.indices = k_gen.handle_indicies(info.indicies, info.var_name,
+        info.indicies = k_gen.handle_indicies(info.indicies, info.var_name,
                       maps, info.kernel_data, inmap_name=inmap_name,
                       output_indicies=rate_info[tag]['map'][info.indicies],
                       outmap_name=outmap_name)

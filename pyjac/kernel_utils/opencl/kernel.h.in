@@ -17,7 +17,7 @@ Nicholas Curtis - 2017
 #include <string.h>
 #include <CL/cl.h>
 #include <stdbool.h>
-#include "timer.h"
+#include "timer.oclh"
 
 #define NUM_PLATFORMS (16)
 #define MAX_DEVICE (16)

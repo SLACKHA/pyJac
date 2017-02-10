@@ -154,7 +154,7 @@ class wrapping_kernel_generator(object):
             os.path.join(scan_path, x)) and not x.endswith('.in')]
         for dep in deps:
             shutil.copyfile(os.path.join(scan_path, dep),
-                os.path.join(path, out_path))
+                out_path)
 
     def generate(self, path, data_order=None, data_filename='data.bin'):
         """

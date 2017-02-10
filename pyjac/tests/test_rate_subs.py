@@ -872,10 +872,6 @@ class SubTest(TestClass):
                 subprocess.check_call([
                     'python{}.{}'.format(sys.version_info[0], sys.version_info[1]),
                     os.path.join(lib_dir, 'test.py')])
-            except:
-                assert False
-            finally:
-                pass
                 #cleanup
                 for x in args + tests:
                     os.remove(x)
@@ -886,6 +882,21 @@ class SubTest(TestClass):
                 __clean_dir(obj_dir)
                 #clean sources
                 __clean_dir(build_dir)
+            except:
+                assert False
+            finally:
+                clean = False
+                if clean:
+                    #cleanup
+                    for x in args + tests:
+                        os.remove(x)
+                    os.remove(os.path.join(lib_dir, 'test.py'))
+                    #remove library
+                    __clean_dir(lib_dir)
+                    #remove build
+                    __clean_dir(obj_dir)
+                    #clean sources
+                    __clean_dir(build_dir)
 
             #test species rates
             #pywrap.species_rates(np.uint32(self.store.test_size),

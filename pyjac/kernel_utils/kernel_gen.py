@@ -123,7 +123,7 @@ class wrapping_kernel_generator(object):
         #to functions, in the meantime use a OpenCL Template
 
         #now create the kernels!
-        target = lp_utils.get_target(self.lang)
+        target = lp_utils.get_target(self.lang, self.loopy_opts.device)
         for i, info in enumerate(self.kernels):
             if info in self.external_kernels:
                 continue

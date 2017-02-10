@@ -80,8 +80,7 @@ class loopy_options(object):
                     rop_net_kernels=False,
                     species_rates_perspec=True,
                     spec_rates_sum_over_reac=True,
-                    platform='',
-                    device_type=''):
+                    platform=''):
         self.width = width
         self.depth = depth
         self.ilp = ilp
@@ -96,21 +95,39 @@ class loopy_options(object):
         self.spec_rates_sum_over_reac = spec_rates_sum_over_reac
         self.platform = platform
         self.device_type = None
+        self.device = None
         #need to find the first platform that has the device of the correct
         #type
         if self.platform:
-            self.device_type = cl.device_type.CPU if platform.lower() == 'cpu' else cl.device_type.GPU
+            self.device_type = cl.device_type.any
+            check_name = None
+            if platform.lower() == 'cpu':
+                self.device_type = cl.device_type.CPU
+            elif platform.lower() == 'gpu'
+                self.device_type = cl.device_type.GPU
+            else:
+                check_name = self.platform
+            self.platform = None
             platforms = cl.get_platforms()
             for p in platforms:
                 try:
                     ctx = cl.Context(
                             dev_type=self.device_type,
                             properties=[(cl.context_properties.PLATFORM, p)])
-                    if ctx:
-                        self.platform = p
-                        break
+                    if check_name:
+                        if check_name.lower() in p.get_info(cl.platform_info.NAME).lower()
+                                or not check_name:
+                            self.platform = p
+                            break
                 except cl.cffi_cl.RuntimeError:
                     pass
+            if not self.platform:
+                raise Exception('Cannot find matching platform for string: {}'.format(platform))
+            self.device = self.platform.get_devices(device_type=self.device_type)
+            if not self.device:
+                raise Exception('Cannot find devices of type {} on platform {}'.format(self.device_type, self.platform))
+            self.device = self.device[0]
+        #finally a matching device
 
 def get_device_list():
     """

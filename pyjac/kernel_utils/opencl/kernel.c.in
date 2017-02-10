@@ -323,7 +323,7 @@ int main(int argc, char* argv[])
     execute_kernel(problem_size, ${local_input_args});
     double runtime = GetTimer();
 
-    printf("%d,%.15le,%.15le\n", problem_size, compilation_time,
+    printf("%d,%.15le,%.15le,%.15le\n", problem_size, compilation_time,
                 setup_time, runtime);
 
     ${input_frees}

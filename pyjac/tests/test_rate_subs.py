@@ -5,6 +5,7 @@ from collections import OrderedDict, defaultdict
 from string import Template
 import subprocess
 import sys
+import shutil
 
 #local imports
 from ..core.rate_subs import (write_specrates_kernel, get_rate_eqn, assign_rates,
@@ -784,6 +785,22 @@ class SubTest(TestClass):
         build_dir = self.store.build_dir
         obj_dir = self.store.obj_dir
         lib_dir = self.store.lib_dir
+        def __clean_dir(dirname, remove_dir=True):
+            for file in os.listdir(dirname):
+                if os.path.isfile(os.path.join(dirname, file)):
+                    os.remove(os.path.join(dirname, file))
+            if remove_dir:
+                os.rmdir(dirname)
+
+        def __cleanup():
+            #remove library
+            __clean_dir(lib_dir)
+            #remove build
+            __clean_dir(obj_dir)
+            #clean sources
+            __clean_dir(build_dir)
+            #clean dummy builder
+            shutil.rmtree(os.path.join(self.store.script_dir, 'build'))
         T = self.store.T
         P = self.store.P
         Tdot_conp = np.reshape(self.store.conp_temperature_rates, (1, -1))
@@ -860,14 +877,6 @@ class SubTest(TestClass):
                 out_arr = out_arr.T.copy()
 
             out_arr.flatten('K').tofile(os.path.join(os.getcwd(), 'data.bin'))
-
-            def __clean_dir(dirname, remove_dir=True):
-                for file in os.listdir(dirname):
-                    if os.path.isfile(os.path.join(dirname, file)):
-                        os.remove(os.path.join(dirname, file))
-                if remove_dir:
-                    os.rmdir(dirname)
-
             #and call
             try:
                 subprocess.check_call([
@@ -877,29 +886,10 @@ class SubTest(TestClass):
                 for x in args + tests:
                     os.remove(x)
                 os.remove(os.path.join(lib_dir, 'test.py'))
-                #remove library
-                __clean_dir(lib_dir)
-                #remove build
-                __clean_dir(obj_dir)
-                #clean sources
-                __clean_dir(build_dir)
-                #clean dummy builder
-                __clean_dir(os.path.join(self.store.script_dir, 'build'))
             except:
-                assert False
+                assert False, 'Species rates error'
             finally:
-                clean = False
-                if clean:
-                    #cleanup
-                    for x in args + tests:
-                        os.remove(x)
-                    os.remove(os.path.join(lib_dir, 'test.py'))
-                    #remove library
-                    __clean_dir(lib_dir)
-                    #remove build
-                    __clean_dir(obj_dir)
-                    #clean sources
-                    __clean_dir(build_dir)
+                __cleanup()
 
             #test species rates
             #pywrap.species_rates(np.uint32(self.store.test_size),

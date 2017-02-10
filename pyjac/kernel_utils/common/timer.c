@@ -1,4 +1,15 @@
-#include "timer.h"
+#include <stdlib.h>
+
+#ifdef WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#else
+ #ifndef __USE_BSD
+ #define __USE_BSD
+ #endif
+#include <time.h>
+#include <sys/time.h>
+#endif
 
 #ifdef WIN32
 double PCFreq = 0.0;

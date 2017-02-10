@@ -281,7 +281,7 @@ def get_file_list(source_dir, lang, FD=False, AD=False):
         files = ['ad_spec_rates']
         return i_dirs, files
 
-    files = ['read_initial_conditions']
+    files = ['read_initial_conditions', 'timer']
     if lang == 'opencl':
         files += ['species_rates_kernel_compiler', 'species_rates_kernel_main', 'ocl_errorcheck']
     else:

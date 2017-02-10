@@ -37,36 +37,12 @@ except ImportError:
 from .. import utils
 from ..core.create_jacobian import create_jacobian
 from ..libgen import (generate_library, libs, compiler, file_struct,
-                      get_cuda_path, flags
+                      get_cuda_path, flags, lib_dirs
                       )
+from .. import site_config as site
 
-STATIC = True
+STATIC = False
 """bool: CUDA only works for static libraries"""
-
-def is_pdep(rxn):
-    """Check if reaction is pressure depedent.
-
-    Notes
-    -----
-    Includes traditional pressure dependence: third-body, falloff, and
-    chemically activated bimolecular reactions. Does not include pressure-log
-    or Chebyshev reactions.
-
-    Parameters
-    ----------
-    rxn : `ReacInfo`
-        Reaction object being queried for pressure depedence
-
-    Returns
-    -------
-    ``True`` if `rxn` is pressure dependent
-
-    """
-    return (isinstance(rxn, ct.ThreeBodyReaction) or
-            isinstance(rxn, ct.FalloffReaction) or
-            isinstance(rxn, ct.ChemicallyActivatedReaction)
-            )
-
 
 def check_step_file(filename, steplist):
     """Checks file for existing data, returns number of runs left
@@ -163,42 +139,30 @@ def cmd_link(lang, shared):
 
     """
     cmd = None
-    if lang == 'icc':
-        cmd = ['icc']
+    if lang == 'opencl':
+        cmd = ['gcc']
     elif lang == 'c':
         cmd = ['gcc']
     elif lang == 'cuda':
         cmd = ['nvcc'] if not shared else ['g++']
     else:
-        print('Lang must be one of {icc, c, cuda}')
+        print('Lang must be one of {opecl, c}')
         raise
     return cmd
 
 
-def linker(lang, temp_lang, test_dir, filelist, lib=None):
+def linker(lang, temp_lang, test_dir, filelist, lib=None, platform=''):
     args = cmd_link(temp_lang, not STATIC)
-    if lang == 'cuda' or (not STATIC):
-        args.extend(flags[temp_lang])
+    args.extend(flags[lang])
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
-    if temp_lang == 'cuda':
-        args.append('-L{}'.format(get_cuda_path()))
-    args.extend(libs[temp_lang])
-    if temp_lang != 'cuda':
-        args.append('-fopenmp')
-    if lang == 'tchem':
-        if os.getenv('TCHEM_HOME'):
-            tchem_home = os.getenv('TCHEM_HOME')
-        else:
-            raise SystemError('TCHEM_HOME environment variable not set.')
-        args.extend(['-L{}'.format(os.path.join(tchem_home, 'lib')), '-ltchem'])
-
-    if lib is not None:
-        if STATIC:
-            args += ['-L{}'.format(os.getcwd())]
-            args += ['-l{}'.format(lib)]
-        else:
-            args += [lib]
+    args.extend(libs[lang])
+    rpath = ''
+    if lang == 'opencl':
+        rpath = next(x for x in site.CL_PATHS if
+            platform.lower() in x)
+        rpath = site.CL_PATHS[rpath]
+        libdirs.extend([rpath])
 
     args.append('-lm')
 
@@ -210,7 +174,7 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
         sys.exit(1)
 
 
-def performance_tester(home, work_dir, use_old_opt, num_threads):
+def performance_tester(home, work_dir):
     """Runs performance testing for pyJac, TChem, and finite differences.
 
     Parameters
@@ -263,39 +227,31 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
               )
         sys.exit(-1)
 
-    if os.getenv('TCHEM_HOME'):
-        tchem_home = os.getenv('TCHEM_HOME')
-    else:
-        raise SystemError('TCHEM_HOME environment variable not set.')
-
-    cpu_repeats = 10
-    gpu_repeats = 10
+    repeats = 10
 
     def false_factory():
         return False
 
-    c_params = {'lang' : 'c',
-                'cache_opt' : [False, True],
-                'finite_diffs' : [False, True]
-                }
-    cuda_params = {'lang' : 'cuda',
-                   'cache_opt' : [False, True],
-                   'shared' : [False, True],
-                   'finite_diffs' : [False, True]
-                   }
-    tchem_params = {'lang' : 'tchem'}
-
-    #set up testing environment
-    env = os.environ.copy()
-    env['OMP_NUM_THREADS'] = str(1)
-    env['MKL_NUM_THREADS'] = str(1)
+    #c_params = {'lang' : 'c',
+    #            'cache_opt' : [False, True],
+    #            'finite_diffs' : [False, True]
+    #            }
+    #cuda_params = {'lang' : 'cuda',
+    #               'cache_opt' : [False, True],
+    #               'shared' : [False, True],
+    #               'finite_diffs' : [False, True]
+    #               }
+    #tchem_params = {'lang' : 'tchem'}
+    vec_widths = [4, 8, 16]
+    wide_ocl_params = {'lang' : 'opencl',
+                  'vecsize' : vec_widths,
+                  'order' : 'F'}
 
     for mech_name, mech_info in sorted(mechanism_list.items(),
                                        key=lambda x:x[1]['ns']
                                        ):
         #get the cantera object
         gas = ct.Solution(os.path.join(work_dir, mech_name, mech_info['mech']))
-        pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
 
         #ensure directory structure is valid
         os.chdir(os.path.join(work_dir, mech_name))
@@ -316,11 +272,21 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                                     state_data.shape[1],
                                     state_data.shape[2]
                                     )
+                num_conditions += state_data.shape[0]
+
+                use_data = state_data.T
+                out_data = np.zeros((gas.n_species + 2, state_data.shape[0]))
+                for i in range(state_data.shape[0]):
+                    #convert to T, P, C
+                    gas.TPY = use_data[i, 1], use_data[i, 2], use_data[i, 3:]
+                    out_data[i, 0] = gas.T
+                    out_data[i, 1] = gas.P
+                    out_data[i, 2] = gas.concentrations[:]
+
                 if data is None:
                     data = state_data
                 else:
                     data = np.vstack((data, state_data))
-                num_conditions += state_data.shape[0]
                 print(num_conditions, data.shape)
             if num_conditions == 0:
                 print('No data found in folder {}, continuing...'.format(mech_name))
@@ -332,137 +298,47 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
         steplist = []
         while step_size < num_conditions:
             steplist.append(step_size)
-            step_size *= 2
-        if step_size / 2 != num_conditions:
-            steplist.append(num_conditions)
+            step_size *= vec_widths[-1]
 
         the_path = os.getcwd()
         first_run = True
-        op = OptionLoop(c_params, false_factory)
-        op = op + OptionLoop(cuda_params, false_factory)
-        op = op + OptionLoop(tchem_params, false_factory)
-
-        haveOpt = False
-        if os.path.isfile(os.path.join(os.getcwd(),
-                          build_dir, 'optimized.pickle')
-                          ):
-            haveOpt = True
+        op = OptionLoop(wide_ocl_params, false_factory)
 
         for state in op:
             lang = state['lang']
-            temp_lang = 'c' if lang != 'cuda' else 'cuda'
-            FD = state['finite_diffs']
-            if FD:
-                filename = 'fd_jacob{}'.format(utils.file_ext[temp_lang])
-                shutil.copy(os.path.join(home, filename),
-                            os.path.join(build_dir, filename)
-                            )
+            vecsize = state['vecsize']
+            order = state['order']
+            temp_lang = 'c'
 
-            opt = state['cache_opt']
-            smem = state['shared']
-
-            if any([isinstance(rxn, ct.PlogReaction) or
-                isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
-                ]) and lang == 'tchem':
-                print('TChem performance evaluation disabled; '
-                      'not compatible with Plog or Chebyshev reactions.'
-                      )
-                continue
-
-            data_output = ('{}_{}_{}_{}'.format(lang, 'co' if opt else 'nco',
-                                                'smem' if smem else 'nosmem',
-                                                'fd' if FD else 'ajac'
-                                                ) +
+            data_output = ('{}_{}_{}'.format(lang, vecsize, order) +
                            '_output.txt'
                            )
 
             data_output = os.path.join(the_path, data_output)
-            if lang != 'cuda':
-                repeats = cpu_repeats
-                num_completed = check_file(data_output)
-                todo = {num_conditions: repeats - num_completed}
-            else:
-                repeats = gpu_repeats
-                todo = check_step_file(data_output, steplist)
-                for x in todo:
-                    todo[x] = repeats - todo[x]
+            todo = check_step_file(data_output, steplist)
+            for x in todo:
+                todo[x] = repeats - todo[x]
             if not any(todo[x] > 0 for x in todo):
                 continue
 
-            if opt and haveOpt and not use_old_opt:
-                raise Exception('Previous optimization file found... exiting')
-
             if lang != 'tchem':
-                create_jacobian(lang, mech_info['mech'],
-                                optimize_cache=opt,
-                                build_path=build_dir,
-                                no_shared=not smem,
-                                num_blocks=8, num_threads=64,
-                                multi_thread=multiprocessing.cpu_count()
-                                )
+                create_jacobian(lang,
+                    mech_name=mech_info['mech'],
+                    vector_size=vector_size,
+                    wide=True,
+                    build_path=build_dir,
+                    skip_jac=True,
+                    auto_diff=False,
+                    platform='intel',
+                    data_filename='data.bin'
+                    )
 
-            #now we need to write the reader
-            filename = ('read_initial_conditions'
-                        '{}'.format(utils.file_ext[temp_lang])
-                        )
-            shutil.copy(os.path.join(home, filename),
-                        os.path.join(os.getcwd(), build_dir, filename)
-                        )
-
-            #write the tester
-            file_data = {'datafile' : os.path.join(the_path, 'data.bin')}
-            if lang == 'c' or lang == 'cuda':
-                filename = 'tester{}.in'.format(utils.file_ext[temp_lang])
-                with open(os.path.join(home, filename), 'r') as file:
-                    src = Template(file.read())
-                src = src.substitute(file_data)
-            else:
-                file_data['mechfile'] = mech_info['chemkin']
-                if 'thermo' in mech_info:
-                    file_data['thermofile'] = mech_info['thermo']
-                else:
-                    #it's the same file
-                    file_data['thermofile'] = mech_info['chemkin']
-                with open(os.path.join(home,
-                                       'tc_tester.c.in'), 'r') as file:
-                    src = Template(file.read())
-                src = src.substitute(file_data)
-            filename = 'test{}'.format(utils.file_ext[temp_lang])
-            with open(os.path.join(build_dir, filename), 'w') as file:
-                file.write(src)
-
-            #copy timer
-            shutil.copy(os.path.join(home, 'timer.h'),
-                        os.path.join(os.getcwd(), build_dir, 'timer.h')
-                        )
 
             #get file lists
-            i_dirs = [build_dir]
-            files = ['test', 'read_initial_conditions']
+            i_dirs, files = get_file_list(build_dir, lang)
 
-            lib = None
-            #now build the library
-            if lang != 'tchem':
-                lib = generate_library(lang, build_dir, test_dir,
-                                       finite_difference=FD, shared=not STATIC
-                                       )
-
-                lib = os.path.normpath(lib)
-                lib = (lib[lib.index('lib') +
-                       len('lib'):lib.index('.so' if not STATIC else '.a')]
-                       )
-            else:
-                files += ['mechanism', 'mass_mole']
-
-            # Compile generated source code
             structs = [file_struct(lang, temp_lang, f, i_dirs,
-                                   (['-DFINITE_DIFF'] if FD else []),
-                                   build_dir, test_dir, not STATIC
-                                   ) for f in files
-                       ]
-            if lang != 'cuda':
-                for s in structs:
-                    s.args.append('-fopenmp')
+               [], build_dir, test_dir, not STATIC) for f in files]
 
             pool = multiprocessing.Pool()
             results = pool.map(compiler, structs)
@@ -473,13 +349,6 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
 
             linker(lang, temp_lang, test_dir, files, lib)
 
-            if lang == 'tchem':
-                #copy periodic table and mechanisms in
-                shutil.copy(os.path.join(tchem_home, 'data',
-                            'periodictable.dat'),
-                            'periodictable.dat'
-                            )
-
             with open(data_output, 'a+') as file:
                 for stepsize in todo:
                     for i in range(todo[stepsize]):
@@ -487,5 +356,5 @@ def performance_tester(home, work_dir, use_old_opt, num_threads):
                         subprocess.check_call(
                             [os.path.join(the_path,
                             test_dir, 'speedtest'),
-                            str(stepsize), str(num_threads)], stdout=file, env=env
+                            str(stepsize), str(num_threads)], stdout=file
                             )

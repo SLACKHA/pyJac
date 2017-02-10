@@ -519,7 +519,9 @@ def get_temperature_rate(eqs, loopy_opts, rate_info, conp=True, test_size=None):
     #finally do vectorization ability and specializer
     can_vectorize = loopy_opts.depth is None
     vec_spec = None
-    if loopy_opts.width is not None:
+    #we need to specialize if we're doing a wide vectorization
+    #or no vectorization, as it also uses 'j' parallelism
+    if loopy_opts.depth is None:
         def __vec_spec(knl):
             name = 'sum_i_update' if not loopy_opts.unr else 'sum_i_outer_i_inner_update'
             #split the reduction

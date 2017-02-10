@@ -2807,7 +2807,7 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
                 instruction_list.extend(['\t' + x for x in specializations[i].instructions.split('\n')])
                 instruction_list.append('end')
         #and combine them
-        specializations = {-1 : k_gen.knl_info('singlekernel',
+        specializations = {-1 : k_gen.knl_info('rateconst_singlekernel{}'.format(name_mod),
             instructions='\n'.join(instruction_list),
             pre_instructions=[k_gen.TINV_PREINST_KEY, k_gen.TLOG_PREINST_KEY],
             **extra_args)}

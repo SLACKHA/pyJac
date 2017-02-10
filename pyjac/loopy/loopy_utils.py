@@ -115,7 +115,7 @@ class loopy_options(object):
                             dev_type=self.device_type,
                             properties=[(cl.context_properties.PLATFORM, p)])
                     if check_name:
-                        if check_name.lower() in p.get_info(cl.platform_info.NAME).lower()
+                        if check_name.lower() in p.get_info(cl.platform_info.NAME).lower() \
                                 or not check_name:
                             self.platform = p
                             break

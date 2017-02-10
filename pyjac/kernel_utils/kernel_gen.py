@@ -186,7 +186,7 @@ class wrapping_kernel_generator(object):
 
         #finally, copy any dependencies to the path
         lang_dir = os.path.join(script_dir, self.lang)
-        self.__copy_deps(self, lang_dir, path)
+        self.__copy_deps(lang_dir, path)
 
     def _generate_common(self, path, data_order=None):
         if data_order is None:
@@ -206,7 +206,7 @@ class wrapping_kernel_generator(object):
                 data_order=data_order))
 
         #and any other deps
-        self.__copy_deps(self, common_dir, path)
+        self.__copy_deps(common_dir, path)
 
     def _get_pass(self, argv, include_type=True, postfix=''):
             return '{type}h_{name}'.format(

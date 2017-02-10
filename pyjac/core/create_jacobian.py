@@ -17,17 +17,34 @@ from . import chem_model as chem
 from . import mech_interpret as mech
 from . import rate_subs as rate
 from . import mech_auxiliary as aux
+from ..loopy import loopy_utils as lp_utils
 
 
-def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
-                    simd_width=4, build_path='./out/', last_spec=None,
-                    skip_jac=False, auto_diff=False, platform=''
+def create_jacobian(lang,
+                    mech_name=None,
+                    therm_name=None,
+                    gas=None,
+                    vector_size=None,
+                    wide=False,
+                    deep=False,
+                    build_path='./out/',
+                    last_spec=None,
+                    skip_jac=False,
+                    auto_diff=False,
+                    platform='',
+                    data_order='C',
+                    rate_specialization='full',
+                    split_rate_kernels=True,
+                    split_rop_net_kernels=False,
+                    spec_rates_sum_over_reac=True,
+                    conp=True,
+                    data_filename='data.bin'
                     ):
     """Create Jacobian subroutine from mechanism.
 
     Parameters
     ----------
-    lang : {'c', 'cuda', 'fortran', 'matlab'}
+    lang : {'c', 'opencl'}
         Language type.
     mech_name : str, optional
         Reaction mechanism filename (e.g. 'mech.dat').
@@ -37,8 +54,12 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
         or nothing if info in mechanism file.
     gas : cantera.Solution, optional
         The mechanism to generate the Jacobian for.  This or ``mech_name`` must be specified
-    simd_width : int
+    vector_size : int
         The SIMD vector width to use.  If the targeted platform is a GPU, this is the GPU block size
+    wide : bool
+        If true, use a 'wide' vectorization strategy. Cannot be specified along with 'deep'.
+    deep : bool
+        If true, use a 'deep' vectorization strategy.  Cannot be specified along with 'wide'.  Currently broken
     build_path : str, optional
         The output directory for the jacobian files
     last_spec : str, optional
@@ -48,10 +69,45 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
         If ``True``, only the reaction rate subroutines will be generated
     auto_diff : bool, optional
         If ``True``, generate files for use with the Adept autodifferention library.
-    platform : str, optional
-        If specified, generate code for this platform.  May be ['CPU', 'GPU'] or a specific vendor name,
-        e.g. 'AMD'
-
+     platform : {'CPU', 'GPU', or other vendor specific name}
+        The OpenCL platform to run on.
+        *   If 'CPU' or 'GPU', the first available matching platform will be used
+        *   If a vendor specific string, it will be passed to pyopencl to get the platform
+    data_order : {'C', 'F'}
+        The data ordering, 'C' (row-major) recommended for deep vectorizations, while 'F' (column-major)
+        recommended for wide vectorizations
+    rate_specialization : {'fixed', 'hybrid', 'full'}
+        The level of specialization in evaluating reaction rates.
+        'Full' is the full form suggested by Lu et al. (citation)
+        'Hybrid' turns off specializations in the exponential term (Ta = 0, b = 0)
+        'Fixed' is a fixed expression exp(logA + b logT + Ta / T)
+    split_rate_kernels : bool
+        If True, and the :param"`rate_specialization` is not 'Fixed', split different evaluation types
+        into different kernels
+    split_rop_net_kernels : bool
+        If True, break different ROP values (fwd / back / pdep) into different kernels
+    spec_rates_sum_over_reac : bool
+        Controls the manner in which the species rates are calculated
+        *  If True, the summation occurs as:
+            for reac:
+                rate = reac_rates[reac]
+                for spec in reac:
+                    spec_rate[spec] += nu(spec, reac) * reac_rate
+        *  If False, the summation occurs as:
+            for spec:
+                for reac in spec_to_reacs[spec]:
+                    rate = reac_rates[reac]
+                    spec_rate[spec] += nu(spec, reac) * reac_rate
+        *  Of these, the first choice appears to be slightly more efficient, likely due to less
+        thread divergence / SIMD wastage, HOWEVER it causes issues with deep vectorization
+        (an atomic update of the spec_rate is needed, and doesn't appear to work in current loopy)
+        Hence, we supply both.
+        *  Note that if True, and deep vectorization is passed this switch will be ignored
+        and a warning will be issued
+    conp : bool
+        If True, use the constant pressure assumption.  If False, use the constant volume assumption.
+    data_filename : str
+        If specified, the path to the data.bin file that will be used for kernel testing
     Returns
     -------
     None
@@ -65,6 +121,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
         print('Error: autodifferention only supported for C')
         sys.exit(2)
 
+    if deep:
+        raise NotImplementedException()
+
     if auto_diff:
         skip_jac = True
 
@@ -74,6 +133,31 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
         for l in utils.langs:
             print(l)
         sys.exit(2)
+
+    #configure options
+    width = None
+    depth = None
+    if wide:
+        width = vector_size
+    elif deep:
+        depth = vector_size
+
+    rspec = ['fixed', 'hybrid', 'full']
+    rate_spec_val = next((i for i, x in rspec if rate_specialization.lower() == x), None)
+    assert rate_spec_val is not None, 'Error: rate specialization value {} not recognized.\nNeeds to be one of: {}'.format(
+            rate_specialization, ', '.join(rspec))
+    rate_spec_val = lp_utils.RateSpecialization(rate_spec_val)
+
+
+
+    #create the loopy options
+    loopy_opts = lp_utils.loopy_options(width=None, depth=None, ilp=False,
+                    unr=None, lang=lang, order=data_order,
+                    rate_spec=rate_spec_val,
+                    rate_spec_kernels=split_rate_kernels,
+                    rop_net_kernels=split_rop_net_kernels,
+                    spec_rates_sum_over_reac=spec_rates_sum_over_reac,
+                    platform=platform)
 
     # create output directory if none exists
     utils.create_dir(build_path)
@@ -150,36 +234,19 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
     specs[-1] = temp[last_spec]
     specs[last_spec] = temp[-1]
 
-
-    the_len = len(reacs)
-
     #reassign the reaction's product / reactant / third body list
     # to integer indexes for speed
     utils.reassign_species_lists(reacs, specs)
 
+    #write header
+    write_mechanism_header(build_dir, loopy_opts.lang, specs, reacs)
+
     ## now begin writing subroutines
+    kgen = write_specrates_kernel(eqs, reacs, specs, opts,
+                    conp=conp)
 
-    # write species rates subroutine
-    rate.write_specrates_kernel(path, eqs, reacs, specs, loopy_opts, test_size, auto_diff)
-
-    # write chem_utils subroutines
-    rate.write_chem_utils(build_path, lang, specs, auto_diff)
-
-    # write derivative subroutines
-    rate.write_derivs(build_path, lang, specs, reacs, seen_sp, auto_diff)
-
-    # write mass-mole fraction conversion subroutine
-    rate.write_mass_mole(build_path, lang, specs)
-
-    # write header file
-    aux.write_header(build_path, lang)
-
-    # write mechanism initializers and testing methods
-    aux.write_mechanism_initializers(build_path, lang, specs, reacs,
-                                     fwd_spec_mapping, reverse_spec_mapping,
-                                     initial_state, optimize_cache,
-                                     last_spec, auto_diff
-                                     )
+    #generate
+    kgen.generate(build_dir, data_filename=data_filename)
 
     if skip_jac == False:
         # write Jacobian subroutine

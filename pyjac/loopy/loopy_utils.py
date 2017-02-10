@@ -78,7 +78,6 @@ class loopy_options(object):
                     rate_spec=RateSpecialization.fixed,
                     rate_spec_kernels=False,
                     rop_net_kernels=False,
-                    species_rates_perspec=True,
                     spec_rates_sum_over_reac=True,
                     platform=''):
         self.width = width
@@ -87,7 +86,7 @@ class loopy_options(object):
         self.unr = unr
         check_lang(lang)
         self.lang = lang
-        assert order in ['C', 'F']
+        assert order in ['C', 'F'], 'Order {} unrecognized'.format(order)
         self.order = order
         self.rate_spec = rate_spec
         self.rate_spec_kernels = rate_spec_kernels

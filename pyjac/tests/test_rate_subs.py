@@ -548,7 +548,7 @@ class SubTest(TestClass):
 
         #create the kernel call
         kc = kernel_call('pred', ref_ans, **args)
-        self.__generic_rate_tester(__tester, kc)
+        self.__generic_rate_tester(__tester, kc, do_ratespec=True)
 
     @attr('long')
     def test_sri_falloff(self):

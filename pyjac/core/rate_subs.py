@@ -2716,10 +2716,11 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         initializer=rate_info[tag]['Ta'],
         read_only=True, scope=scopes.GLOBAL)
     T_arr = lp.GlobalArg('T_arr', shape=(test_size,), dtype=np.float64)
-    simple_arrhenius_data = [A_lp, b_lp, Ta_lp, T_arr]
 
+    simple_arrhenius_data = []
     if test_size == 'problem_size':
         simple_arrhenius_data += [lp.ValueArg(test_size, dtype=np.int32)]
+    simple_arrhenius_data.extend([A_lp, b_lp, Ta_lp, T_arr])
 
     #if we need the rtype array, add it
     if not separated_kernels and not fixed:

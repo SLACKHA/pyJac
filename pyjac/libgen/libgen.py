@@ -41,7 +41,7 @@ shared_flags = dict(c=['-fPIC'],
                     opencl=['-fPIC'],
                     cuda=['-Xcompiler', '"-fPIC"']
                     )
-opt_flags = ['-O0', '-g'] #['-O3']
+opt_flags = ['-O3']
 
 flags = dict(c=site.CC_FLAGS + opt_flags + ['-fopenmp', '-std=c99'],
              opencl=site.CL_FLAGS + opt_flags + ['-xc', '-std=c99'])

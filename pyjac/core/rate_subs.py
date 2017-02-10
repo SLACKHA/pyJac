@@ -2770,11 +2770,11 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
         """,
         **extra_args)
     i_beta_exp = k_gen.knl_info('rateconst_beta_exp{}'.format(name_mod),
-        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(Ta_name, 0))),
+        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(Ta_name + '[i]', 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
     i_ta_exp = k_gen.knl_info('rateconst_ta_exp{}'.format(name_mod),
-        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(b_name, 0))),
+        instructions=expkf_assign.safe_substitute(rate=str(rate_eqn_pre.subs(b_name + '[i]', 0))),
         pre_instructions=default_preinstructs,
         **extra_args)
     i_full = k_gen.knl_info('rateconst_full{}'.format(name_mod),

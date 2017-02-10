@@ -99,7 +99,7 @@ class loopy_options(object):
         #need to find the first platform that has the device of the correct
         #type
         if self.platform:
-            self.device_type = cl.device_type.any
+            self.device_type = cl.device_type.ALL
             check_name = None
             if platform.lower() == 'cpu':
                 self.device_type = cl.device_type.CPU
@@ -114,11 +114,9 @@ class loopy_options(object):
                     ctx = cl.Context(
                             dev_type=self.device_type,
                             properties=[(cl.context_properties.PLATFORM, p)])
-                    if check_name:
-                        if check_name.lower() in p.get_info(cl.platform_info.NAME).lower() \
-                                or not check_name:
-                            self.platform = p
-                            break
+                    if not check_name or check_name.lower() in p.get_info(cl.platform_info.NAME).lower():
+                        self.platform = p
+                        break
                 except cl.cffi_cl.RuntimeError:
                     pass
             if not self.platform:

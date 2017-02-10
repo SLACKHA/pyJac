@@ -399,29 +399,50 @@ three_body_reaction('2 O + M => O2 + M', [1.200000e+17, -1.0, 0.0])
 # elementary both ways
 
 # Reaction 2
-reaction('O + H2 <=> H + OH', [3.870000e+04, 2.7, 6260.0])
-# third body mix
+reaction('O + H2 <=> H + OH', [3.870000e+04, 2.7, 6260.0],
+         options='duplicate')
+# elementary test A only
 
 # Reaction 3
+reaction('O + H2 <=> H + OH', [3.870000e+04, 0.0, 0.0],
+         options='duplicate')
+# elementary test beta-int
+
+# Reaction 4
+reaction('O + H2 <=> H + OH', [3.870000e+04, 1.0, 0.0],
+         options='duplicate')
+# elementary test no-Ta
+
+# Reaction 5
+reaction('O + H2 <=> H + OH', [3.870000e+04, 2.7, 0.0],
+         options='duplicate')
+# elementary test no-beta
+
+# Reaction 6
+reaction('O + H2 <=> H + OH', [3.870000e+04, 0.0, 6260.0],
+         options='duplicate')
+# third body mix
+
+# Reaction 7
 three_body_reaction('O + H + M <=> OH + M', [5.000000e+17, -1.0, 0.0],
                     efficiencies='H2:2.0 H2O:6.0 AR:0.7')
 # falloff single
 
-# Reaction 4
+# Reaction 8
 falloff_reaction('H + O2 (+ AR) <=> HO2 (+ AR)',
                  kf=[2.800000e+18, -0.86, 0.0],
                  kf0=[2.300000e+18, -0.9, -1700.0],
                  falloff=Troe(A=0.7346, T3=94.0, T1=1756.0, T2=5182.0))
 # falloff unity
 
-# Reaction 5
+# Reaction 9
 falloff_reaction('H + H (+ M) <=> H2 (+ M)',
                  kf=[2.800000e+18, -0.86, 0.0],
                  kf0=[2.300000e+18, -0.9, -1700.0],
                  falloff=Troe(A=0.7346, T3=94.0, T1=1756.0, T2=5182.0))
 # troe
 
-# Reaction 6
+# Reaction 10
 falloff_reaction('2 OH (+ M) <=> H2O2 (+ M)',
                  kf=[7.400000e+13, -0.37, 0.0],
                  kf0=[2.300000e+18, -0.9, -1700.0],
@@ -429,28 +450,28 @@ falloff_reaction('2 OH (+ M) <=> H2O2 (+ M)',
                  falloff=Troe(A=0.7346, T3=94.0, T1=1756.0, T2=5182.0))
 # sri
 
-# Reaction 7
+# Reaction 11
 chemically_activated_reaction('CH3 + CH3 (+ M) <=> C2H5 + H (+ M)',
                               kLow=[4.989000e+12, 0.099, 10600.0],
                               kHigh=[3.802000e-07, 4.838, 7710.0],
                               falloff=SRI(A=1.641, B=4334.0, C=2725.0))
 # plog
 
-# Reaction 8
+# Reaction 12
 pdep_arrhenius('C2H5 + O2 <=> C2H5O2',
                [(0.04, 'atm'), 3.398000e+53, -13.9, 9279.0],
                [(1.0, 'atm'), 9.362000e+59, -15.28, 14240.0],
                [(10.0, 'atm'), 1.262000e+60, -14.91, 16240.0])
 # lindeman
 
-# Reaction 9
+# Reaction 13
 falloff_reaction('H + HCN (+ M) <=> H2CN (+ M)',
                  kf=[3.300000e+13, 0.0, 0.0],
                  kf0=[1.400000e+26, -3.4, 1900.0],
                  efficiencies='CO2:2.0 CO:1.5 H2:2.0 H2O:6.0 AR:0.7 CH4:2.0 C2H6:3.0')
 # cheb
 
-# Reaction 10
+# Reaction 14
 chebyshev_reaction('IC5H9OH1-1 + H (+ M) <=> IC4H9CHO + H (+ M)',
                    Tmin=290.0, Tmax=3000.0,
                    Pmin=(0.009869232667160128, 'atm'), Pmax=(98.69232667160128, 'atm'),
@@ -461,20 +482,20 @@ chebyshev_reaction('IC5H9OH1-1 + H (+ M) <=> IC4H9CHO + H (+ M)',
                            [-4.78840e-02, -6.48500e-02, -2.48350e-02]])
 # explicit reversible
 
-# Reaction 11
+# Reaction 15
 reaction('c2h3oh + hocho => ch3cho + hocho', [2.810000e-02, 3.286, -4509.0])
 
-# Reaction 12
+# Reaction 16
 reaction('ch3cho + hocho => c2h3oh + hocho', [7.040000e+04, 1.209, 556.0])
 
-# Reaction 13
+# Reaction 17
 pdep_arrhenius('ch2cho + O2 <=> ho2ch2co',
                [(0.01, 'atm'), 3.640000e+65, -21.87, 19020.0],
                [(0.1, 'atm'), 3.640000e+58, -19.0, 19090.0],
                [(1.0, 'atm'), 6.650000e+48, -15.55, 17460.0],
                [(10.0, 'atm'), 4.800000e+38, -12.14, 14960.0])
 
-# Reaction 14
+# Reaction 18
 chebyshev_reaction('C8H6 + C2H (+ M) <=> C6H5 + C4H2 (+ M)',
                    Tmin=290.0, Tmax=3000.0,
                    Pmin=(0.009869232667160128, 'atm'), Pmax=(98.69232667160128, 'atm'),
@@ -486,6 +507,6 @@ chebyshev_reaction('C8H6 + C2H (+ M) <=> C6H5 + C4H2 (+ M)',
 # NetReaction from PDepNetwork #7 (C10H7)    deltaHrxn(T=298K) = -19.317280861892925 kcal/mol
 # this should be last to test non-zero last efficiency (N2)
 
-# Reaction 15
+# Reaction 19
 three_body_reaction('H + O2 + M <=> HO2 + M', [2.800000e+18, -0.86, 0.0],
                     efficiencies='CO2:1.5 CO:0.75 H2O:0.0 AR:0.0 C2H6:1.5 N2:3.0 O2:0.0')

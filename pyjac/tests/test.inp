@@ -140,6 +140,19 @@ REACTIONS
 2O+M=>O2+M                               1.200E+17   -1.000        .00
 !elementary both ways
 O+H2<=>H+OH                              3.870E+04    2.700    6260.00
+DUPLICATE
+!elementary test A only
+O+H2<=>H+OH                              3.870E+04    0.0          0.0
+DUPLICATE
+!elementary test beta-int
+O+H2<=>H+OH                              3.870E+04    1.0          0.0
+DUPLICATE
+!elementary test no-Ta
+O+H2<=>H+OH                              3.870E+04    2.700        0.0
+DUPLICATE
+!elementary test no-beta
+O+H2<=>H+OH                              3.870E+04    0.0      6260.00
+DUPLICATE
 !third body mix
 O+H+M<=>OH+M                             5.000E+17   -1.000        .00
 H2/2.00/ H2O/6.00/ AR/ .70/

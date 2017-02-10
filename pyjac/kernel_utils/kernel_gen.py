@@ -153,10 +153,11 @@ class wrapping_kernel_generator(object):
         deps = [x for x in os.listdir(scan_path) if os.path.isfile(
             os.path.join(scan_path, x)) and not x.endswith('.in')]
         for dep in deps:
+            dep_dest = dep
             if change_extension and not dep.endswith(utils.file_ext[self.lang]):
-                dep = dep[:dep.rfind('.')] + utils.file_ext[self.lang]
+                dep_dest = dep[:dep.rfind('.')] + utils.file_ext[self.lang]
             shutil.copyfile(os.path.join(scan_path, dep),
-                os.path.join(out_path, dep))
+                os.path.join(out_path, dep_dest))
 
     def generate(self, path, data_order=None, data_filename='data.bin'):
         """

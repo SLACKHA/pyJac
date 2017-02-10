@@ -2801,7 +2801,8 @@ def get_simple_arrhenius_rates(eqs, loopy_opts, rate_info, test_size=None,
             instruction_list = []
             inds = set()
             for i in specializations:
-                instruction_list.append('<>test_{0} = rtype[i] == {0} {{id=d{0}}}'.format(i))
+                instruction_list.append('<>test_{0} = rtype{1}[i] == {0} {{id=d{0}}}'.format(i,
+                    name_mod))
                 instruction_list.append('if test_{0}'.format(i))
                 instruction_list.extend(['\t' + x for x in specializations[i].instructions.split('\n')])
                 instruction_list.append('end')

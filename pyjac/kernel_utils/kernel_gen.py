@@ -169,6 +169,7 @@ class wrapping_kernel_generator(object):
         -------
         None
         """
+        utils.create_dir(path)
         self._make_kernels()
         self._generate_wrapping_kernel(path)
         self._generate_compiling_program(path)

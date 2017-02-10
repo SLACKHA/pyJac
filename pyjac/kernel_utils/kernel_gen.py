@@ -154,8 +154,10 @@ class wrapping_kernel_generator(object):
             os.path.join(scan_path, x)) and not x.endswith('.in')]
         for dep in deps:
             dep_dest = dep
-            if change_extension and not dep.endswith(utils.file_ext[self.lang]):
-                dep_dest = dep[:dep.rfind('.')] + utils.file_ext[self.lang]
+            dep_is_header = dep.endswith('.h')
+            ext = utils.file_ext[self.lang] if not dep_is_header else utils.header_ext[self.lang]
+            if change_extension and not dep.endswith(ext):
+                dep_dest = dep[:dep.rfind('.')] + ext
             shutil.copyfile(os.path.join(scan_path, dep),
                 os.path.join(out_path, dep_dest))
 

@@ -166,7 +166,7 @@ void init(cl_uint problem_size, cl_uint num_devices${input_initialized_args_defn
         // Partition type
         properties[0] = CL_DEVICE_PARTITION_BY_COUNTS;
         // number of compute units
-        properties[1] = 3;
+        properties[1] = num_cores;
         // List end
         properties[2] = CL_DEVICE_PARTITION_BY_COUNTS_LIST_END;
 

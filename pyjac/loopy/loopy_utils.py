@@ -482,7 +482,7 @@ def populate(knl, kernel_calls, device='0'):
                 test_knl = set_editor(k)
                 if isinstance(test_knl.target, lp.PyOpenCLTarget):
                     #recreate with device
-                    test_knl.target = lp.PyOpenCLTarget(device=device)
+                    test_knl = test_knl.copy(target=lp.PyOpenCLTarget(device=device))
 
                 #check for chaining
                 if kc.chain:
@@ -493,11 +493,18 @@ def populate(knl, kernel_calls, device='0'):
 
                 #output mapping
                 if all(x is None for x in out_ref):
-                    out_ref = out[:]
-                else:
-                    for ind in range(len(out)):
-                        copy_inds = np.where(np.logical_not(np.isinf(out[ind])))
-                        out_ref[ind][copy_inds] = out[ind][copy_inds]
+                    #if the outputs are none, we init to zeros
+                    #and avoid copying zeros over later data!
+                    out_ref = [np.zeros_like(x) for x in out]
+
+                for ind in range(len(out)):
+                    #get indicies that are non-zero (already in there)
+                    #or non infinity
+                    copy_inds = np.where(np.logical_not(
+                        np.logical_or(np.isinf(out[ind]),
+                            out[ind] == 0)),
+                        )
+                    out_ref[ind][copy_inds] = out[ind][copy_inds]
         output.append(out_ref)
         assert found, 'No kernels could be found to match kernel call {}'.format(kc.name)
     return output

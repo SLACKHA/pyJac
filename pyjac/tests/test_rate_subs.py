@@ -883,6 +883,8 @@ class SubTest(TestClass):
                 __clean_dir(obj_dir)
                 #clean sources
                 __clean_dir(build_dir)
+                #clean dummy builder
+                __clean_dir(os.path.join(self.store.script_dir, 'build'))
             except:
                 assert False
             finally:

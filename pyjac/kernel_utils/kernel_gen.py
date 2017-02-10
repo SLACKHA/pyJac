@@ -149,6 +149,13 @@ class wrapping_kernel_generator(object):
         for x in self.depends_on:
             x._make_kernels()
 
+    def __copy_deps(self, scan_path, out_path):
+        deps = [x for x in os.listdir(scan_path) if os.path.isfile(
+            os.path.join(scan_path, x)) and not x.endswith('.in')]
+        for dep in deps:
+            shutil.copyfile(os.path.join(scan_path, dep),
+                os.path.join(path, out_path))
+
     def generate(self, path, data_order=None, data_filename='data.bin'):
         """
         Generates wrapping kernel, compiling program (if necessary) and
@@ -179,18 +186,15 @@ class wrapping_kernel_generator(object):
 
         #finally, copy any dependencies to the path
         lang_dir = os.path.join(script_dir, self.lang)
-        deps = [x for x in os.listdir(lang_dir) if os.path.isfile(
-            os.path.join(lang_dir, x)) and not x.endswith('.in')]
-        for dep in deps:
-            shutil.copyfile(os.path.join(lang_dir, dep),
-                os.path.join(path, dep))
+        self.__copy_deps(self, lang_dir, path)
 
     def _generate_common(self, path, data_order=None):
         if data_order is None:
             data_order = self.loopy_opts.order
 
+        common_dir = os.path.join(script_dir, 'common')
         #get the initial condition reader
-        with open(os.path.join(script_dir, 'common',
+        with open(os.path.join(common_dir,
                     'read_initial_conditions.c.in'), 'r') as file:
             file_src = Template(file.read())
 
@@ -200,6 +204,9 @@ class wrapping_kernel_generator(object):
             file.add_lines(file_src.safe_substitute(
                 mechanism='mechanism' + utils.header_ext[self.lang],
                 data_order=data_order))
+
+        #and any other deps
+        self.__copy_deps(self, common_dir, path)
 
     def _get_pass(self, argv, include_type=True, postfix=''):
             return '{type}h_{name}'.format(
@@ -520,7 +527,7 @@ ${name} : ${type}
             '<>temp = i',
             kernel_data,
             name=self.name,
-            target=lp_utils.get_target(self.lang)
+            target=lp_utils.get_target(self.lang, self.loopy_opts.device)
             )
         if self.vec_width:
             knl = lp.tag_inames(knl, [('i', 'l.0')])

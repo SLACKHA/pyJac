@@ -815,7 +815,7 @@ class SubTest(TestClass):
             write_mechanism_header(build_dir, opts.lang, self.store.specs, self.store.reacs)
 
             #generate wrapper
-            generate_wrapper(opts.lang, build_dir=obj_dir,
+            generate_wrapper(opts.lang, build_dir, build_dir=obj_dir,
                          out_dir=lib_dir, platform='intel')
 
             #get arrays
@@ -850,7 +850,7 @@ class SubTest(TestClass):
                     package='pyjac_ocl',
                     input_args=', '.join('"{}"'.format(x) for x in args),
                     test_arrays=', '.join('"{}"'.format(x) for x in tests),
-                    non_array_args='{}, 1'.format(self.store.test_size),
+                    non_array_args='{}, 12'.format(self.store.test_size),
                     call_name='species_rates'))
 
             out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),

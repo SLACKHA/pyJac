@@ -786,6 +786,8 @@ class SubTest(TestClass):
         obj_dir = self.store.obj_dir
         lib_dir = self.store.lib_dir
         def __clean_dir(dirname, remove_dir=True):
+            if not os.path.exists(dirname):
+                return
             for file in os.listdir(dirname):
                 if os.path.isfile(os.path.join(dirname, file)):
                     os.remove(os.path.join(dirname, file))
@@ -800,7 +802,9 @@ class SubTest(TestClass):
             #clean sources
             __clean_dir(build_dir)
             #clean dummy builder
-            shutil.rmtree(os.path.join(self.store.script_dir, 'build'))
+            dist_build = os.path.join(self.store.script_dir, 'build')
+            if os.path.exists(dist_build):
+                shutil.rmtree(dist_build)
         T = self.store.T
         P = self.store.P
         Tdot_conp = np.reshape(self.store.conp_temperature_rates, (1, -1))
@@ -813,6 +817,7 @@ class SubTest(TestClass):
 
         #now start test
         for i, state in enumerate(oploop):
+            __cleanup()
             if state['width'] is not None and state['depth'] is not None:
                 continue
             #due to current issue interacting with loopy, can't generate deep

@@ -564,7 +564,7 @@ class SubTest(TestClass):
         sri_mask = np.where(np.in1d(self.store.fall_inds, self.store.sri_inds))[0]
         #create the kernel call
         kc = kernel_call('fall_sri', ref_ans, out_mask=[0],
-                                    compare_mask=sri_mask, **args)
+                                    compare_mask=[sri_mask], **args)
         self.__generic_rate_tester(get_sri_kernel, kc)
 
     @attr('long')
@@ -581,7 +581,7 @@ class SubTest(TestClass):
         troe_mask = np.where(np.in1d(self.store.fall_inds, self.store.troe_inds))[0]
         #create the kernel call
         kc = kernel_call('fall_troe', ref_ans, out_mask=[0],
-                                    compare_mask=troe_mask, **args)
+                                    compare_mask=[troe_mask], **args)
         self.__generic_rate_tester(get_troe_kernel, kc)
 
     @attr('long')
@@ -591,7 +591,7 @@ class SubTest(TestClass):
         lind_mask = np.where(np.in1d(self.store.fall_inds, self.store.lind_inds))[0]
         #create the kernel call
         kc = kernel_call('fall_lind', ref_ans,
-                                    compare_mask=lind_mask)
+                                    compare_mask=[lind_mask])
         self.__generic_rate_tester(get_lind_kernel, kc)
 
     @attr('long')
@@ -600,7 +600,7 @@ class SubTest(TestClass):
         ref_kc = self.store.equilibrium_constants.copy()
         ref_B = self.store.ref_B_rev.copy()
         ref_rev = self.store.rev_rate_constants.copy()
-        args={'B' : lambda x: ref_B.copy() if x == 'F' else ref_B.T.copy(),
+        args={'b' : lambda x: ref_B.copy() if x == 'F' else ref_B.T.copy(),
                 'kf' : lambda x: ref_fwd_rates.copy() if x == 'F' else ref_fwd_rates.T.copy()}
 
         #create the kernel call

@@ -815,7 +815,7 @@ class SubTest(TestClass):
             write_mechanism_header(build_dir, opts.lang, self.store.specs, self.store.reacs)
 
             #generate wrapper
-            generate_wrapper(opts.lang, build_dir,
+            generate_wrapper(opts.lang, build_dir=obj_dir,
                          out_dir=lib_dir, platform='intel')
 
             #get arrays
@@ -850,8 +850,22 @@ class SubTest(TestClass):
                     package='pyjac_ocl',
                     input_args=', '.join('"{}"'.format(x) for x in args),
                     test_arrays=', '.join('"{}"'.format(x) for x in tests),
-                    non_array_args='{}, 6'.format(self.store.test_size),
+                    non_array_args='{}, 1'.format(self.store.test_size),
                     call_name='species_rates'))
+
+            out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
+                        np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))
+            if opts.order == 'C':
+                out_arr = out_arr.T.copy()
+
+            out_arr.flatten('K').tofile(os.path.join(os.getcwd(), 'data.bin'))
+
+            def __clean_dir(dirname, remove_dir=True):
+                for file in os.listdir(dirname):
+                    if os.path.isfile(os.path.join(dirname, file)):
+                        os.remove(os.path.join(dirname, file))
+                if remove_dir:
+                    os.remove(dirname)
 
             #and call
             try:
@@ -866,13 +880,12 @@ class SubTest(TestClass):
                 for x in args + tests:
                     os.remove(x)
                 os.remove(os.path.join(lib_dir, 'test.py'))
-
-            # out_arr = np.concatenate((np.reshape(T.copy(), (1, -1)),
-            #     np.reshape(P.copy(), (1, -1)), self.store.concs.copy()))
-            # if opts.order == 'C':
-            #     out_arr = out_arr.T.copy()
-
-            # out_arr.flatten('K').tofile(os.path.join(os.getcwd(), 'data.bin'))
+                #remove library
+                __clean_dir(lib_dir)
+                #remove build
+                __clean_dir(obj_dir)
+                #clean sources
+                __clean_dir(build_dir)
 
             #test species rates
             #pywrap.species_rates(np.uint32(self.store.test_size),

@@ -107,14 +107,15 @@ def generate_wrapper(lang, source_dir, build_dir=None, out_dir=None, auto_diff=F
     if out_dir is None:
         out_dir = os.getcwd()
 
-    distutils_build = os.path.join('build', distutils_dir_name('temp'))
+    if build_dir is None:
+        build_dir = os.path.join(os.path.getcwd(), 'build', distutils_dir_name('temp'))
 
     shared = False
     ext = '.so' if shared else '.a'
     lib = None
     if lang != 'tchem':
         #first generate the library
-        lib = generate_library(lang, source_dir, out_dir=distutils_build,
+        lib = generate_library(lang, source_dir, out_dir=build_dir,
                                shared=shared, auto_diff=auto_diff
                                )
         lib = os.path.normpath(lib)
@@ -149,7 +150,7 @@ def generate_wrapper(lang, source_dir, build_dir=None, out_dir=None, auto_diff=F
         sys.exit(-1)
 
     generate_setup(os.path.join(home_dir, setupfile), home_dir, source_dir,
-                   distutils_build, lib, extra_include_dirs, libraries, libdirs
+                   build_dir, lib, extra_include_dirs, libraries, libdirs
                    )
 
     python_str = 'python{}.{}'.format(sys.version_info[0], sys.version_info[1])

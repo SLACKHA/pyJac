@@ -291,25 +291,44 @@ int main(int argc, char* argv[])
     //#0 - the program name
     //#1 - the problem size
     //#2 - the number of cores [CPU only] or number of GPUs / accelerators [GPU only]
-
-    //first compile to binary
-    compiler();
+    //#3 - whether to compile
 
     cl_uint problem_size = atoi(argv[1]);
     cl_uint num_devices = atoi(argv[2]);
+    int compile = 1;
+    if (argc >= 4)
+        compile = atoi(argv[2]);
+
+    //first compile to binary
+    double compilation_time = -1;
+    if (compile)
+    {
+        StartTimer();
+        compiler();
+        compilation_time = GetTimer();
+    }
 
     ${input_allocs}
 
     //init memory & program
+    StartTimer();
     init(problem_size, num_devices${input_initialized_args_local});
+    double setup_time = GetTimer();
     //read input data
     read_initial_conditions("${data_filename}", problem_size,
                                 ${read_args},
                                 '${order}');
 
+    StartTimer();
     execute_kernel(problem_size, ${local_input_args});
+    double runtime = GetTimer();
+
+    printf("%d,%.15le,%.15le\n", problem_size, compilation_time,
+                setup_time, runtime);
 
     ${input_frees}
 
     finalize();
+
+    return 0;
 }

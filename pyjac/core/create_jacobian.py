@@ -20,8 +20,8 @@ from . import mech_auxiliary as aux
 
 
 def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
-                    num_threads=64, build_path='./out/', last_spec=None,
-                    skip_jac=False, auto_diff=False
+                    simd_width=4, build_path='./out/', last_spec=None,
+                    skip_jac=False, auto_diff=False, platform=''
                     ):
     """Create Jacobian subroutine from mechanism.
 
@@ -37,24 +37,8 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
         or nothing if info in mechanism file.
     gas : cantera.Solution, optional
         The mechanism to generate the Jacobian for.  This or ``mech_name`` must be specified
-    optimize_cache : bool, optional
-        If ``True``, use the greedy optimizer to attempt to improve cache hit rates
-    initial_state : str, optional
-        A comma separated list of the initial conditions to use in form
-        T,P,X (e.g. '800,1,H2=1.0,O2=0.5'). Temperature in K, P in atm
-    num_blocks : int, optional
-        The target number of blocks / sm to achieve for cuda
-    num_threads : int, optional
-        The target number of threads / block to achieve for cuda
-    no_shared : bool, optional
-        If ``True``, do not use the shared_memory_manager
-        to attempt to optimize for CUDA
-    L1_preferred : bool, optional
-        If ``True``, prefer a larger L1 cache and a smaller shared memory size for CUDA
-    multi_thread : int, optional
-        The number of threads to use during optimization
-    force_optimize : bool, optional
-        If ``True``, redo the cache optimization even if the same mechanism
+    simd_width : int
+        The SIMD vector width to use.  If the targeted platform is a GPU, this is the GPU block size
     build_path : str, optional
         The output directory for the jacobian files
     last_spec : str, optional
@@ -64,6 +48,9 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None,
         If ``True``, only the reaction rate subroutines will be generated
     auto_diff : bool, optional
         If ``True``, generate files for use with the Adept autodifferention library.
+    platform : str, optional
+        If specified, generate code for this platform.  May be ['CPU', 'GPU'] or a specific vendor name,
+        e.g. 'AMD'
 
     Returns
     -------

@@ -10,7 +10,7 @@ FAQs
 What state vector should I pass into pyJac?
 ===========================================
 
-As described in :ref:`state_vec`, pyJac expectes state vector `Y` that
+As described in :ref:`state_vec`, pyJac expectes state vector :math:`\Phi` that
 consists of:
 
 .. math::
@@ -35,23 +35,28 @@ What does this mean for comparison to say, Cantera?
 
 The main *gotcha* here, is that pyJac automatically picks a species
 to place at the end of the model.  This choice defaults to the first
-of N:sub:`2`, Ar or He found in the model.  The last species can
-also be specified by the user, with the `-ls` command line option.
+of N\ :sub:`2`, Ar or He found in the model.  The last species can
+also be specified by the user, with the "-ls" command line option.
 
-This species (say, N:sub:`2`) is taken out of its' original position in
+This species (say, N\ :sub:`2`) is taken out of its' original position in
 the model and placed at the end of the model.  If you want to compare results
-to Cantera, this can be confusing; say you have a Solution object `gas`, and
-have selected N:sub:`2` as the last species.  The Solution object can be updated
-as:
+to Cantera, this can be confusing; say you have a Solution object "gas", and
+have selected N\ :sub:`2` as the last species.  The Solution object can be
+updated as:
+
+.. code-block:: python
 
     import cantera as ct
     #create gas from original mechanism file `mech.cti`
     gas = ct.Solution('mech.cti')
     #reorder the gas to match pyJac
     n2_ind = gas.species_index('N2')
+    specs = gas.species()[:]
     gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
             species=specs[:n2_ind] + specs[n2_ind + 1:] + [specs[n2_ind]],
             reactions=gas.reactions())
+
+.. _jac_vals:
 
 What is in the Jacobian?
 ========================
@@ -68,8 +73,8 @@ followed by the temperature derivative WRT mass fractions:
 .. math::
     \frac{\partial \dot{T}}{\partial Y_j}
 
-for :math:`j = 0\ldots N_{\text{sp}} - 1}`, in indicies
-:math:`1\ldots N_{\text{sp}}}`.
+for :math:`j = 0\ldots N_{\text{sp}} - 1`, in indicies
+:math:`1\ldots N_{\text{sp}}`.
 
 Following this is the species mass fraction derivative WRT temperature:
 
@@ -78,6 +83,7 @@ Following this is the species mass fraction derivative WRT temperature:
 
 in index :math:`N_{\text{sp} + 1}` and the mass fraction derivatives
 WRT the other mass fractions:
+
 .. math::
     \frac{\partial Y_0}{\partial Y_j}
 
@@ -86,6 +92,25 @@ Note that the ordering issues disucssed in :ref:ordering apply here as well.
 The resulting Jacobian is of length :math:`N_{\text{sp}} * N_{\text{sp}}`.
 
 .. _paper: https://Niemeyer-Research-Group.github.io/pyJac-paper/
+
+.. _param_names:
+
+What is the difference between "t" and "T" in the Python interface?
+===================================================================
+
+Most ODE solvers allow you to pass the current system time (or independent
+variable) to the RHS / Jacobian functions. We conform to this standard, as it
+allows for interfacing pyJac with other solvers, e.g. CVODEs.  Hence the
+:ref:`dydt` and :ref:`eval_jacob` functions have a "t" parameter for the
+current system time, although it is not used.
+
+However, several other functions (e.g., the reaction / species rates, etc.)
+require the temperature.  Internally, we separate the temperature out from the
+state vector for easier comprehension; however this makes life confusing
+(to say the least), because these functions have a "T" representing the
+temperature.
+
+We know this is not ideal, and it will be fixed in V2.
 
 .. _data_passing:
 
@@ -102,17 +127,21 @@ indexing numpy arrays but does *not* change the actual order in which the data
 is
 stored in memory. E.g.:
 
+.. code-block:: python
+
     arr = arr.T
 
-Returns a *view* of the transpose of `arr`, but does not change the data order
+Returns a *view* of the transpose of "arr", but does not change the data order
 in memory.
 To do that, you would need a copy (among other ways):
+
+.. code-block:: python
 
     arr = arr.T.copy()
 
 This is important for pyJac, as once you pass a 2-D array to the underlying
 C/CUDA code, it will be written / read from in C-contiguous order
-(again, see ordering_). If you pass a non C-contiguous array to pyJac, you will
+(again, see npordering_). If you pass a non C-contiguous array to pyJac, you will
 likely have difficulty intepreting the output.
 
 Finally, we note that the CUDA functions expects 2-D arrays to be ordered such
@@ -126,4 +155,4 @@ independent thermo-chemical states, this translates to:
 
 .. _view: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.view.html
 .. _numpy: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html
-.. _ordering: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html
+.. _npordering: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html

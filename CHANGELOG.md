@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Changed
  - Issue warning in Cantera parsing if the installed version doesn't have access to species thermo properties.
 
+### Added
+ - Added significantly more documentation and examples for data ordering,
+ the state vector / Jacobian, and using the python interface
+
 ## [1.0.2] - 2017.01.18
 ### Added
  - Added CHANGELOG

@@ -47,8 +47,10 @@
   <div class="section" id="overview">
 <h1>Overview<a class="headerlink" href="#overview" title="Permalink to this headline">¶</a></h1>
 <p>pyJac creates the C or CUDA source code files necessary to evaluate the
-analytical Jacobian matrix for a constant-pressure reacting system. Briefly, a
-thermochemical state is described using a composition vector:</p>
+analytical Jacobian matrix for a constant-pressure reacting system.</p>
+<div class="section" id="state-vector">
+<span id="state-vec"></span><h2>State Vector<a class="headerlink" href="#state-vector" title="Permalink to this headline">¶</a></h2>
+<p>Briefly, a thermochemical state is described using a composition vector:</p>
 <div class="math">
 \[\Phi = \left \lbrace T, Y_1, Y_2, \dotsc,
 Y_{N_{\text{sp}} - 1} \right \rbrace^{\text{T}}\]</div>
@@ -57,6 +59,9 @@ Y_{N_{\text{sp}} - 1} \right \rbrace^{\text{T}}\]</div>
 of the final species is determined through conservation of mass:</p>
 <div class="math">
 \[Y_{N_{\text{sp}}} = 1 - \sum_{k=1}^{N_{\text{sp}} - 1} Y_k\]</div>
+</div>
+<div class="section" id="jacobian-formulation">
+<span id="id1"></span><h2>Jacobian Formulation<a class="headerlink" href="#jacobian-formulation" title="Permalink to this headline">¶</a></h2>
 <p>The governing equations of chemical kinetics include ordinary differential
 equations for the rate of change of temperature and the species&#8217; mass fractions:</p>
 <div class="math">
@@ -80,6 +85,7 @@ is the overall production rate of species <em>k</em>.</p>
 \[\mathcal{J}_{i,j} = \frac{\partial f_i}{\partial \Phi_j}\]</div>
 <p>More details can be found in the paper fully describing version 1.0.2 of pyJac:
 <a class="reference external" href="https://Niemeyer-Research-Group.github.io/pyJac-paper/">https://Niemeyer-Research-Group.github.io/pyJac-paper/</a></p>
+</div>
 </div>
 
 

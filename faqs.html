@@ -1,0 +1,226 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>FAQs &#8212; pyJac 1.0.2 documentation</title>
+    
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.2',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="top" title="pyJac 1.0.2 documentation" href="index.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Overview" href="overview.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head>
+  <body role="document">
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="faqs">
+<h1>FAQs<a class="headerlink" href="#faqs" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="id1">
+<h2>FAQs<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="what-state-vector-should-i-pass-into-pyjac">
+<span id="ordering"></span><h3>What state vector should I pass into pyJac?<a class="headerlink" href="#what-state-vector-should-i-pass-into-pyjac" title="Permalink to this headline">¶</a></h3>
+<p>As described in <a class="reference internal" href="overview.html#state-vec"><span class="std std-ref">State Vector</span></a>, pyJac expectes state vector <span class="math">\(\Phi\)</span> that
+consists of:</p>
+<div class="math">
+\[\Phi = \left \lbrace T, Y_1, Y_2, \dotsc,
+Y_{N_{\text{sp}} - 1} \right \rbrace^{\text{T}}\]</div>
+<p>where <span class="math">\(T\)</span> is the temperature, and <span class="math">\(Y_i\)</span> is the mass fraction of
+species <em>i</em>.  Because pyJac is formulated to ensure strict mass conservation,
+the mass fraction of the last species in the model <span class="math">\(Y_{N_{sp}}\)</span> is
+determined as:</p>
+<div class="math">
+\[Y_{N_{\text{sp}}} = 1 - \sum_{k=1}^{N_{\text{sp}} - 1} Y_k\]</div>
+<p>This means that supplying the last species mass fraction is <em>optional</em> in
+all the pyJac forms.</p>
+</div>
+<div class="section" id="what-does-this-mean-for-comparison-to-say-cantera">
+<span id="cantera-comp"></span><h3>What does this mean for comparison to say, Cantera?<a class="headerlink" href="#what-does-this-mean-for-comparison-to-say-cantera" title="Permalink to this headline">¶</a></h3>
+<p>The main <em>gotcha</em> here, is that pyJac automatically picks a species
+to place at the end of the model.  This choice defaults to the first
+of N<sub>2</sub>, Ar or He found in the model.  The last species can
+also be specified by the user, with the &#8220;-ls&#8221; command line option.</p>
+<p>This species (say, N<sub>2</sub>) is taken out of its&#8217; original position in
+the model and placed at the end of the model.  If you want to compare results
+to Cantera, this can be confusing; say you have a Solution object &#8220;gas&#8221;, and
+have selected N<sub>2</sub> as the last species.  The Solution object can be
+updated as:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
+<span class="c1">#create gas from original mechanism file `mech.cti`</span>
+<span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="s1">&#39;mech.cti&#39;</span><span class="p">)</span>
+<span class="c1">#reorder the gas to match pyJac</span>
+<span class="n">n2_ind</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">species_index</span><span class="p">(</span><span class="s1">&#39;N2&#39;</span><span class="p">)</span>
+<span class="n">specs</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">species</span><span class="p">()[:]</span>
+<span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">thermo</span><span class="o">=</span><span class="s1">&#39;IdealGas&#39;</span><span class="p">,</span> <span class="n">kinetics</span><span class="o">=</span><span class="s1">&#39;GasKinetics&#39;</span><span class="p">,</span>
+        <span class="n">species</span><span class="o">=</span><span class="n">specs</span><span class="p">[:</span><span class="n">n2_ind</span><span class="p">]</span> <span class="o">+</span> <span class="n">specs</span><span class="p">[</span><span class="n">n2_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">specs</span><span class="p">[</span><span class="n">n2_ind</span><span class="p">]],</span>
+        <span class="n">reactions</span><span class="o">=</span><span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">())</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="what-is-in-the-jacobian">
+<span id="jac-vals"></span><h3>What is in the Jacobian?<a class="headerlink" href="#what-is-in-the-jacobian" title="Permalink to this headline">¶</a></h3>
+<p>As described in <a class="reference internal" href="overview.html#jacobian-formulation"><span class="std std-ref">Jacobian Formulation</span></a>, the Jacobian consists of
+temperature and mass fraction derivatives.  The order (described in full in
+the <a class="reference external" href="https://Niemeyer-Research-Group.github.io/pyJac-paper/">paper</a>) consists of total temperature derivative in index 0</p>
+<div class="math">
+\[\frac{\partial \dot{T}}{\partial T}\]</div>
+<p>followed by the temperature derivative WRT mass fractions:</p>
+<div class="math">
+\[\frac{\partial \dot{T}}{\partial Y_j}\]</div>
+<p>for <span class="math">\(j = 0\ldots N_{\text{sp}} - 1\)</span>, in indicies
+<span class="math">\(1\ldots N_{\text{sp}}\)</span>.</p>
+<p>Following this is the species mass fraction derivative WRT temperature:</p>
+<div class="math">
+\[\frac{\partial Y_0}{\partial T}\]</div>
+<p>in index <span class="math">\(N_{\text{sp} + 1}\)</span> and the mass fraction derivatives
+WRT the other mass fractions:</p>
+<div class="math">
+\[\frac{\partial Y_0}{\partial Y_j}\]</div>
+<p>in indicies <span class="math">\(N_{\text{sp}} + 1 \ldots 2 N_{\text{sp}}\)</span>, etc.
+Note that the ordering issues disucssed in :ref:ordering apply here as well.
+The resulting Jacobian is of length <span class="math">\(N_{\text{sp}} * N_{\text{sp}}\)</span>.</p>
+</div>
+<div class="section" id="what-is-the-difference-between-t-and-t-in-the-python-interface">
+<span id="param-names"></span><h3>What is the difference between &#8220;t&#8221; and &#8220;T&#8221; in the Python interface?<a class="headerlink" href="#what-is-the-difference-between-t-and-t-in-the-python-interface" title="Permalink to this headline">¶</a></h3>
+<p>Most ODE solvers allow you to pass the current system time (or independent
+variable) to the RHS / Jacobian functions. We conform to this standard, as it
+allows for interfacing pyJac with other solvers, e.g. CVODEs.  Hence the
+<span class="xref std std-ref">dydt</span> and <span class="xref std std-ref">eval_jacob</span> functions have a &#8220;t&#8221; parameter for the
+current system time, although it is not used.</p>
+<p>However, several other functions (e.g., the reaction / species rates, etc.)
+require the temperature.  Internally, we separate the temperature out from the
+state vector for easier comprehension; however this makes life confusing
+(to say the least), because these functions have a &#8220;T&#8221; representing the
+temperature.</p>
+<p>We know this is not ideal, and it will be fixed in V2.</p>
+</div>
+<div class="section" id="how-do-i-pass-numpy-arrays-to-the-c-cuda-pyjac-functions-from-python">
+<span id="data-passing"></span><h3>How do I pass numpy arrays to the C/CUDA pyJac functions from Python?<a class="headerlink" href="#how-do-i-pass-numpy-arrays-to-the-c-cuda-pyjac-functions-from-python" title="Permalink to this headline">¶</a></h3>
+<p>In addition to the ordering considerations discussed above (<a class="reference internal" href="#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a>),
+care must be taken to ensure correctness when using numpy with pyJac&#8217;s
+Python interface.</p>
+<p>First, it is important to realize the difference between a numpy <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.view.html">view</a> and the
+actual data order inside of <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html">numpy</a>.  A view is a simple user interface for
+indexing numpy arrays but does <em>not</em> change the actual order in which the data
+is
+stored in memory. E.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span>
+</pre></div>
+</div>
+<p>Returns a <em>view</em> of the transpose of &#8220;arr&#8221;, but does not change the data order
+in memory.
+To do that, you would need a copy (among other ways):</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>This is important for pyJac, as once you pass a 2-D array to the underlying
+C/CUDA code, it will be written / read from in C-contiguous order
+(again, see <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html">npordering</a>). If you pass a non C-contiguous array to pyJac, you will
+likely have difficulty intepreting the output.</p>
+<p>Finally, we note that the CUDA functions expects 2-D arrays to be ordered such
+that e.g., the temperatures for all the different states are contiguous in
+memory, followed by the mass fractions, etc.  For <span class="math">\(N_{\text{state}}\)</span>
+independent thermo-chemical states, this translates to:</p>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">pyJac</a></h1>
+
+
+
+<p class="blurb">Python-based generator of analytical Jacobians for chemical kinetics</p>
+
+
+
+
+<p>
+<iframe src="https://ghbtns.com/github-btn.html?user=kyleniemeyer&repo=pyjac&type=watch&count=true&size=large&v=2"
+  allowtransparency="true" frameborder="0" scrolling="0" width="200px" height="35px"></iframe>
+</p>
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">FAQs</a></li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installing.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="src/index.html">pyJac API</a></li>
+</ul>
+
+
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2016, Kyle Niemeyer, Nicholas Curtis.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      
+      |
+      <a href="_sources/faqs.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+    <a href="https://github.com/kyleniemeyer/pyjac" class="github">
+        <img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub"  class="github"/>
+    </a>
+    
+
+    
+  </body>
+</html>

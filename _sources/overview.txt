@@ -2,8 +2,15 @@ Overview
 ########
 
 pyJac creates the C or CUDA source code files necessary to evaluate the
-analytical Jacobian matrix for a constant-pressure reacting system. Briefly, a
-thermochemical state is described using a composition vector:
+analytical Jacobian matrix for a constant-pressure reacting system.
+
+.. _state_vec:
+
+============
+State Vector
+============
+
+Briefly, a thermochemical state is described using a composition vector:
 
 .. math::
     \Phi = \left \lbrace T, Y_1, Y_2, \dotsc,
@@ -15,6 +22,12 @@ of the final species is determined through conservation of mass:
 
 .. math::
     Y_{N_{\text{sp}}} = 1 - \sum_{k=1}^{N_{\text{sp}} - 1} Y_k
+
+.. _jacobian_formulation:
+
+====================
+Jacobian Formulation
+====================
 
 The governing equations of chemical kinetics include ordinary differential
 equations for the rate of change of temperature and the species' mass fractions:

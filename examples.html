@@ -28,7 +28,7 @@
     <link rel="search" title="Search" href="search.html" />
     <link rel="top" title="pyJac 1.0.2 documentation" href="index.html" />
     <link rel="next" title="Installation" href="installing.html" />
-    <link rel="prev" title="Overview" href="overview.html" />
+    <link rel="prev" title="FAQs" href="faqs.html" />
    
   <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
@@ -142,6 +142,135 @@ via (e.g.,):</p>
 .pyx files in <a class="reference internal" href="src/pyjac.pywrap.html#module-pyjac.pywrap" title="pyjac.pywrap"><code class="xref py py-mod docutils literal"><span class="pre">pyjac.pywrap</span></code></a>, or the calls in
 <a class="reference internal" href="src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator" title="pyjac.functional_tester.test.cpyjac_evaluator"><code class="xref py py-class docutils literal"><span class="pre">pyjac.functional_tester.test.cpyjac_evaluator</span></code></a></p>
 </div>
+<div class="section" id="using-the-python-interface">
+<h2>Using the Python Interface<a class="headerlink" href="#using-the-python-interface" title="Permalink to this headline">¶</a></h2>
+<p>Once generated, the python wrapper can be imported from a python script in
+the same directory, e.g.:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyjacob</span>
+</pre></div>
+</div>
+<p>Then the <code class="xref py py-func docutils literal"><span class="pre">dydt()</span></code> or <code class="xref py py-func docutils literal"><span class="pre">eval_jacob()</span></code> functions can be called, e.g. for
+the GRI-Mech 3.0 model as:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyjacob</span>
+<span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c1">#create gas from original mechanism file gri30.cti</span>
+<span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="s1">&#39;gri30.cti&#39;</span><span class="p">)</span>
+<span class="c1">#reorder the gas to match pyJac</span>
+<span class="n">n2_ind</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">species_index</span><span class="p">(</span><span class="s1">&#39;N2&#39;</span><span class="p">)</span>
+<span class="n">specs</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">species</span><span class="p">()[:]</span>
+<span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">thermo</span><span class="o">=</span><span class="s1">&#39;IdealGas&#39;</span><span class="p">,</span> <span class="n">kinetics</span><span class="o">=</span><span class="s1">&#39;GasKinetics&#39;</span><span class="p">,</span>
+        <span class="n">species</span><span class="o">=</span><span class="n">specs</span><span class="p">[:</span><span class="n">n2_ind</span><span class="p">]</span> <span class="o">+</span> <span class="n">specs</span><span class="p">[</span><span class="n">n2_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">specs</span><span class="p">[</span><span class="n">n2_ind</span><span class="p">]],</span>
+        <span class="n">reactions</span><span class="o">=</span><span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">())</span>
+
+<span class="c1">#set the gas state</span>
+<span class="n">T</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="n">P</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">one_atm</span>
+<span class="n">gas</span><span class="o">.</span><span class="n">TPY</span> <span class="o">=</span> <span class="n">T</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="s2">&quot;CH4:1.0, O2:2, N2:7.52&quot;</span>
+
+<span class="c1">#setup the state vector</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
+<span class="n">y</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">T</span>
+<span class="n">y</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+<span class="c1">#create a dydt vector</span>
+<span class="n">dydt</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+<span class="n">pyjacob</span><span class="o">.</span><span class="n">py_dydt</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">dydt</span><span class="p">)</span>
+
+<span class="c1">#create a jacobian vector</span>
+<span class="n">jac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">*</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
+
+<span class="c1">#evaluate the Jacobian</span>
+<span class="n">pyjacob</span><span class="o">.</span><span class="n">py_eval_jacobian</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">P</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">jac</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The above uses the state vector discussed in (<a class="reference internal" href="faqs.html#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a>), as well as the
+reordering in (<a class="reference internal" href="faqs.html#cantera-comp"><span class="std std-ref">What does this mean for comparison to say, Cantera?</span></a>) to enable direct comparison to Cantera.
+Also note that we can pass a dummy time of 0, as explained in
+(<a class="reference internal" href="faqs.html#param-names"><span class="std std-ref">What is the difference between &#8220;t&#8221; and &#8220;T&#8221; in the Python interface?</span></a>).</p>
+<p>The CUDA interface is less modular, and currently only supports evaluating the
+Jacobian directly (which in turn populates the other values).  For example,
+if we have 1000 states to evaluate:</p>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cu_pyjacob</span>
+<span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
+
+<span class="c1">#create gas from original mechanism file gri30.cti</span>
+<span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="s1">&#39;gri30.cti&#39;</span><span class="p">)</span>
+<span class="c1">#reorder the gas to match pyJac</span>
+<span class="n">n2_ind</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">species_index</span><span class="p">(</span><span class="s1">&#39;N2&#39;</span><span class="p">)</span>
+<span class="n">specs</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">species</span><span class="p">()[:]</span>
+<span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="n">thermo</span><span class="o">=</span><span class="s1">&#39;IdealGas&#39;</span><span class="p">,</span> <span class="n">kinetics</span><span class="o">=</span><span class="s1">&#39;GasKinetics&#39;</span><span class="p">,</span>
+        <span class="n">species</span><span class="o">=</span><span class="n">specs</span><span class="p">[:</span><span class="n">n2_ind</span><span class="p">]</span> <span class="o">+</span> <span class="n">specs</span><span class="p">[</span><span class="n">n2_ind</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="p">[</span><span class="n">specs</span><span class="p">[</span><span class="n">n2_ind</span><span class="p">]],</span>
+        <span class="n">reactions</span><span class="o">=</span><span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">())</span>
+
+<span class="n">N_state</span> <span class="o">=</span> <span class="mi">1000</span>
+<span class="c1">#setup the state vectors</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
+<span class="n">pres</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">N_state</span><span class="p">)</span>
+
+<span class="c1">#populate with dummy data</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">N_state</span><span class="p">):</span>
+    <span class="c1">#use cantera to normalize mass fractions</span>
+    <span class="n">gas</span><span class="o">.</span><span class="n">TPY</span> <span class="o">=</span> <span class="mi">2400</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(),</span> <span class="mi">25</span> <span class="o">*</span> <span class="n">ct</span><span class="o">.</span><span class="n">one_atm</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">rand</span><span class="p">(),</span> \
+        <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">random</span><span class="p">(</span><span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">)</span>
+
+    <span class="c1">#set state</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">T</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="mi">1</span><span class="p">:]</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">Y</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">pres</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">gas</span><span class="o">.</span><span class="n">P</span>
+
+<span class="c1">#flatten</span>
+<span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+
+<span class="c1">#find # of reversible reactions</span>
+<span class="n">num_rev</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">rxn</span><span class="o">.</span><span class="n">reversible</span>
+                            <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()]</span>
+                            <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+<span class="k">def</span> <span class="nf">__is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">(</span><span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ThreeBodyReaction</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">or</span>
+        <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">)</span>
+        <span class="p">)</span>
+
+<span class="n">num_pdep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">__is_pdep</span><span class="p">(</span><span class="n">rxn</span><span class="p">)</span>
+                         <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">()]</span>
+                         <span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
+
+<span class="c1">#create other arrays</span>
+<span class="k">def</span> <span class="nf">__czeros</span><span class="p">(</span><span class="n">shape</span><span class="p">):</span>
+    <span class="c1">#Return array of zeros in C ordering.</span>
+    <span class="n">arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">arr</span><span class="o">.</span><span class="n">flatten</span><span class="p">(</span><span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+
+<span class="n">concs</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
+<span class="n">fwd_rates</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_reactions</span><span class="p">))</span>
+<span class="n">rev_rates</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">num_rev</span><span class="p">))</span>
+<span class="n">pres_mod</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">num_pdep</span><span class="p">))</span>
+<span class="n">spec_rates</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
+<span class="n">dydt</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
+<span class="n">jac</span> <span class="o">=</span> <span class="n">__czeros</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">*</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">))</span>
+
+<span class="c1">#intialize and get padding</span>
+<span class="n">N_pad</span> <span class="o">=</span> <span class="n">cu_pyjacob</span><span class="o">.</span><span class="n">py_cuinit</span><span class="p">(</span><span class="n">N_state</span><span class="p">)</span>
+
+<span class="c1">#call jacobian function</span>
+<span class="n">cu_pyjacob</span><span class="o">.</span><span class="n">py_cujac</span><span class="p">(</span><span class="n">N_state</span><span class="p">,</span> <span class="n">N_pad</span><span class="p">,</span> <span class="n">pres</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">concs</span><span class="p">,</span>
+                        <span class="n">fwd_rates</span><span class="p">,</span> <span class="n">rev_rates</span><span class="p">,</span> <span class="n">pres_mod</span><span class="p">,</span>
+                        <span class="n">spec_rates</span><span class="p">,</span> <span class="n">dydt</span><span class="p">,</span> <span class="n">jac</span>
+                        <span class="p">)</span>
+
+<span class="c1">#finally reshape arrays for sensible comparison</span>
+<span class="n">dydt</span> <span class="o">=</span> <span class="n">dydt</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+<span class="n">jac</span> <span class="o">=</span> <span class="n">jac</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">N_state</span><span class="p">,</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span> <span class="o">*</span> <span class="n">gas</span><span class="o">.</span><span class="n">n_species</span><span class="p">),</span>
+    <span class="n">order</span><span class="o">=</span><span class="s1">&#39;f&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">dtype</span><span class="p">(</span><span class="s1">&#39;d&#39;</span><span class="p">),</span> <span class="n">order</span><span class="o">=</span><span class="s1">&#39;c&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Note that this uses the ordering discussed in (<a class="reference internal" href="faqs.html#data-passing"><span class="std std-ref">How do I pass numpy arrays to the C/CUDA pyJac functions from Python?</span></a>), while the
+Jacobian values are explained in (<a class="reference internal" href="faqs.html#jac-vals"><span class="std std-ref">What is in the Jacobian?</span></a>).</p>
+</div>
 </div>
 
 
@@ -171,6 +300,7 @@ via (e.g.,):</p>
 <h3>Navigation</h3>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faqs.html">FAQs</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="installing.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="src/index.html">pyJac API</a></li>

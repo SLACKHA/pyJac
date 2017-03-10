@@ -100,3 +100,141 @@ via (e.g.,):
 For details of the functions included in the python wrapper, look at the
 .pyx files in :py:mod:`pyjac.pywrap`, or the calls in
 :py:class:`pyjac.functional_tester.test.cpyjac_evaluator`
+
+==========================
+Using the Python Interface
+==========================
+
+Once generated, the python wrapper can be imported from a python script in
+the same directory, e.g.:
+
+.. code-block:: python
+
+    import pyjacob
+
+Then the :func:`dydt` or :func:`eval_jacob` functions can be called, e.g. for
+the GRI-Mech 3.0 model as:
+
+.. code-block:: python
+
+    import pyjacob
+    import cantera as ct
+    import numpy as np
+
+    #create gas from original mechanism file gri30.cti
+    gas = ct.Solution('gri30.cti')
+    #reorder the gas to match pyJac
+    n2_ind = gas.species_index('N2')
+    specs = gas.species()[:]
+    gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+            species=specs[:n2_ind] + specs[n2_ind + 1:] + [specs[n2_ind]],
+            reactions=gas.reactions())
+
+    #set the gas state
+    T = 1000
+    P = ct.one_atm
+    gas.TPY = T, P, "CH4:1.0, O2:2, N2:7.52"
+
+    #setup the state vector
+    y = np.zeros(gas.n_species)
+    y[0] = T
+    y[1:] = gas.Y[:-1]
+
+    #create a dydt vector
+    dydt = np.zeros_like(y)
+    pyjacob.py_dydt(0, P, y, dydt)
+
+    #create a jacobian vector
+    jac = np.zeros(gas.n_species * gas.n_species)
+
+    #evaluate the Jacobian
+    pyjacob.py_eval_jacobian(0, P, y, jac)
+
+The above uses the state vector discussed in (:ref:`ordering`), as well as the
+reordering in (:ref:`cantera_comp`) to enable direct comparison to Cantera.
+Also note that we can pass a dummy time of 0, as explained in
+(:ref:`param_names`).
+
+The CUDA interface is less modular, and currently only supports evaluating the
+Jacobian directly (which in turn populates the other values).  For example,
+if we have 1000 states to evaluate:
+
+.. code-block:: python
+
+    import cu_pyjacob
+    import cantera as ct
+    import numpy as np
+
+    #create gas from original mechanism file gri30.cti
+    gas = ct.Solution('gri30.cti')
+    #reorder the gas to match pyJac
+    n2_ind = gas.species_index('N2')
+    specs = gas.species()[:]
+    gas = ct.Solution(thermo='IdealGas', kinetics='GasKinetics',
+            species=specs[:n2_ind] + specs[n2_ind + 1:] + [specs[n2_ind]],
+            reactions=gas.reactions())
+
+    N_state = 1000
+    #setup the state vectors
+    y = np.zeros((N_state, gas.n_species))
+    pres = np.zeros(N_state)
+
+    #populate with dummy data
+    for i in range(N_state):
+        #use cantera to normalize mass fractions
+        gas.TPY = 2400 * np.random.rand(), 25 * ct.one_atm * np.random.rand(), \
+            np.random.random(gas.n_species)
+
+        #set state
+        y[i, 0] = gas.T
+        y[i, 1:] = gas.Y[:-1]
+        pres[i] = gas.P
+
+    #flatten
+    y = y.flatten(order='f').astype(np.dtype('d'), order='c')
+
+    #find # of reversible reactions
+    num_rev = np.array([rxn.reversible
+                                for rxn in gas.reactions()]
+                                ).sum()
+    def __is_pdep(rxn):
+        return (isinstance(rxn, ct.ThreeBodyReaction) or
+            isinstance(rxn, ct.FalloffReaction) or
+            isinstance(rxn, ct.ChemicallyActivatedReaction)
+            )
+
+    num_pdep = np.array([__is_pdep(rxn)
+                             for rxn in gas.reactions()]
+                             ).sum()
+
+    #create other arrays
+    def __czeros(shape):
+        #Return array of zeros in C ordering.
+        arr = np.zeros(shape)
+        return arr.flatten(order='c')
+
+    concs = __czeros((N_state, gas.n_species))
+    fwd_rates = __czeros((N_state, gas.n_reactions))
+    rev_rates = __czeros((N_state, num_rev))
+    pres_mod = __czeros((N_state, num_pdep))
+    spec_rates = __czeros((N_state, gas.n_species))
+    dydt = __czeros((N_state, gas.n_species))
+    jac = __czeros((N_state, gas.n_species * gas.n_species))
+
+    #intialize and get padding
+    N_pad = cu_pyjacob.py_cuinit(N_state)
+
+    #call jacobian function
+    cu_pyjacob.py_cujac(N_state, N_pad, pres, y, concs,
+                            fwd_rates, rev_rates, pres_mod,
+                            spec_rates, dydt, jac
+                            )
+
+    #finally reshape arrays for sensible comparison
+    dydt = dydt.reshape((N_state, gas.n_species), order='f').astype(
+        np.dtype('d'), order='c')
+    jac = jac.reshape((N_state, gas.n_species * gas.n_species),
+        order='f').astype(np.dtype('d'), order='c')
+
+Note that this uses the ordering discussed in (:ref:`data_passing`), while the
+Jacobian values are explained in (:ref:`jac_vals`).

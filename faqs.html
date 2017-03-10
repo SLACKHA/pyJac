@@ -17,7 +17,8 @@
         VERSION:     '1.0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
@@ -26,7 +27,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="top" title="pyJac 1.0.2 documentation" href="index.html" />
     <link rel="next" title="Examples" href="examples.html" />
     <link rel="prev" title="Overview" href="overview.html" />
    
@@ -98,16 +98,16 @@ the <a class="reference external" href="https://Niemeyer-Research-Group.github.i
 <div class="math">
 \[\frac{\partial \dot{T}}{\partial Y_j}\]</div>
 <p>for <span class="math">\(j = 0\ldots N_{\text{sp}} - 1\)</span>, in indicies
-<span class="math">\(1\ldots N_{\text{sp}}\)</span>.</p>
+<span class="math">\(1\ldots N_{\text{sp}} - 1\)</span>.</p>
 <p>Following this is the species mass fraction derivative WRT temperature:</p>
 <div class="math">
 \[\frac{\partial Y_0}{\partial T}\]</div>
-<p>in index <span class="math">\(N_{\text{sp} + 1}\)</span> and the mass fraction derivatives
+<p>in index <span class="math">\(N_{\text{sp}}\)</span> and the mass fraction derivatives
 WRT the other mass fractions:</p>
 <div class="math">
 \[\frac{\partial Y_0}{\partial Y_j}\]</div>
 <p>in indicies <span class="math">\(N_{\text{sp}} + 1 \ldots 2 N_{\text{sp}}\)</span>, etc.
-Note that the ordering issues disucssed in :ref:ordering apply here as well.
+Note that the ordering issues disucssed in <a class="reference internal" href="#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a> apply here as well.
 The resulting Jacobian is of length <span class="math">\(N_{\text{sp}} * N_{\text{sp}}\)</span>.</p>
 </div>
 <div class="section" id="what-is-the-difference-between-t-and-t-in-the-python-interface">
@@ -115,7 +115,7 @@ The resulting Jacobian is of length <span class="math">\(N_{\text{sp}} * N_{\tex
 <p>Most ODE solvers allow you to pass the current system time (or independent
 variable) to the RHS / Jacobian functions. We conform to this standard, as it
 allows for interfacing pyJac with other solvers, e.g. CVODEs.  Hence the
-<span class="xref std std-ref">dydt</span> and <span class="xref std std-ref">eval_jacob</span> functions have a &#8220;t&#8221; parameter for the
+<code class="xref py py-func docutils literal"><span class="pre">dydt()</span></code> and <code class="xref py py-func docutils literal"><span class="pre">eval_jacob()</span></code> functions have a &#8220;t&#8221; parameter for the
 current system time, although it is not used.</p>
 <p>However, several other functions (e.g., the reaction / species rates, etc.)
 require the temperature.  Internally, we separate the temperature out from the
@@ -145,12 +145,15 @@ To do that, you would need a copy (among other ways):</p>
 </div>
 <p>This is important for pyJac, as once you pass a 2-D array to the underlying
 C/CUDA code, it will be written / read from in C-contiguous order
-(again, see <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html">npordering</a>). If you pass a non C-contiguous array to pyJac, you will
+(again, see <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html">numpy</a>). If you pass a non C-contiguous array to pyJac, you will
 likely have difficulty intepreting the output.</p>
 <p>Finally, we note that the CUDA functions expects 2-D arrays to be ordered such
 that e.g., the temperatures for all the different states are contiguous in
 memory, followed by the mass fractions, etc.  For <span class="math">\(N_{\text{state}}\)</span>
 independent thermo-chemical states, this translates to:</p>
+<div class="math">
+\[T_{0}, T_{1}, \ldots T_{N_{\text{state}}}, Y_{0, 0}, Y_{0, 1}, \ldots
+Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots\]</div>
 </div>
 </div>
 </div>
@@ -207,11 +210,11 @@ independent thermo-chemical states, this translates to:</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/faqs.txt"
+      <a href="_sources/faqs.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

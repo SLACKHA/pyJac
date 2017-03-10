@@ -17,7 +17,8 @@
         VERSION:     '1.0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -26,7 +27,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="top" title="pyJac 1.0.2 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -50,33 +50,33 @@
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name" colspan="2">param Jacob_Unroll:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of reactions to attempt to place in each Jacobian reaction update subfile</td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">The number of reactions to attempt to place in each Jacobian reaction update subfile</td>
 </tr>
 <tr class="field-even field"><th class="field-name" colspan="2">type Jacob_Unroll:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">int</td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">param Jacob_Spec_Unroll:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of species to attempt to place in each Jacobian species update subfile</td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">The number of species to attempt to place in each Jacobian species update subfile</td>
 </tr>
 <tr class="field-even field"><th class="field-name" colspan="2">type Jacob_Spec_Unroll:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">int</td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">param Rates_Unroll:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of reactions to limit each reaction rate subfile to</td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">The number of reactions to limit each reaction rate subfile to</td>
 </tr>
 <tr class="field-even field"><th class="field-name" colspan="2">type Rates_Unroll:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">int</td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">param Max_Lines:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of lines to attempt to limit each Jacobian reaction update subfile to</td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">The number of lines to attempt to limit each Jacobian reaction update subfile to</td>
 </tr>
 <tr class="field-even field"><th class="field-name">type Max_Lines:</th><td class="field-body">int</td>
 </tr>
 <tr class="field-odd field"><th class="field-name" colspan="2">param Max_Spec_Lines:</th></tr>
-<tr class="field-odd field"><td>&nbsp;</td><td class="field-body">The number of lines to attempt to limit each Jacobian species update subfile to</td>
+<tr class="field-odd field"><td>&#160;</td><td class="field-body">The number of lines to attempt to limit each Jacobian species update subfile to</td>
 </tr>
 <tr class="field-even field"><th class="field-name" colspan="2">type Max_Spec_Lines:</th></tr>
-<tr class="field-even field"><td>&nbsp;</td><td class="field-body">int</td>
+<tr class="field-even field"><td>&#160;</td><td class="field-body">int</td>
 </tr>
 </tbody>
 </table>
@@ -136,10 +136,10 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>builddir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The directory to place the source file in</li>
-<li><strong>blocks_per_sm</strong> (<em>int, optional</em>) &#8211; The number of blocks to target per kernel launch</li>
-<li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The number of threads per block in the per kernel launch</li>
-<li><strong>L1_PREFERRED</strong> (<em>bool, optional</em>) &#8211; If true, prefer a larger L1 cache over more shared memory (recommended)</li>
-<li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If false, turn off shared memory</li>
+<li><strong>blocks_per_sm</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of blocks to target per kernel launch</li>
+<li><strong>num_threads</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of threads per block in the per kernel launch</li>
+<li><strong>L1_PREFERRED</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If true, prefer a larger L1 cache over more shared memory (recommended)</li>
+<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If false, turn off shared memory</li>
 </ul>
 </td>
 </tr>
@@ -182,6 +182,7 @@
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faqs.html">FAQs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
@@ -206,11 +207,11 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="../_sources/src/pyjac.core.CUDAParams.txt"
+      <a href="../_sources/src/pyjac.core.CUDAParams.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

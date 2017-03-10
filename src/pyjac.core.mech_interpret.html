@@ -17,7 +17,8 @@
         VERSION:     '1.0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -26,7 +27,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="top" title="pyJac 1.0.2 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -59,7 +59,7 @@
 
 <dl class="data">
 <dt id="pyjac.core.mech_interpret.act_energy_fact">
-<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">act_energy_fact</code><em class="property"> = {'joules/kmole': 0.00012027236253804078, 'cal/mole': 0.5032195648591627, 'kcal/mole': 503.2195648591627, 'evolts': 11595.0, 'kjoules/mole': 120.2723625380408, 'joules/mole': 0.1202723625380408, 'kelvins': 1.0}</em><a class="headerlink" href="#pyjac.core.mech_interpret.act_energy_fact" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.core.mech_interpret.</code><code class="descname">act_energy_fact</code><em class="property"> = {'joules/kmole': 0.00012027236253804078, 'joules/mole': 0.1202723625380408, 'kcal/mole': 503.2195648591627, 'kelvins': 1.0, 'evolts': 11595.0, 'cal/mole': 0.5032195648591627, 'kjoules/mole': 120.2723625380408}</em><a class="headerlink" href="#pyjac.core.mech_interpret.act_energy_fact" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; Activation energy conversion factor</p>
 </dd></dl>
 
@@ -73,7 +73,7 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;)</li>
-<li><strong>therm_filename</strong> (<em>str, optional</em>) &#8211; Thermodynamic database filename (e.g., &#8216;therm.dat&#8217;)</li>
+<li><strong>therm_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; Thermodynamic database filename (e.g., &#8216;therm.dat&#8217;)</li>
 </ul>
 </td>
 </tr>
@@ -176,6 +176,7 @@ values (if given).</p>
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faqs.html">FAQs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
@@ -200,11 +201,11 @@ values (if given).</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="../_sources/src/pyjac.core.mech_interpret.txt"
+      <a href="../_sources/src/pyjac.core.mech_interpret.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

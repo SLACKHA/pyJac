@@ -17,7 +17,8 @@
         VERSION:     '1.0.2',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -26,7 +27,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="top" title="pyJac 1.0.2 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -55,17 +55,17 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path where files are being written.</li>
-<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Language type.</li>
+<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) &#8211; Language type.</li>
 <li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; List of species in the mechanism.</li>
 <li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; List of reactions in the mechanism.</li>
 <li><strong>fwd_spec_mapping</strong> (<em>list of int</em>) &#8211; A mapping of the original mechanism to the new species order</li>
 <li><strong>back_spec_mapping</strong> (<em>list of int</em>) &#8211; A mapping of the new species order to the original mechanism</li>
-<li><strong>initial_conditions</strong> (<em>Optional[str]</em>) &#8211; A comma separated list of the initial conditions to use in form
+<li><strong>initial_conditions</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>]</em><em></em>) &#8211; A comma separated list of the initial conditions to use in form
 T,P,X (e.g. &#8216;800,1,H2=1.0,O2=0.5&#8217;). Temperature in K, P in atm.</li>
-<li><strong>cache_optimized</strong> (<em>Optional[bool]</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, use the greedy optimizer to attempt to improve cache hit rates</li>
-<li><strong>last_spec</strong> (<em>Optional[str]</em>) &#8211; If specified, the species to assign to the last index.
+<li><strong>cache_optimized</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>]</em><em></em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, use the greedy optimizer to attempt to improve cache hit rates</li>
+<li><strong>last_spec</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>]</em><em></em>) &#8211; If specified, the species to assign to the last index.
 Typically should be N2, Ar, He or another inert bath gas</li>
-<li><strong>auto_diff</strong> (<em>Optional[bool]</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate files for Adept auto_differention library.</li>
+<li><strong>auto_diff</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>]</em><em></em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate files for Adept auto_differention library.</li>
 </ul>
 </td>
 </tr>
@@ -89,7 +89,7 @@ Typically should be N2, Ar, He or another inert bath gas</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path where files are being written.</li>
-<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Language type.</li>
+<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) &#8211; Language type.</li>
 </ul>
 </td>
 </tr>
@@ -132,6 +132,7 @@ Typically should be N2, Ar, He or another inert bath gas</li>
 <h3>Navigation</h3>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../overview.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faqs.html">FAQs</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../examples.html">Examples</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../installing.html">Installation</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">pyJac API</a></li>
@@ -156,11 +157,11 @@ Typically should be N2, Ar, He or another inert bath gas</li>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="../_sources/src/pyjac.core.mech_auxiliary.txt"
+      <a href="../_sources/src/pyjac.core.mech_auxiliary.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

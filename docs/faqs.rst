@@ -74,21 +74,21 @@ followed by the temperature derivative WRT mass fractions:
     \frac{\partial \dot{T}}{\partial Y_j}
 
 for :math:`j = 0\ldots N_{\text{sp}} - 1`, in indicies
-:math:`1\ldots N_{\text{sp}}`.
+:math:`1\ldots N_{\text{sp}} - 1`.
 
 Following this is the species mass fraction derivative WRT temperature:
 
 .. math::
     \frac{\partial Y_0}{\partial T}
 
-in index :math:`N_{\text{sp} + 1}` and the mass fraction derivatives
+in index :math:`N_{\text{sp}}` and the mass fraction derivatives
 WRT the other mass fractions:
 
 .. math::
     \frac{\partial Y_0}{\partial Y_j}
 
 in indicies :math:`N_{\text{sp}} + 1 \ldots 2 N_{\text{sp}}`, etc.
-Note that the ordering issues disucssed in :ref:ordering apply here as well.
+Note that the ordering issues disucssed in :ref:`ordering` apply here as well.
 The resulting Jacobian is of length :math:`N_{\text{sp}} * N_{\text{sp}}`.
 
 .. _paper: https://Niemeyer-Research-Group.github.io/pyJac-paper/
@@ -101,7 +101,7 @@ What is the difference between "t" and "T" in the Python interface?
 Most ODE solvers allow you to pass the current system time (or independent
 variable) to the RHS / Jacobian functions. We conform to this standard, as it
 allows for interfacing pyJac with other solvers, e.g. CVODEs.  Hence the
-:ref:`dydt` and :ref:`eval_jacob` functions have a "t" parameter for the
+:func:`dydt` and :func:`eval_jacob` functions have a "t" parameter for the
 current system time, although it is not used.
 
 However, several other functions (e.g., the reaction / species rates, etc.)
@@ -141,18 +141,18 @@ To do that, you would need a copy (among other ways):
 
 This is important for pyJac, as once you pass a 2-D array to the underlying
 C/CUDA code, it will be written / read from in C-contiguous order
-(again, see npordering_). If you pass a non C-contiguous array to pyJac, you will
+(again, see `numpy`__). If you pass a non C-contiguous array to pyJac, you will
 likely have difficulty intepreting the output.
+
+.. _view: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.view.html
+.. _numpy: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html
+__ numpy_
 
 Finally, we note that the CUDA functions expects 2-D arrays to be ordered such
 that e.g., the temperatures for all the different states are contiguous in
 memory, followed by the mass fractions, etc.  For :math:`N_{\text{state}}`
 independent thermo-chemical states, this translates to:
 
-.. :math::
+.. math::
     T_{0}, T_{1}, \ldots T_{N_{\text{state}}}, Y_{0, 0}, Y_{0, 1}, \ldots
     Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots
-
-.. _view: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.view.html
-.. _numpy: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html
-.. _npordering: https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html

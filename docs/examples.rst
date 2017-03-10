@@ -236,5 +236,5 @@ if we have 1000 states to evaluate:
     jac = jac.reshape((N_state, gas.n_species * gas.n_species),
         order='f').astype(np.dtype('d'), order='c')
 
-Note that this uses the ordering discussed in (data_passing_), while the
-Jacobian values are explained in (jac_vals_).
+Note that this uses the ordering discussed in (:ref:`data_passing`), while the
+Jacobian values are explained in (:ref:`jac_vals`).

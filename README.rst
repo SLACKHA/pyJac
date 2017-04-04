@@ -8,6 +8,9 @@ pyJac
 .. image:: https://badge.fury.io/py/pyJac.svg
     :target: https://badge.fury.io/py/pyJac
 
+.. image:: https://img.shields.io/badge/license-MIT-blue.svg
+    :target: https://opensource.org/licenses/MIT
+
 This utility creates source code to calculate the Jacobian matrix analytically
 for a chemical reaction mechanism.
 

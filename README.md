@@ -53,7 +53,7 @@ openly via [`arXiv:1605.03262 [physics.comp-ph]`](https://arxiv.org/abs/1605.032
 ## License
 
 pyJac is released under the MIT license; see the
-[LICENSE](https://github.com/slackha/pyJac/blob/master/LICENSE)> for details.
+[LICENSE](https://github.com/slackha/pyJac/blob/master/LICENSE) for details.
 
 If you use this package as part of a scholarly publication, please see
 [CITATION.md](https://github.com/slackha/pyJac/blob/master/CITATION.md)

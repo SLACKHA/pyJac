@@ -20,11 +20,11 @@ matrix:
     - os: linux
       env: PYTHON="3.6"
 
-    - os: osx
-      env: PYTHON="3.5"
-
-    - os: osx
-      env: PYTHON="3.6"
+    # - os: osx
+    #   env: PYTHON="3.5"
+    #
+    # - os: osx
+    #   env: PYTHON="3.6"
 
 # Install packages
 install:
@@ -56,16 +56,10 @@ install:
 script:
   - set -e
   - if [[ -z "$TRAVIS_TAG" ]]; then
-      #python setup.py test;
       python -c 'import pyjac; import pyjac.pywrap; import pyjac.performance_tester; import pyjac.libgen; import pyjac.functional_tester; import pyjac.core'
       if [[ "$PYTHON" == "3.6" && "$TRAVIS_OS_NAME" == "linux" ]]; then
         git checkout -- test-environment.yaml;
-        #conda install -q sphinx doctr;
         python setup.py install;
-        #cd docs;
-        #make html SPHINXOPTS="-W";
-        #cd ..;
-        #doctr deploy .;
       fi
     else
       conda build conda.recipe --python=${PYTHON};

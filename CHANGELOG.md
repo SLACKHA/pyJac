@@ -4,7 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.0.3] - 2017.04.01
+## [Unreleased]
+### Added
+
+### Fixed
+
+### Changed
+
+
+## [1.0.3] - 2017-04-01
 ### Fixed
  - Fix for SRI Falloff functions with non-default third bodies ([issue #12](https://github.com/SLACKHA/pyJac/issues/12))
  - Fixed removal of jac/rate lists before libgen of functional_tester
@@ -17,7 +25,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
  - Added significantly more documentation and examples for data ordering,
  the state vector / Jacobian, and using the python interface
 
-## [1.0.2] - 2017.01.18
+## [1.0.2] - 2017-01-18
 ### Added
  - Added CHANGELOG
  - Added documentation for libgen / pywrap features
@@ -72,7 +80,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
  - First working / tested version of pyJac
 
 
-[Unreleased]: https://github.com/slackha/pyJac/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/slackha/pyJac/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/slackha/pyJac/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/slackha/pyJac/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/slackha/pyJac/compare/v1.0...v1.0.1
 [1.0]: https://github.com/slackha/pyJac/compare/v0.9.1-beta...v1.0
 [0.9.1-beta]: https://github.com/slackha/pyJac/compare/v0.9-beta...v0.9.1-beta

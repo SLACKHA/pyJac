@@ -10,5 +10,6 @@ dependencies:
   - Cython>=0.23.1
   - pyyaml>=3.11
   - python=${PYTHON}
-  - optionloop>=1.0.4
+  - optionloop>1.0.3
   - cantera>=2.3.0
+  - pytest>=3.0.1

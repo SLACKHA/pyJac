@@ -6,8 +6,6 @@ include CONTRIBUTING.md
 include citation.jsonld
 include setup.py
 include setup.cfg
-include requirements.txt
-include optional-requirements.txt
 
 include pyjac/utils.py
 include pyjac/__init__.py

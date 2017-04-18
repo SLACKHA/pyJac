@@ -37,13 +37,17 @@ except (ImportError, OSError, IOError):
 install_requires = [
     'numpy>=1.9.0',
     'bitarray>=0.8.1',
-    'optionloop>=1.0.4',
-]
-
-tests_require = [
+    'optionloop>1.0.3',
     'Cython>=0.23.1',
     'pyyaml>=3.11',
 ]
+
+tests_require = [
+    'pytest>=3.0.1',
+]
+
+needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
+setup_requires = ['pytest-runner'] if needs_pytest else []
 
 setup(
     name='pyjac',
@@ -76,7 +80,7 @@ setup(
     keywords='chemical_kinetics analytical_Jacobian',
 
     packages=['pyjac', 'pyjac.core', 'pyjac.functional_tester', 'pyjac.libgen',
-              'pyjac.performance_tester', 'pyjac.pywrap', 'pyjac.utils',
+              'pyjac.performance_tester', 'pyjac.pywrap', 'pyjac.tests',
               ],
     package_dir={'pyjac': 'pyjac'},
     install_requires=install_requires,
@@ -89,6 +93,8 @@ setup(
         },
     include_package_data=True,
     tests_require=tests_require,
+    setup_requires=setup_requires,
+    zip_safe=False,
 
     entry_points={
         'console_scripts': [

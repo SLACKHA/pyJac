@@ -6,6 +6,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+ - Adds Travis config for automatic PyPI and conda build
 
 ### Fixed
 

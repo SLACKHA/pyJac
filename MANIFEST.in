@@ -2,6 +2,7 @@ include MANIFEST.in
 include LICENSE
 include README.rst
 include CITATION.md
+include CONTRIBUTING.md
 include citation.jsonld
 include setup.py
 include setup.cfg

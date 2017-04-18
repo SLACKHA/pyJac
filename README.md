@@ -20,7 +20,7 @@ Detailed installation instructions can be found in the
 The easiest way to install pyJac is via `conda`. You can install to your
 environment with
 ```
-> conda install -c kyleniemeyer pyteck
+> conda install -c slackha pyjac
 ```
 
 pyJac can also be installed from PyPI using pip:

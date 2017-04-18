@@ -1,6 +1,7 @@
 include MANIFEST.in
 include LICENSE
 include README.md
+include CODE_OF_CONDUCT.md
 include CITATION.md
 include CONTRIBUTING.md
 include citation.jsonld

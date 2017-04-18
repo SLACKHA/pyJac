@@ -6,14 +6,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
- - Adds Travis config for automatic PyPI and conda builds
- - Adds minimal unittest test suite for module imports
 
 ### Fixed
 
 ### Changed
- - Changed README back to Markdown for simplicity
 
+
+## [1.0.4] - 2017-04-18
+### Added
+ - Adds Travis config for automatic PyPI and conda builds
+ - Adds minimal unittest test suite for module imports
+ - Adds code of conduct
+
+### Changed
+ - Changed README back to Markdown for simplicity
+ - Updated citation instructions
 
 ## [1.0.3] - 2017-04-01
 ### Fixed
@@ -83,7 +90,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
  - First working / tested version of pyJac
 
 
-[Unreleased]: https://github.com/slackha/pyJac/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/slackha/pyJac/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/slackha/pyJac/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/slackha/pyJac/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/slackha/pyJac/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/slackha/pyJac/compare/v1.0...v1.0.1

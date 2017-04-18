@@ -15,7 +15,7 @@ with open(path.join(here, 'pyjac', '_version.py')) as version_file:
     exec(version_file.read())
 
 # Get the long description from the relevant files
-with open(path.join(here, 'README.rst'), encoding='utf-8') as readme_file:
+with open(path.join(here, 'README.md')) as readme_file:
     readme = readme_file.read()
 
 with open(path.join(here, 'CHANGELOG.md')) as changelog_file:

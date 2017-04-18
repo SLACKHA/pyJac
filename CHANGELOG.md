@@ -6,12 +6,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
- - Adds Travis config for automatic PyPI and conda build
+ - Adds Travis config for automatic PyPI and conda builds
  - Adds minimal unittest test suite for module imports
 
 ### Fixed
 
 ### Changed
+ - Changed README back to Markdown for simplicity
 
 
 ## [1.0.3] - 2017-04-01

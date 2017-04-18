@@ -24,15 +24,14 @@ with open(path.join(here, 'CHANGELOG.md')) as changelog_file:
 with open(path.join(here, 'CITATION.md')) as citation_file:
     citation = citation_file.read()
 
-desc = changelog + '\n\n' + citation
+desc = readme + '\n\n' + changelog + '\n\n' + citation
 try:
     import pypandoc
     long_description = pypandoc.convert_text(desc, 'rst', format='md')
-    long_description = readme + '\n\n' + long_description
     with open(path.join(here, 'README.rst'), 'w') as rst_readme:
         rst_readme.write(long_description)
 except (ImportError, OSError, IOError):
-    long_description = readme + '\n\n' + desc
+    long_description = desc
 
 install_requires = [
     'numpy>=1.9.0',

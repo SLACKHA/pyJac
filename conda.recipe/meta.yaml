@@ -21,22 +21,21 @@ requirements:
     - pyyaml >=3.11
     - numpy >=1.9.0
     - bitarray >=0.8.1
-    - Cython >=0.23.1
-    - optionloop >=1.0.4
+    - cython >=0.23.1
+    - optionloop >1.0.3
     - cantera >=2.3.0
+    - Cython >=0.23.1
+    - pyyaml >=3.11
 
 test:
   imports:
     - pyjac
-    - pyjac.core
-    - pyjac.pywrap
-    - pyjac.performance_tester
-    - pyjac.libgen
-    - pyjac.functional_tester
 
   requires:
-    - Cython >=0.23.1
-    - pyyaml >=3.11
+    - pytest >=3.0.1
+
+  commands:
+    - pytest -vv --pyargs pyjac
 
 about:
   home: data['url']

@@ -34,7 +34,7 @@ except (ImportError, OSError, IOError):
     long_description = desc
 
 install_requires = [
-    'numpy>=1.9.0',
+    'numpy>=1.12.0',
     'bitarray>=0.8.1',
     'optionloop>1.0.3',
     'Cython>=0.23.1',

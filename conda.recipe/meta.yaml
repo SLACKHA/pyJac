@@ -19,7 +19,7 @@ requirements:
   run:
     - python {{PY_VER}}*
     - pyyaml >=3.11
-    - numpy >=1.9.0
+    - numpy >=1.12.0
     - bitarray >=0.8.1
     - cython >=0.23.1
     - optionloop >1.0.3

@@ -1,0 +1,15 @@
+name: test-environment
+channels:
+- defaults
+- conda-forge
+- slackha
+- cantera
+dependencies:
+  - numpy=1.12.0
+  - bitarray>=0.8.1
+  - cython>=0.23.1
+  - pyyaml>=3.11
+  - python=${PYTHON}
+  - optionloop>1.0.3
+  - cantera>=2.3.0
+  - pytest>=3.0.1

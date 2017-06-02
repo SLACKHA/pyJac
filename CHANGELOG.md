@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 ### Changed
+- Now strip whitespace from mechanism file lines prior to parsing keywords
 
 ### Removed
 - Removed plotting scripts specific to first paper on pyJac

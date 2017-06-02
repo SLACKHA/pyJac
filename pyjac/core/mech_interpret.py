@@ -108,6 +108,9 @@ def read_mech(mech_filename, therm_filename):
             # don't convert to lowercase, since thermo
             # needs to match (for Chemkin)
 
+            # Remove trailing and leading whitespace, tabs, newline
+            line = line.strip()
+
             # remove any comments from end of line
             ind = line.find('!')
             if ind > 0: line = line[0:ind]
@@ -171,8 +174,6 @@ def read_mech(mech_filename, therm_filename):
             elif line[0:3].lower() == 'end':
                 key = ''
                 continue
-
-            line = line.strip()
 
             if key == 'elem':
                 # if any atomic weight declarations, replace / with spaces

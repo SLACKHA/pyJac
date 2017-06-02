@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Changed
 
+### Removed
+- Removed plotting scripts specific to first paper on pyJac
+
 
 ## [1.0.4] - 2017-04-18
 ### Added

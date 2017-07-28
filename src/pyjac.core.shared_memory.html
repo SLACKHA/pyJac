@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.shared_memory module &#8212; pyJac 1.0.2 documentation</title>
+    <title>pyjac.core.shared_memory module &#8212; pyJac 1.0.3 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,11 +14,10 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.2',
+        VERSION:     '1.0.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
+        HAS_SOURCE:  true
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -27,6 +26,7 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="pyJac 1.0.3 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -96,9 +96,9 @@ tracking of <a class="reference internal" href="#pyjac.core.shared_memory.variab
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>blocks_per_sm</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of blocks / streaming multiprocessor to target</li>
-<li><strong>num_threads</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of threads / block expected in kernel launches</li>
-<li><strong>L1_PREFERRED</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; Whether or not to prefer a larger L1 cache over more shared memory
+<li><strong>blocks_per_sm</strong> (<em>int, optional</em>) &#8211; The number of blocks / streaming multiprocessor to target</li>
+<li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The number of threads / block expected in kernel launches</li>
+<li><strong>L1_PREFERRED</strong> (<em>bool, optional</em>) &#8211; Whether or not to prefer a larger L1 cache over more shared memory
 (recommended).</li>
 </ul>
 </td>
@@ -201,7 +201,7 @@ Thus this class has methods for setting the state/behaviour
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open <code class="xref any docutils literal"><span class="pre">File</span></code> object to write to</li>
-<li><strong>indent</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of spaces to use in the indent</li>
+<li><strong>indent</strong> (<em>int, optional</em>) &#8211; The number of spaces to use in the indent</li>
 </ul>
 </td>
 </tr>
@@ -227,9 +227,9 @@ usage and stagnancy.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; Open <code class="xref any docutils literal"><span class="pre">File</span></code> object to write to</li>
 <li><strong>variables</strong> (list of <a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; List of variables to consider loading</li>
-<li><strong>estimated_usage</strong> (<em>list of float</em><em>, </em><em>optional</em>) &#8211; If specified, these will be used to prioritize variable additon</li>
-<li><strong>indent</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of spaces to use in the indentation</li>
-<li><strong>load</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code> (default), a load into the internal dictionary will be
+<li><strong>estimated_usage</strong> (<em>list of float, optional</em>) &#8211; If specified, these will be used to prioritize variable additon</li>
+<li><strong>indent</strong> (<em>int, optional</em>) &#8211; The number of spaces to use in the indentation</li>
+<li><strong>load</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code> (default), a load into the internal dictionary will be
 written to the file. If <code class="docutils literal"><span class="pre">False</span></code>, this will must be handled by
 the calling routine.</li>
 </ul>
@@ -291,7 +291,7 @@ address, otherwise calls <a class="reference internal" href="pyjac.utils.html#py
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'}</em>) &#8211; Programming language.</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language.</li>
 <li><strong>thevar</strong> (<a class="reference internal" href="#pyjac.core.shared_memory.variable" title="pyjac.core.shared_memory.variable"><code class="xref any py py-class docutils literal"><span class="pre">variable</span></code></a>) &#8211; Variable of interest.</li>
 <li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index in the array.</li>
 <li><strong>twod</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Not used in this function.</li>
@@ -364,11 +364,11 @@ address, otherwise calls <a class="reference internal" href="pyjac.utils.html#py
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
-      <a href="../_sources/src/pyjac.core.shared_memory.rst.txt"
+      <a href="../_sources/src/pyjac.core.shared_memory.txt"
           rel="nofollow">Page source</a>
     </div>
 

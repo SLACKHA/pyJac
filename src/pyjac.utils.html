@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.utils module &#8212; pyJac 1.0.2 documentation</title>
+    <title>pyjac.utils module &#8212; pyJac 1.0.3 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,11 +14,10 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.2',
+        VERSION:     '1.0.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
+        HAS_SOURCE:  true
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -27,6 +26,7 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="pyJac 1.0.3 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -47,7 +47,7 @@
 <p>Module containing utility functions.</p>
 <dl class="data">
 <dt id="pyjac.utils.comment">
-<code class="descclassname">pyjac.utils.</code><code class="descname">comment</code><em class="property"> = {'cuda': '//', 'matlab': '%', 'fortran': '!', 'c': '//'}</em><a class="headerlink" href="#pyjac.utils.comment" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.utils.</code><code class="descname">comment</code><em class="property"> = {'fortran': '!', 'c': '//', 'matlab': '%', 'cuda': '//'}</em><a class="headerlink" href="#pyjac.utils.comment" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; comment characters for each language</p>
 </dd></dl>
 
@@ -59,7 +59,7 @@
 
 <dl class="data">
 <dt id="pyjac.utils.file_ext">
-<code class="descclassname">pyjac.utils.</code><code class="descname">file_ext</code><em class="property"> = {'cuda': '.cu', 'matlab': '.m', 'fortran': '.f90', 'c': '.c'}</em><a class="headerlink" href="#pyjac.utils.file_ext" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.utils.</code><code class="descname">file_ext</code><em class="property"> = {'fortran': '.f90', 'c': '.c', 'matlab': '.m', 'cuda': '.cu'}</em><a class="headerlink" href="#pyjac.utils.file_ext" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; source code file extensions based on language</p>
 </dd></dl>
 
@@ -71,25 +71,25 @@
 
 <dl class="data">
 <dt id="pyjac.utils.header_ext">
-<code class="descclassname">pyjac.utils.</code><code class="descname">header_ext</code><em class="property"> = {'cuda': '.cuh', 'c': '.h'}</em><a class="headerlink" href="#pyjac.utils.header_ext" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.utils.</code><code class="descname">header_ext</code><em class="property"> = {'c': '.h', 'cuda': '.cuh'}</em><a class="headerlink" href="#pyjac.utils.header_ext" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; header extensions based on language</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyjac.utils.line_end">
-<code class="descclassname">pyjac.utils.</code><code class="descname">line_end</code><em class="property"> = {'cuda': ';\n', 'matlab': ';\n', 'fortran': '\n', 'c': ';\n'}</em><a class="headerlink" href="#pyjac.utils.line_end" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.utils.</code><code class="descname">line_end</code><em class="property"> = {'fortran': '\n', 'c': ';\n', 'matlab': ';\n', 'cuda': ';\n'}</em><a class="headerlink" href="#pyjac.utils.line_end" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; line endings dependent on language</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyjac.utils.exp_10_fun">
-<code class="descclassname">pyjac.utils.</code><code class="descname">exp_10_fun</code><em class="property"> = {'cuda': 'exp10(', 'matlab': 'exp(log(10.0) * ', 'fortran': 'exp(log(10) * ', 'c': 'pow(10.0, '}</em><a class="headerlink" href="#pyjac.utils.exp_10_fun" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.utils.</code><code class="descname">exp_10_fun</code><em class="property"> = {'fortran': 'exp(log(10) * ', 'c': 'pow(10.0, ', 'matlab': 'exp(log(10.0) * ', 'cuda': 'exp10('}</em><a class="headerlink" href="#pyjac.utils.exp_10_fun" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; exp10 functions for various languages</p>
 </dd></dl>
 
 <dl class="data">
 <dt id="pyjac.utils.array_chars">
-<code class="descclassname">pyjac.utils.</code><code class="descname">array_chars</code><em class="property"> = {'cuda': '[INDEX({})]', 'matlab': '({})', 'fortran': '({})', 'c': '[{}]'}</em><a class="headerlink" href="#pyjac.utils.array_chars" title="Permalink to this definition">¶</a></dt>
+<code class="descclassname">pyjac.utils.</code><code class="descname">array_chars</code><em class="property"> = {'fortran': '({})', 'c': '[{}]', 'matlab': '({})', 'cuda': '[INDEX({})]'}</em><a class="headerlink" href="#pyjac.utils.array_chars" title="Permalink to this definition">¶</a></dt>
 <dd><p><em>dict</em> &#8211; the characters to format an index into an array per language</p>
 </dd></dl>
 
@@ -153,7 +153,7 @@
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>string</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; String to be parsed.</li>
-<li><strong>sep</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; Delimiter (default is None, which means consecutive whitespace).</li>
+<li><strong>sep</strong> (<em>str, optional</em>) &#8211; Delimiter (default is None, which means consecutive whitespace).</li>
 </ul>
 </td>
 </tr>
@@ -223,7 +223,7 @@ into the appropriate array characters (e.g., [] or ()).</p>
 <li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; One of the accepted languages</li>
 <li><strong>name</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The name of the array</li>
 <li><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The index to format</li>
-<li><strong>twod</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; If not <code class="docutils literal"><span class="pre">None</span></code> and the lang is &#8216;fortan&#8217; or &#8216;matlab&#8217; this will be formatted
+<li><strong>twod</strong> (<em>int, optional</em>) &#8211; If not <code class="docutils literal"><span class="pre">None</span></code> and the lang is &#8216;fortan&#8217; or &#8216;matlab&#8217; this will be formatted
 as a second index in the array.</li>
 </ul>
 </td>
@@ -297,7 +297,7 @@ representing the species&#8217; index in the list.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>val</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Value to be checked.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>val</strong> (<em>int, float</em>) &#8211; Value to be checked.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><code class="docutils literal"><span class="pre">True</span></code> if <code class="docutils literal"><span class="pre">val</span></code> is <a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">int</span></code></a> or whole number (if <a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">float</span></code></a>).</td>
 </tr>
@@ -378,11 +378,11 @@ representing the species&#8217; index in the list.</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
-      <a href="../_sources/src/pyjac.utils.rst.txt"
+      <a href="../_sources/src/pyjac.utils.txt"
           rel="nofollow">Page source</a>
     </div>
 

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.core.create_jacobian module &#8212; pyJac 1.0.2 documentation</title>
+    <title>pyjac.core.create_jacobian module &#8212; pyJac 1.0.3 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,11 +14,10 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.2',
+        VERSION:     '1.0.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
+        HAS_SOURCE:  true
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -27,6 +26,7 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="pyJac 1.0.3 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -293,7 +293,7 @@ chemically activated bimolecular)</td>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
-<li><strong>rev</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If true, get the reverse constant rate constant derivative</li>
+<li><strong>rev</strong> (<em>bool, optional</em>) &#8211; If true, get the reverse constant rate constant derivative</li>
 </ul>
 </td>
 </tr>
@@ -317,7 +317,7 @@ chemically activated bimolecular)</td>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
-<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'}</em>) &#8211; The programming language</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
 <li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reactions in the mechanism</li>
 <li><strong>rev_reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reversible reactions in the mechanism</li>
@@ -346,7 +346,7 @@ the index of all species with non-zero dB/dT entries</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'}</em>) &#8211; The programming language</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) &#8211; The species in the mechanism</li>
 <li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
 <li><strong>do_unroll</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, Jacobian unrolling is turned on</li>
@@ -387,7 +387,7 @@ pressure dependent reaction</li>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>conc_temp_log</strong> &#8211; List with (species index, efficiency) for third-body efficiencies.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)">int</a>, <a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)">float</a>)</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of (int, float)</p>
 </td>
 </tr>
 </tbody>
@@ -404,7 +404,7 @@ pressure dependent reaction</li>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>file</strong> (<code class="xref any docutils literal"><span class="pre">File</span></code>) &#8211; The open file object to write to</li>
-<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'}</em>) &#8211; The programming language</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; The reaction to consider</li>
 </ul>
 </td>
@@ -686,7 +686,7 @@ elementary reaction.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
-<li><strong>lang</strong> (<em>str {'c'</em><em>, </em><em>'cuda'}</em>) &#8211; Programming language</li>
+<li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; Programming language</li>
 <li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Jacobian subfile number</li>
 <li><strong>rate_list</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The required reaction/species rate strings needed for the intro</li>
 <li><strong>this_rev</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, batch contains a reversible reaction</li>
@@ -724,7 +724,7 @@ elementary reaction.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; The path to place the file in</li>
-<li><strong>lang</strong> (<em>str {'c'</em><em>, </em><em>'cuda'}</em>) &#8211; The programming language</li>
+<li><strong>lang</strong> (<em>str {'c', 'cuda'}</em>) &#8211; The programming language</li>
 <li><strong>number</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; The jacobian subfile index</li>
 <li><strong>have_jnplus_jplus</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, the last species has non-zero contributions to the Jacobian</li>
 </ul>
@@ -750,11 +750,11 @@ elementary reaction.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
-<li><strong>lang</strong> (<em>str {'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) &#8211; Programming language.</li>
+<li><strong>lang</strong> (<em>str {'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
 <li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species in the mechanism.</li>
 <li><strong>reacs</strong> (<em>list of ReacInfo</em>) &#8211; List of reactions in the mechanism.</li>
 <li><strong>seen_sp</strong> (<em>list of bool</em>) &#8211; List of <a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a>; <code class="docutils literal"><span class="pre">False</span></code> if species has (identically) zero rate</li>
-<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><em>shared_memory_manager</em></a><em>, </em><em>optional</em>) &#8211; If not <code class="docutils literal"><span class="pre">None</span></code>, use this to manage shared memory optimization</li>
+<li><strong>smm</strong> (<em>shared_memory_manager, optional</em>) &#8211; If not <code class="docutils literal"><span class="pre">None</span></code>, use this to manage shared memory optimization</li>
 </ul>
 </td>
 </tr>
@@ -779,8 +779,8 @@ Jacobian with a column &#8216;j&#8217; of another matrix.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to build directory for file.</li>
-<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) &#8211; Programming language.</li>
-<li><strong>inidicies</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; A list of indicies where the Jacobian is non-zero</li>
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Programming language.</li>
+<li><strong>inidicies</strong> (<em>list</em>) &#8211; A list of indicies where the Jacobian is non-zero</li>
 <li><strong>nvars</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of variables in the Jacobian matrix</li>
 </ul>
 </td>
@@ -804,27 +804,27 @@ Jacobian with a column &#8216;j&#8217; of another matrix.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) &#8211; Language type.</li>
-<li><strong>mech_name</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;).
+<li><strong>lang</strong> (<em>{'c', 'cuda', 'fortran', 'matlab'}</em>) &#8211; Language type.</li>
+<li><strong>mech_name</strong> (<em>str, optional</em>) &#8211; Reaction mechanism filename (e.g. &#8216;mech.dat&#8217;).
 This or gas must be specified</li>
-<li><strong>therm_name</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; Thermodynamic database filename (e.g. &#8216;therm.dat&#8217;)
+<li><strong>therm_name</strong> (<em>str, optional</em>) &#8211; Thermodynamic database filename (e.g. &#8216;therm.dat&#8217;)
 or nothing if info in mechanism file.</li>
-<li><strong>gas</strong> (<em>cantera.Solution</em><em>, </em><em>optional</em>) &#8211; The mechanism to generate the Jacobian for.  This or <code class="docutils literal"><span class="pre">mech_name</span></code> must be specified</li>
-<li><strong>optimize_cache</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, use the greedy optimizer to attempt to improve cache hit rates</li>
-<li><strong>initial_state</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; A comma separated list of the initial conditions to use in form
+<li><strong>gas</strong> (<em>cantera.Solution, optional</em>) &#8211; The mechanism to generate the Jacobian for.  This or <code class="docutils literal"><span class="pre">mech_name</span></code> must be specified</li>
+<li><strong>optimize_cache</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, use the greedy optimizer to attempt to improve cache hit rates</li>
+<li><strong>initial_state</strong> (<em>str, optional</em>) &#8211; A comma separated list of the initial conditions to use in form
 T,P,X (e.g. &#8216;800,1,H2=1.0,O2=0.5&#8217;). Temperature in K, P in atm</li>
-<li><strong>num_blocks</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The target number of blocks / sm to achieve for cuda</li>
-<li><strong>num_threads</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The target number of threads / block to achieve for cuda</li>
-<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use the shared_memory_manager
+<li><strong>num_blocks</strong> (<em>int, optional</em>) &#8211; The target number of blocks / sm to achieve for cuda</li>
+<li><strong>num_threads</strong> (<em>int, optional</em>) &#8211; The target number of threads / block to achieve for cuda</li>
+<li><strong>no_shared</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use the shared_memory_manager
 to attempt to optimize for CUDA</li>
-<li><strong>L1_preferred</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, prefer a larger L1 cache and a smaller shared memory size for CUDA</li>
-<li><strong>multi_thread</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>, </em><em>optional</em>) &#8211; The number of threads to use during optimization</li>
-<li><strong>force_optimize</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, redo the cache optimization even if the same mechanism</li>
-<li><strong>build_path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; The output directory for the jacobian files</li>
-<li><strong>last_spec</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a><em>, </em><em>optional</em>) &#8211; If specified, the species to assign to the last index.
+<li><strong>L1_preferred</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, prefer a larger L1 cache and a smaller shared memory size for CUDA</li>
+<li><strong>multi_thread</strong> (<em>int, optional</em>) &#8211; The number of threads to use during optimization</li>
+<li><strong>force_optimize</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, redo the cache optimization even if the same mechanism</li>
+<li><strong>build_path</strong> (<em>str, optional</em>) &#8211; The output directory for the jacobian files</li>
+<li><strong>last_spec</strong> (<em>str, optional</em>) &#8211; If specified, the species to assign to the last index.
 Typically should be N2, Ar, He or another inert bath gas</li>
-<li><strong>skip_jac</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, only the reaction rate subroutines will be generated</li>
-<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate files for use with the Adept autodifferention library.</li>
+<li><strong>skip_jac</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, only the reaction rate subroutines will be generated</li>
+<li><strong>auto_diff</strong> (<em>bool, optional</em>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, generate files for use with the Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>
@@ -892,11 +892,11 @@ Typically should be N2, Ar, He or another inert bath gas</li>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
-      <a href="../_sources/src/pyjac.core.create_jacobian.rst.txt"
+      <a href="../_sources/src/pyjac.core.create_jacobian.txt"
           rel="nofollow">Page source</a>
     </div>
 

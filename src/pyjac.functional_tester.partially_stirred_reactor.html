@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>pyjac.functional_tester.partially_stirred_reactor module &#8212; pyJac 1.0.2 documentation</title>
+    <title>pyjac.functional_tester.partially_stirred_reactor module &#8212; pyJac 1.0.3 documentation</title>
     
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,11 +14,10 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.2',
+        VERSION:     '1.0.3',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
+        HAS_SOURCE:  true
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -27,6 +26,7 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="top" title="pyJac 1.0.3 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -154,7 +154,7 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterable</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a>) &#8211; List of objects.</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>iterable</strong> (<em>list</em>) &#8211; List of objects.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>zipped</strong> &#8211; Zip with pairs of objects from <a class="reference external" href="https://docs.python.org/2/glossary.html#term-iterable" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">iterable</span></code></a>.</td>
 </tr>
@@ -243,7 +243,7 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>particles</strong> (list of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a>) &#8211; List of <a class="reference internal" href="#pyjac.functional_tester.partially_stirred_reactor.Particle" title="pyjac.functional_tester.partially_stirred_reactor.Particle"><code class="xref any py py-class docutils literal"><span class="pre">Particle</span></code></a> objects.</li>
 <li><strong>num_pairs</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Number of pairs to be selected and moved.</li>
-<li><strong>num_skip</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em><em></em>) &#8211; Number of pairs at end of list to be skipped. Optional, default 0.</li>
+<li><strong>num_skip</strong> (<em>Optional[int]</em>) &#8211; Number of pairs at end of list to be skipped. Optional, default 0.</li>
 </ul>
 </td>
 </tr>
@@ -311,18 +311,18 @@ species, suitable for setting the state of the input ThermoPhase.</p>
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
 <li><strong>mech</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Mechanism filename (in Cantera format).</li>
-<li><strong>case</strong> (<em>{'Premixed'</em><em>,</em><em>'Non-premixed'}</em>) &#8211; Case of PaSR simulation; {&#8216;Premixed&#8217;, &#8216;Non-premixed&#8217;}.</li>
+<li><strong>case</strong> (<em>{'Premixed','Non-premixed'}</em>) &#8211; Case of PaSR simulation; {&#8216;Premixed&#8217;, &#8216;Non-premixed&#8217;}.</li>
 <li><strong>init_temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Initial temperature [K].</li>
 <li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure [atm].</li>
 <li><strong>eq_ratio</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Equivalence ratio.</li>
 <li><strong>fuel</strong> (<a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the fuel mixture and the fraction of         each molecule in the fuel mixture.</li>
 <li><strong>oxidizer</strong> (<a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)"><em>dict</em></a>) &#8211; Dictionary of molecules in the oxidizer mixture and the         fraction of each molecule in the oxidizer mixture.</li>
-<li><strong>complete_products</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#list" title="(in Python v2.7)"><em>list</em></a><em>]</em><em></em>) &#8211; List of species in the products of complete combustion.         Optional, default [&#8216;CO2&#8217;, &#8216;H2O&#8217;, &#8216;N2&#8217;].</li>
-<li><strong>num_part</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em><em></em>) &#8211; Number of particles. Optional, default 100.</li>
-<li><strong>tau_res</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>]</em><em></em>) &#8211; Residence time [s]. Optional, default 10 [ms].</li>
-<li><strong>tau_mix</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>]</em><em></em>) &#8211; Mixing timescale [s]. Optional, default 1 [ms].</li>
-<li><strong>tau_pair</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a><em>]</em><em></em>) &#8211; Pairing timescale [s]. Optional, default 1 [ms].</li>
-<li><strong>num_res</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a><em>]</em><em></em>) &#8211; Numer of residence times to simulate. Optional, default 5.</li>
+<li><strong>complete_products</strong> (<em>Optional[list]</em>) &#8211; List of species in the products of complete combustion.         Optional, default [&#8216;CO2&#8217;, &#8216;H2O&#8217;, &#8216;N2&#8217;].</li>
+<li><strong>num_part</strong> (<em>Optional[int]</em>) &#8211; Number of particles. Optional, default 100.</li>
+<li><strong>tau_res</strong> (<em>Optional[float]</em>) &#8211; Residence time [s]. Optional, default 10 [ms].</li>
+<li><strong>tau_mix</strong> (<em>Optional[float]</em>) &#8211; Mixing timescale [s]. Optional, default 1 [ms].</li>
+<li><strong>tau_pair</strong> (<em>Optional[float]</em>) &#8211; Pairing timescale [s]. Optional, default 1 [ms].</li>
+<li><strong>num_res</strong> (<em>Optional[int]</em>) &#8211; Numer of residence times to simulate. Optional, default 5.</li>
 </ul>
 </td>
 </tr>
@@ -408,11 +408,11 @@ species, suitable for setting the state of the input ThermoPhase.</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.5.3</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
       
       |
-      <a href="../_sources/src/pyjac.functional_tester.partially_stirred_reactor.rst.txt"
+      <a href="../_sources/src/pyjac.functional_tester.partially_stirred_reactor.txt"
           rel="nofollow">Page source</a>
     </div>
 

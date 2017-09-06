@@ -13,6 +13,11 @@ for a chemical reaction mechanism.
 
 The full documentation for pyJac can be found at <http://slackha.github.io/pyJac/>.
 
+## User Group
+
+Further support can be found at our [user group](https://groups.io/g/slackha-users),
+or by [opening an issue](https://github.com/SLACKHA/pyJac/issues) on our github repo.
+
 ## Installation
 
 Detailed installation instructions can be found in the

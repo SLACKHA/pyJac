@@ -83,20 +83,11 @@ def read_mech(mech_filename, therm_filename):
     elems = []
     reacs = []
     specs = []
-
-    units = ''
     key = ''
-
-    # By default, need to read thermo database if file given.
-    if therm_filename:
-        therm_flag = True
 
     with open(mech_filename, 'r') as file:
         # start line reading loop
         while True:
-            # remember last line position
-            last_line = file.tell()
-
             line = file.readline()
 
             # end of file
@@ -687,6 +678,17 @@ def read_mech(mech_filename, therm_filename):
                     reac.cheb_par[0] += math.log10(0.001 ** (order - 1.))
 
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
+
+    # check that all species in reactions correspond to a known species
+    spec_names = set(spec.name for spec in specs)
+    for idx, reac in enumerate(reacs):
+        in_rxn = set(reac.reac + reac.prod)
+        for spec in in_rxn:
+            if spec not in spec_names:
+                logger = logging.getLogger(__name__)
+                logger.error('Reaction {} contains unknown species {}'.format(
+                    idx, spec))
+                sys.exit(-1)
 
     # Split reversible reactions with explicit reverse parameters into
     # two irreversible reactions to match Cantera's behavior

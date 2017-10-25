@@ -839,7 +839,7 @@ def read_thermo(filename, elems, specs):
                 spec.mw += e_num * elem_wt[e.lower()]
 
             # temperatures for species
-            T_spec = utils.read_str_num(line[45:73])
+            T_spec = utils.read_str_num(line[45:74])
             T_low = T_spec[0]
             T_high = T_spec[1]
             if len(T_spec) == 3:

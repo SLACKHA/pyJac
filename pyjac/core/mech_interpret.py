@@ -957,6 +957,21 @@ def read_mech_ct(filename=None, gas=None):
     # Cantera internally uses joules/kmol for activation energy
     E_fac = act_energy_fact['joules/kmole']
 
+    def handle_effiencies(reac, ct_rxn):
+        # See if single species acts as third body
+        if rxn.default_efficiency == 0.0 \
+                and len(ct_rxn.efficiencies.keys()) == 1\
+                and list(ct_rxn.efficiencies.values())[0] == 1\
+                and reac.is_pdep:
+            reac.pdep_sp = list(rxn.efficiencies.keys())[0]
+        else:
+            for sp in gas.species_names:
+                if sp in ct_rxn.efficiencies:
+                    reac.thd_body_eff.append([sp, ct_rxn.efficiencies[sp]])
+                elif ct_rxn.default_efficiency != 1.0:
+                    reac.thd_body_eff.append([sp, ct_rxn.default_efficiency])
+        return reac
+
     for rxn in gas.reactions():
 
         if isinstance(rxn, ct.ThreeBodyReaction):
@@ -971,10 +986,7 @@ def read_mech_ct(filename=None, gas=None):
                                  rxn.rate.activation_energy * E_fac
                                  )
             reac.thd_body = True
-            for thd_body in rxn.efficiencies:
-                reac.thd_body_eff.append([thd_body,
-                                          rxn.efficiencies[thd_body]
-                                          ])
+            reac = handle_effiencies(reac, rxn)
 
         elif isinstance(rxn, ct.FalloffReaction) and \
              not isinstance(rxn, ct.ChemicallyActivatedReaction):
@@ -988,12 +1000,7 @@ def read_mech_ct(filename=None, gas=None):
                                  rxn.high_rate.activation_energy * E_fac
                                  )
             reac.pdep = True
-            # See if single species acts as third body
-            if rxn.default_efficiency == 0.0:
-                reac.pdep_sp = list(rxn.efficiencies.keys())[0]
-            else:
-                for sp in rxn.efficiencies:
-                    reac.thd_body_eff.append([sp, rxn.efficiencies[sp]])
+            reac = handle_effiencies(reac, rxn)
 
             reac.low = [rxn.low_rate.pre_exponential_factor,
                         rxn.low_rate.temperature_exponent,
@@ -1028,12 +1035,7 @@ def read_mech_ct(filename=None, gas=None):
                                  rxn.low_rate.activation_energy * E_fac
                                  )
             reac.pdep = True
-            # See if single species acts as third body
-            if rxn.default_efficiency == 0.0:
-                reac.pdep_sp = list(rxn.efficiencies.keys())[0]
-            else:
-                for sp in rxn.efficiencies:
-                    reac.thd_body_eff.append([sp, rxn.efficiencies[sp]])
+            reac = handle_effiencies(reac, rxn)
 
             reac.high = [rxn.high_rate.pre_exponential_factor,
                          rxn.high_rate.temperature_exponent,

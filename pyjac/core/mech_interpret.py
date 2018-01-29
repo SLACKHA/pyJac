@@ -958,6 +958,22 @@ def read_mech_ct(filename=None, gas=None):
     E_fac = act_energy_fact['joules/kmole']
 
     def handle_effiencies(reac, ct_rxn):
+        """Convert Cantera `cantera.Reaction`'s third body efficienicies
+           to pyJac's internal format, and return updated reaction
+
+        Parameters
+        ----------
+        reac : `ReacInfo`
+            The pyJac reaction to update
+        ct_rxn : `Reaction` object
+            Corresponding cantera reaction to pull the third bodies from
+
+        Returns
+        -------
+        updated_reac: `ReacInfo`
+            The updated pyjac reaction with appropriate third body efficiencies
+        """
+
         # See if single species acts as third body
         if rxn.default_efficiency == 0.0 \
                 and len(ct_rxn.efficiencies.keys()) == 1\

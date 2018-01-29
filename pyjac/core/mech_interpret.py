@@ -1019,7 +1019,7 @@ def read_mech_ct(filename=None, gas=None):
                     do_warn = True
                 if do_warn:
                     logging.warn('Troe parameters in reaction {} modified to avoid'
-                                    ' division by zero!.'.format(len(reacs)))
+                                 ' division by zero!.'.format(len(reacs)))
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True
                 reac.sri_par = rxn.falloff.parameters.tolist()
@@ -1045,6 +1045,16 @@ def read_mech_ct(filename=None, gas=None):
             if rxn.falloff.type == 'Troe':
                 reac.troe = True
                 reac.troe_par = rxn.falloff.parameters.tolist()
+                do_warn = False
+                if reac.troe_par[1] == 0:
+                    reac.troe_par[1] = 1e-30
+                    do_warn = True
+                if reac.troe_par[2] == 0:
+                    reac.troe_par[2] = 1e-30
+                    do_warn = True
+                if do_warn:
+                    logging.warn('Troe parameters in reaction {} modified to avoid'
+                                    ' division by zero!.'.format(len(reacs)))
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True
                 reac.sri_par = rxn.falloff.parameters.tolist()

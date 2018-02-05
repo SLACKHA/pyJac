@@ -1,23 +1,21 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>pyjac.functional_tester.test module &#8212; pyJac 1.0.3 documentation</title>
-    
+    <title>pyjac.functional_tester.test module &#8212; pyJac 1.0.5c documentation</title>
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.3',
+        VERSION:     '1.0.5c',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -26,7 +24,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="top" title="pyJac 1.0.3 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -34,7 +31,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
+  <body>
   
 
     <div class="document">
@@ -54,7 +51,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) – <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -74,7 +71,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) – <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -95,14 +92,14 @@ the Cantera built-in script <code class="docutils literal"><span class="pre">ck2
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename of the input CHEMKIN format mechanism. The converted
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Filename of the input CHEMKIN format mechanism. The converted
 CTI file will have the same name, but with <code class="docutils literal"><span class="pre">.cti</span></code> extension.</li>
-<li><strong>thermo_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Filename of the thermodynamic database. Optional, if the
+<li><strong>thermo_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Filename of the thermodynamic database. Optional, if the
 thermodynamic database is present in the mechanism input.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mech_filename</strong> &#8211; Filename of converted mechanism in Cantera <code class="docutils literal"><span class="pre">.cti</span></code> format.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>mech_filename</strong> – Filename of converted mechanism in Cantera <code class="docutils literal"><span class="pre">.cti</span></code> format.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)">str</a></p>
@@ -123,8 +120,8 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>pressure</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure in Pascals</li>
-<li><strong>fwd_spec_map</strong> (<code class="xref any docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Map of original species indices to new indices</li>
+<li><strong>pressure</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure in Pascals</li>
+<li><strong>fwd_spec_map</strong> (<code class="xref any docutils literal"><span class="pre">numpy.array</span></code>) – Map of original species indices to new indices</li>
 </ul>
 </td>
 </tr>
@@ -144,9 +141,9 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) – <code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code> object with the kinetic system</td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>jacob</strong> &#8211; Jacobian matrix evaluated using autodifferentiation</td>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><strong>jacob</strong> – Jacobian matrix evaluated using autodifferentiation</td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><code class="xref any docutils literal"><span class="pre">numpy.array</span></code></td>
 </tr>
@@ -164,7 +161,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) &#8211; Reaction object of interest</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) – Reaction object of interest</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -183,13 +180,13 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>pasr_input_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of PaSR input file in YAML format</li>
-<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Name of Cantera-format mechanism file</li>
-<li><strong>pasr_output_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; filename for saving PaSR output data</li>
+<li><strong>pasr_input_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Name of PaSR input file in YAML format</li>
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Name of Cantera-format mechanism file</li>
+<li><strong>pasr_output_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; filename for saving PaSR output data</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>state_data</strong> &#8211; Array with state data (time, temperature, pressure, mass fractions)</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>state_data</strong> – Array with state data (time, temperature, pressure, mass fractions)</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><code class="docutils literal"><span class="pre">numpy.array</span></code></p>
@@ -213,9 +210,9 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of directory for build objects</li>
-<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; Object with kinetic system</li>
-<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; filename of header with mechanism information</li>
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path of directory for build objects</li>
+<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) – Object with kinetic system</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; filename of header with mechanism information</li>
 </ul>
 </td>
 </tr>
@@ -238,9 +235,9 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path of directory for build objects</li>
-<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) &#8211; Object with kinetic system</li>
-<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; filename of header with mechanism information</li>
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path of directory for build objects</li>
+<li><strong>gas</strong> (<code class="xref any docutils literal"><span class="pre">cantera.Solution</span></code>) – Object with kinetic system</li>
+<li><strong>filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; filename of header with mechanism information</li>
 </ul>
 </td>
 </tr>
@@ -263,10 +260,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>mass_frac</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species mass fractions</li>
-<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>mass_frac</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species mass fractions</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</li>
 </ul>
 </td>
 </tr>
@@ -289,11 +286,11 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
-<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
-<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
 </ul>
 </td>
 </tr>
@@ -316,10 +313,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
-<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction rate pressure modification</li>
 </ul>
 </td>
 </tr>
@@ -342,10 +339,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
-<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
-<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
-<li><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction rate pressure modification</li>
+<li><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
 </ul>
 </td>
 </tr>
@@ -368,10 +365,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
-<li><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Derivative of state vector</li>
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – State vector (temperature + species mass fractions)</li>
+<li><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Derivative of state vector</li>
 </ul>
 </td>
 </tr>
@@ -394,10 +391,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
-<li><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Jacobian matrix</li>
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – State vector (temperature + species mass fractions)</li>
+<li><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Jacobian matrix</li>
 </ul>
 </td>
 </tr>
@@ -419,7 +416,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of data for evaluating quantities</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Index of data for evaluating quantities</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -454,7 +451,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Index of data for evaluating quantities</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>index</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Index of data for evaluating quantities</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -472,7 +469,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shape</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Shape of array</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>shape</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Shape of array</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -496,10 +493,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>mass_frac</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species mass fractions</li>
-<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>mass_frac</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species mass fractions</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</li>
 </ul>
 </td>
 </tr>
@@ -522,11 +519,11 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
-<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
-<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
 </ul>
 </td>
 </tr>
@@ -549,10 +546,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature, in Kelvin</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</li>
-<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
+<li><strong>temp</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature, in Kelvin</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction rate pressure modification</li>
 </ul>
 </td>
 </tr>
@@ -575,10 +572,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
-<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
-<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction rate pressure modification</li>
-<li><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>pres_mod</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction rate pressure modification</li>
+<li><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
 </ul>
 </td>
 </tr>
@@ -601,10 +598,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
-<li><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Derivative of state vector</li>
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – State vector (temperature + species mass fractions)</li>
+<li><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Derivative of state vector</li>
 </ul>
 </td>
 </tr>
@@ -627,10 +624,10 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Time, in seconds</li>
-<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Pressure, in Pascals</li>
-<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; State vector (temperature + species mass fractions)</li>
-<li><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Jacobian matrix</li>
+<li><strong>t</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Time, in seconds</li>
+<li><strong>pres</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Pressure, in Pascals</li>
+<li><strong>y</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – State vector (temperature + species mass fractions)</li>
+<li><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Jacobian matrix</li>
 </ul>
 </td>
 </tr>
@@ -659,7 +656,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Species concentrations, in kmol/m^3</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>conc</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Species concentrations, in kmol/m^3</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -678,8 +675,8 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction forward rates of progress, in kmol/m^3/s</li>
-<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</li>
+<li><strong>fwd_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction forward rates of progress, in kmol/m^3/s</li>
+<li><strong>rev_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</li>
 </ul>
 </td>
 </tr>
@@ -701,7 +698,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Reaction reverse rates of progress, in kmol/m^3/s</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>spec_rates</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Reaction reverse rates of progress, in kmol/m^3/s</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -719,7 +716,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Derivative of state vector</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dydt</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Derivative of state vector</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -737,7 +734,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) &#8211; Jacobian matrix</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>jacob</strong> (<code class="docutils literal"><span class="pre">numpy.array</span></code>) – Jacobian matrix</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -757,7 +754,7 @@ thermodynamic database is present in the mechanism input.</li>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path for file to be removed</td>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path for file to be removed</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
 </tr>
@@ -777,26 +774,26 @@ state data from PaSR simulations.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>lang</strong> (<em>{'c', 'cuda'}</em>) &#8211; Programming language</li>
-<li><strong>home_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to home directory for testing and data</li>
-<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Path to directory for building Jacobian files</li>
-<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Chemkin- or Cantera-format mechanism file</li>
-<li><strong>therm_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of thermodynamic database file (if needed)</li>
-<li><strong>pasr_input_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of YAML-formatted file with PaSR test input</li>
-<li><strong>generate_jacob</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, generate Jacobian files.
+<li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'}</em>) – Programming language</li>
+<li><strong>home_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to home directory for testing and data</li>
+<li><strong>build_dir</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to directory for building Jacobian files</li>
+<li><strong>mech_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Chemkin- or Cantera-format mechanism file</li>
+<li><strong>therm_filename</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; name of thermodynamic database file (if needed)</li>
+<li><strong>pasr_input_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; name of YAML-formatted file with PaSR test input</li>
+<li><strong>generate_jacob</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Optional; if <code class="docutils literal"><span class="pre">True</span></code>, generate Jacobian files.
 Otherwise, use existing files.</li>
-<li><strong>compile_jacob</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; Optional; if <code class="docutils literal"><span class="pre">True</span></code>, compile Jacobian files. Otherwise, using existing.</li>
-<li><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Optional; random seed for PaSR</li>
-<li><strong>pasr_output_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of output file for saving PaSR results</li>
-<li><strong>last_spec</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; name of species to move to last position.
+<li><strong>compile_jacob</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – Optional; if <code class="docutils literal"><span class="pre">True</span></code>, compile Jacobian files. Otherwise, using existing.</li>
+<li><strong>seed</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Optional; random seed for PaSR</li>
+<li><strong>pasr_output_file</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; name of output file for saving PaSR results</li>
+<li><strong>last_spec</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; name of species to move to last position.
 If not specified, will try searching for N2, Ar, or He.</li>
-<li><strong>cache_optimization</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, enable reordering to optimize cache usage</li>
-<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, do not use GPU shared memory</li>
-<li><strong>tchem_flag</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, compare with TChem results</li>
-<li><strong>only_rxn</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) &#8211; Optional; string with list of reaction numbers to retain.
+<li><strong>cache_optimization</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If <code class="docutils literal"><span class="pre">True</span></code>, enable reordering to optimize cache usage</li>
+<li><strong>no_shared</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If <code class="docutils literal"><span class="pre">True</span></code>, do not use GPU shared memory</li>
+<li><strong>tchem_flag</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If <code class="docutils literal"><span class="pre">True</span></code>, compare with TChem results</li>
+<li><strong>only_rxn</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Optional; string with list of reaction numbers to retain.
 All other reactions removed.</li>
-<li><strong>do_not_remove</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) &#8211; If <code class="docutils literal"><span class="pre">True</span></code>, keep all generated files.</li>
-<li><strong>condition_numbers</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) &#8211; Optional; string with list of conditions numbers to use.</li>
+<li><strong>do_not_remove</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a>) – If <code class="docutils literal"><span class="pre">True</span></code>, keep all generated files.</li>
+<li><strong>condition_numbers</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#int" title="(in Python v2.7)"><em>int</em></a>) – Optional; string with list of conditions numbers to use.</li>
 </ul>
 </td>
 </tr>
@@ -864,11 +861,11 @@ All other reactions removed.</li>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="../_sources/src/pyjac.functional_tester.test.txt"
+      <a href="../_sources/src/pyjac.functional_tester.test.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

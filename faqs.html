@@ -1,23 +1,21 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>FAQs &#8212; pyJac 1.0.3 documentation</title>
-    
+    <title>FAQs &#8212; pyJac 1.0.5c documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.3',
+        VERSION:     '1.0.5c',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
@@ -26,7 +24,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="top" title="pyJac 1.0.3 documentation" href="index.html" />
     <link rel="next" title="Examples" href="examples.html" />
     <link rel="prev" title="Overview" href="overview.html" />
    
@@ -36,7 +33,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
+  <body>
   
 
     <div class="document">
@@ -69,10 +66,10 @@ all the pyJac forms.</p>
 <p>The main <em>gotcha</em> here, is that pyJac automatically picks a species
 to place at the end of the model.  This choice defaults to the first
 of N<sub>2</sub>, Ar or He found in the model.  The last species can
-also be specified by the user, with the &#8220;-ls&#8221; command line option.</p>
-<p>This species (say, N<sub>2</sub>) is taken out of its&#8217; original position in
+also be specified by the user, with the “-ls” command line option.</p>
+<p>This species (say, N<sub>2</sub>) is taken out of its’ original position in
 the model and placed at the end of the model.  If you want to compare results
-to Cantera, this can be confusing; say you have a Solution object &#8220;gas&#8221;, and
+to Cantera, this can be confusing; say you have a Solution object “gas”, and
 have selected N<sub>2</sub> as the last species.  The Solution object can be
 updated as:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
@@ -111,23 +108,23 @@ Note that the ordering issues disucssed in <a class="reference internal" href="#
 The resulting Jacobian is of length <span class="math">\(N_{\text{sp}} * N_{\text{sp}}\)</span>.</p>
 </div>
 <div class="section" id="what-is-the-difference-between-t-and-t-in-the-python-interface">
-<span id="param-names"></span><h3>What is the difference between &#8220;t&#8221; and &#8220;T&#8221; in the Python interface?<a class="headerlink" href="#what-is-the-difference-between-t-and-t-in-the-python-interface" title="Permalink to this headline">¶</a></h3>
+<span id="param-names"></span><h3>What is the difference between “t” and “T” in the Python interface?<a class="headerlink" href="#what-is-the-difference-between-t-and-t-in-the-python-interface" title="Permalink to this headline">¶</a></h3>
 <p>Most ODE solvers allow you to pass the current system time (or independent
 variable) to the RHS / Jacobian functions. We conform to this standard, as it
 allows for interfacing pyJac with other solvers, e.g. CVODEs.  Hence the
-<code class="xref py py-func docutils literal"><span class="pre">dydt()</span></code> and <code class="xref py py-func docutils literal"><span class="pre">eval_jacob()</span></code> functions have a &#8220;t&#8221; parameter for the
+<code class="xref py py-func docutils literal"><span class="pre">dydt()</span></code> and <code class="xref py py-func docutils literal"><span class="pre">eval_jacob()</span></code> functions have a “t” parameter for the
 current system time, although it is not used.</p>
 <p>However, several other functions (e.g., the reaction / species rates, etc.)
 require the temperature.  Internally, we separate the temperature out from the
 state vector for easier comprehension; however this makes life confusing
-(to say the least), because these functions have a &#8220;T&#8221; representing the
+(to say the least), because these functions have a “T” representing the
 temperature.</p>
 <p>We know this is not ideal, and it will be fixed in V2.</p>
 </div>
 <div class="section" id="how-do-i-pass-numpy-arrays-to-the-c-cuda-pyjac-functions-from-python">
 <span id="data-passing"></span><h3>How do I pass numpy arrays to the C/CUDA pyJac functions from Python?<a class="headerlink" href="#how-do-i-pass-numpy-arrays-to-the-c-cuda-pyjac-functions-from-python" title="Permalink to this headline">¶</a></h3>
 <p>In addition to the ordering considerations discussed above (<a class="reference internal" href="#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a>),
-care must be taken to ensure correctness when using numpy with pyJac&#8217;s
+care must be taken to ensure correctness when using numpy with pyJac’s
 Python interface.</p>
 <p>First, it is important to realize the difference between a numpy <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.view.html">view</a> and the
 actual data order inside of <a class="reference external" href="https://docs.scipy.org/doc/numpy/reference/generated/numpy.ndarray.flags.html">numpy</a>.  A view is a simple user interface for
@@ -137,7 +134,7 @@ stored in memory. E.g.:</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span>
 </pre></div>
 </div>
-<p>Returns a <em>view</em> of the transpose of &#8220;arr&#8221;, but does not change the data order
+<p>Returns a <em>view</em> of the transpose of “arr”, but does not change the data order
 in memory.
 To do that, you would need a copy (among other ways):</p>
 <div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
@@ -210,11 +207,11 @@ Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots\]</div>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/faqs.txt"
+      <a href="_sources/faqs.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

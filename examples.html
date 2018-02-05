@@ -1,23 +1,21 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>Examples &#8212; pyJac 1.0.3 documentation</title>
-    
+    <title>Examples &#8212; pyJac 1.0.5c documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.3',
+        VERSION:     '1.0.5c',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="_static/jquery.js"></script>
@@ -26,7 +24,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="top" title="pyJac 1.0.3 documentation" href="index.html" />
     <link rel="next" title="Installation" href="installing.html" />
     <link rel="prev" title="FAQs" href="faqs.html" />
    
@@ -36,7 +33,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
+  <body>
   
 
     <div class="document">
@@ -98,7 +95,7 @@ subdirectories in the base directory, looking for the following keys:</p>
 <div><ul class="simple">
 <li>A Cantera mechanism (ending with .cti)</li>
 <li>A Chemkin mechanism of the same name (ending with .dat)</li>
-<li>An (optional) Chemkin thermodynamic file (with &#8220;therm&#8221; in filename)
+<li>An (optional) Chemkin thermodynamic file (with “therm” in filename)
 if required. If the thermo file is not specified, the mechanism is assumed
 to contain the thermo data.</li>
 <li>Thermochemical state data (as generated previously using the PaSR module)
@@ -184,7 +181,7 @@ the GRI-Mech 3.0 model as:</p>
 <p>The above uses the state vector discussed in (<a class="reference internal" href="faqs.html#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a>), as well as the
 reordering in (<a class="reference internal" href="faqs.html#cantera-comp"><span class="std std-ref">What does this mean for comparison to say, Cantera?</span></a>) to enable direct comparison to Cantera.
 Also note that we can pass a dummy time of 0, as explained in
-(<a class="reference internal" href="faqs.html#param-names"><span class="std std-ref">What is the difference between &#8220;t&#8221; and &#8220;T&#8221; in the Python interface?</span></a>).</p>
+(<a class="reference internal" href="faqs.html#param-names"><span class="std std-ref">What is the difference between “t” and “T” in the Python interface?</span></a>).</p>
 <p>The CUDA interface is less modular, and currently only supports evaluating the
 Jacobian directly (which in turn populates the other values).  For example,
 if we have 1000 states to evaluate:</p>
@@ -321,11 +318,11 @@ Jacobian values are explained in (<a class="reference internal" href="faqs.html#
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="_sources/examples.txt"
+      <a href="_sources/examples.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

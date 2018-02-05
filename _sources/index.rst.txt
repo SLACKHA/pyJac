@@ -49,11 +49,11 @@ Up-to-date information about citing **pyJac** can be found within the
 See also
 --------
 
-- To-be-published `pyJac v1 paper`_
+- The published `pyJac v1 paper`_
 - Kyle Niemeyer, Nick Curtis, and Chih-Jen Sung's `WSSCI Fall 2015 paper`_ introducing
 - The associated `WSSCI Fall 2015 slides`_
 
-.. _pyJac v1 paper: https://Niemeyer-Research-Group.github.io/pyJac-paper
+.. _pyJac v1 paper: https://arxiv.org/abs/1605.03262
 .. _WSSCI Fall 2015 paper: https://dx.doi.org/10.6084/m9.figshare.2075515.v1
 .. _WSSCI Fall 2015 slides: http://www.slideshare.net/kyleniemeyer/initial-investigation-of-pyjac-an-analytical-jacobian-generator-for-chemical-kinetics
 
@@ -62,10 +62,12 @@ Get in touch
 
 - Please report bugs, suggest feature ideas, and browse the source code `on GitHub`_.
 - There, new contributors can also find `a guide to contributing`_.
+- Additionally, you may join our `user group`_ for further support and to be notified of new releases, features, etc.
 - You can also contact Kyle `on Twitter`_.
 
 .. _on GitHub: https://github.com/slackha/pyJac
 .. _a guide to contributing: https://github.com/slackha/pyJac/blob/master/CONTRIBUTING.md
+.. _user group: https://groups.io/g/slackha-users
 .. _on Twitter: http://twitter.com/kyleniemeyer
 
 

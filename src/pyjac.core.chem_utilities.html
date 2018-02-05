@@ -1,23 +1,21 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>pyjac.core.chem_utilities module &#8212; pyJac 1.0.3 documentation</title>
-    
+    <title>pyjac.core.chem_utilities module &#8212; pyJac 1.0.5c documentation</title>
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.3',
+        VERSION:     '1.0.5c',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
@@ -26,7 +24,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="top" title="pyJac 1.0.3 documentation" href="../index.html" />
    
   <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
@@ -34,7 +31,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
+  <body>
   
 
     <div class="document">
@@ -58,7 +55,7 @@
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>elem_wt</strong> &#8211; Dictionary with element name keys and atomic weight [kg/kmol] values.</td>
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>elem_wt</strong> – Dictionary with element name keys and atomic weight [kg/kmol] values.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference external" href="https://docs.python.org/2/library/stdtypes.html#dict" title="(in Python v2.7)">dict</a></td>
 </tr>
@@ -75,121 +72,121 @@
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.rev">
 <code class="descname">rev</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.rev" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>bool</em> &#8211; True if reversible reaction, False if irreversible.</p>
+<dd><p><em>bool</em> – True if reversible reaction, False if irreversible.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.reactants">
 <code class="descname">reactants</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.reactants" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of str</em> &#8211; List of reactant species names.</p>
+<dd><p><em>list of str</em> – List of reactant species names.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.reac_nu">
 <code class="descname">reac_nu</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.reac_nu" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of int/float</em> &#8211; List of reactant stoichiometric coefficients, either int or float.</p>
+<dd><p><em>list of int/float</em> – List of reactant stoichiometric coefficients, either int or float.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.products">
 <code class="descname">products</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.products" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of str</em> &#8211; List of product species names.</p>
+<dd><p><em>list of str</em> – List of product species names.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.prod_nu">
 <code class="descname">prod_nu</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.prod_nu" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of int/float</em> &#8211; List of product stoichiometric coefficients, either int or float.</p>
+<dd><p><em>list of int/float</em> – List of product stoichiometric coefficients, either int or float.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.A">
 <code class="descname">A</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.A" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>float</em> &#8211; Arrhenius pre-exponential coefficient.</p>
+<dd><p><em>float</em> – Arrhenius pre-exponential coefficient.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.b">
 <code class="descname">b</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.b" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>float</em> &#8211; Arrhenius temperature exponent.</p>
+<dd><p><em>float</em> – Arrhenius temperature exponent.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.E">
 <code class="descname">E</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.E" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>float</em> &#8211; Arrhenius activation energy.</p>
+<dd><p><em>float</em> – Arrhenius activation energy.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.rev_par">
 <code class="descname">rev_par</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.rev_par" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float, optional</em> &#8211; List of reverse Arrhenius coefficients (default empty).</p>
+<dd><p><em>list of float, optional</em> – List of reverse Arrhenius coefficients (default empty).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.dup">
 <code class="descname">dup</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.dup" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>bool, optional</em> &#8211; Duplicate reaction flag (default False).</p>
+<dd><p><em>bool, optional</em> – Duplicate reaction flag (default False).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.thd">
 <code class="descname">thd</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.thd" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>bool, optional</em> &#8211; Third-body reaction flag (default False).</p>
+<dd><p><em>bool, optional</em> – Third-body reaction flag (default False).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.thd_body">
 <code class="descname">thd_body</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.thd_body" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of list of [str, float], optional</em> &#8211; List of third body names and efficiencies (default empty).</p>
+<dd><p><em>list of list of [str, float], optional</em> – List of third body names and efficiencies (default empty).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.pdep">
 <code class="descname">pdep</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.pdep" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>bool, optional</em> &#8211; Pressure-dependence flag (default False).</p>
+<dd><p><em>bool, optional</em> – Pressure-dependence flag (default False).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.pdep_sp">
 <code class="descname">pdep_sp</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.pdep_sp" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str, optional</em> &#8211; Name of specific third-body or &#8216;M&#8217; (default &#8216;&#8217;).</p>
+<dd><p><em>str, optional</em> – Name of specific third-body or ‘M’ (default ‘’).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.low">
 <code class="descname">low</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.low" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float, optional</em> &#8211; List of low-pressure-limit Arrhenius coefficients (default empty).</p>
+<dd><p><em>list of float, optional</em> – List of low-pressure-limit Arrhenius coefficients (default empty).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.high">
 <code class="descname">high</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.high" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float, optional</em> &#8211; List of high-pressure-limit Arrhenius coefficients (default empty).</p>
+<dd><p><em>list of float, optional</em> – List of high-pressure-limit Arrhenius coefficients (default empty).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.troe">
 <code class="descname">troe</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.troe" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>bool, optional</em> &#8211; Troe pressure-dependence formulation flag (default False).</p>
+<dd><p><em>bool, optional</em> – Troe pressure-dependence formulation flag (default False).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.troe_par">
 <code class="descname">troe_par</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.troe_par" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float, optional</em> &#8211; List of Troe formulation constants (default empty).</p>
+<dd><p><em>list of float, optional</em> – List of Troe formulation constants (default empty).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.sri">
 <code class="descname">sri</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.sri" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>bool, optional</em> &#8211; SRI pressure-dependence formulation flag (default False).</p>
+<dd><p><em>bool, optional</em> – SRI pressure-dependence formulation flag (default False).</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.ReacInfo.sri_par">
 <code class="descname">sri_par</code><a class="headerlink" href="#pyjac.core.chem_utilities.ReacInfo.sri_par" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float, optional</em> &#8211; List of SRI formulation constants (default empty).</p>
+<dd><p><em>list of float, optional</em> – List of SRI formulation constants (default empty).</p>
 </dd></dl>
 
 <p class="rubric">Notes</p>
@@ -209,37 +206,37 @@ If <a class="reference internal" href="#pyjac.core.chem_utilities.ReacInfo.troe"
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.SpecInfo.name">
 <code class="descname">name</code><a class="headerlink" href="#pyjac.core.chem_utilities.SpecInfo.name" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>str</em> &#8211; Name of species.</p>
+<dd><p><em>str</em> – Name of species.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.SpecInfo.elem">
 <code class="descname">elem</code><a class="headerlink" href="#pyjac.core.chem_utilities.SpecInfo.elem" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of list of [str, float]</em> &#8211; Elemental composition in [element, number] pairs.</p>
+<dd><p><em>list of list of [str, float]</em> – Elemental composition in [element, number] pairs.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.SpecInfo.mw">
 <code class="descname">mw</code><a class="headerlink" href="#pyjac.core.chem_utilities.SpecInfo.mw" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>float</em> &#8211; Molecular weight.</p>
+<dd><p><em>float</em> – Molecular weight.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.SpecInfo.hi">
 <code class="descname">hi</code><a class="headerlink" href="#pyjac.core.chem_utilities.SpecInfo.hi" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float</em> &#8211; High-temperature range NASA thermodynamic coefficients.</p>
+<dd><p><em>list of float</em> – High-temperature range NASA thermodynamic coefficients.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.SpecInfo.lo">
 <code class="descname">lo</code><a class="headerlink" href="#pyjac.core.chem_utilities.SpecInfo.lo" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float</em> &#8211; Low-temperature range NASA thermodynamic coefficients.</p>
+<dd><p><em>list of float</em> – Low-temperature range NASA thermodynamic coefficients.</p>
 </dd></dl>
 
 <dl class="attribute">
 <dt id="pyjac.core.chem_utilities.SpecInfo.Trange">
 <code class="descname">Trange</code><a class="headerlink" href="#pyjac.core.chem_utilities.SpecInfo.Trange" title="Permalink to this definition">¶</a></dt>
-<dd><p><em>list of float</em> &#8211; Temperatures defining ranges of thermodynamic polynomial fits
+<dd><p><em>list of float</em> – Temperatures defining ranges of thermodynamic polynomial fits
 (low, middle, high), default ([300, 1000, 5000]).</p>
 </dd></dl>
 
@@ -254,12 +251,12 @@ If <a class="reference internal" href="#pyjac.core.chem_utilities.ReacInfo.troe"
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>T</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) &#8211; Temperature of gas mixture.</li>
-<li><strong>specs</strong> (<em>list of SpecInfo</em>) &#8211; List of species.</li>
+<li><strong>T</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Temperature of gas mixture.</li>
+<li><strong>specs</strong> (<em>list of SpecInfo</em>) – List of species.</li>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>spec_smh</strong> &#8211; List of species&#8217; standard-state entropies minus enthalpies.</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>spec_smh</strong> – List of species’ standard-state entropies minus enthalpies.</p>
 </td>
 </tr>
 <tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of float</p>
@@ -323,11 +320,11 @@ If <a class="reference internal" href="#pyjac.core.chem_utilities.ReacInfo.troe"
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |
-      <a href="../_sources/src/pyjac.core.chem_utilities.txt"
+      <a href="../_sources/src/pyjac.core.chem_utilities.rst.txt"
           rel="nofollow">Page source</a>
     </div>
 

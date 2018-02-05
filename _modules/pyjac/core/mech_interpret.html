@@ -1,23 +1,21 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>pyjac.core.mech_interpret &#8212; pyJac 1.0.3 documentation</title>
-    
+    <title>pyjac.core.mech_interpret &#8212; pyJac 1.0.5c documentation</title>
     <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
-    
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../../../',
-        VERSION:     '1.0.3',
+        VERSION:     '1.0.5c',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
       };
     </script>
     <script type="text/javascript" src="../../../_static/jquery.js"></script>
@@ -26,8 +24,6 @@
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
     <link rel="index" title="Index" href="../../../genindex.html" />
     <link rel="search" title="Search" href="../../../search.html" />
-    <link rel="top" title="pyJac 1.0.3 documentation" href="../../../index.html" />
-    <link rel="up" title="Module code" href="../../index.html" />
    
   <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
   
@@ -35,7 +31,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
   </head>
-  <body role="document">
+  <body>
   
 
     <div class="document">
@@ -129,20 +125,11 @@
     <span class="n">elems</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">reacs</span> <span class="o">=</span> <span class="p">[]</span>
     <span class="n">specs</span> <span class="o">=</span> <span class="p">[]</span>
-
-    <span class="n">units</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
     <span class="n">key</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
-
-    <span class="c1"># By default, need to read thermo database if file given.</span>
-    <span class="k">if</span> <span class="n">therm_filename</span><span class="p">:</span>
-        <span class="n">therm_flag</span> <span class="o">=</span> <span class="kc">True</span>
 
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">mech_filename</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
         <span class="c1"># start line reading loop</span>
         <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="c1"># remember last line position</span>
-            <span class="n">last_line</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">tell</span><span class="p">()</span>
-
             <span class="n">line</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">readline</span><span class="p">()</span>
 
             <span class="c1"># end of file</span>
@@ -606,10 +593,10 @@
                         <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">False</span>
                         <span class="k">if</span> <span class="n">par2</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                             <span class="n">do_warn</span><span class="o">=</span><span class="kc">True</span>
-                            <span class="n">par2</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                            <span class="n">par2</span> <span class="o">=</span> <span class="mf">1e-30</span>
                         <span class="k">if</span> <span class="n">par3</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
                             <span class="n">do_warn</span><span class="o">=</span><span class="kc">True</span>
-                            <span class="n">par3</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                            <span class="n">par3</span> <span class="o">=</span> <span class="mf">1e-30</span>
                         <span class="k">if</span> <span class="n">do_warn</span><span class="p">:</span>
                             <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Troe parameters in reaction </span><span class="si">{}</span><span class="s1"> modified to avoid&#39;</span>
                                 <span class="s1">&#39; division by zero!.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)))</span>
@@ -733,6 +720,17 @@
                     <span class="n">reac</span><span class="o">.</span><span class="n">cheb_par</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">+=</span> <span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="mf">0.001</span> <span class="o">**</span> <span class="p">(</span><span class="n">order</span> <span class="o">-</span> <span class="mf">1.</span><span class="p">))</span>
 
                 <span class="n">reacs</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span><span class="o">.</span><span class="n">cheb_par</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">reac</span><span class="o">.</span><span class="n">cheb_par</span><span class="p">,</span> <span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">m</span><span class="p">))</span>
+
+    <span class="c1"># check that all species in reactions correspond to a known species</span>
+    <span class="n">spec_names</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">spec</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">specs</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">idx</span><span class="p">,</span> <span class="n">reac</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">reacs</span><span class="p">):</span>
+        <span class="n">in_rxn</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">reac</span><span class="o">.</span><span class="n">reac</span> <span class="o">+</span> <span class="n">reac</span><span class="o">.</span><span class="n">prod</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">spec</span> <span class="ow">in</span> <span class="n">in_rxn</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">spec</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">spec_names</span><span class="p">:</span>
+                <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s1">&#39;Reaction </span><span class="si">{}</span><span class="s1"> contains unknown species </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                    <span class="n">idx</span><span class="p">,</span> <span class="n">spec</span><span class="p">))</span>
+                <span class="n">sys</span><span class="o">.</span><span class="n">exit</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
 
     <span class="c1"># Split reversible reactions with explicit reverse parameters into</span>
     <span class="c1"># two irreversible reactions to match Cantera&#39;s behavior</span>
@@ -885,7 +883,7 @@
                 <span class="n">spec</span><span class="o">.</span><span class="n">mw</span> <span class="o">+=</span> <span class="n">e_num</span> <span class="o">*</span> <span class="n">elem_wt</span><span class="p">[</span><span class="n">e</span><span class="o">.</span><span class="n">lower</span><span class="p">()]</span>
 
             <span class="c1"># temperatures for species</span>
-            <span class="n">T_spec</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">read_str_num</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">45</span><span class="p">:</span><span class="mi">73</span><span class="p">])</span>
+            <span class="n">T_spec</span> <span class="o">=</span> <span class="n">utils</span><span class="o">.</span><span class="n">read_str_num</span><span class="p">(</span><span class="n">line</span><span class="p">[</span><span class="mi">45</span><span class="p">:</span><span class="mi">74</span><span class="p">])</span>
             <span class="n">T_low</span> <span class="o">=</span> <span class="n">T_spec</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
             <span class="n">T_high</span> <span class="o">=</span> <span class="n">T_spec</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">T_spec</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
@@ -1001,6 +999,37 @@
     <span class="c1"># Cantera internally uses joules/kmol for activation energy</span>
     <span class="n">E_fac</span> <span class="o">=</span> <span class="n">act_energy_fact</span><span class="p">[</span><span class="s1">&#39;joules/kmole&#39;</span><span class="p">]</span>
 
+    <span class="k">def</span> <span class="nf">handle_effiencies</span><span class="p">(</span><span class="n">reac</span><span class="p">,</span> <span class="n">ct_rxn</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Convert Cantera `cantera.Reaction`&#39;s third body efficienicies</span>
+<span class="sd">           to pyJac&#39;s internal format, and return updated reaction</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        reac : `ReacInfo`</span>
+<span class="sd">            The pyJac reaction to update</span>
+<span class="sd">        ct_rxn : `Reaction` object</span>
+<span class="sd">            Corresponding cantera reaction to pull the third bodies from</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        updated_reac: `ReacInfo`</span>
+<span class="sd">            The updated pyjac reaction with appropriate third body efficiencies</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="c1"># See if single species acts as third body</span>
+        <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">default_efficiency</span> <span class="o">==</span> <span class="mf">0.0</span> \
+                <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">ct_rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span> <span class="o">==</span> <span class="mi">1</span>\
+                <span class="ow">and</span> <span class="nb">list</span><span class="p">(</span><span class="n">ct_rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">values</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>\
+                <span class="ow">and</span> <span class="n">reac</span><span class="o">.</span><span class="n">is_pdep</span><span class="p">:</span>
+            <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">species_names</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">ct_rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">ct_rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">sp</span><span class="p">]])</span>
+                <span class="k">elif</span> <span class="n">ct_rxn</span><span class="o">.</span><span class="n">default_efficiency</span> <span class="o">!=</span> <span class="mf">1.0</span><span class="p">:</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">ct_rxn</span><span class="o">.</span><span class="n">default_efficiency</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">reac</span>
+
     <span class="k">for</span> <span class="n">rxn</span> <span class="ow">in</span> <span class="n">gas</span><span class="o">.</span><span class="n">reactions</span><span class="p">():</span>
 
         <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ThreeBodyReaction</span><span class="p">):</span>
@@ -1015,10 +1044,7 @@
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
                                  <span class="p">)</span>
             <span class="n">reac</span><span class="o">.</span><span class="n">thd_body</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="k">for</span> <span class="n">thd_body</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
-                <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">thd_body</span><span class="p">,</span>
-                                          <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">thd_body</span><span class="p">]</span>
-                                          <span class="p">])</span>
+            <span class="n">reac</span> <span class="o">=</span> <span class="n">handle_effiencies</span><span class="p">(</span><span class="n">reac</span><span class="p">,</span> <span class="n">rxn</span><span class="p">)</span>
 
         <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">FalloffReaction</span><span class="p">)</span> <span class="ow">and</span> \
              <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">rxn</span><span class="p">,</span> <span class="n">ct</span><span class="o">.</span><span class="n">ChemicallyActivatedReaction</span><span class="p">):</span>
@@ -1032,12 +1058,7 @@
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">high_rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
                                  <span class="p">)</span>
             <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="c1"># See if single species acts as third body</span>
-            <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">default_efficiency</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
-                    <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">sp</span><span class="p">]])</span>
+            <span class="n">reac</span> <span class="o">=</span> <span class="n">handle_effiencies</span><span class="p">(</span><span class="n">reac</span><span class="p">,</span> <span class="n">rxn</span><span class="p">)</span>
 
             <span class="n">reac</span><span class="o">.</span><span class="n">low</span> <span class="o">=</span> <span class="p">[</span><span class="n">rxn</span><span class="o">.</span><span class="n">low_rate</span><span class="o">.</span><span class="n">pre_exponential_factor</span><span class="p">,</span>
                         <span class="n">rxn</span><span class="o">.</span><span class="n">low_rate</span><span class="o">.</span><span class="n">temperature_exponent</span><span class="p">,</span>
@@ -1049,14 +1070,14 @@
                 <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
                 <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">False</span>
                 <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-30</span>
                     <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span><span class="n">e</span><span class="o">-</span><span class="mi">30</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-30</span>
                     <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="k">if</span> <span class="n">do_warn</span><span class="p">:</span>
                     <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Troe parameters in reaction </span><span class="si">{}</span><span class="s1"> modified to avoid&#39;</span>
-                                    <span class="s1">&#39; division by zero!.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)))</span>
+                                 <span class="s1">&#39; division by zero!.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)))</span>
             <span class="k">elif</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;SRI&#39;</span><span class="p">:</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">sri</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">sri_par</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
@@ -1072,12 +1093,7 @@
                                  <span class="n">rxn</span><span class="o">.</span><span class="n">low_rate</span><span class="o">.</span><span class="n">activation_energy</span> <span class="o">*</span> <span class="n">E_fac</span>
                                  <span class="p">)</span>
             <span class="n">reac</span><span class="o">.</span><span class="n">pdep</span> <span class="o">=</span> <span class="kc">True</span>
-            <span class="c1"># See if single species acts as third body</span>
-            <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">default_efficiency</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
-                <span class="n">reac</span><span class="o">.</span><span class="n">pdep_sp</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="mi">0</span><span class="p">]</span>
-            <span class="k">else</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">sp</span> <span class="ow">in</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">:</span>
-                    <span class="n">reac</span><span class="o">.</span><span class="n">thd_body_eff</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">sp</span><span class="p">,</span> <span class="n">rxn</span><span class="o">.</span><span class="n">efficiencies</span><span class="p">[</span><span class="n">sp</span><span class="p">]])</span>
+            <span class="n">reac</span> <span class="o">=</span> <span class="n">handle_effiencies</span><span class="p">(</span><span class="n">reac</span><span class="p">,</span> <span class="n">rxn</span><span class="p">)</span>
 
             <span class="n">reac</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="p">[</span><span class="n">rxn</span><span class="o">.</span><span class="n">high_rate</span><span class="o">.</span><span class="n">pre_exponential_factor</span><span class="p">,</span>
                          <span class="n">rxn</span><span class="o">.</span><span class="n">high_rate</span><span class="o">.</span><span class="n">temperature_exponent</span><span class="p">,</span>
@@ -1087,6 +1103,16 @@
             <span class="k">if</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;Troe&#39;</span><span class="p">:</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">troe</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+                <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-30</span>
+                    <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">reac</span><span class="o">.</span><span class="n">troe_par</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-30</span>
+                    <span class="n">do_warn</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">do_warn</span><span class="p">:</span>
+                    <span class="n">logging</span><span class="o">.</span><span class="n">warn</span><span class="p">(</span><span class="s1">&#39;Troe parameters in reaction </span><span class="si">{}</span><span class="s1"> modified to avoid&#39;</span>
+                                    <span class="s1">&#39; division by zero!.&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">reacs</span><span class="p">)))</span>
             <span class="k">elif</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">type</span> <span class="o">==</span> <span class="s1">&#39;SRI&#39;</span><span class="p">:</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">sri</span> <span class="o">=</span> <span class="kc">True</span>
                 <span class="n">reac</span><span class="o">.</span><span class="n">sri_par</span> <span class="o">=</span> <span class="n">rxn</span><span class="o">.</span><span class="n">falloff</span><span class="o">.</span><span class="n">parameters</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
@@ -1204,8 +1230,8 @@
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.4.9</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.9</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
     </div>
 

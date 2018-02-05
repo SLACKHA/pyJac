@@ -82,7 +82,7 @@ The performance tester can be called using:
 
 .. code-block:: bash
 
-    python -m pyjac.performance_tester -w data/ -nt 12
+    python -m pyjac.performance_tester -w data/
 
 ==================
 Library Generation

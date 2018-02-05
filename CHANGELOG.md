@@ -6,6 +6,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 ### Added
+- DOI for 1.0.4
+
+### Fixed
+- Syntax errors in readme.md
+- Conda install instructions in install.md
+- Corrected TRange columns in parser
+
+### Added
+- Add check to reactions to test that all species exist
+- Duplicate warning from falloff->chemically-activated TROE reactions for zero-parameters
+- Add handling of non-unity default third body efficiency
+
+## [1.0.5.b0] - 2017-06-02
+### Added
 - Added usergroup info to README and documentation
 
 ### Fixed
@@ -15,7 +29,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Removed
 - Removed plotting scripts specific to first paper on pyJac
-
 
 ## [1.0.4] - 2017-04-18
 ### Added

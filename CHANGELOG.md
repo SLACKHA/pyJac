@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Duplicate warning from falloff->chemically-activated TROE reactions for zero-parameters
 - Add handling of non-unity default third body efficiency
 
+### Changed
+- Bump internal version to 1.0.5.c
+
 ## [1.0.5.b0] - 2017-06-02
 ### Added
 - Added usergroup info to README and documentation

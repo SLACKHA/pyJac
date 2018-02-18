@@ -286,7 +286,7 @@ def performance_tester(home, work_dir, use_old_opt):
     #check that nvcc installed
     cuda_params = {}
     try:
-        subprocess.check_call('nvcc --version')
+        subprocess.check_call(['nvcc', '--version'])
         #if we have NVCC, assume we can execute CUDA
         cuda_params = {'lang' : 'cuda',
                    'cache_opt' : [False],

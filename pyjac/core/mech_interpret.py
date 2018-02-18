@@ -978,7 +978,7 @@ def read_mech_ct(filename=None, gas=None):
         if rxn.default_efficiency == 0.0 \
                 and len(ct_rxn.efficiencies.keys()) == 1\
                 and list(ct_rxn.efficiencies.values())[0] == 1\
-                and reac.is_pdep:
+                and reac.pdep:
             reac.pdep_sp = list(rxn.efficiencies.keys())[0]
         else:
             for sp in gas.species_names:

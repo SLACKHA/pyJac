@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [Unreleased]
+## [1.0.6] - 2018-02-21
 ### Added
 - DOI for 1.0.4
 
@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Syntax errors in readme.md
 - Conda install instructions in install.md
 - Corrected TRange columns in parser
+- Minor documentation fixes
 
 ### Added
 - Add check to reactions to test that all species exist

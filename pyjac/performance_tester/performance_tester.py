@@ -275,7 +275,7 @@ def performance_tester(home, work_dir, use_old_opt):
     import multiprocessing #for cpu count
     max_cpu = multiprocessing.cpu_count()
     num_threads = [1]
-    while num_threads < max_cpu:
+    while num_threads[-1] < max_cpu:
         num_threads.append(min(max_cpu, num_threads[-1] * 2))
     c_params = {'lang' : 'c',
                 'cache_opt' : [False],

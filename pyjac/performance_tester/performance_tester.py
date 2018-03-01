@@ -175,10 +175,10 @@ def cmd_link(lang, shared):
     return cmd
 
 
-def linker(lang, temp_lang, test_dir, filelist, lib=None):
+def linker(lang, temp_lang, test_dir, filelist, lib=None, cl=20):
     args = cmd_link(temp_lang, not STATIC)
     if lang == 'cuda' or (not STATIC):
-        args.extend(flags[temp_lang])
+        args.extend([f.format(cl=cl) for f in flags[temp_lang]])
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
     if temp_lang == 'cuda':
@@ -477,7 +477,7 @@ def performance_tester(home, work_dir, use_old_opt, cl_level=20):
             structs = [file_struct(lang, temp_lang, f, i_dirs,
                                    (['-DFINITE_DIFF'] if FD else []),
                                    build_dir, test_dir, not STATIC
-                                   ) for f in files
+                                   cl=cl_level) for f in files
                        ]
             if lang != 'cuda':
                 for s in structs:
@@ -490,7 +490,7 @@ def performance_tester(home, work_dir, use_old_opt, cl_level=20):
             if any(r == -1 for r in results):
                sys.exit(-1)
 
-            linker(lang, temp_lang, test_dir, files, lib)
+            linker(lang, temp_lang, test_dir, files, lib, cl=cl_level)
 
             if lang == 'tchem':
                 #copy periodic table and mechanisms in

@@ -78,7 +78,7 @@ includes = dict(c=['/usr/local/include/'], icc=['/usr/local/include/'],
 
 flags = dict(c=['-std=c99', '-O3', '-mtune=native'],
              icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
-             cuda=['-O3', '-gencode arch=compute_{cl},code=sm_{cl}']
+             cuda=['-O3', '-arch=sm_{cl}']
              )
 
 shared_flags = dict(c=['-fPIC'],

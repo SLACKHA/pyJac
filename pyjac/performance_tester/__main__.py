@@ -24,6 +24,7 @@ def main(args=None):
                             )
         parser.add_argument('-cl', '--compute_level',
                             default=20,
+                            type=int,
                             required=False,
                             choices=[20, 21, 30, 32, 35, 37, 50, 52, 53, 60, 61,
                                      62, 70, 71],

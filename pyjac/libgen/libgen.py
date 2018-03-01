@@ -23,6 +23,16 @@ cmd_compile = dict(c='gcc',
                    )
 
 
+def which(file):
+    """A substitute for the `which` command, searches the PATH for
+    a given file"""
+    for path in os.environ["PATH"].split(os.pathsep):
+        if os.path.exists(os.path.join(path, file)):
+                return os.path.join(path, file)
+
+    return None
+
+
 def get_cuda_path(lib=True):
     """Returns location of CUDA (nvcc) on the system.
 
@@ -80,16 +90,6 @@ libs = dict(c=['-lm', '-std=c99'],
             cuda=['-lcudart'],
             icc=['-m64', '-ipo', '-lm', '-std=c99']
             )
-
-
-def which(file):
-    """A substitute for the `which` command, searches the PATH for
-    a given file"""
-    for path in os.environ["PATH"].split(os.pathsep):
-        if os.path.exists(os.path.join(path, file)):
-                return os.path.join(path, file)
-
-    return None
 
 
 def compiler(fstruct):

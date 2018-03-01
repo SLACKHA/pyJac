@@ -210,7 +210,7 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
         sys.exit(1)
 
 
-def performance_tester(home, work_dir, use_old_opt):
+def performance_tester(home, work_dir, use_old_opt, cl_level=20):
     """Runs performance testing for pyJac, TChem, and finite differences.
 
     Parameters
@@ -221,6 +221,8 @@ def performance_tester(home, work_dir, use_old_opt):
         Working directory with mechanisms and for data
     use_old_opt : bool
         If ``True``, use old optimization files found
+    cl_level: int [20]
+        The cuda compute level to use
 
     Returns
     -------
@@ -461,8 +463,8 @@ def performance_tester(home, work_dir, use_old_opt):
             #now build the library
             if lang != 'tchem':
                 lib = generate_library(lang, build_dir, test_dir,
-                                       finite_difference=FD, shared=not STATIC
-                                       )
+                                       finite_difference=FD, shared=not STATIC,
+                                       compute_level=cl_level)
 
                 lib = os.path.normpath(lib)
                 lib = (lib[lib.index('lib') +

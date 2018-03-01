@@ -9,8 +9,8 @@ import subprocess
 import sys
 import multiprocessing
 import platform
-
 from .. import utils
+
 
 def lib_ext(shared):
     """Returns the appropriate library extension based on the shared flag"""
@@ -21,6 +21,33 @@ cmd_compile = dict(c='gcc',
                    icc='icc',
                    cuda='nvcc'
                    )
+
+
+def get_cuda_path(lib=True):
+    """Returns location of CUDA (nvcc) on the system.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    cuda_path : str
+        Path where CUDA (nvcc) is found on the system.
+
+    """
+    cuda_path = which('nvcc')
+    if cuda_path is None:
+        print('nvcc not found!')
+        sys.exit(-1)
+
+    sixtyfourbit = platform.architecture()[0] == '64bit'
+    cuda_path = os.path.dirname(os.path.dirname(cuda_path))
+    if lib:
+        cuda_path = os.path.join(cuda_path,
+                                 'lib{}'.format('64' if sixtyfourbit else '')
+                                 )
+    return cuda_path
 
 
 def cmd_lib(lang, shared):
@@ -35,14 +62,13 @@ def cmd_lib(lang, shared):
 
 
 includes = dict(c=['/usr/local/include/'], icc=['/usr/local/include/'],
-                cuda=['/usr/local/cuda/include/',
-                      '/usr/local/cuda/samples/common/inc/'
-                      ]
+                cuda=[os.path.join(get_cuda_path(False), 'include'),
+                      os.path.join(get_cuda_path(False), 'samples', 'common', 'inc')]
                 )
 
 flags = dict(c=['-std=c99', '-O3', '-mtune=native'],
              icc=['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
-             cuda=['-O3', '-arch=sm_20']
+             cuda=['-O3', '-gencode arch=compute_{cl},code=sm_{cl}']
              )
 
 shared_flags = dict(c=['-fPIC'],
@@ -87,7 +113,10 @@ def compiler(fstruct):
     args = [cmd_compile[fstruct.build_lang]]
     if fstruct.auto_diff:
         args = ['g++']
-    args.extend(flags[fstruct.build_lang])
+    fl = flags[fstruct.build_lang]
+    if fstruct.build_lang == 'cuda':
+        fl = [f.format(cl=fstruct.cl) for f in fl]
+    args.extend(fl)
     if fstruct.auto_diff:
         args = [x for x in args if 'std=c99' not in x]
 
@@ -118,32 +147,6 @@ def compiler(fstruct):
               )
         return -1
     return 0
-
-
-def get_cuda_path():
-    """Returns location of CUDA (nvcc) on the system.
-
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    cuda_path : str
-        Path where CUDA (nvcc) is found on the system.
-
-    """
-    cuda_path = which('nvcc')
-    if cuda_path is None:
-        print('nvcc not found!')
-        sys.exit(-1)
-
-    sixtyfourbit = platform.architecture()[0] == '64bit'
-    cuda_path = os.path.dirname(os.path.dirname(cuda_path))
-    cuda_path = os.path.join(cuda_path,
-                             'lib{}'.format('64' if sixtyfourbit else '')
-                             )
-    return cuda_path
 
 
 def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
@@ -219,7 +222,7 @@ class file_struct(object):
     """A simple structure designed to enable multiprocess compilation
     """
     def __init__(self, lang, build_lang, filename, i_dirs, args,
-                 source_dir, obj_dir, shared
+                 source_dir, obj_dir, shared, cl=20
                  ):
         """
         Parameters
@@ -240,6 +243,8 @@ class file_struct(object):
             The directory to place the compiled object file in
         shared : bool
             If true, this is creating a shared library
+        cl : int [20]
+            The default compute level
         """
 
         self.lang = lang
@@ -250,7 +255,8 @@ class file_struct(object):
         self.source_dir = source_dir
         self.obj_dir = obj_dir
         self.shared = shared
-        self.auto_diff=False
+        self.auto_diff = False
+        self.cl = cl
 
 
 def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
@@ -321,7 +327,8 @@ def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
 
 def generate_library(lang, source_dir, obj_dir=None,
                      out_dir=None, shared=None,
-                     finite_difference=False, auto_diff=False
+                     finite_difference=False, auto_diff=False,
+                     compute_level=20
                      ):
     """Generate shared/static library for pyJac files.
 
@@ -339,6 +346,8 @@ def generate_library(lang, source_dir, obj_dir=None,
         If ``True``, include finite differences
     auto_diff : bool
         If ``True``, include autodifferentiation
+    compute_level: int [20]
+        If specified, the CUDA compute level to use.  Defaults to 20
 
     Returns
     -------
@@ -395,7 +404,7 @@ def generate_library(lang, source_dir, obj_dir=None,
     # Compile generated source code
     structs = [file_struct(lang, build_lang, f, i_dirs,
                (['-DFINITE_DIFF'] if finite_difference else []),
-               source_dir, obj_dir, shared) for f in files
+               source_dir, obj_dir, shared, cl=compute_level) for f in files
                ]
     for x in structs:
         x.auto_diff=auto_diff

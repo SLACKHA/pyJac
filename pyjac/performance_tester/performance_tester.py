@@ -476,7 +476,7 @@ def performance_tester(home, work_dir, use_old_opt, cl_level=20):
             # Compile generated source code
             structs = [file_struct(lang, temp_lang, f, i_dirs,
                                    (['-DFINITE_DIFF'] if FD else []),
-                                   build_dir, test_dir, not STATIC
+                                   build_dir, test_dir, not STATIC,
                                    cl=cl_level) for f in files
                        ]
             if lang != 'cuda':

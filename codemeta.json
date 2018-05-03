@@ -1,0 +1,25 @@
+{
+    "@context": "http://schema.org",
+    "@type": "Code",
+    "author": [
+        {
+            "@id": "http://orcid.org/0000-0003-4425-7097",
+            "@type": "Person",
+            "email": "kyle.niemeyer@gmail.com",
+            "name": "Kyle Niemeyer"
+        },
+        {
+            "@id": "http://orcid.org/0000-0002-0303-4711",
+            "@type": "Person",
+            "email": "arghdos@gmail.com",
+            "name": "Nicholas Curtis"
+        }
+    ],
+    "citation": "https://doi.org/10.5281/zenodo.1182789",
+    "codeRepository": "https://github.com/SLACKHA/pyJac",
+    "dateCreated": "2018-02-21",
+    "description": "Creates C and CUDA analytical Jacobians for chemical kinetics ODE systems http://slackha.github.io/pyJac/",
+    "keywords": "chemical kinetics, Jacobian, ODE system",
+    "license": "http://opensource.org/licenses/MIT",
+    "name": "pyJac"
+}

@@ -62,34 +62,28 @@ What is in the Jacobian?
 ========================
 
 As described in :ref:`jacobian_formulation`, the Jacobian consists of
-temperature and mass fraction derivatives.  The order (described in full in
-the paper_) consists of total temperature derivative in index 0
+temperature and mass fraction derivatives:
 
 .. math::
-    \frac{\partial \dot{T}}{\partial T}
+    \mathcal{J}_{i, j} = \frac{\partial \dot{\Phi_i}}{\partial Phi_j}
 
-followed by the temperature derivative WRT mass fractions:
-
-.. math::
-    \frac{\partial \dot{T}}{\partial Y_j}
-
-for :math:`j = 0\ldots N_{\text{sp}} - 1`, in indicies
-:math:`1\ldots N_{\text{sp}} - 1`.
-
-Following this is the species mass fraction derivative WRT temperature:
+This translates to a Jacobian matrix that looks like:
 
 .. math::
-    \frac{\partial Y_0}{\partial T}
+    \begin{array}{cccc}
+        \frac{\partial \dot{T}}{\partial T} & \frac{\partial \dot{T}}{\partial Y_1} & \ldots & \frac{\partial \dot{T}}{\partial Y_{N_{\text{sp}} - 1}} \\
+        \frac{\partial \dot{Y_1}}{\partial T} & \frac{\partial \dot{Y_1}}{\partial Y_1} & \ldots & \frac{\partial \dot{Y_1}}{\partial Y_{N_{\text{sp}} - 1}} \\
+        \vdots & & \ddots & \vdots \\
+        \frac{\partial \dot{Y_{N_{\text{sp}} - 1}}}{\partial T} & \frac{\partial \dot{Y_{N_{\text{sp}} - 1}}}{\partial Y_1} & \ldots & \frac{\partial \dot{Y_{N_{\text{sp}} - 1}}}{\partial Y_{N_{\text{sp}} - 1}}
+    \end{array}
 
-in index :math:`N_{\text{sp}}` and the mass fraction derivatives
-WRT the other mass fractions:
+In code, the Jacobian is flattened in column-major (Fortran) order:
 
 .. math::
-    \frac{\partial Y_0}{\partial Y_j}
+    \vec{\mathcal{J}} = \left\{ \partial \dot{T}}{\partial T}, \frac{\partial \dot{Y_1}}{\partial T}, \ldots \frac{\partial \dot{Y_{N_{\text{sp}} - 1}}}{\partial T}, \ldots, \frac{\partial \dot{T}}{\partial Y_1}, \frac{\partial \dot{Y_1}}{\partial Y_1} \ldots, \frac{\partial \dot{T}}{\partial Y_{N_{\text{sp}} - 1}}, \frac{\partial \dot{Y_1}}{\partial Y_{N_{\text{sp}} - 1}} \ldots \frac{\partial \dot{Y_{N_{\text{sp}} - 1}}}{\partial Y_{N_{\text{sp}} - 1}} \right\}
 
-in indicies :math:`N_{\text{sp}} + 1 \ldots 2 N_{\text{sp}}`, etc.
-Note that the ordering issues disucssed in :ref:`ordering` apply here as well.
 The resulting Jacobian is of length :math:`N_{\text{sp}} * N_{\text{sp}}`.
+Note that the ordering issues disucssed in :ref:`ordering` apply here as well.
 
 .. _paper: https://Niemeyer-Research-Group.github.io/pyJac-paper/
 

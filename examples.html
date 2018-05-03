@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>Examples &#8212; pyJac 1.0.5c documentation</title>
+    <title>Examples &#8212; pyJac 1.0.6 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0.5c',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -32,8 +24,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -43,21 +34,21 @@
             
   <div class="section" id="examples">
 <h1>Examples<a class="headerlink" href="#examples" title="Permalink to this headline">¶</a></h1>
-<p>Some example input files are included in the <code class="docutils literal"><span class="pre">data</span></code> directory.</p>
+<p>Some example input files are included in the <code class="docutils literal notranslate"><span class="pre">data</span></code> directory.</p>
 <p>After installing pyJac, or in the package directory, you can see all of the
-usage options with a standard <code class="docutils literal"><span class="pre">--help</span></code> or <code class="docutils literal"><span class="pre">-h</span></code> option:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac --help
+usage options with a standard <code class="docutils literal notranslate"><span class="pre">--help</span></code> or <code class="docutils literal notranslate"><span class="pre">-h</span></code> option:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac --help
 </pre></div>
 </div>
 <div class="section" id="jacobian-file-generation">
 <h2>Jacobian file generation<a class="headerlink" href="#jacobian-file-generation" title="Permalink to this headline">¶</a></h2>
 <p>To generate the Jacobian source files for a hydrogen-air system in C (without
 any cache optimization):</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac --lang c --input data/h2o2.inp
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac --lang c --input data/h2o2.inp
 </pre></div>
 </div>
 <p>CUDA source code can be generated similarly:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac --lang cuda --input data/h2o2.inp
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac --lang cuda --input data/h2o2.inp
 </pre></div>
 </div>
 </div>
@@ -66,22 +57,22 @@ any cache optimization):</p>
 <p>Functional testing (i.e., testing whether pyJac gives the correct results)
 requires thermochemical state data. This can be generated using the built-in
 partially stirred reactor (PaSR) module:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac.functional_tester.partially_stirred_reactor <span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac.functional_tester.partially_stirred_reactor <span class="se">\</span>
 --mech data/h2o2.cti --input data/pasr_input.yaml <span class="se">\</span>
 --output h2_pasr_output.npy
 </pre></div>
 </div>
 <p>Then, functional testing using this data can be performed via:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac.functional_tester --mech data/h2o2.cti --lang c <span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac.functional_tester --mech data/h2o2.cti --lang c <span class="se">\</span>
 --pasr_output h2_pasr_output.npy
 </pre></div>
 </div>
 <p><strong>Alternatively</strong>, you can perform the test using provided example data:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac.functional_tester --mech data/h2o2.cti --lang c <span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac.functional_tester --mech data/h2o2.cti --lang c <span class="se">\</span>
 --pasr_output data/h2_pasr_output.npy
 </pre></div>
 </div>
-<p>Detailed error statistics are saved in <code class="docutils literal"><span class="pre">error_arrays.npz</span></code>, and overall results
+<p>Detailed error statistics are saved in <code class="docutils literal notranslate"><span class="pre">error_arrays.npz</span></code>, and overall results
 printed to screen.</p>
 </div>
 <div class="section" id="performance-testing">
@@ -99,12 +90,12 @@ subdirectories in the base directory, looking for the following keys:</p>
 if required. If the thermo file is not specified, the mechanism is assumed
 to contain the thermo data.</li>
 <li>Thermochemical state data (as generated previously using the PaSR module)
-files ending with <code class="docutils literal"><span class="pre">*.npy</span></code></li>
+files ending with <code class="docutils literal notranslate"><span class="pre">*.npy</span></code></li>
 </ul>
 </div></blockquote>
-<p>Note that all <code class="docutils literal"><span class="pre">*.npy</span></code> files in a directory will be used for testing purposes.</p>
+<p>Note that all <code class="docutils literal notranslate"><span class="pre">*.npy</span></code> files in a directory will be used for testing purposes.</p>
 <p>The performance tester can be called using:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac.performance_tester -w data/
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac.performance_tester -w data/
 </pre></div>
 </div>
 </div>
@@ -112,9 +103,9 @@ files ending with <code class="docutils literal"><span class="pre">*.npy</span><
 <h2>Library Generation<a class="headerlink" href="#library-generation" title="Permalink to this headline">¶</a></h2>
 <p>pyJac also has the ability to generate shared / static libraries for
 linkage to external programs.  This functionality is available via the
-<a class="reference internal" href="src/pyjac.libgen.html#module-pyjac.libgen" title="pyjac.libgen"><code class="xref py py-mod docutils literal"><span class="pre">pyjac.libgen</span></code></a> submodule, and requires a gcc/nvcc installation available
+<a class="reference internal" href="src/pyjac.libgen.html#module-pyjac.libgen" title="pyjac.libgen"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pyjac.libgen</span></code></a> submodule, and requires a gcc/nvcc installation available
 on the path.  It can be called as:</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac.libgen --source_dir /path/to/generated/pyjac/output <span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac.libgen --source_dir /path/to/generated/pyjac/output <span class="se">\</span>
        --lang cuda --static
 </pre></div>
 </div>
@@ -127,24 +118,24 @@ static library.</p>
 generate a python wrapper for chemical source term / Jacobian evaluation
 (among others) directly from python.  This functionality can be called
 via (e.g.,):</p>
-<div class="highlight-bash"><div class="highlight"><pre><span></span>python -m pyjac.pywrap --source_dir /path/to/generated/pyjac/output <span class="se">\</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python -m pyjac.pywrap --source_dir /path/to/generated/pyjac/output <span class="se">\</span>
        --lang cuda
 </pre></div>
 </div>
 <p>For details of the functions included in the python wrapper, look at the
-.pyx files in <a class="reference internal" href="src/pyjac.pywrap.html#module-pyjac.pywrap" title="pyjac.pywrap"><code class="xref py py-mod docutils literal"><span class="pre">pyjac.pywrap</span></code></a>, or the calls in
-<a class="reference internal" href="src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator" title="pyjac.functional_tester.test.cpyjac_evaluator"><code class="xref py py-class docutils literal"><span class="pre">pyjac.functional_tester.test.cpyjac_evaluator</span></code></a></p>
+.pyx files in <a class="reference internal" href="src/pyjac.pywrap.html#module-pyjac.pywrap" title="pyjac.pywrap"><code class="xref py py-mod docutils literal notranslate"><span class="pre">pyjac.pywrap</span></code></a>, or the calls in
+<a class="reference internal" href="src/pyjac.functional_tester.test.html#pyjac.functional_tester.test.cpyjac_evaluator" title="pyjac.functional_tester.test.cpyjac_evaluator"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyjac.functional_tester.test.cpyjac_evaluator</span></code></a></p>
 </div>
 <div class="section" id="using-the-python-interface">
 <h2>Using the Python Interface<a class="headerlink" href="#using-the-python-interface" title="Permalink to this headline">¶</a></h2>
 <p>Once generated, the python wrapper can be imported from a python script in
 the same directory, e.g.:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyjacob</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyjacob</span>
 </pre></div>
 </div>
-<p>Then the <code class="xref py py-func docutils literal"><span class="pre">dydt()</span></code> or <code class="xref py py-func docutils literal"><span class="pre">eval_jacob()</span></code> functions can be called, e.g. for
+<p>Then the <code class="xref py py-func docutils literal notranslate"><span class="pre">dydt()</span></code> or <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_jacob()</span></code> functions can be called, e.g. for
 the GRI-Mech 3.0 model as:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyjacob</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pyjacob</span>
 <span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
@@ -185,7 +176,7 @@ Also note that we can pass a dummy time of 0, as explained in
 <p>The CUDA interface is less modular, and currently only supports evaluating the
 Jacobian directly (which in turn populates the other values).  For example,
 if we have 1000 states to evaluate:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cu_pyjacob</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cu_pyjacob</span>
 <span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
 <span class="kn">import</span> <span class="nn">numpy</span> <span class="kn">as</span> <span class="nn">np</span>
 
@@ -302,12 +293,14 @@ Jacobian values are explained in (<a class="reference internal" href="faqs.html#
 
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -318,7 +311,7 @@ Jacobian values are explained in (<a class="reference internal" href="faqs.html#
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

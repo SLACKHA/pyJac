@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>FAQs &#8212; pyJac 1.0.5c documentation</title>
+    <title>FAQs &#8212; pyJac 1.0.6 documentation</title>
     <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.0.5c',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
@@ -32,8 +24,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -47,16 +38,16 @@
 <h2>FAQs<a class="headerlink" href="#id1" title="Permalink to this headline">¶</a></h2>
 <div class="section" id="what-state-vector-should-i-pass-into-pyjac">
 <span id="ordering"></span><h3>What state vector should I pass into pyJac?<a class="headerlink" href="#what-state-vector-should-i-pass-into-pyjac" title="Permalink to this headline">¶</a></h3>
-<p>As described in <a class="reference internal" href="overview.html#state-vec"><span class="std std-ref">State Vector</span></a>, pyJac expectes state vector <span class="math">\(\Phi\)</span> that
+<p>As described in <a class="reference internal" href="overview.html#state-vec"><span class="std std-ref">State Vector</span></a>, pyJac expectes state vector <span class="math notranslate nohighlight">\(\Phi\)</span> that
 consists of:</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[\Phi = \left \lbrace T, Y_1, Y_2, \dotsc,
 Y_{N_{\text{sp}} - 1} \right \rbrace^{\text{T}}\]</div>
-<p>where <span class="math">\(T\)</span> is the temperature, and <span class="math">\(Y_i\)</span> is the mass fraction of
+<p>where <span class="math notranslate nohighlight">\(T\)</span> is the temperature, and <span class="math notranslate nohighlight">\(Y_i\)</span> is the mass fraction of
 species <em>i</em>.  Because pyJac is formulated to ensure strict mass conservation,
-the mass fraction of the last species in the model <span class="math">\(Y_{N_{sp}}\)</span> is
+the mass fraction of the last species in the model <span class="math notranslate nohighlight">\(Y_{N_{sp}}\)</span> is
 determined as:</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[Y_{N_{\text{sp}}} = 1 - \sum_{k=1}^{N_{\text{sp}} - 1} Y_k\]</div>
 <p>This means that supplying the last species mass fraction is <em>optional</em> in
 all the pyJac forms.</p>
@@ -72,7 +63,7 @@ the model and placed at the end of the model.  If you want to compare results
 to Cantera, this can be confusing; say you have a Solution object “gas”, and
 have selected N<sub>2</sub> as the last species.  The Solution object can be
 updated as:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">cantera</span> <span class="kn">as</span> <span class="nn">ct</span>
 <span class="c1">#create gas from original mechanism file `mech.cti`</span>
 <span class="n">gas</span> <span class="o">=</span> <span class="n">ct</span><span class="o">.</span><span class="n">Solution</span><span class="p">(</span><span class="s1">&#39;mech.cti&#39;</span><span class="p">)</span>
 <span class="c1">#reorder the gas to match pyJac</span>
@@ -87,32 +78,41 @@ updated as:</p>
 <div class="section" id="what-is-in-the-jacobian">
 <span id="jac-vals"></span><h3>What is in the Jacobian?<a class="headerlink" href="#what-is-in-the-jacobian" title="Permalink to this headline">¶</a></h3>
 <p>As described in <a class="reference internal" href="overview.html#jacobian-formulation"><span class="std std-ref">Jacobian Formulation</span></a>, the Jacobian consists of
-temperature and mass fraction derivatives.  The order (described in full in
-the <a class="reference external" href="https://Niemeyer-Research-Group.github.io/pyJac-paper/">paper</a>) consists of total temperature derivative in index 0</p>
-<div class="math">
-\[\frac{\partial \dot{T}}{\partial T}\]</div>
-<p>followed by the temperature derivative WRT mass fractions:</p>
-<div class="math">
-\[\frac{\partial \dot{T}}{\partial Y_j}\]</div>
-<p>for <span class="math">\(j = 0\ldots N_{\text{sp}} - 1\)</span>, in indicies
-<span class="math">\(1\ldots N_{\text{sp}} - 1\)</span>.</p>
-<p>Following this is the species mass fraction derivative WRT temperature:</p>
-<div class="math">
-\[\frac{\partial Y_0}{\partial T}\]</div>
-<p>in index <span class="math">\(N_{\text{sp}}\)</span> and the mass fraction derivatives
-WRT the other mass fractions:</p>
-<div class="math">
-\[\frac{\partial Y_0}{\partial Y_j}\]</div>
-<p>in indicies <span class="math">\(N_{\text{sp}} + 1 \ldots 2 N_{\text{sp}}\)</span>, etc.
-Note that the ordering issues disucssed in <a class="reference internal" href="#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a> apply here as well.
-The resulting Jacobian is of length <span class="math">\(N_{\text{sp}} * N_{\text{sp}}\)</span>.</p>
+temperature and mass fraction derivatives:</p>
+<div class="math notranslate nohighlight">
+\[\mathcal{J}_{i, j} = \frac{\partial \dot{\Phi_i}}{\partial \Phi_j}\]</div>
+<p>This translates to a Jacobian matrix that looks like:</p>
+<div class="math notranslate nohighlight">
+\[\begin{split}\left[
+\begin{array}{cccc}
+    \frac{\partial \dot{T}}{\partial T} &amp; \frac{\partial \dot{T}}{\partial Y_1} &amp; \ldots &amp; \frac{\partial \dot{T}}{\partial Y_{N_{\text{sp}} - 1}} \\
+    \frac{\partial \dot{Y_1}}{\partial T} &amp; \frac{\partial \dot{Y_1}}{\partial Y_1} &amp; \ldots &amp; \frac{\partial \dot{Y_1}}{\partial Y_{N_{\text{sp}} - 1}} \\
+    \vdots &amp; &amp; \ddots &amp; \vdots \\
+    \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial T} &amp; \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial Y_1} &amp; \ldots &amp; \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial Y_{N_{\text{sp}} - 1}}
+\end{array}
+\right]\end{split}\]</div>
+<p>In code, the Jacobian is flattened in column-major (Fortran) order:</p>
+<div class="math notranslate nohighlight">
+\[\vec{\mathcal{J}} = \left\{ \frac{\partial \dot{T}}{\partial T}, \frac{\partial \dot{Y_1}}{\partial T}, \ldots \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial T}, \ldots, \frac{\partial \dot{T}}{\partial Y_1}, \frac{\partial \dot{Y_1}}{\partial Y_1} \ldots, \frac{\partial \dot{T}}{\partial Y_{N_{\text{sp}} - 1}}, \frac{\partial \dot{Y_1}}{\partial Y_{N_{\text{sp}} - 1}} \ldots \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial Y_{N_{\text{sp}} - 1}} \right\}\]</div>
+<p>The resulting Jacobian is of length <span class="math notranslate nohighlight">\(N_{\text{sp}} * N_{\text{sp}}\)</span>.
+Note that the ordering issues disucssed in <a class="reference internal" href="#ordering"><span class="std std-ref">What state vector should I pass into pyJac?</span></a> apply here as well.</p>
+</div>
+<div class="section" id="what-units-does-pyjac-use">
+<span id="units"></span><h3>What units does pyJac use?<a class="headerlink" href="#what-units-does-pyjac-use" title="Permalink to this headline">¶</a></h3>
+<p>pyJac uses a default of kilogram, meters and seconds for its unit system.
+This means that pressures are in pascals, temperature in Kelvin, and time in seconds.</p>
+<p>In chemical kinetic mechanism files, users should utilize the default units for the
+parser (Chemkin/Cantera) they are using.</p>
+<p>The only known exception to this, is the <em>-ic</em> or <em>–initial-conditions</em>
+command line flag for code-generation, where pressure is specified in atmospheres for
+convenience.</p>
 </div>
 <div class="section" id="what-is-the-difference-between-t-and-t-in-the-python-interface">
 <span id="param-names"></span><h3>What is the difference between “t” and “T” in the Python interface?<a class="headerlink" href="#what-is-the-difference-between-t-and-t-in-the-python-interface" title="Permalink to this headline">¶</a></h3>
 <p>Most ODE solvers allow you to pass the current system time (or independent
 variable) to the RHS / Jacobian functions. We conform to this standard, as it
 allows for interfacing pyJac with other solvers, e.g. CVODEs.  Hence the
-<code class="xref py py-func docutils literal"><span class="pre">dydt()</span></code> and <code class="xref py py-func docutils literal"><span class="pre">eval_jacob()</span></code> functions have a “t” parameter for the
+<code class="xref py py-func docutils literal notranslate"><span class="pre">dydt()</span></code> and <code class="xref py py-func docutils literal notranslate"><span class="pre">eval_jacob()</span></code> functions have a “t” parameter for the
 current system time, although it is not used.</p>
 <p>However, several other functions (e.g., the reaction / species rates, etc.)
 require the temperature.  Internally, we separate the temperature out from the
@@ -131,13 +131,13 @@ actual data order inside of <a class="reference external" href="https://docs.sci
 indexing numpy arrays but does <em>not</em> change the actual order in which the data
 is
 stored in memory. E.g.:</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span>
 </pre></div>
 </div>
 <p>Returns a <em>view</em> of the transpose of “arr”, but does not change the data order
 in memory.
 To do that, you would need a copy (among other ways):</p>
-<div class="highlight-python"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
 </pre></div>
 </div>
 <p>This is important for pyJac, as once you pass a 2-D array to the underlying
@@ -146,11 +146,12 @@ C/CUDA code, it will be written / read from in C-contiguous order
 likely have difficulty intepreting the output.</p>
 <p>Finally, we note that the CUDA functions expects 2-D arrays to be ordered such
 that e.g., the temperatures for all the different states are contiguous in
-memory, followed by the mass fractions, etc.  For <span class="math">\(N_{\text{state}}\)</span>
+memory, followed by the mass fractions, etc.  For <span class="math notranslate nohighlight">\(N_{\text{state}}\)</span>
 independent thermo-chemical states, this translates to:</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 \[T_{0}, T_{1}, \ldots T_{N_{\text{state}}}, Y_{0, 0}, Y_{0, 1}, \ldots
 Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots\]</div>
+<p>where <span class="math notranslate nohighlight">\(\Phi_{i, j}\)</span> corresponds to the <em>i</em>-th entry in the state vector, for the <em>j</em>-th stherm-chemical state.</p>
 </div>
 </div>
 </div>
@@ -191,12 +192,14 @@ Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots\]</div>
 
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -207,7 +210,7 @@ Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots\]</div>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

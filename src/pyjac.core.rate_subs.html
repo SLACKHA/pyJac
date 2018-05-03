@@ -4,20 +4,12 @@
 
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>pyjac.core.rate_subs module &#8212; pyJac 1.0.5c documentation</title>
+    <title>pyjac.core.rate_subs module &#8212; pyJac 1.0.6 documentation</title>
     <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.0.5c',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true,
-        SOURCELINK_SUFFIX: '.txt'
-      };
-    </script>
+    <script type="text/javascript" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
@@ -30,8 +22,7 @@
   
   <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
 
-  </head>
-  <body>
+  </head><body>
   
 
     <div class="document">
@@ -53,23 +44,23 @@ to create only the rate subroutines if desired.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>A</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Arrhenius pre-exponential coefficient</li>
-<li><strong>b</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Arrhenius temperature exponent</li>
-<li><strong>E</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#float" title="(in Python v2.7)"><em>float</em></a>) – Arrhenius activation energy</li>
+<li><strong>A</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.6)"><em>float</em></a>) – Arrhenius pre-exponential coefficient</li>
+<li><strong>b</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.6)"><em>float</em></a>) – Arrhenius temperature exponent</li>
+<li><strong>E</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.6)"><em>float</em></a>) – Arrhenius activation energy</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>line</strong> – String with expression for reaction rate.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)">str</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)">str</a></p>
 </td>
 </tr>
 </tbody>
 </table>
 <p class="rubric">Notes</p>
 <p>Form of the reaction rate constant (from, e.g., Lu and Law <a class="footnote-reference" href="#id2" id="id1">[1]</a>):</p>
-<div class="math">
+<div class="math notranslate nohighlight">
 k_f = \begin{cases}
 A &amp; \text{if } \beta = 0 \text{ and } T_a = 0 \\
 \exp \left( \log A + \beta \log T \right) &amp;
@@ -106,16 +97,16 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Programming language</li>
-<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) – Reaction with Chebyshev pressure dependence.</li>
-<li><strong>write_defns</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal"><span class="pre">True</span></code> (default), write calculation of <code class="docutils literal"><span class="pre">Tred</span></code> and <code class="docutils literal"><span class="pre">Pred</span></code>.</li>
+<li><strong>lang</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Programming language</li>
+<li><strong>rxn</strong> (<a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ReacInfo</span></code></a>) – Reaction with Chebyshev pressure dependence.</li>
+<li><strong>write_defns</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code> (default), write calculation of <code class="docutils literal notranslate"><span class="pre">Tred</span></code> and <code class="docutils literal notranslate"><span class="pre">Pred</span></code>.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>line</strong> – Line with evaluation of Chebyshev reaction rate.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">str</span></code></a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><code class="xref any docutils literal notranslate"><span class="pre">str</span></code></a></p>
 </td>
 </tr>
 </tbody>
@@ -132,20 +123,20 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to build directory for file.</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) – Programming language.</li>
-<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) – List of species in the mechanism.</li>
-<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) – List of reactions in the mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">SpecInfo</span></code></a>) – List of species in the mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ReacInfo</span></code></a>) – List of reactions in the mechanism.</li>
 <li><strong>fwd_rxn_mapping</strong> (<em>List of integers</em>) – The index of the reaction in the original mechanism</li>
-<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a>, optional) – If not <code class="docutils literal"><span class="pre">None</span></code> (default), <a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> for CUDA optimizations</li>
-<li><strong>auto_diff</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>]</em>) – If <code class="docutils literal"><span class="pre">True</span></code>, generate files for Adept autodifferention library.</li>
+<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal notranslate"><span class="pre">shared_memory_manager</span></code></a>, optional) – If not <code class="docutils literal notranslate"><span class="pre">None</span></code> (default), <a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal notranslate"><span class="pre">shared_memory_manager</span></code></a> for CUDA optimizations</li>
+<li><strong>auto_diff</strong> (<em>Optional</em><em>[</em><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>]</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, generate files for Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
 </td>
 </tr>
 </tbody>
@@ -161,20 +152,20 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to build directory for file.</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) – Language type.</li>
-<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) – List of species in mechanism.</li>
-<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) – List of reactions in mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">SpecInfo</span></code></a>) – List of species in mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ReacInfo</span></code></a>) – List of reactions in mechanism.</li>
 <li><strong>fwd_rxn_mapping</strong> (<em>List of int</em>) – The order of the reaction in the original mechanism</li>
-<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a>, optional) – If not <code class="docutils literal"><span class="pre">`None`</span></code>, <a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> to use for CUDA optimizations</li>
-<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal"><span class="pre">`True`</span></code>, generate files for Adept autodifferention library.</li>
+<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal notranslate"><span class="pre">shared_memory_manager</span></code></a>, optional) – If not <code class="docutils literal notranslate"><span class="pre">`None`</span></code>, <a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal notranslate"><span class="pre">shared_memory_manager</span></code></a> to use for CUDA optimizations</li>
+<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">`True`</span></code>, generate files for Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
 </td>
 </tr>
 </tbody>
@@ -190,21 +181,21 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to build directory for file.</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) – Programming language.</li>
-<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) – List of species in mechanism.</li>
-<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) – List of reactions in mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">SpecInfo</span></code></a>) – List of species in mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ReacInfo</span></code></a>) – List of reactions in mechanism.</li>
 <li><strong>fwd_spec_mapping</strong> (<em>list of int</em>) – the index of the species in the original mechanism</li>
 <li><strong>fwd_rxn_mapping</strong> (<em>list of int</em>) – the index of the reactions in the original mechanism</li>
-<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><em>shared_memory_manager</em></a><em>, </em><em>optional</em>) – If not <code class="docutils literal"><span class="pre">`None`</span></code>, <a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal"><span class="pre">shared_memory_manager</span></code></a> to use for CUDA optimizations</li>
-<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal"><span class="pre">`True`</span></code>, generate files for Adept autodifferention library.</li>
+<li><strong>smm</strong> (<a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><em>shared_memory_manager</em></a><em>, </em><em>optional</em>) – If not <code class="docutils literal notranslate"><span class="pre">`None`</span></code>, <a class="reference internal" href="pyjac.core.shared_memory.html#pyjac.core.shared_memory.shared_memory_manager" title="pyjac.core.shared_memory.shared_memory_manager"><code class="xref any py py-class docutils literal notranslate"><span class="pre">shared_memory_manager</span></code></a> to use for CUDA optimizations</li>
+<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">`True`</span></code>, generate files for Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>seen</strong></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a>, <code class="docutils literal"><span class="pre">True</span></code> if species rate i is not identically zero</p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">list of <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><code class="xref any docutils literal notranslate"><span class="pre">bool</span></code></a>, <code class="docutils literal notranslate"><span class="pre">True</span></code> if species rate i is not identically zero</p>
 </td>
 </tr>
 </tbody>
@@ -223,17 +214,17 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to build directory for file.</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) – Programming language.</li>
-<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) – List of species in the mechanism.</li>
-<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal"><span class="pre">True</span></code>, generate files for Adept autodifferention library.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">SpecInfo</span></code></a>) – List of species in the mechanism.</li>
+<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, generate files for Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
 </td>
 </tr>
 </tbody>
@@ -249,19 +240,19 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to build directory for file.</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) – Programming language.</li>
-<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) – List of species in the mechanism.</li>
-<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal"><span class="pre">ReacInfo</span></code></a>) – List of reactions in the mechanism.</li>
-<li><strong>specs_nonzero</strong> (<em>list of bool</em>) – List of <a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><code class="xref any docutils literal"><span class="pre">bool</span></code></a> indicating species with zero net production</li>
-<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#bool" title="(in Python v2.7)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal"><span class="pre">True</span></code>, generate files for Adept autodifferention library.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">SpecInfo</span></code></a>) – List of species in the mechanism.</li>
+<li><strong>reacs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.ReacInfo" title="pyjac.core.chem_utilities.ReacInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">ReacInfo</span></code></a>) – List of reactions in the mechanism.</li>
+<li><strong>specs_nonzero</strong> (<em>list of bool</em>) – List of <a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><code class="xref any docutils literal notranslate"><span class="pre">bool</span></code></a> indicating species with zero net production</li>
+<li><strong>auto_diff</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.6)"><em>bool</em></a><em>, </em><em>optional</em>) – If <code class="docutils literal notranslate"><span class="pre">True</span></code>, generate files for Adept autodifferention library.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
 </td>
 </tr>
 </tbody>
@@ -277,16 +268,16 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 <col class="field-body" />
 <tbody valign="top">
 <tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/2/library/functions.html#str" title="(in Python v2.7)"><em>str</em></a>) – Path to build directory for file.</li>
+<li><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.6)"><em>str</em></a>) – Path to build directory for file.</li>
 <li><strong>lang</strong> (<em>{'c'</em><em>, </em><em>'cuda'</em><em>, </em><em>'fortran'</em><em>, </em><em>'matlab'}</em>) – Programming language.</li>
-<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal"><span class="pre">SpecInfo</span></code></a>) – List of species in mechanism.</li>
+<li><strong>specs</strong> (list of <a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.SpecInfo" title="pyjac.core.chem_utilities.SpecInfo"><code class="xref any py py-class docutils literal notranslate"><span class="pre">SpecInfo</span></code></a>) – List of species in mechanism.</li>
 </ul>
 </td>
 </tr>
 <tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="pyjac.core.chem_utilities.html#pyjac.core.chem_utilities.None" title="pyjac.core.chem_utilities.None">None</a></p>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">None</p>
 </td>
 </tr>
 </tbody>
@@ -331,12 +322,14 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
 
 <div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
-      <div><input type="text" name="q" /></div>
-      <div><input type="submit" value="Go" /></div>
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
@@ -347,7 +340,7 @@ Pred and Tred, T and pres, and kf, cheb_temp_0 and cheb_temp_1.</p>
       &copy;2016, Kyle Niemeyer, Nicholas Curtis.
       
       |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.6.7</a>
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
       &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
       
       |

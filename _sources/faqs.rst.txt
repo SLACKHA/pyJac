@@ -62,36 +62,48 @@ What is in the Jacobian?
 ========================
 
 As described in :ref:`jacobian_formulation`, the Jacobian consists of
-temperature and mass fraction derivatives.  The order (described in full in
-the paper_) consists of total temperature derivative in index 0
+temperature and mass fraction derivatives:
 
 .. math::
-    \frac{\partial \dot{T}}{\partial T}
+    \mathcal{J}_{i, j} = \frac{\partial \dot{\Phi_i}}{\partial \Phi_j}
 
-followed by the temperature derivative WRT mass fractions:
-
-.. math::
-    \frac{\partial \dot{T}}{\partial Y_j}
-
-for :math:`j = 0\ldots N_{\text{sp}} - 1`, in indicies
-:math:`1\ldots N_{\text{sp}} - 1`.
-
-Following this is the species mass fraction derivative WRT temperature:
+This translates to a Jacobian matrix that looks like:
 
 .. math::
-    \frac{\partial Y_0}{\partial T}
+    \left[
+    \begin{array}{cccc}
+        \frac{\partial \dot{T}}{\partial T} & \frac{\partial \dot{T}}{\partial Y_1} & \ldots & \frac{\partial \dot{T}}{\partial Y_{N_{\text{sp}} - 1}} \\
+        \frac{\partial \dot{Y_1}}{\partial T} & \frac{\partial \dot{Y_1}}{\partial Y_1} & \ldots & \frac{\partial \dot{Y_1}}{\partial Y_{N_{\text{sp}} - 1}} \\
+        \vdots & & \ddots & \vdots \\
+        \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial T} & \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial Y_1} & \ldots & \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial Y_{N_{\text{sp}} - 1}}
+    \end{array}
+    \right]
 
-in index :math:`N_{\text{sp}}` and the mass fraction derivatives
-WRT the other mass fractions:
+In code, the Jacobian is flattened in column-major (Fortran) order:
 
 .. math::
-    \frac{\partial Y_0}{\partial Y_j}
+    \vec{\mathcal{J}} = \left\{ \frac{\partial \dot{T}}{\partial T}, \frac{\partial \dot{Y_1}}{\partial T}, \ldots \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial T}, \ldots, \frac{\partial \dot{T}}{\partial Y_1}, \frac{\partial \dot{Y_1}}{\partial Y_1} \ldots, \frac{\partial \dot{T}}{\partial Y_{N_{\text{sp}} - 1}}, \frac{\partial \dot{Y_1}}{\partial Y_{N_{\text{sp}} - 1}} \ldots \frac{\partial \dot{Y}_{N_{\text{sp}} - 1}}{\partial Y_{N_{\text{sp}} - 1}} \right\}
 
-in indicies :math:`N_{\text{sp}} + 1 \ldots 2 N_{\text{sp}}`, etc.
-Note that the ordering issues disucssed in :ref:`ordering` apply here as well.
 The resulting Jacobian is of length :math:`N_{\text{sp}} * N_{\text{sp}}`.
+Note that the ordering issues disucssed in :ref:`ordering` apply here as well.
 
 .. _paper: https://Niemeyer-Research-Group.github.io/pyJac-paper/
+
+.. _units:
+
+What units does pyJac use?
+=========================
+
+pyJac uses a default of kilogram, meters and seconds for its unit system.
+This means that pressures are in pascals, temperature in Kelvin, and time in seconds.
+
+In chemical kinetic mechanism files, users should utilize the default units for the
+parser (Chemkin/Cantera) they are using.
+
+The only known exception to this, is the *-ic* or *--initial-conditions*
+command line flag for code-generation, where pressure is specified in atmospheres for
+convenience.
+
 
 .. _param_names:
 
@@ -156,3 +168,5 @@ independent thermo-chemical states, this translates to:
 .. math::
     T_{0}, T_{1}, \ldots T_{N_{\text{state}}}, Y_{0, 0}, Y_{0, 1}, \ldots
     Y_{0, N_{\text{state}}}, Y_{1, 0}, \ldots
+
+where :math:`\Phi_{i, j}` corresponds to the *i*-th entry in the state vector, for the *j*-th stherm-chemical state.

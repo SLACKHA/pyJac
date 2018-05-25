@@ -7,6 +7,7 @@ from string import Template
 
 from ..libgen import generate_library
 
+
 def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
     """Helper method to fill in the template .in files
 
@@ -22,7 +23,6 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
         Output directory path
     libname : str
         Library name
-
     Returns
     -------
     None
@@ -31,10 +31,10 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
     with open(setupfile, 'r') as file:
         src = Template(file.read())
 
-    file_data = {'homepath' : home_dir,
-                 'buildpath' : build_dir,
-                 'libname' : libname,
-                 'outpath' : out_dir
+    file_data = {'homepath': home_dir,
+                 'buildpath': build_dir,
+                 'libname': libname,
+                 'outpath': out_dir
                  }
     src = src.safe_substitute(file_data)
     with open(setupfile[:setupfile.rindex('.in')], 'w') as file:
@@ -95,10 +95,9 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
     ext = '.so' if shared else '.a'
     lib = None
     if lang != 'tchem':
-        #first generate the library
+        # first generate the library
         lib = generate_library(lang, source_dir, out_dir=distutils_build,
-                               shared=shared, auto_diff=auto_diff
-                               )
+                               shared=shared, auto_diff=auto_diff)
         lib = os.path.normpath(lib)
         if shared:
             lib = lib[lib.index('lib') + len('lib'):lib.index(ext)]
@@ -116,13 +115,22 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         print('Language {} not recognized'.format(lang))
         sys.exit(-1)
 
+    from pyjac.libgen import get_compiler
     generate_setup(os.path.join(home_dir, setupfile), home_dir, source_dir,
-                   distutils_build, lib
-                   )
+                   distutils_build, lib)
 
-    python_str = 'python{}.{}'.format(sys.version_info[0], sys.version_info[1])
+    # try sys.executable first
+    python_str = get_compiler(sys.executable, return_code=True,
+                              print_on_fail=False)
+    if not python_str:
+        # if that fails, try a generic "pythonX.X"
+        python_str = 'python{}.{}'.format(sys.version_info[0],
+                                          sys.version_info[1])
+        python_str = get_compiler(python_str)
 
-    subprocess.check_call([python_str, os.path.join(home_dir,
-                           setupfile[:setupfile.index('.in')]),
-                           'build_ext', '--build-lib', out_dir
-                           ])
+    call = [python_str, os.path.join(home_dir,
+            setupfile[:setupfile.index('.in')]),
+            'build_ext', '--build-lib', out_dir]
+    if os.name == 'nt':
+        call += ['--compiler={}'.format('mingw32')]
+    subprocess.check_call(call)

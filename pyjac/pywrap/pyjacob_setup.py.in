@@ -6,8 +6,8 @@ import parallel_compiler as pcc
 import numpy
 import os
 
-sources = ['$homepath/pyjacob_wrapper.pyx']
-includes = ['$buildpath/']
+sources = [r'$homepath/pyjacob_wrapper.pyx']
+includes = [r'$buildpath/']
 
 distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
 
@@ -16,7 +16,8 @@ ext_modules=[Extension("pyjacob",
      include_dirs=includes + [numpy.get_include()],
      extra_compile_args=['-frounding-math', '-fsignaling-nans'],
      language='c',
-     extra_objects=[os.path.join('$outpath', '$libname')]
+     extra_objects=[os.path.join(r'$outpath', r'$libname') if os.name != 'nt'
+                    else r'$libname']
      )]
 
 setup(

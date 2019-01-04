@@ -1746,7 +1746,9 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rxn_ind,
             # log(K2) - log(K1) term differently
             raise NotImplementedError
         else:
-            assert b_p1 != 0.0 or E_p1 != 0.0 or b_p2 != 0.0 or E_p2 != 0.0, "PLOG Derivative undefined"
+            if b_p1 == 0.0 and E_p1 == 0.0 and b_p2 == 0.0 and E_p2 == 0.0:
+                # derivative is identically zero
+                jline_p += '0.0'
             if b_p1 != 0.0:
                 jline_p += '{:.16e}'.format(b_p1)
             if E_p1 != 0.0:
@@ -1757,14 +1759,17 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rxn_ind,
 
                 jline_p += '('
                 if b_p2 - b_p1 != 0.0:
-                    jline_p += '{:.16e} + '.format(b_p2 - b_p1)
+                    jline_p += '{:.16e}'.format(b_p2 - b_p1)
                 if E_p2 - E_p1 != 0.0:
-                    jline_p += '{:.16e} / T) * (log(pres)'.format(E_p2 - E_p1)
-                    if p1 != 1.0:
-                        jline_p += ' - {:.16e}'.format(math.log(p1))
-                    jline_p += ') / '
-                    assert p1 != p2, 'Cannot have equal pressures in PLOG'
-                    jline_p += '{:.16e})'.format(math.log(p2) - math.log(p1))
+                    if jline_p: jline_p += ' + '
+                    jline_p += '{:.16e} / T'.format(E_p2 - E_p1)
+
+                jline_p += ') * (log(pres)'
+                if p1 != 1.0:
+                    jline_p += ' - {:.16e}'.format(math.log(p1))
+                jline_p += ') / '
+                assert p1 != p2, 'Cannot have equal pressures in PLOG'
+                jline_p += '{:.16e})'.format(math.log(p2) - math.log(p1))
             else:
                 jline_p += ')'
 
@@ -1833,21 +1838,25 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rxn_ind,
     dkdt = get_elementary_rxn_dt(lang, specs, rxn_p, rxn_ind,
                                  rev_idx, get_array, do_unroll
                                  )
+    if have_prev:
+        file.write(utils.line_start +
+                   '}} else if (pres > {:.4e}) {{\n'.format(pn)
+                   )
+    else:
+        file.write(utils.line_start +
+                   'j_temp = 0' + utils.line_end[lang]
+                   )
+        file.write(utils.line_start +
+                   'if (pres > {:.4e}) {{\n'.format(pn)
+                   )
     if dkdt:
-        if have_prev:
-            file.write(utils.line_start +
-                       '}} else if (pres > {:.4e}) {{\n'.format(pn)
-                       )
-        else:
-            file.write(utils.line_start +
-                       'j_temp = 0' + utils.line_end[lang]
-                       )
-            file.write(utils.line_start +
-                       'if (pres > {:.4e}) {{\n'.format(pn)
-                       )
         file.write(utils.line_start + jline + dkdt)
+    else:
+        file.write(utils.line_start * 2 +
+                   'j_temp = 0' + utils.line_end[lang]
+                   )
 
-        file.write(utils.line_start + '}\n')
+    file.write(utils.line_start + '}\n')
 
 
 def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):

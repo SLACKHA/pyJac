@@ -175,10 +175,10 @@ def cmd_link(lang, shared):
     return cmd
 
 
-def linker(lang, temp_lang, test_dir, filelist, lib=None):
+def linker(lang, temp_lang, test_dir, filelist, lib=None, cl=20):
     args = cmd_link(temp_lang, not STATIC)
     if lang == 'cuda' or (not STATIC):
-        args.extend(flags[temp_lang])
+        args.extend([f.format(cl=cl) for f in flags[temp_lang]])
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
     if temp_lang == 'cuda':
@@ -210,7 +210,7 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
         sys.exit(1)
 
 
-def performance_tester(home, work_dir, use_old_opt):
+def performance_tester(home, work_dir, use_old_opt, cl_level=20):
     """Runs performance testing for pyJac, TChem, and finite differences.
 
     Parameters
@@ -221,6 +221,8 @@ def performance_tester(home, work_dir, use_old_opt):
         Working directory with mechanisms and for data
     use_old_opt : bool
         If ``True``, use old optimization files found
+    cl_level: int [20]
+        The cuda compute level to use
 
     Returns
     -------
@@ -275,7 +277,7 @@ def performance_tester(home, work_dir, use_old_opt):
     import multiprocessing #for cpu count
     max_cpu = multiprocessing.cpu_count()
     num_threads = [1]
-    while num_threads < max_cpu:
+    while num_threads[-1] < max_cpu:
         num_threads.append(min(max_cpu, num_threads[-1] * 2))
     c_params = {'lang' : 'c',
                 'cache_opt' : [False],
@@ -461,8 +463,8 @@ def performance_tester(home, work_dir, use_old_opt):
             #now build the library
             if lang != 'tchem':
                 lib = generate_library(lang, build_dir, test_dir,
-                                       finite_difference=FD, shared=not STATIC
-                                       )
+                                       finite_difference=FD, shared=not STATIC,
+                                       compute_level=cl_level)
 
                 lib = os.path.normpath(lib)
                 lib = (lib[lib.index('lib') +
@@ -474,8 +476,8 @@ def performance_tester(home, work_dir, use_old_opt):
             # Compile generated source code
             structs = [file_struct(lang, temp_lang, f, i_dirs,
                                    (['-DFINITE_DIFF'] if FD else []),
-                                   build_dir, test_dir, not STATIC
-                                   ) for f in files
+                                   build_dir, test_dir, not STATIC,
+                                   cl=cl_level) for f in files
                        ]
             if lang != 'cuda':
                 for s in structs:
@@ -488,7 +490,7 @@ def performance_tester(home, work_dir, use_old_opt):
             if any(r == -1 for r in results):
                sys.exit(-1)
 
-            linker(lang, temp_lang, test_dir, files, lib)
+            linker(lang, temp_lang, test_dir, files, lib, cl=cl_level)
 
             if lang == 'tchem':
                 #copy periodic table and mechanisms in

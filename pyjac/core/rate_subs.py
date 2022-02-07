@@ -2428,6 +2428,8 @@ def write_derivs(path, lang, specs, reacs, specs_nonzero, auto_diff=False):
                  )
 
         isfirst = False
+
+    if not isfirst: line += ' + '
     line += '(' + utils.get_array(lang, 'cv', len(specs) - 1) + ' * y_N)'
     file.write(line + utils.line_end[lang] + '\n')
 

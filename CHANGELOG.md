@@ -47,6 +47,35 @@ C and CUDA output against fixtures recorded from 1.0.6.
   repository; the sdist now holds only what is needed to install and run pyJac,
   which took it from 355 KB to 101 KB. The wheel payload is unchanged.
 
+### Added (modernization, continued)
+- Golden coverage extended to the Adept autodifferentiation variant and to CUDA
+  without the shared-memory manager, so refactors of the string-assembly code
+  are checked on every branch they touch (152 recorded files across 8 variants)
+- Smoke-and-compile test for the cache-optimizer path. Its output is not
+  byte-compared: `cache_optimizer` is a randomized greedy search on unseeded
+  `np.random`, so successive runs legitimately differ.
+
+### Changed (modernization, continued)
+- Converted all 589 `str.format()` calls to f-strings (ruff `UP032`). Generated
+  source is byte-identical across all 152 golden files, verified before and
+  after the conversion.
+- Fortran and Matlab are now explicitly unsupported. Both backends were left
+  incomplete years ago and died with a `KeyError` on the first file written;
+  they now raise `NotImplementedError` before any work is done, and the CLI
+  reports the error and exits with status 2. The partial implementation stays
+  in the tree. `utils.supported_langs` records the distinction.
+
+### Fixed (modernization, continued)
+- `cache_optimizer.optimize_cache` unconditionally called a debug `plot()`
+  helper -- docstring-marked "Marked for removal" -- which imported matplotlib
+  (never a declared dependency) and wrote `old.pdf` and `new.pdf` into the
+  working directory. Cache optimization therefore failed outright with
+  `ModuleNotFoundError` for anyone without matplotlib installed. Both the call
+  and the helper are removed; generated output is unaffected.
+- `__main__.main()` ignored a supplied `args` namespace: the entire body sat
+  inside `if args is None`, so `main(args)` was a silent no-op. It now returns
+  an exit status.
+
 ### Known issues (not yet addressed)
 - `pyjac.pywrap.parallel_compiler` and the `pywrap` setup templates still
   import `distutils`, removed from the stdlib in Python 3.12

@@ -17,7 +17,21 @@ GOLDEN_MECHS = {
     'rxn_types': MECH_DIR / 'rxn_types.inp',
 }
 
-#: Languages for which golden output is recorded.
+#: Generation variants with recorded golden output, as
+#: ``name -> (lang, create_jacobian kwargs)``. Each exercises a distinct branch
+#: of the generators, so that a refactor touching any of them is caught.
+#:
+#: ``cuda`` deliberately keeps ``no_shared=False`` (the default), so the plain
+#: variant covers the shared-memory manager and ``cuda-noshared`` covers its
+#: absence.
+GOLDEN_VARIANTS = {
+    'c': ('c', {}),
+    'cuda': ('cuda', {}),
+    'c-autodiff': ('c', {'auto_diff': True}),
+    'cuda-noshared': ('cuda', {'no_shared': True}),
+}
+
+#: Kept for readability where only the plain per-language variants are meant.
 GOLDEN_LANGS = ('c', 'cuda')
 
 

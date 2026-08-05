@@ -94,7 +94,7 @@ def compiler(fstruct):
     #always use fPIC in case we're building wrapper
     args.extend(shared_flags[fstruct.build_lang])
     args.extend(fstruct.args)
-    include = ['-I{}'.format(d) for d in fstruct.i_dirs +
+    include = [f'-I{d}' for d in fstruct.i_dirs +
                includes[fstruct.build_lang]
                ]
     args.extend(include)
@@ -110,7 +110,7 @@ def compiler(fstruct):
         print(' '.join(args))
         subprocess.check_call(args)
     except OSError:
-        print('Error: Compiler {} not found, generation of pyjac library failed.'.format(args[0]))
+        print(f'Error: Compiler {args[0]} not found, generation of pyjac library failed.')
         sys.exit(-1)
     except subprocess.CalledProcessError:
         print('Error: compilation failed for ' + fstruct.filename +
@@ -175,7 +175,7 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
         else:
             desc = 'c'
 
-    libname = 'lib{}_pyjac'.format(desc)
+    libname = f'lib{desc}_pyjac'
 
     #remove the old library
     if os.path.exists(os.path.join(out_dir, libname + lib_ext(shared))):
@@ -199,14 +199,14 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
         command += [os.path.join(out_dir, libname)]
 
         if lang == 'cuda':
-            command += ['-L{}'.format(get_cuda_path())]
+            command += [f'-L{get_cuda_path()}']
         command.extend(libs[lang])
 
     try:
         print(' '.join(command))
         subprocess.check_call(command)
     except OSError:
-        print('Error: Compiler {} not found, generation of pyjac library failed.'.format(args[0]))
+        print(f'Error: Compiler {args[0]} not found, generation of pyjac library failed.')
         sys.exit(-1)
     except subprocess.CalledProcessError:
         print('Error: Generation of pyjac library failed.')
@@ -347,7 +347,7 @@ def generate_library(lang, source_dir, obj_dir=None,
     """
     #check lang
     if lang not in flags.keys():
-        print('Cannot generate library for unknown language {}'.format(lang))
+        print(f'Cannot generate library for unknown language {lang}')
         sys.exit(-1)
 
     shared = shared and lang != 'cuda'
@@ -378,7 +378,7 @@ def generate_library(lang, source_dir, obj_dir=None,
     pmod = False
     #figure out whether there's pressure mod reactions or not
     with open(os.path.join(source_dir,
-              'mechanism{}'.format(utils.header_ext[build_lang])), 'r'
+              f'mechanism{utils.header_ext[build_lang]}'), 'r'
               ) as file:
         for line in file.readlines():
             line = line.strip()

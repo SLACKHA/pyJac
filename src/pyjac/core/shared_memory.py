@@ -318,7 +318,7 @@ class shared_memory_manager(object):
             return self.skeleton.format('threadIdx.x')
         else:
             return self.skeleton.format('threadIdx.x + '
-                                        '{} * blockDim.x'.format(index)
+                                        f'{index} * blockDim.x'
                                         )
 
     def get_index(self, var):

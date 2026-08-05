@@ -704,7 +704,7 @@ def inflow(streams):
 
     # Check sum of flows
     if sum_flows < 0.0:
-        print('Error: sum_flows = {:.4}'.format(sum_flows))
+        print(f'Error: sum_flows = {sum_flows:.4}')
         sys.exit(1)
 
     # Now reduce running flow rate of selected stream
@@ -879,7 +879,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 
     print('Time [ms]  Temperature [K]')
     temp_mean[i_step] = np.mean([p.gas.T for p in particles])
-    print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
+    print(f'{time*1000.:6.2f}  {temp_mean[i_step]:9.1f}')
 
     while time < time_end:
         if i_step + 1 >= num_steps:
@@ -939,7 +939,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
         # Save full data
         save_data(i_step, time, particles, particle_data)
 
-        print('{:6.2f}  {:9.1f}'.format(time*1000., temp_mean[i_step]))
+        print(f'{time*1000.:6.2f}  {temp_mean[i_step]:9.1f}')
 
     times = times[:i_step + 1]
     temp_mean = temp_mean[:i_step + 1]

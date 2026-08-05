@@ -182,7 +182,7 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
     args.extend([os.path.join(test_dir, getf(f) + '.o') for f in filelist])
     args.extend(['-o', os.path.join(test_dir, 'speedtest')])
     if temp_lang == 'cuda':
-        args.append('-L{}'.format(get_cuda_path()))
+        args.append(f'-L{get_cuda_path()}')
     args.extend(libs[temp_lang])
     if temp_lang != 'cuda':
         args.append('-fopenmp')
@@ -195,8 +195,8 @@ def linker(lang, temp_lang, test_dir, filelist, lib=None):
 
     if lib is not None:
         if STATIC:
-            args += ['-L{}'.format(os.getcwd())]
-            args += ['-l{}'.format(lib)]
+            args += [f'-L{os.getcwd()}']
+            args += [f'-l{lib}']
         else:
             args += [lib]
 
@@ -235,7 +235,7 @@ def performance_tester(home, work_dir, use_old_opt):
     #find the mechanisms to test
     mechanism_list = {}
     if not os.path.exists(work_dir):
-        print ('Error: work directory {} for '.format(work_dir) +
+        print (f'Error: work directory {work_dir} for ' +
                'performance testing not found, exiting...')
         sys.exit(-1)
     for name in os.listdir(work_dir):
@@ -257,7 +257,7 @@ def performance_tester(home, work_dir, use_old_opt):
 
     if len(mechanism_list) == 0:
         print('No mechanisms found for performance testing in '
-              '{}, exiting...'.format(work_dir)
+              f'{work_dir}, exiting...'
               )
         sys.exit(-1)
 
@@ -333,7 +333,7 @@ def performance_tester(home, work_dir, use_old_opt):
                 num_conditions += state_data.shape[0]
                 print(num_conditions, data.shape)
             if num_conditions == 0:
-                print('No data found in folder {}, continuing...'.format(mech_name))
+                print(f'No data found in folder {mech_name}, continuing...')
                 continue
             data.tofile(file)
 
@@ -363,7 +363,7 @@ def performance_tester(home, work_dir, use_old_opt):
             temp_lang = 'c' if lang != 'cuda' else 'cuda'
             FD = state['finite_diffs']
             if FD:
-                filename = 'fd_jacob{}'.format(utils.file_ext[temp_lang])
+                filename = f'fd_jacob{utils.file_ext[temp_lang]}'
                 shutil.copy(os.path.join(home, filename),
                             os.path.join(build_dir, filename)
                             )
@@ -420,7 +420,7 @@ def performance_tester(home, work_dir, use_old_opt):
 
             #now we need to write the reader
             filename = ('read_initial_conditions'
-                        '{}'.format(utils.file_ext[temp_lang])
+                        f'{utils.file_ext[temp_lang]}'
                         )
             shutil.copy(os.path.join(home, filename),
                         os.path.join(os.getcwd(), build_dir, filename)
@@ -429,7 +429,7 @@ def performance_tester(home, work_dir, use_old_opt):
             #write the tester
             file_data = {'datafile' : os.path.join(the_path, 'data.bin')}
             if lang == 'c' or lang == 'cuda':
-                filename = 'tester{}.in'.format(utils.file_ext[temp_lang])
+                filename = f'tester{utils.file_ext[temp_lang]}.in'
                 with open(os.path.join(home, filename), 'r') as file:
                     src = Template(file.read())
                 src = src.substitute(file_data)
@@ -444,7 +444,7 @@ def performance_tester(home, work_dir, use_old_opt):
                                        'tc_tester.c.in'), 'r') as file:
                     src = Template(file.read())
                 src = src.substitute(file_data)
-            filename = 'test{}'.format(utils.file_ext[temp_lang])
+            filename = f'test{utils.file_ext[temp_lang]}'
             with open(os.path.join(build_dir, filename), 'w') as file:
                 file.write(src)
 

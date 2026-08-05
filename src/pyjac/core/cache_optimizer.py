@@ -27,58 +27,6 @@ except:
     print('bitarray not found, turning off cache-optimization')
 
 
-def plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping):
-    """Convenience plotting function. Marked for removal.
-    """
-    nr = len(reacs)
-    nsp = len(specs)
-    #plot for visibility
-    import matplotlib
-    matplotlib.use('agg')
-    import matplotlib.pyplot as plt
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    arr = np.zeros((nr, nsp + 1, 3))
-    arr.fill(1)
-
-    name_map = {sp.name: i for i, sp in enumerate(specs)}
-    for rind in range(nr):
-        rxn = reacs[rind]
-        plot = set(rxn.reac + rxn.prod)
-        if consider_thd:
-            plot = plot.union(set([x[0] for x in rxn.thd_body_eff] +
-                              [rxn.pdep_sp])
-                              )
-        plot = [name_map[sp] for sp in plot if sp]
-        for sp in plot:
-            arr[rind, sp] = [0, 0, 0]
-
-    plt.imshow(arr, interpolation='nearest')
-    plt.savefig('old.pdf')
-
-    fig = plt.figure()
-    ax = fig.add_subplot(1,1,1)
-    arr = np.zeros((nr, nsp + 1, 3))
-    arr.fill(1)
-
-    name_map = {specs[fwd_spec_mapping[i]].name:
-                i for i, sp in enumerate(fwd_spec_mapping)
-                }
-    #print(name_map)
-    for i, rind in enumerate(fwd_rxn_mapping):
-        rxn = reacs[rind]
-        plot = set(rxn.reac + rxn.prod)
-        if consider_thd:
-            plot = plot.union(set([x[0] for x in rxn.thd_body_eff] +
-                              [rxn.pdep_sp])
-                              )
-        plot = [name_map[sp] for sp in plot if sp]
-        for sp in plot:
-            arr[i, sp] = [0, 0, 0]
-
-    plt.imshow(arr, interpolation='nearest')
-    plt.savefig('new.pdf')
-
 
 def optimizer_loop(starting_order, mapping, lookback,
                    improve_cutoff, random_tries
@@ -289,8 +237,7 @@ def optimize_cache(specs, reacs, multi_thread,
                 )
             if reverse_spec_mapping[last_spec] != len(specs) - 1:
                 print('Different last species detected, '
-                      'old species was {} and new species is {}'.format(
-                      specs[fwd_spec_mapping[-1]].name, specs[last_spec].name)
+                      f'old species was {specs[fwd_spec_mapping[-1]].name} and new species is {specs[last_spec].name}'
                       )
                 print('Forcing reoptimization...')
                 same_mech = False
@@ -377,8 +324,7 @@ def optimize_cache(specs, reacs, multi_thread,
            ):
         time.sleep(30)
         complete = sum(x.ready() for x in result_list)
-        print('Reaction Optimization {}% complete...'.format(
-              100. * complete / float(len(result_list)))
+        print(f'Reaction Optimization {100. * complete / float(len(result_list))}% complete...'
               )
         complete = complete == len(result_list)
 
@@ -421,8 +367,7 @@ def optimize_cache(specs, reacs, multi_thread,
            ):
         time.sleep(30)
         complete = sum(x.ready() for x in result_list)
-        print('Species Optimization {}% complete...'.format(
-              100. * complete / float(len(result_list)))
+        print(f'Species Optimization {100. * complete / float(len(result_list))}% complete...'
               )
         complete = complete == len(result_list)
 
@@ -446,8 +391,6 @@ def optimize_cache(specs, reacs, multi_thread,
     reverse_rxn_mapping = [fwd_rxn_mapping.index(i)
                            for i in range(len(fwd_rxn_mapping))
                            ]
-
-    plot(specs, reacs, consider_thd, fwd_spec_mapping, fwd_rxn_mapping)
 
     specs = [specs[i] for i in fwd_spec_mapping]
     reacs = [reacs[i] for i in fwd_rxn_mapping]

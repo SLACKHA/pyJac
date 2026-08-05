@@ -113,14 +113,14 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
     elif lang == 'tchem':
         setupfile = 'pytchem_setup.py.in'
     else:
-        print('Language {} not recognized'.format(lang))
+        print(f'Language {lang} not recognized')
         sys.exit(-1)
 
     generate_setup(os.path.join(home_dir, setupfile), home_dir, source_dir,
                    distutils_build, lib
                    )
 
-    python_str = 'python{}.{}'.format(sys.version_info[0], sys.version_info[1])
+    python_str = f'python{sys.version_info[0]}.{sys.version_info[1]}'
 
     subprocess.check_call([python_str, os.path.join(home_dir,
                            setupfile[:setupfile.index('.in')]),

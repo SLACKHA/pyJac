@@ -165,7 +165,7 @@ def convert_mech(mech_filename, therm_filename=None):
     ck2cti.main(arg)
     mech_filename = mech_filename[:-4] + '.cti'
     print('Mechanism conversion successful, written to '
-          '{}'.format(mech_filename)
+          f'{mech_filename}'
           )
     return mech_filename
 
@@ -1329,7 +1329,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
 
         print()
-        print('Testing condition {} / {}'.format(i + 1, num_trials))
+        print(f'Testing condition {i + 1} / {num_trials}')
 
         # Calculate error in concentrations
         non_zero = np.where(test_conc > 0.)[0]
@@ -1339,9 +1339,9 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
-        print('L2 norm error in non-zero concentration: {:.2e} %'.format(err))
-        print('Max error in non-zero concentration: {:.2e} % @ species {}'
-            .format(max_err * 100., loc))
+        print(f'L2 norm error in non-zero concentration: {err:.2e} %')
+        print(f'Max error in non-zero concentration: {max_err * 100.:.2e} % @ species {loc}'
+            )
 
         # Modify forward and reverse rates with pressure modification
         test_fwd_rates[idx_pmod] *= test_pres_mod
@@ -1358,10 +1358,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
         print('L2 norm error in non-zero forward reaction rates: '
-              '{:.2e}%'.format(err)
+              f'{err:.2e}%'
               )
         print('Max error in non-zero forward reaction rates: '
-              '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+              f'{max_err * 100.:.2e}% @ reaction {loc}'
               )
 
         if idx_rev:
@@ -1374,10 +1374,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
             print('L2 norm error in non-zero reverse reaction rates: '
-                  '{:.2e}%'.format(err)
+                  f'{err:.2e}%'
                   )
             print('Max error in non-zero reverse reaction rates: '
-                  '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+                  f'{max_err * 100.:.2e}% @ reaction {loc}'
                   )
 
         # Calculate error in species net production rates
@@ -1391,16 +1391,16 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
         print('L2 norm relative error of non-zero net production rates: '
-              '{:.2e} %'.format(err)
+              f'{err:.2e} %'
               )
-        print('Max error in non-zero net production rates: {:.2e}% '
-              '@ species {}'.format(max_err * 100., loc)
+        print(f'Max error in non-zero net production rates: {max_err * 100.:.2e}% '
+              f'@ species {loc}'
               )
         err = np.linalg.norm(
             test_spec_rates[zero] - gas.net_production_rates[zero])
         print(
-            'L2 norm difference of "zero" net production rates: {:.2e}'
-            .format(err))
+            f'L2 norm difference of "zero" net production rates: {err:.2e}'
+            )
 
         # Calculate error in derivative source terms
 
@@ -1418,13 +1418,13 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         loc = pyjacob.dydt_mask[non_zero[np.argmax(err)]]
         err = np.linalg.norm(err) * 100.
         err_dydt[i] = err
-        print('L2 norm relative error of non-zero dydt: {:.2e} %'.format(err))
-        print('Max error in non-zero dydt: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc)
+        print(f'L2 norm relative error of non-zero dydt: {err:.2e} %')
+        print(f'Max error in non-zero dydt: {max_err * 100.:.2e}% '
+              f'@ index {loc}'
               )
         err = np.linalg.norm(t_dydt[zero] - ode_dydt[zero])
         err_dydt_zero[i] = err
-        print('L2 norm difference of "zero" dydt: {:.2e}'.format(err))
+        print(f'L2 norm difference of "zero" dydt: {err:.2e}')
 
         # Calculate error in Jacobian matrix
         non_zero = np.where(abs(test_jacob) > 1.e-30)[0]
@@ -1435,10 +1435,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         max_err = np.max(err)
         loc = non_zero[np.argmax(err)]
         err = np.linalg.norm(err) * 100.
-        print('Max error in non-zero Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
+        print(f'Max error in non-zero Jacobian: {max_err * 100.:.2e}% '
+              f'@ index {loc}')
         print('L2 norm of relative error of Jacobian: '
-              '{:.2e} %'.format(err))
+              f'{err:.2e} %')
         err_jac_max[i] = max_err
         err_jac[i] = err
 
@@ -1456,20 +1456,20 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
         err = np.linalg.norm(err) * 100.
         err_jac_thr[i] = err
         print('L2 norm of thresholded relative error of Jacobian: '
-              '{:.2e} %'.format(err))
+              f'{err:.2e} %')
 
         err_jac_thr_max[i] = max_err
-        print('Max thresholded relative error of Jacobian: {:.2e}% '
-              '@ index {}'.format(max_err * 100., loc))
+        print(f'Max thresholded relative error of Jacobian: {max_err * 100.:.2e}% '
+              f'@ index {loc}')
 
         err = np.linalg.norm(test_jacob - jacob) / np.linalg.norm(jacob)
         err_jac_norm[i] = err
-        print('L2 norm error of Jacobian: {:.2e}'.format(err))
+        print(f'L2 norm error of Jacobian: {err:.2e}')
 
         err = np.linalg.norm(test_jacob[zero] - jacob[zero])
         err_jac_zero[i] = err
         print('L2 norm difference of "zero" Jacobian: '
-              '{:.2e}'.format(err))
+              f'{err:.2e}')
 
         # Compare against TChem, if enabled
         if tchem_flag:
@@ -1483,10 +1483,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
             print('L2 norm difference with TChem concentration: '
-                  '{:.2e} %'.format(err)
+                  f'{err:.2e} %'
                   )
             print('Max difference with TChem concentration: '
-                  '{:.2e} % @ species {}'.format(max_err * 100., loc)
+                  f'{max_err * 100.:.2e} % @ species {loc}'
                   )
 
             tchem_fwd_rates = np.zeros(gas.n_reactions)
@@ -1500,10 +1500,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
             print('L2 norm difference with TChem forward reaction rates: '
-                  '{:.2e}%'.format(err)
+                  f'{err:.2e}%'
                   )
             print('Max difference with TChem forward reaction rates: '
-                  '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+                  f'{max_err * 100.:.2e}% @ reaction {loc}'
                   )
 
             if idx_rev:
@@ -1516,10 +1516,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
                 loc = non_zero[np.argmax(err)]
                 err = np.linalg.norm(err) * 100.
                 print('L2 norm difference with TChem reverse reaction rates: '
-                      '{:.2e}%'.format(err)
+                      f'{err:.2e}%'
                       )
                 print('Max difference with TChem reverse reaction rates: '
-                      '{:.2e}% @ reaction {}'.format(max_err * 100., loc)
+                      f'{max_err * 100.:.2e}% @ reaction {loc}'
                       )
 
             tchem_spec_rates = np.zeros(gas.n_species)
@@ -1532,10 +1532,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
             print('L2 norm relative difference with TChem net production'
-                  ' rates: {:.2e} %'.format(err)
+                  f' rates: {err:.2e} %'
                   )
-            print('Max difference with TChem net production rates: {:.2e}% '
-                  '@ species {}'.format(max_err * 100., loc)
+            print(f'Max difference with TChem net production rates: {max_err * 100.:.2e}% '
+                  f'@ species {loc}'
                   )
 
             tchem_dydt = np.zeros(gas.n_species)
@@ -1548,10 +1548,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             loc = non_zero[np.argmax(err)]
             err = np.linalg.norm(err) * 100.
             print('L2 norm relative difference with TChem dydt: '
-                  '{:.2e} %'.format(err)
+                  f'{err:.2e} %'
                   )
-            print('Max difference with TChem dydt: {:.2e}% '
-                  '@ species {}'.format(max_err * 100., loc)
+            print(f'Max difference with TChem dydt: {max_err * 100.:.2e}% '
+                  f'@ species {loc}'
                   )
 
             tchem_jacob = np.zeros(gas.n_species * gas.n_species)
@@ -1562,11 +1562,11 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
                       tchem_jacob[non_zero]
                       )
             loc = non_zero[np.argmax(err)]
-            print('Max difference with non-zero TChem Jacobian: {:.2e}% '
-                  '@ index {}'.format(np.max(err) * 100., loc))
+            print(f'Max difference with non-zero TChem Jacobian: {np.max(err) * 100.:.2e}% '
+                  f'@ index {loc}')
             err = np.linalg.norm(err) * 100.
             print('L2 norm of relative difference with TChem Jacobian: '
-                  '{:.2e} %'.format(err))
+                  f'{err:.2e} %')
             err_jac_tchem[i] = err
 
 
@@ -1580,10 +1580,10 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
 
     # Report overall error statistics
     print('Maximum of thresholded L2 norm relative error: '
-          '{:.3e}%'.format(np.max(err_jac_thr))
+          f'{np.max(err_jac_thr):.3e}%'
           )
     print('Standard deviation of thresholded L2 norm relative error: '
-          '{:.3e}%'.format(np.std(err_jac_thr))
+          f'{np.std(err_jac_thr):.3e}%'
           )
 
     if not do_not_remove:

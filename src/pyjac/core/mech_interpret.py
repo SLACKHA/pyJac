@@ -565,8 +565,8 @@ def read_mech(mech_filename, therm_filename):
                             do_warn=True
                             par3 = 1e-30
                         if do_warn:
-                            logging.warn('Troe parameters in reaction {} modified to avoid'
-                                ' division by zero!.'.format(len(reacs)))
+                            logging.warn(f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                                ' division by zero!.')
 
                         reacs[-1].troe_par.append(par1)
                         reacs[-1].troe_par.append(par2)
@@ -695,8 +695,7 @@ def read_mech(mech_filename, therm_filename):
         for spec in in_rxn:
             if spec not in spec_names:
                 logger = logging.getLogger(__name__)
-                logger.error('Reaction {} contains unknown species {}'.format(
-                    idx, spec))
+                logger.error(f'Reaction {idx} contains unknown species {spec}')
                 sys.exit(-1)
 
     # Split reversible reactions with explicit reverse parameters into
@@ -1043,8 +1042,8 @@ def read_mech_ct(filename=None, gas=None):
                     reac.troe_par[2] = 1e-30
                     do_warn = True
                 if do_warn:
-                    logging.warn('Troe parameters in reaction {} modified to avoid'
-                                 ' division by zero!.'.format(len(reacs)))
+                    logging.warn(f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                                 ' division by zero!.')
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True
                 reac.sri_par = rxn.falloff.parameters.tolist()
@@ -1078,8 +1077,8 @@ def read_mech_ct(filename=None, gas=None):
                     reac.troe_par[2] = 1e-30
                     do_warn = True
                 if do_warn:
-                    logging.warn('Troe parameters in reaction {} modified to avoid'
-                                    ' division by zero!.'.format(len(reacs)))
+                    logging.warn(f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                                    ' division by zero!.')
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True
                 reac.sri_par = rxn.falloff.parameters.tolist()

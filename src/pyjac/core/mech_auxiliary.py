@@ -106,12 +106,12 @@ void eval_jacob(const double t, const double p, const double* y,
 
     # the mechanism header defines a number of useful preprocessor defines, as
     # well as defining method stubs for setting initial conditions
-    with open(os.path.join(path, 'mechanism{}'.format(utils.header_ext[lang])),
+    with open(os.path.join(path, f'mechanism{utils.header_ext[lang]}'),
               'w'
               ) as file:
 
-        file.write('#ifndef MECHANISM_{}\n'.format(utils.header_ext[lang][1:]) +
-                   '#define MECHANISM_{}\n\n'.format(utils.header_ext[lang][1:])
+        file.write(f'#ifndef MECHANISM_{utils.header_ext[lang][1:]}\n' +
+                   f'#define MECHANISM_{utils.header_ext[lang][1:]}\n\n'
                    )
 
         if lang == 'cuda':
@@ -125,7 +125,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        )
             file.write('\nstruct mechanism_memory {\n')
             for array in gpu_memory:
-                file.write('  double * {};\n'.format(array))
+                file.write(f'  double * {array};\n')
             file.write('};\n\n')
         if lang == 'c':
             file.write('#include <string.h>\n') # for memset
@@ -133,36 +133,34 @@ void eval_jacob(const double t, const double p, const double* y,
         # make cache optimized easy to recognize
         if cache_optimized:
             file.write('//Cache Optimized\n')
-        file.write('//last_spec {}\n'.format(last_spec))
+        file.write(f'//last_spec {last_spec}\n')
 
         # convience: write species indexes
         file.write('/* Species Indexes\n')
-        file.write('\n'.join('{}  {}'.format(i, spec.name)
+        file.write('\n'.join(f'{i}  {spec.name}'
                              for i, spec in enumerate(specs)
                              )
                    )
         file.write('\n*/\n\n')
 
         file.write('//Number of species\n'
-                   '#define NSP {}\n'.format(len(specs)) +
+                   f'#define NSP {len(specs)}\n' +
                    '//Number of variables. NN = NSP + 1 (temperature)\n' +
-                   '#define NN {}\n'.format(len(specs) + 1)
+                   f'#define NN {len(specs) + 1}\n'
                    )
         file.write('//Number of forward reactions\n' +
-                   '#define FWD_RATES {}\n'.format(len(reacs)) +
+                   f'#define FWD_RATES {len(reacs)}\n' +
                    '//Number of reversible reactions\n'+
-                   '#define REV_RATES {}\n'.format(
-                   len([reac for reac in reacs if reac.rev]))
+                   f'#define REV_RATES {len([reac for reac in reacs if reac.rev])}\n'
                    )
         file.write('//Number of reactions with pressure modified rates\n')
         file.write(
-            '#define PRES_MOD_RATES {}\n\n'.format(
-            len([reac for reac in reacs if reac.pdep or reac.thd_body]))
+            f'#define PRES_MOD_RATES {len([reac for reac in reacs if reac.pdep or reac.thd_body])}\n\n'
             )
 
         file.write(
             '//Must be implemented by user on a per '
-            'mechanism basis in mechanism{}\n'.format(utils.file_ext[lang]) +
+            f'mechanism basis in mechanism{utils.file_ext[lang]}\n' +
             'void set_same_initial_conditions(int, double**, double**);\n\n'
             )
         file.write('#if defined (RATES_TEST) || defined (PROFILER)\n'
@@ -178,9 +176,9 @@ void eval_jacob(const double t, const double p, const double* y,
     # now the mechanism file
     with open(os.path.join(path, 'mechanism' + utils.file_ext[lang]), 'w') as file:
         file.write(
-            '#include "mass_mole{}"\n'.format(utils.header_ext[lang]) +
+            f'#include "mass_mole{utils.header_ext[lang]}"\n' +
             '#include <stdio.h>\n'
-            '#include "mechanism{}"\n'.format(utils.header_ext[lang])
+            f'#include "mechanism{utils.header_ext[lang]}"\n'
             )
         if lang == 'cuda':
             file.write('#include "gpu_memory.cuh"\n')
@@ -192,7 +190,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        '        memcpy(temp, y_specs, NSP * sizeof(double));\n'
                        )
             for i, spec in enumerate(fwd_spec_mapping):
-                file.write('        y_specs[{0}] = temp[{1}];\n'.format(i, spec))
+                file.write(f'        y_specs[{i}] = temp[{spec}];\n')
         file.write('    }\n')
 
         file.write('    //reverse masking of ICs for cache optimized mechanisms\n')
@@ -202,7 +200,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        '        memcpy(temp, y_specs, NSP * sizeof(double));\n'
                        )
             for i, spec in enumerate(back_spec_mapping):
-                file.write('        y_specs[{0}] = temp[{1}];\n'.format(i, spec))
+                file.write(f'        y_specs[{i}] = temp[{spec}];\n')
         file.write('    }\n')
 
         needed_arr = ['y', 'var']
@@ -260,7 +258,7 @@ void eval_jacob(const double t, const double p, const double* y,
                 print('Unknown species in initial mole list')
                 sys.exit(1)
         for x in mole_list:
-            file.write('    Xi[{}] = {}'.format(x[0], x[1]) +
+            file.write(f'    Xi[{x[0]}] = {x[1]}' +
                        utils.line_end[lang]
                        )
         file.write(
@@ -279,9 +277,9 @@ void eval_jacob(const double t, const double p, const double* y,
             '    double Yi[NSP - 1] = {0.0};\n'
             '    mole2mass(Xi, Yi);\n\n'
             '    //set initial pressure, units [PA]\n' +
-            '    double P = {};\n'.format(chem.PA * P) +
+            f'    double P = {chem.PA * P};\n' +
             '    // set intial temperature, units [K]\n' +
-            '    double T0 = {};\n\n'.format(T0)
+            f'    double T0 = {T0};\n\n'
             )
         file.write(
             '    (*y_host) = (double*)malloc(NUM * NSP * sizeof(double));\n'
@@ -316,7 +314,7 @@ void eval_jacob(const double t, const double p, const double* y,
             file.write('#ifndef GPU_MEMORY_CUH\n'
                        '#define GPU_MEMORY_CUH\n'
                        '\n'
-                       '#include "header{}"\n'.format(utils.header_ext[lang]) +
+                       f'#include "header{utils.header_ext[lang]}"\n' +
                        '#include "gpu_macros.cuh"\n'
                        '\n'
                        )
@@ -342,8 +340,8 @@ void eval_jacob(const double t, const double p, const double* y,
                        '  size_t mech_size = 0;\n'
                        )
             for array, size in gpu_memory.items():
-                file.write('  //{}\n'.format(array) +
-                           '  mech_size += {};\n'.format(size)
+                file.write(f'  //{array}\n' +
+                           f'  mech_size += {size};\n'
                            )
             file.write('  //y_device\n'
                        '  mech_size += NSP;\n'
@@ -366,7 +364,7 @@ void eval_jacob(const double t, const double p, const double* y,
             for array, size in gpu_memory.items():
                 file.write(
                     err_check.format(
-                    'cudaMalloc(&((*h_mem)->{}), {}'.format(array, size) +
+                    f'cudaMalloc(&((*h_mem)->{array}), {size}' +
                     ' * padded * sizeof(double))')
                     )
 
@@ -374,7 +372,7 @@ void eval_jacob(const double t, const double p, const double* y,
             for x in zero_vals:
                 file.write(
                     utils.line_start + 'cudaErrorCheck( '
-                    'cudaMemset((*h_mem)->{}, 0, {}'.format(x, gpu_memory[x]) +
+                    f'cudaMemset((*h_mem)->{x}, 0, {gpu_memory[x]}' +
                     ' * padded * sizeof(double)) )' +
                     utils.line_end[lang]
                     )
@@ -396,7 +394,7 @@ void eval_jacob(const double t, const double p, const double* y,
                        )
             for array in gpu_memory:
                 file.write(utils.line_start +
-                           free_template.format('(*h_mem)->{}'.format(array)) +
+                           free_template.format(f'(*h_mem)->{array}') +
                            utils.line_end[lang]
                            )
             file.write(utils.line_start +
@@ -466,7 +464,7 @@ def write_header(path, lang):
                    '//#define CONV\n'
                    '\n'
                    '/** Include mechanism header to get NSP and NN **/\n'
-                   '#include "mechanism{}"\n'.format(utils.header_ext[lang]) +
+                   f'#include "mechanism{utils.header_ext[lang]}"\n' +
                    '// OpenMP\n'
                    '#ifdef _OPENMP\n'
                    ' #include <omp.h>\n'

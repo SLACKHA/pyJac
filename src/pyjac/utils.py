@@ -22,7 +22,18 @@ comment = dict(c='//', cuda='//',
 """dict: comment characters for each language"""
 
 langs = ['c', 'cuda', 'fortran', 'matlab']
-"""list(`str`): list of supported languages"""
+"""list(`str`): list of languages the generators have partial support for"""
+
+supported_langs = ['c', 'cuda']
+"""list(`str`): languages that are fully implemented and tested
+
+The Fortran and Matlab backends were never completed: the generators emit C
+preprocessor constructs (``#include``, include guards, ``__restrict__``) that
+have no Fortran or Matlab equivalent, and ``header_ext`` has no entry for
+either, so generation raises `KeyError` on the first file written. The partial
+implementation is retained in the tree, but selecting these languages raises
+`NotImplementedError` rather than failing part-way through with a stack trace.
+"""
 
 file_ext = dict(c='.c', cuda='.cu', fortran='.f90', matlab='.m')
 """dict: source code file extensions based on language"""
@@ -217,7 +228,7 @@ def get_array(lang, name, index, twod=None):
 
     if lang in ['fortran', 'matlab']:
         if twod is not None:
-            return name +'({}, {})'.format(index + 1, twod + 1)
+            return name +f'({index + 1}, {twod + 1})'
         return name + array_chars[lang].format(index + 1)
     return name + array_chars[lang].format(index)
 
@@ -327,7 +338,10 @@ def get_parser():
                         type=str,
                         choices=langs,
                         required=True,
-                        help='Programming language for output source files.'
+                        help='Programming language for output source files. '
+                             'Implemented: {}. The fortran and matlab backends '
+                             'are incomplete and will report an error.'.format(
+                                 ', '.join(supported_langs))
                         )
     parser.add_argument('-i', '--input',
                         type=str,

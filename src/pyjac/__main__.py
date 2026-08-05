@@ -7,6 +7,7 @@ from .core.create_jacobian import create_jacobian
 def main(args=None):
     if args is None:
         args = utils.get_parser()
+    try:
         create_jacobian(
                     lang=args.lang,
                     mech_name=args.input,
@@ -24,6 +25,11 @@ def main(args=None):
                     last_spec=args.last_species,
                     auto_diff=args.auto_diff
                     )
+    except NotImplementedError as err:
+        print(f'Error: {err}', file=sys.stderr)
+        return 2
+    return 0
+
 
 if __name__ == '__main__':
     sys.exit(main())

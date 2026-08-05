@@ -1,10 +1,5 @@
-# -*- coding: utf-8 -*-
 """Module for partially stirred reactor simulations.
 """
-
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
 
 # Standard libraries
 import sys
@@ -16,22 +11,9 @@ if sys.version_info.major == 2:
     from itertools import izip as zip
 
 # Related modules
-try:
-    import numpy as np
-except ImportError:
-    print('Error: NumPy must be installed.')
-    raise
-try:
-    import cantera as ct
-    from cantera import ck2cti
-except ImportError:
-    print('Error: Cantera must be installed.')
-    raise
-try:
-    import yaml
-except ImportError:
-    print('Error: YAML must be installed to read input file.')
-    raise
+import numpy as np
+import cantera as ct
+import yaml
 
 # Parallel processing for reaction substep
 parallel = True
@@ -41,7 +23,7 @@ except ImportError:
     print('Warning: multiprocessing not installed')
     parallel = False
 
-class Stream(object):
+class Stream:
     """Class for inlet flow stream into reactor.
     """
 
@@ -82,7 +64,7 @@ class Stream(object):
         return self.comp
 
 
-class Particle(object):
+class Particle:
     """Class for particle in reactor.
     """
 
@@ -963,11 +945,11 @@ def parse_input_file(input_file):
 
     """
 
-    with open(input_file, 'r') as f:
+    with open(input_file) as f:
         pars = yaml.load(f)
 
     case = pars.get('case', None)
-    if not case in ['premixed', 'non-premixed']:
+    if case not in ['premixed', 'non-premixed']:
         print('Error: case needs to be one of '
               '"premixed" or "non-premixed".')
         sys.exit(1)

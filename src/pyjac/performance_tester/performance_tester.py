@@ -1,14 +1,12 @@
 """Module for performance testing of pyJac and related tools.
 """
 
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
-
 # Standard libraries
+from pathlib import Path
 import os
 import sys
 import subprocess
+import itertools
 import re
 from argparse import ArgumentParser
 import multiprocessing
@@ -17,21 +15,8 @@ from collections import defaultdict
 
 from string import Template
 
-# Related modules
 import numpy as np
-
-try:
-    import cantera as ct
-    from cantera import ck2cti
-except ImportError:
-    print('Error: Cantera must be installed.')
-    raise
-
-try:
-    from optionloop import OptionLoop
-except ImportError:
-    print('Error: optionloop must be installed.')
-    raise
+import cantera as ct
 
 # Local imports
 from .. import utils
@@ -42,6 +27,43 @@ from ..libgen import (generate_library, libs, compiler, file_struct,
 
 STATIC = True
 """bool: CUDA only works for static libraries"""
+
+
+def option_cases(*param_sets):
+    """Expand parameter dictionaries into concrete option cases.
+
+    Each dictionary maps an option name to either a fixed value or a list of
+    values to sweep over. One case is yielded per combination within a set, and
+    the sets are visited in the order given. Empty sets are skipped, so a
+    backend that is unavailable simply contributes nothing.
+
+    Options missing from a given set read back as ``False``.
+
+    Parameters
+    ----------
+    *param_sets : dict
+        Option dictionaries, values either scalars or lists.
+
+    Yields
+    ------
+    dict
+        One fully-populated set of options per combination.
+
+    """
+    all_keys = {key for params in param_sets for key in params}
+    for params in param_sets:
+        if not params:
+            continue
+        names = sorted(params)
+        values = [
+            params[name] if isinstance(params[name], list) else [params[name]]
+            for name in names
+        ]
+        for combination in itertools.product(*values):
+            case = dict.fromkeys(all_keys, False)
+            case.update(zip(names, combination))
+            yield case
+
 
 def is_pdep(rxn):
     """Check if reaction is pressure depedent.
@@ -90,11 +112,11 @@ def check_step_file(filename, steplist):
     runs = {}
     for step in steplist:
         runs[step] = 0
-    if not 'cuda' in filename:
+    if 'cuda' not in filename:
         raise Exception(filename)
 
     try:
-        with open(filename, 'r') as file:
+        with open(filename) as file:
             lines = [line.strip() for line in file.readlines()]
         for line in lines:
             try:
@@ -124,7 +146,7 @@ def check_file(filename):
 
     """
     try:
-        with open(filename, 'r') as file:
+        with open(filename) as file:
             lines = [line.strip() for line in file.readlines()]
         num_completed = 0
         to_find = 2
@@ -143,7 +165,7 @@ def check_file(filename):
 
 
 def getf(x):
-    return os.path.basename(x)
+    return Path(x).name
 
 
 def cmd_link(lang, shared):
@@ -269,18 +291,15 @@ def performance_tester(home, work_dir, use_old_opt):
     cpu_repeats = 10
     gpu_repeats = 10
 
-    def false_factory():
-        return False
-
-    import multiprocessing #for cpu count
     max_cpu = multiprocessing.cpu_count()
-    num_threads = [1]
-    while num_threads < max_cpu:
-        num_threads.append(min(max_cpu, num_threads[-1] * 2))
+    # thread counts to sweep over, one test case per count
+    thread_counts = [1]
+    while thread_counts[-1] < max_cpu:
+        thread_counts.append(min(max_cpu, thread_counts[-1] * 2))
     c_params = {'lang' : 'c',
                 'cache_opt' : [False],
                 'finite_diffs' : [False, True],
-                'num_threads' : num_threads
+                'num_threads' : thread_counts
                 }
 
     #check that nvcc installed
@@ -348,9 +367,7 @@ def performance_tester(home, work_dir, use_old_opt):
 
         the_path = os.getcwd()
         first_run = True
-        op = OptionLoop(c_params, false_factory)
-        op = op + OptionLoop(cuda_params, false_factory)
-        op = op + OptionLoop(tchem_params, false_factory)
+        op = option_cases(c_params, cuda_params, tchem_params)
 
         haveOpt = False
         if os.path.isfile(os.path.join(os.getcwd(),
@@ -371,10 +388,9 @@ def performance_tester(home, work_dir, use_old_opt):
             opt = state['cache_opt']
             smem = state['shared']
 
-            #handle threading
-            num_threads = -1
-            if 'num_threads' in state:
-                num_threads = state['num_threads']
+            # CUDA cases do not sweep thread counts; -1 selects the test
+            # binary's own default
+            num_threads = state['num_threads'] or -1
 
 
             if any([isinstance(rxn, ct.PlogReaction) or
@@ -430,7 +446,7 @@ def performance_tester(home, work_dir, use_old_opt):
             file_data = {'datafile' : os.path.join(the_path, 'data.bin')}
             if lang == 'c' or lang == 'cuda':
                 filename = f'tester{utils.file_ext[temp_lang]}.in'
-                with open(os.path.join(home, filename), 'r') as file:
+                with open(os.path.join(home, filename)) as file:
                     src = Template(file.read())
                 src = src.substitute(file_data)
             else:
@@ -441,7 +457,7 @@ def performance_tester(home, work_dir, use_old_opt):
                     #it's the same file
                     file_data['thermofile'] = mech_info['chemkin']
                 with open(os.path.join(home,
-                                       'tc_tester.c.in'), 'r') as file:
+                                       'tc_tester.c.in')) as file:
                     src = Template(file.read())
                 src = src.substitute(file_data)
             filename = f'test{utils.file_ext[temp_lang]}'

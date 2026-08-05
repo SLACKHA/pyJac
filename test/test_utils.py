@@ -2,7 +2,7 @@ import sys
 
 from pyjac import utils
 
-class TestUtils(object):
+class TestUtils:
     """
     """
     def test_imported(self):

@@ -1,9 +1,9 @@
 """Module used to create a shared/static library from pyJac files.
 """
-from __future__ import print_function
 
 import shutil
 import re
+from pathlib import Path
 import os
 import subprocess
 import sys
@@ -103,7 +103,7 @@ def compiler(fstruct):
         os.path.join(fstruct.source_dir, fstruct.filename +
                      utils.file_ext[fstruct.build_lang]
                      ),
-        '-o', os.path.join(fstruct.obj_dir, os.path.basename(fstruct.filename) + '.o')
+        '-o', os.path.join(fstruct.obj_dir, Path(fstruct.filename).name + '.o')
         ])
     args = [val for val in args if val.strip()]
     try:
@@ -139,7 +139,7 @@ def get_cuda_path():
         sys.exit(-1)
 
     sixtyfourbit = platform.architecture()[0] == '64bit'
-    cuda_path = os.path.dirname(os.path.dirname(cuda_path))
+    cuda_path = str(Path(cuda_path).parent.parent)
     cuda_path = os.path.join(cuda_path,
                              'lib{}'.format('64' if sixtyfourbit else '')
                              )
@@ -189,7 +189,7 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
         command += [os.path.join(out_dir, libname)]
 
     #add the files
-    command.extend([os.path.join(obj_dir, os.path.basename(f) + '.o') for f in filelist])
+    command.extend([os.path.join(obj_dir, Path(f).name + '.o') for f in filelist])
 
     if shared:
         command.extend(shared_flags[lang])
@@ -206,7 +206,8 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
         print(' '.join(command))
         subprocess.check_call(command)
     except OSError:
-        print(f'Error: Compiler {args[0]} not found, generation of pyjac library failed.')
+        print(f'Error: Compiler {command[0]} not found, '
+              'generation of pyjac library failed.')
         sys.exit(-1)
     except subprocess.CalledProcessError:
         print('Error: Generation of pyjac library failed.')
@@ -215,7 +216,7 @@ def libgen(lang, obj_dir, out_dir, filelist, shared, auto_diff):
     return libname
 
 
-class file_struct(object):
+class file_struct:
     """A simple structure designed to enable multiprocess compilation
     """
     def __init__(self, lang, build_lang, filename, i_dirs, args,
@@ -378,7 +379,7 @@ def generate_library(lang, source_dir, obj_dir=None,
     pmod = False
     #figure out whether there's pressure mod reactions or not
     with open(os.path.join(source_dir,
-              f'mechanism{utils.header_ext[build_lang]}'), 'r'
+              f'mechanism{utils.header_ext[build_lang]}')
               ) as file:
         for line in file.readlines():
             line = line.strip()

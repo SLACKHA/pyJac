@@ -12,82 +12,99 @@ C and CUDA output against fixtures recorded from 1.0.6.
 
 ### Added
 - Golden-output fixtures and characterization tests covering C and CUDA
-  generation, generator determinism, and warning-free compilation of the
-  generated C (`test/fixtures/`, `test/test_golden_output.py`)
+  generation, the Adept autodifferentiation variant, CUDA without the
+  shared-memory manager, generator determinism, and warning-free compilation
+  of the generated C: 152 recorded files across 8 variants
 - `test/fixtures/mechanisms/rxn_types.inp`, a fixture mechanism exercising
   third-body, Troe falloff, SRI falloff, PLOG, Chebyshev, duplicate,
   irreversible, and explicit-reverse reactions
 - `test/regenerate_golden.py` to re-record fixtures when generated output
   changes intentionally
+- Smoke-and-compile test for the cache-optimizer path. Its output is not
+  byte-compared: `cache_optimizer` is a randomized greedy search on unseeded
+  `np.random`, so successive runs legitimately differ.
+- Regression tests for Chebyshev parsing and generation, the CLI, the
+  unsupported-language guard, and `option_cases`
 - `pyproject.toml` with PEP 621 metadata, optional-dependency extras
   (`pywrap`, `cache-opt`, `test`, `docs`), and ruff/pytest/coverage config,
   built with hatchling
 - `.pre-commit-config.yaml` (ruff hooks staged but disabled pending the
   one-time lint cleanup)
+- `--version` / `-v` flag reporting the pyJac version
+- The CLI validates before doing any work: unsupported languages, a missing
+  mechanism file, and a missing thermodynamic database all exit through the
+  parser with a plain message and status 2, rather than a traceback from deep
+  inside generation
 
 ### Changed
-- Replaces CodeMeta files with `CITATION.cff`
 - Moved the package to a `src/` layout (`pyjac/` -> `src/pyjac/`) and the test
   suite out of the package to a top-level `test/` directory
 - Tests now import `pyjac` absolutely, so they exercise the installed package
 - `requires-python` is now `>=3.10`, the floor set by Cantera 3.x
 - `_version.py` exposes `__version__` as a literal so build backends can read
   it without importing the package
+- Replaced the CodeMeta files with `CITATION.cff`
+- Moved the argument parser from `pyjac.utils` to `pyjac.__main__`.
+- Fortran and Matlab are now explicitly unsupported, and raise
+  `NotImplementedError` before any work is done, and the CLI reports the
+  error and exits with status 2.
+- Replaced `cantera.ck2cti` with `cantera.ck2yaml`; Chemkin input now converts
+  to YAML, as the CTI format and its converter were removed in Cantera 3.0
+- Ported `pywrap.parallel_compiler` and the four `*_setup.py.in` templates
+  from `distutils` to `setuptools._distutils`
+- Dropped the `optionloop` dependency in favour of a small
+  `itertools.product` helper (`performance_tester.option_cases`)
+- Removed Python 2 compatibility imports, converted all 589 `str.format()`
+  calls to f-strings, fixed invalid escape sequences,
+  replaced `is` comparisons against string literals with `==`, and
+  switched `logging.warn` to `logging.warning`.
+- Path parsing now uses `pathlib` rather than `os.path`
 
 ### Fixed
-- Cantera version check rejected every 3.x release and called `sys.exit(1)` at
-  import time, making `import pyjac` fail outright with modern Cantera. It now
-  compares versions as a tuple and warns instead of exiting.
-
-### Removed
-- `setup.py`, `setup.cfg`, `MANIFEST.in` (superseded by `pyproject.toml`)
-- `conda.recipe/` and `test-environment.yaml`; distribution is now PyPI-only
-- The source distribution no longer carries the test suite, example mechanisms,
-  or documentation sources. Those are development content and remain in the git
-  repository; the sdist now holds only what is needed to install and run pyJac,
-  which took it from 355 KB to 101 KB. The wheel payload is unchanged.
-
-### Added (modernization, continued)
-- Golden coverage extended to the Adept autodifferentiation variant and to CUDA
-  without the shared-memory manager, so refactors of the string-assembly code
-  are checked on every branch they touch (152 recorded files across 8 variants)
-- Smoke-and-compile test for the cache-optimizer path. Its output is not
-  byte-compared: `cache_optimizer` is a randomized greedy search on unseeded
-  `np.random`, so successive runs legitimately differ.
-
-### Changed (modernization, continued)
-- Converted all 589 `str.format()` calls to f-strings (ruff `UP032`). Generated
-  source is byte-identical across all 152 golden files, verified before and
-  after the conversion.
-- Fortran and Matlab are now explicitly unsupported. Both backends were left
-  incomplete years ago and died with a `KeyError` on the first file written;
-  they now raise `NotImplementedError` before any work is done, and the CLI
-  reports the error and exits with status 2. The partial implementation stays
-  in the tree. `utils.supported_langs` records the distinction.
-
-### Fixed (modernization, continued)
+- The Cantera version check rejected every 3.x release and called
+  `sys.exit(1)` at import time, making `import pyjac` fail outright
+  with modern Cantera. It now compares versions as a tuple and warns
+  instead of exiting.
+- A Chebyshev reaction with two or fewer temperature coefficients generated an
+  out-of-bounds read on `dot_prod` in `jacob.c`. Where another reaction set a
+  larger array size, the read was in bounds but returned that reaction's
+  value, silently producing a wrong temperature derivative.
+- A standalone `TCHEB/ ... /` or `PCHEB/ ... /` line, not followed by
+  the other on the same line, raised `IndexError` in the Chemkin parser
 - `cache_optimizer.optimize_cache` unconditionally called a debug `plot()`
-  helper -- docstring-marked "Marked for removal" -- which imported matplotlib
-  (never a declared dependency) and wrote `old.pdf` and `new.pdf` into the
-  working directory. Cache optimization therefore failed outright with
-  `ModuleNotFoundError` for anyone without matplotlib installed. Both the call
-  and the helper are removed; generated output is unaffected.
+  helper. Removed both the call and the helper.
+- `libgen.libgen` referenced an undefined `args` when a compiler was missing,
+  raising `NameError` instead of reporting the missing compiler
+- `rate_subs` referenced an undefined `sp` when estimating shared-memory usage
+  for third-body species, raising `NameError` whenever that branch was reached
+- `performance_tester` compared a list against an int to size its
+  thread sweep, raising `TypeError` on Python 3
 - `__main__.main()` ignored a supplied `args` namespace: the entire body sat
   inside `if args is None`, so `main(args)` was a silent no-op. It now returns
   an exit status.
 
+### Removed
+- `setup.py`, `setup.cfg`, `MANIFEST.in` (superseded by `pyproject.toml`)
+- `conda.recipe/` and `test-environment.yaml`; distribution is now PyPI-only
+- The vestigial `__main__` blocks in `core.create_jacobian` and
+  `core.rate_subs`; the latter called an imported module as a function
+- The source distribution no longer carries the test suite,
+  example mechanisms, or documentation sources. The wheel payload is
+  unchanged.
+
 ### Known issues (not yet addressed)
-- `pyjac.pywrap.parallel_compiler` and the `pywrap` setup templates still
-  import `distutils`, removed from the stdlib in Python 3.12
-- `pyjac.functional_tester` and `pyjac.performance_tester` still import
-  `cantera.ck2cti`, removed in Cantera 3.0
-- `read_mech_ct` still dispatches on Cantera reaction classes removed in 3.0
-- Fortran and Matlab generation raise `KeyError` on the first write, as
-  `utils.header_ext` defines only `c` and `cuda`; this predates 1.0.6
-- A Chebyshev reaction with two or fewer temperature coefficients generates an
-  out-of-bounds read on `dot_prod` in `jacob.c`
-- A standalone `TCHEB/ ... /` line (not followed by `PCHEB` on the same line)
-  raises `IndexError` in the Chemkin parser
+- Six sites still dispatch on the `Reaction` subclasses that Cantera removed in
+  3.0 (`ThreeBodyReaction`, `FalloffReaction`, `ChemicallyActivatedReaction`,
+  `PlogReaction`, `ChebyshevReaction`, `ElementaryReaction`), and raise
+  `AttributeError` when reached:
+  - `core.mech_interpret.read_mech_ct`, the main six-way dispatch
+  - `functional_tester.test.is_pdep`, plus the inline third-body/falloff and
+    PLOG/Chebyshev checks inside `functional_tester.test.test`
+  - `performance_tester.is_pdep`, plus the inline PLOG/Chebyshev check inside
+    `performance_tester.performance_tester`
+
+  The inline checks sit mid-function, so they fail only after a PaSR or timing
+  run has already started rather than up front.
 
 ## [1.0.6] - 2018-02-21
 ### Added

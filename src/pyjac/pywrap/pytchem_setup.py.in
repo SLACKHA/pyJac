@@ -1,13 +1,13 @@
 import os
 import shutil
 from setuptools import setup
-from distutils.extension import Extension
+from setuptools import Extension
 from Cython.Distutils import build_ext
 import numpy
 
-import distutils.ccompiler
+from setuptools._distutils.ccompiler import CCompiler
 import parallel_compiler as pcc
-distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
+CCompiler.compile = pcc.parallel_compile
 
 if os.getenv('TCHEM_HOME'):
     tchem_home = os.getenv('TCHEM_HOME')

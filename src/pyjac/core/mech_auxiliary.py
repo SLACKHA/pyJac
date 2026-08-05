@@ -1,10 +1,6 @@
 """Writes mechanism header and output testing files
 """
 
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
-
 # Standard libraries
 import os
 import sys

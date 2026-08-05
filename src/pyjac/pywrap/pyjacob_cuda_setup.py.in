@@ -1,14 +1,14 @@
 import os
 from os.path import join as pjoin
 from setuptools import setup
-from distutils.extension import Extension
+from setuptools import Extension
 from Cython.Distutils import build_ext
 import subprocess
 import numpy
 
-import distutils.ccompiler
+from setuptools._distutils.ccompiler import CCompiler
 import parallel_compiler as pcc
-distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
+CCompiler.compile = pcc.parallel_compile
 
 def find_in_path(name, path):
     "Find a file in a search path"
@@ -139,12 +139,12 @@ def customize_linker_for_nvcc(self):
 
 
 def customize_compiler_for_nvcc(self):
-    """inject deep into distutils to customize how the dispatch
+    """inject deep into the compiler machinery to customize how the dispatch
     to gcc/nvcc works.
 
     If you subclass UnixCCompiler, it's not trivial to get your subclass
     injected in, and still have the right customizations (i.e.
-    distutils.sysconfig.customize_compiler) run on it. So instead of going
+    customize_compiler) run on it. So instead of going
     the OO route, I have this. Note, it's kindof like a wierd functional
     subclassing going on."""
 
@@ -156,7 +156,7 @@ def customize_compiler_for_nvcc(self):
     super = self._compile
 
     # now redefine the _compile method. This gets executed for each
-    # object but distutils doesn't have the ability to change compilers
+    # object but the build system doesn't have the ability to change compilers
     # based on source extension: we add it.
     def _compile(obj, src, ext, cc_args, extra_postargs, pp_opts):
         if os.path.splitext(src)[1] == '.cu':

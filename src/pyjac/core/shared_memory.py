@@ -9,7 +9,7 @@ from math import floor
 from .. import utils
 from . import CUDAParams
 
-class variable(object):
+class variable:
     """
     Class that represents an array/index pair.  Used for in the internal
     dicitonary of the `shared_memory_manager` for identification and
@@ -57,7 +57,7 @@ class variable(object):
         return utils.get_array(self.lang, self.base, self.index)
 
 
-class shared_memory_manager(object):
+class shared_memory_manager:
     """Manager for GPU shared memory.
     """
     def __init__(self, blocks_per_sm=8, num_threads=64, L1_PREFERRED=True):
@@ -235,7 +235,7 @@ class shared_memory_manager(object):
         if self.self_eviction_strategy is not None:
             for ind, val in self.shared_dict.items():
                 #if qualifies for self eviction and not in current set
-                if self.self_eviction_strategy(val) and not val in variables:
+                if self.self_eviction_strategy(val) and val not in variables:
                     self.eviction_marking[ind] = True
                 elif val in variables:
                     self.eviction_marking[ind] = False
@@ -255,7 +255,7 @@ class shared_memory_manager(object):
                 var = thevar
                 usage = None
             #don't re-add if it's already in
-            if not var in self.shared_dict.values():
+            if var not in self.shared_dict.values():
                 #skip barely used ones
                 if usage <= 1:
                     continue
@@ -271,13 +271,13 @@ class shared_memory_manager(object):
         if estimated_usage:
             # add any usage = 1 ones if space
             for var, usage in variables:
-                if not var in self.shared_dict.values():
+                if var not in self.shared_dict.values():
                     if len(self.shared_dict) < self.shared_per_thread:
                         self.add_to_dictionary(var)
         if load is True:
             # need to write loads for any new vars
             for ind, val in self.shared_dict.items():
-                if not val in old_variables:
+                if val not in old_variables:
                     file.write(' ' * indent + self.__get_string(ind) +
                                ' = ' + val.to_string() +
                                utils.line_end['cuda']

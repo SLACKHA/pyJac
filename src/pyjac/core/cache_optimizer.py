@@ -1,10 +1,6 @@
 """ Reorders loads of rate and species subs to optimize cache hits, etc.
 """
 
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
-
 # Standard libraries
 import multiprocessing
 import pickle
@@ -89,7 +85,7 @@ def optimizer_loop(starting_order, mapping, lookback,
     for i in range(nvar):
         if mapping[order[i]].count() == 0:
             zero_vals.append(order[i])
-    order = [x for x in order if not x in zero_vals]
+    order = [x for x in order if x not in zero_vals]
     nvar = len(order)
     order += zero_vals
 

@@ -7,7 +7,7 @@ from pyjac.core import mech_auxiliary
 from pyjac.core import rate_subs
 from pyjac.core import shared_memory
 
-class TestCacheOptimizer(object):
+class TestCacheOptimizer:
     """
     """
     def test_imported(self):
@@ -15,7 +15,7 @@ class TestCacheOptimizer(object):
         """
         assert 'pyjac.core.cache_optimizer' in sys.modules
 
-class TestChemUtilities(object):
+class TestChemUtilities:
     """
     """
     def test_imported(self):
@@ -23,7 +23,7 @@ class TestChemUtilities(object):
         """
         assert 'pyjac.core.chem_utilities' in sys.modules
 
-class TestCreateJacobian(object):
+class TestCreateJacobian:
     """
     """
     def test_imported(self):
@@ -31,7 +31,7 @@ class TestCreateJacobian(object):
         """
         assert 'pyjac.core.create_jacobian' in sys.modules
 
-class TestMechAuxiliary(object):
+class TestMechAuxiliary:
     """
     """
     def test_imported(self):
@@ -39,7 +39,7 @@ class TestMechAuxiliary(object):
         """
         assert 'pyjac.core.mech_auxiliary' in sys.modules
 
-class TestRateSubs(object):
+class TestRateSubs:
     """
     """
     def test_imported(self):
@@ -47,7 +47,7 @@ class TestRateSubs(object):
         """
         assert 'pyjac.core.rate_subs' in sys.modules
 
-class TestSharedMemory(object):
+class TestSharedMemory:
     """
     """
     def test_imported(self):

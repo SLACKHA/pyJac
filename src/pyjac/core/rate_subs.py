@@ -1,13 +1,8 @@
-# -*- coding: utf-8 -*-
 """Module for writing species/reaction rate subroutines.
 
 This is kept separate from Jacobian creation module in order
 to create only the rate subroutines if desired.
 """
-
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
 
 # Standard libraries
 import sys
@@ -688,7 +683,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
                     lo_array, hi_array = __get_arrays(sp)
 
-                    if not sp.Trange[1] in coeffs:
+                    if sp.Trange[1] not in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
                         coeffs[sp.Trange[1]] = [
@@ -718,7 +713,7 @@ def write_rxn_rates(path, lang, specs, reacs, fwd_rxn_mapping,
 
                     lo_array, hi_array = __get_arrays(sp, factor=-1.0)
 
-                    if not sp.Trange[1] in coeffs:
+                    if sp.Trange[1] not in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
                     else:
                         coeffs[sp.Trange[1]] = [
@@ -1098,9 +1093,8 @@ def write_rxn_pressure_mod(path, lang, specs, reacs,
                     count = 0
                     while temp < len(reacs):
                         rxn = reacs[temp]
-                        if sp_i in set([x[0] for x in rxn.thd_body_eff
-                                       if sp[1] != 1.0]
-                                       ):
+                        if sp_i in {x[0] for x in rxn.thd_body_eff
+                                    if x[1] != 1.0}:
                             count += 1
                         else:
                             break
@@ -2527,8 +2521,8 @@ def write_mass_mole(path, lang, specs):
         file.write('/** Function converting species mole fractions to '
                    'mass fractions.\n'
                    ' *\n'
-                   ' * \param[in]  X  array of species mole fractions\n'
-                   ' * \param[out] Y  array of species mass fractions\n'
+                   ' * \\param[in]  X  array of species mole fractions\n'
+                   ' * \\param[out] Y  array of species mass fractions\n'
                    ' */\n'
                    'void mole2mass (const double * X, double * Y) {\n'
                    '\n'
@@ -2622,8 +2616,8 @@ def write_mass_mole(path, lang, specs):
         file.write('/** Function converting species mass fractions to mole '
                    'fractions.\n'
                    ' *\n'
-                   ' * \param[in]  Y  array of species mass fractions\n'
-                   ' * \param[out] X  array of species mole fractions\n'
+                   ' * \\param[in]  Y  array of species mass fractions\n'
+                   ' * \\param[out] X  array of species mole fractions\n'
                    ' */\n'
                    'void mass2mole (const double * Y, double * X) {\n'
                    '\n'
@@ -2716,9 +2710,9 @@ def write_mass_mole(path, lang, specs):
     if lang in ['c', 'cuda']:
         file.write('/** Function calculating density from mole fractions.\n'
                    ' *\n'
-                   ' * \param[in]  temp  temperature\n'
-                   ' * \param[in]  pres  pressure\n'
-                   ' * \param[in]  X     array of species mole fractions\n'
+                   ' * \\param[in]  temp  temperature\n'
+                   ' * \\param[in]  pres  pressure\n'
+                   ' * \\param[in]  X     array of species mole fractions\n'
                    r' * \return     rho  mixture mass density' + '\n'
                    ' */\n'
                    'double getDensity (const double temp, const double '
@@ -2801,23 +2795,3 @@ def write_mass_mole(path, lang, specs):
 
     file.close()
     return
-
-if __name__ == "__main__":
-    from . import create_jacobian
-    args = utils.get_parser()
-    create_jacobian(lang=args.lang,
-                mech_name=args.input,
-                therm_name=args.thermo,
-                optimize_cache=args.cache_optimizer,
-                initial_state=args.initial_conditions,
-                num_blocks=args.num_blocks,
-                num_threads=args.num_threads,
-                no_shared=args.no_shared,
-                L1_preferred=args.L1_preferred,
-                multi_thread=args.multi_thread,
-                force_optimize=args.force_optimize,
-                build_path=args.build_path,
-                skip_jac=True,
-                last_spec=args.last_species,
-                auto_diff=args.auto_diff
-                )

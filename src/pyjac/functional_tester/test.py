@@ -1,11 +1,8 @@
 """Module for testing function (accuracy) of pyJac.
 """
 
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
-
 # Standard libraries
+from pathlib import Path
 import os
 import re
 import sys
@@ -17,13 +14,8 @@ import glob
 
 # Related modules
 import numpy as np
-
-try:
-    import cantera as ct
-    from cantera import ck2cti
-except ImportError:
-    print('Error: Cantera must be installed.')
-    raise
+import cantera as ct
+from cantera import ck2yaml
 
 # Local imports
 from .. import utils
@@ -50,7 +42,7 @@ libs = dict(c=['-lm', '-std=c99'],
             fortran='')
 
 
-class ReactorConstPres(object):
+class ReactorConstPres:
     """Object for constant pressure ODE system.
     """
     def __init__(self, gas):
@@ -92,7 +84,7 @@ class ReactorConstPres(object):
         return np.hstack((dTdt, dYdt))
 
 
-class ReactorConstVol(object):
+class ReactorConstVol:
     """Object for constant volume ODE system.
     """
     def __init__(self, gas):
@@ -137,40 +129,38 @@ class ReactorConstVol(object):
 def convert_mech(mech_filename, therm_filename=None):
     """Convert a mechanism and return a string with the filename.
 
-    Convert a CHEMKIN format mechanism to the Cantera CTI format using
-    the Cantera built-in script ``ck2cti``.
+    Convert a CHEMKIN format mechanism to the Cantera YAML format using
+    Cantera's built-in ``ck2yaml`` converter.
 
     Parameters
     ----------
     mech_filename : str
         Filename of the input CHEMKIN format mechanism. The converted
-        CTI file will have the same name, but with ``.cti`` extension.
-    thermo_filename : str
+        YAML file will have the same name, but with a ``.yaml`` extension.
+    therm_filename : str
         Filename of the thermodynamic database. Optional, if the
         thermodynamic database is present in the mechanism input.
 
     Returns
     -------
     mech_filename : str
-        Filename of converted mechanism in Cantera ``.cti`` format.
+        Filename of converted mechanism in Cantera ``.yaml`` format.
 
     """
+    output_filename = str(Path(mech_filename).with_suffix('.yaml'))
 
-    arg = ['--input=' + mech_filename]
-    if therm_filename is not None:
-        arg.append('--thermo=' + therm_filename)
-    arg.append('--permissive')
+    ck2yaml.convert(mech_filename,
+                    thermo_file=therm_filename,
+                    out_name=output_filename,
+                    permissive=True,
+                    quiet=True
+                    )
 
-    # Convert the mechanism
-    ck2cti.main(arg)
-    mech_filename = mech_filename[:-4] + '.cti'
-    print('Mechanism conversion successful, written to '
-          f'{mech_filename}'
-          )
-    return mech_filename
+    print(f'Mechanism conversion successful, written to {output_filename}')
+    return output_filename
 
 
-class AutodiffJacob(object):
+class AutodiffJacob:
     """Class for
     """
     def __init__(self, pressure, fwd_spec_map):
@@ -276,7 +266,7 @@ def run_pasr(pasr_input_file, mech_filename, pasr_output_file=None):
     return state_data
 
 
-class cpyjac_evaluator(object):
+class cpyjac_evaluator:
     """Class for pyJac-based Jacobian matrix evaluator
     """
     def __copy(self, B):
@@ -303,7 +293,7 @@ class cpyjac_evaluator(object):
         None
 
         """
-        with open(os.path.join(build_dir, filename), 'r') as file:
+        with open(os.path.join(build_dir, filename)) as file:
             n_spec = None
             n_reac = None
             for line in file.readlines():
@@ -349,7 +339,7 @@ class cpyjac_evaluator(object):
 
         """
         self.fwd_spec_map = np.array(range(gas.n_species))
-        with open(os.path.join(build_dir, filename), 'r') as file:
+        with open(os.path.join(build_dir, filename)) as file:
             opt = False
             last_spec = None
             for line in file.readlines():

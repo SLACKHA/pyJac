@@ -1,9 +1,5 @@
-# -*- coding: utf-8 -*-
 """Chemkin-format mechanism interpreter module.
 """
-
-# Python 2 compatibility
-from __future__ import division
 
 # Standard libraries
 import sys
@@ -23,9 +19,7 @@ CANTERA_FLAG = False
 try:
     import cantera as ct
 
-    # Compare as a tuple; the previous form (`major < 2 or minor < 3`) rejected
-    # every release whose minor version happened to be below 3 -- including all
-    # of Cantera 3.0/3.1/3.2 -- and did so with sys.exit() at import time.
+    # Compare as a tuple so that, e.g., 3.2 is not read as older than 2.3.
     _version = tuple(
         int(part) for part in ct.__version__.split('.')[:2] if part.isdigit()
     )
@@ -94,7 +88,7 @@ def read_mech(mech_filename, therm_filename):
     specs = []
     key = ''
 
-    with open(mech_filename, 'r') as file:
+    with open(mech_filename) as file:
         # start line reading loop
         while True:
             line = file.readline()
@@ -103,7 +97,7 @@ def read_mech(mech_filename, therm_filename):
             if not line: break
 
             # skip blank or commented lines
-            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
+            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line): continue
 
             # don't convert to lowercase, since thermo
             # needs to match (for Chemkin)
@@ -255,10 +249,10 @@ def read_mech(mech_filename, therm_filename):
                         # (e.g., '(+)').
                         # If not, part of species name.
                         inParen = sub_str[ind1 + 1: ind2].strip()
-                        if inParen is '+':
+                        if inParen == '+':
                             # '+' embedded within parentheses
                             sub_str = sub_str[ind2 + 1:]
-                        elif inParen[0] is '+':
+                        elif inParen[0] == '+':
                             pdep = True
 
                             # either 'm' or a specific species
@@ -297,7 +291,7 @@ def read_mech(mech_filename, therm_filename):
                         # ensure not last entry
                         if (ind < len(reac_list) - 1):
                             spNext = reac_list[ind + 1]
-                            if sp[len(sp) - 1] is '(' and spNext[0] is ')':
+                            if sp[len(sp) - 1] == '(' and spNext[0] == ')':
                                 reac_list[ind] = sp + '+' + spNext
                                 del reac_list[ind + 1]
 
@@ -353,10 +347,10 @@ def read_mech(mech_filename, therm_filename):
                         # parentheses and not embedded within parentheses
                         # (e.g., '(+)'). If not, part of species name.
                         inParen = sub_str[ind1 + 1: ind2].strip()
-                        if inParen is '+':
+                        if inParen == '+':
                             # '+' embedded within parentheses
                             sub_str = sub_str[ind2 + 1:]
-                        elif inParen[0] is '+':
+                        elif inParen[0] == '+':
                             pdep = True
 
                             # either 'm' or a specific species
@@ -395,7 +389,7 @@ def read_mech(mech_filename, therm_filename):
                         # ensure not last entry
                         if (ind < len(prod_list) - 1):
                             spNext = prod_list[ind + 1]
-                            if sp[len(sp) - 1] is '(' and spNext[0] is ')':
+                            if sp[len(sp) - 1] == '(' and spNext[0] == ')':
                                 prod_list[ind] = sp + '+' + spNext
                                 del prod_list[ind + 1]
 
@@ -565,7 +559,7 @@ def read_mech(mech_filename, therm_filename):
                             do_warn=True
                             par3 = 1e-30
                         if do_warn:
-                            logging.warn(f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                            logging.warning(f'Troe parameters in reaction {len(reacs)} modified to avoid'
                                 ' division by zero!.')
 
                         reacs[-1].troe_par.append(par1)
@@ -621,8 +615,9 @@ def read_mech(mech_filename, therm_filename):
                                                float(line_split[2]) * chem.PA
                                                ]
 
-                        # Look for temperature limits on same line:
-                        if line_split[3].lower() == 'tcheb':
+                        # Temperature limits may share the line, or PCHEB may
+                        # stand alone.
+                        if len(line_split) > 3 and line_split[3].lower() == 'tcheb':
                             reacs[-1].cheb_tlim = [float(line_split[4]),
                                                    float(line_split[5])
                                                    ]
@@ -632,8 +627,9 @@ def read_mech(mech_filename, therm_filename):
                         reacs[-1].cheb_tlim = [float(line_split[1]),
                                                float(line_split[2])
                                                ]
-                        # Look for pressure limits on same line:
-                        if line_split[3].lower() == 'pcheb':
+                        # Pressure limits may share the line, or TCHEB may
+                        # stand alone.
+                        if len(line_split) > 3 and line_split[3].lower() == 'pcheb':
                             reacs[-1].cheb_plim = [float(line_split[4]) * chem.PA,
                                                    float(line_split[5]) * chem.PA
                                                    ]
@@ -762,14 +758,14 @@ def read_thermo(filename, elems, specs):
 
     """
 
-    with open(filename, 'r') as file:
+    with open(filename) as file:
 
         # loop through intro lines
         while True:
             line = file.readline()
 
             # skip blank or commented lines
-            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
+            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line): continue
 
             # skip 'thermo' at beginning
             if 'thermo' in line.lower(): break
@@ -797,7 +793,7 @@ def read_thermo(filename, elems, specs):
             if line is None or line[0:3].lower() == 'end': break
 
             # skip blank/commented line
-            if re.search('^\s*$', line) or re.search('^\s*!', line): continue
+            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line): continue
 
             # species name, columns 0:18
             spec = line[0:18].strip()
@@ -1042,7 +1038,7 @@ def read_mech_ct(filename=None, gas=None):
                     reac.troe_par[2] = 1e-30
                     do_warn = True
                 if do_warn:
-                    logging.warn(f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                    logging.warning(f'Troe parameters in reaction {len(reacs)} modified to avoid'
                                  ' division by zero!.')
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True
@@ -1077,7 +1073,7 @@ def read_mech_ct(filename=None, gas=None):
                     reac.troe_par[2] = 1e-30
                     do_warn = True
                 if do_warn:
-                    logging.warn(f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                    logging.warning(f'Troe parameters in reaction {len(reacs)} modified to avoid'
                                     ' division by zero!.')
             elif rxn.falloff.type == 'SRI':
                 reac.sri = True

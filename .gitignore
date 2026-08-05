@@ -55,6 +55,9 @@ docs/_build/
 #Pycharm stuff
 .idea/
 
+# Local task notes
+.todo
+
 #Mechanism files
 *.txt
 *.dat

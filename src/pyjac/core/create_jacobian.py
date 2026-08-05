@@ -2,10 +2,6 @@
 """Creates source code for calculating analytical Jacobian matrix.
 """
 
-# Python 2 compatibility
-from __future__ import division
-from __future__ import print_function
-
 # Standard libraries
 import sys
 import math
@@ -536,7 +532,7 @@ def write_kc(file, lang, specs, rxn):
         hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] +
                     hi_array[3:]
                     ]
-        if not sp.Trange[1] in coeffs:
+        if sp.Trange[1] not in coeffs:
             coeffs[sp.Trange[1]] = lo_array, hi_array
         else:
             coeffs[sp.Trange[1]] = [lo_array[i] + coeffs[sp.Trange[1]][0][i]
@@ -812,7 +808,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs,
                 continue
 
             dBdT_flag[sp_ind] = True
-            if not specs[sp_ind].Trange[1] in t_mid:
+            if specs[sp_ind].Trange[1] not in t_mid:
                 t_mid[specs[sp_ind].Trange[1]] = []
             t_mid[specs[sp_ind].Trange[1]].append(sp_ind)
 
@@ -1576,10 +1572,16 @@ def write_cheb_ut(file, lang, rxn):
 
     line_list.append('cheb_temp_0 = 1.0')
     line_list.append('cheb_temp_1 = 2.0 * Tred')
-    #finally, do the temperature portion
-    line_list.append('kf = ' + utils.get_array(lang, 'dot_prod', 1) +
-                     ' + 2.0 * Tred * ' + utils.get_array(lang, 'dot_prod', 2)
-                     )
+    # finally, do the temperature portion
+    # d/dTred of the Chebyshev series is a series in Chebyshev polynomials of
+    # the second kind, with U_0 = 1 and U_1 = 2 * Tred. dot_prod is only filled
+    # for indices 1 .. cheb_n_temp - 1, so emit only the terms that exist.
+    terms = []
+    if rxn.cheb_n_temp > 1:
+        terms.append(utils.get_array(lang, 'dot_prod', 1))
+    if rxn.cheb_n_temp > 2:
+        terms.append('2.0 * Tred * ' + utils.get_array(lang, 'dot_prod', 2))
+    line_list.append('kf = ' + (' + '.join(terms) if terms else '0.0'))
 
     update_one = True
     for i in range(3, rxn.cheb_n_temp):
@@ -1849,7 +1851,7 @@ def write_plog_rxn_dt(file, lang, jline, specs, rxn, rxn_ind,
 
 
 def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
-    """Finishes calculation of d(\partial T / \partial t)/dT
+    r"""Finishes calculation of d(\partial T / \partial t)/dT
 
     Parameters
     ----------
@@ -3457,8 +3459,7 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
             print(l)
         sys.exit(2)
 
-    # Reject the incomplete backends before doing any work, rather than failing
-    # part-way through generation with a KeyError on utils.header_ext.
+    # Reject the incomplete backends before any output is written.
     if lang not in utils.supported_langs:
         raise NotImplementedError(
             '{} output is not implemented. The {} backend was never completed '
@@ -3634,23 +3635,3 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
         write_sparse_multiplier(build_path, lang, touched, len(specs))
 
     return 0
-
-
-if __name__ == "__main__":
-    args = utils.get_parser()
-
-    create_jacobian(lang=args.lang,
-                    mech_name=args.input,
-                    therm_name=args.thermo,
-                    optimize_cache=args.cache_optimizer,
-                    initial_state=args.initial_conditions,
-                    num_blocks=args.num_blocks,
-                    num_threads=args.num_threads,
-                    no_shared=args.no_shared,
-                    L1_preferred=args.L1_preferred,
-                    multi_thread=args.multi_thread,
-                    force_optimize=args.force_optimize,
-                    build_path=args.build_path,
-                    last_spec=args.last_species,
-                    auto_diff=args.auto_diff
-                    )

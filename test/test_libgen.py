@@ -2,7 +2,7 @@ import sys
 
 from pyjac.libgen import libgen
 
-class TestLibgen(object):
+class TestLibgen:
     """
     """
     def test_imported(self):

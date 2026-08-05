@@ -1,5 +1,5 @@
-from distutils.core import setup, Extension
-import distutils.ccompiler
+from setuptools import setup, Extension
+from setuptools._distutils.ccompiler import CCompiler
 
 from Cython.Distutils import build_ext
 import parallel_compiler as pcc
@@ -9,7 +9,7 @@ import os
 sources = ['$homepath/pyjacob_wrapper.pyx']
 includes = ['$buildpath/']
 
-distutils.ccompiler.CCompiler.compile = pcc.parallel_compile
+CCompiler.compile = pcc.parallel_compile
 
 ext_modules=[Extension("pyjacob",
      sources=sources,

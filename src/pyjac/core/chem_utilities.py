@@ -2,9 +2,6 @@
 
 """
 
-# Python 2 compatibility
-from __future__ import division
-
 # Standard libraries
 import math
 import numpy as np
@@ -24,13 +21,13 @@ AVAG = 6.0221367e23
 PA = 101325.0
 
 
-class CommonEqualityMixin(object):
+class CommonEqualityMixin:
     """Base class for `ReacInfo` and `SpecInfo` classes for equality comparison
     """
     def __eq__(self, other):
         try:
             for key, value in self.__dict__.items():
-                if not key in other.__dict__:
+                if key not in other.__dict__:
                     return False
                 if isinstance(value, np.ndarray):
                     if not np.array_equal(value, other.__dict__[key]):

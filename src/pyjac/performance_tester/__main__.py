@@ -1,3 +1,4 @@
+from pathlib import Path
 import sys
 import os
 
@@ -23,7 +24,7 @@ def main(args=None):
                                  'any old optimization files found'
                             )
         args = parser.parse_args()
-        pt.performance_tester(os.path.dirname(os.path.abspath(pt.__file__)),
+        pt.performance_tester(str(Path(pt.__file__).resolve().parent),
                               args.working_directory,
                               args.use_old_opt)
 

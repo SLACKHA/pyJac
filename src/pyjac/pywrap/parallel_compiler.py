@@ -1,9 +1,20 @@
 """Module for performing parallel compilation of source code files.
+
+The compiler machinery lives in ``setuptools._distutils``, which is private,
+so it is imported defensively with an actionable error message.
 """
 
 import multiprocessing
 from multiprocessing.pool import ThreadPool
-import distutils.ccompiler
+
+try:
+    from setuptools._distutils.ccompiler import CCompiler
+except ImportError as err:  # pragma: no cover - depends on setuptools layout
+    raise ImportError(
+        'Building the pyJac Python wrapper requires setuptools, which '
+        'provides the compiler machinery that distutils supplied before '
+        "Python 3.12. Install it with: pip install 'pyjac[pywrap]'"
+    ) from err
 
 N = multiprocessing.cpu_count()
 
@@ -39,7 +50,7 @@ def parallel_compile(self, sources, output_dir=None, macros=None,
         List of object files generated
 
     """
-    # those lines are copied from distutils.ccompiler.CCompiler directly
+    # these lines are copied from CCompiler.compile directly
     macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
         output_dir, macros, include_dirs, sources, depends, extra_postargs
         )

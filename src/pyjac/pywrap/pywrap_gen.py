@@ -1,5 +1,6 @@
 """Module for generating Python wrapper around pyJac code.
 """
+from pathlib import Path
 import sys
 import os
 import subprocess
@@ -28,7 +29,7 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
     None
 
     """
-    with open(setupfile, 'r') as file:
+    with open(setupfile) as file:
         src = Template(file.read())
 
     file_data = {'homepath' : home_dir,
@@ -84,7 +85,7 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
     """
 
     source_dir = os.path.normpath(source_dir)
-    home_dir = os.path.abspath(os.path.dirname(__file__))
+    home_dir = str(Path(__file__).resolve().parent)
 
     if out_dir is None:
         out_dir = os.getcwd()

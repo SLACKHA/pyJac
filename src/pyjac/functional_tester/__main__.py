@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from . import test
 from .. import utils
+from pathlib import Path
 import os
 
 if __name__ == '__main__':
@@ -17,7 +18,7 @@ if __name__ == '__main__':
                         )
     parser.add_argument('-b', '--build_dir',
                         type=str,
-                        default='out' + os.path.sep,
+                        default='out' + os.sep,
                         help='The directory the jacob/rates/tester'
                              ' files will be generated and built in'
                         )
@@ -102,7 +103,7 @@ if __name__ == '__main__':
                              ' useful for debugging.'
                         )
     args = parser.parse_args()
-    test.test(args.lang, os.path.dirname(os.path.abspath(test.__file__)),
+    test.test(args.lang, str(Path(test.__file__).resolve().parent),
               args.build_dir, args.mech, args.thermo, args.input,
               args.generate_jacob, args.compile_jacob, args.seed,
               args.pasr_output, args.last_spec, args.cache_optimization,

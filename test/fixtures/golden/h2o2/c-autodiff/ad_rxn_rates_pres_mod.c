@@ -20,7 +20,7 @@ void get_rxn_pres_mod (const adouble T, const adouble& pres, const adouble * __r
   adouble B;
 
   adouble logT = log(T);
-  adouble m = pres / (8.31446210e+03 * T);
+  adouble m = pres / (8.31446262e+03 * T);
 
   // reaction 0;
   pres_mod[0] = m + 1.4 * C[0] + 14.4 * C[5] - 0.17000000000000004 * C[8];
@@ -39,7 +39,7 @@ void get_rxn_pres_mod (const adouble T, const adouble& pres, const adouble * __r
 
   // reaction 20;
   thd = m + 1.0 * C[0] + 5.0 * C[5] - 0.30000000000000004 * C[8];
-  k0 = exp(2.8463930238863654e+01 - 0.9 * logT - (-8.5547326026057669e+02 / T));
+  k0 = exp(2.8463930238863654e+01 - 0.9 * logT - (-8.5547320694790187e+02 / T));
   kinf = exp(2.5027330930150580e+01 - 0.37 * logT);
   Pr = k0 * thd / kinf;
   logFcent = log10( fmax(2.65400000e-01 * exp(-T / 9.40000000e+01) + 7.34600000e-01 * exp(-T / 1.75600000e+03) + exp(-5.18200000e+03 / T), 1.0e-300));

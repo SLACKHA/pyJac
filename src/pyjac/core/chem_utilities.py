@@ -3,22 +3,22 @@
 """
 
 # Standard libraries
+import functools
 import math
+
+import cantera as ct
 import numpy as np
 
 __all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',
            'ReacInfo', 'SpecInfo', 'calc_spec_smh']
 
 # universal gas constants, SI units
-RU = 8314.4621  # J/(kmole * K)
-RU_JOUL = 8.3144621
+RU = ct.gas_constant  # J/(kmole * K)
+RU_JOUL = ct.gas_constant / 1000.
 RUC = (RU / 4.18400)  # cal/(mole * K)
 
-# Avogadro's number
-AVAG = 6.0221367e23
-
 # pressure of one standard atmosphere [Pa]
-PA = 101325.0
+PA = ct.one_atm
 
 
 class CommonEqualityMixin:
@@ -45,8 +45,46 @@ class CommonEqualityMixin:
         return not self.__eq__(other)
 
 
+#: Conventional mass numbers for radioelements that Cantera declines to weigh,
+#: since they have no stable isotopes. Retained from pyJac's original table so
+#: that mechanisms naming them still parse.
+_UNSTABLE_ELEM_WT = {
+    'tc': 99.0, 'pm': 145.0, 'po': 210.0, 'at': 210.0, 'rn': 222.0,
+    'fr': 223.0, 'ra': 226.0, 'ac': 227.0, 'pa': 231.0, 'np': 237.0,
+    'pu': 242.0, 'am': 243.0, 'cm': 247.0, 'bk': 249.0, 'cf': 251.0,
+    'es': 254.0, 'fm': 253.0,
+}
+
+#: Chemkin mechanisms use D for deuterium and E for the electron; Cantera
+#: defines neither as an element.
+_EXTRA_ELEM_WT = {'d': 2.014102, 'e': 5.4857990907e-4}
+
+
+@functools.lru_cache(maxsize=1)
+def _base_elem_wt():
+    """Build the element weight table once; callers get their own copy."""
+    elem_wt = {}
+    for symbol in ct.Element.element_symbols:
+        try:
+            elem_wt[symbol.lower()] = ct.Element(symbol).weight
+        except ct.CanteraError:
+            continue
+
+    elem_wt.update(_UNSTABLE_ELEM_WT)
+    elem_wt.update(_EXTRA_ELEM_WT)
+    return elem_wt
+
+
 def get_elem_wt():
-    """Returns dict with built-in element names and atomic weights [kg/kmol].
+    """Returns dict with element names and atomic weights [kg/kmol].
+
+    Weights come from Cantera, so that a mechanism read through the Chemkin
+    parser and the same mechanism read through Cantera describe identical
+    species masses.
+
+    A fresh dictionary is returned on each call: callers overwrite entries
+    when a mechanism declares its own atomic weights, and those overrides must
+    not leak into the next mechanism read.
 
     Attributes
     ----------
@@ -57,43 +95,7 @@ def get_elem_wt():
     elem_wt : dict
         Dictionary with element name keys and atomic weight [kg/kmol] values.
     """
-    elem_wt = dict([
-        ('h', 1.00794), ('he', 4.00260), ('li', 6.93900),
-        ('be', 9.01220), ('b', 10.81100), ('c', 12.0110),
-        ('n', 14.00674), ('o', 15.99940), ('f', 18.99840),
-        ('ne', 20.18300), ('na', 22.98980), ('mg', 24.31200),
-        ('al', 26.98150), ('si', 28.08600), ('p', 30.97380),
-        ('s', 32.06400), ('cl', 35.45300), ('ar', 39.94800),
-        ('k', 39.10200), ('ca', 40.08000), ('sc', 44.95600),
-        ('ti', 47.90000), ('v', 50.94200), ('cr', 51.99600),
-        ('mn', 54.93800), ('fe', 55.84700), ('co', 58.93320),
-        ('ni', 58.71000), ('cu', 63.54000), ('zn', 65.37000),
-        ('ga', 69.72000), ('ge', 72.59000), ('as', 74.92160),
-        ('se', 78.96000), ('br', 79.90090), ('kr', 83.80000),
-        ('rb', 85.47000), ('sr', 87.62000), ('y', 88.90500),
-        ('zr', 91.22000), ('nb', 92.90600), ('mo', 95.94000),
-        ('tc', 99.00000), ('ru', 101.07000), ('rh', 102.90500),
-        ('pd', 106.40000), ('ag', 107.87000), ('cd', 112.40000),
-        ('in', 114.82000), ('sn', 118.69000), ('sb', 121.75000),
-        ('te', 127.60000), ('i', 126.90440), ('xe', 131.30000),
-        ('cs', 132.90500), ('ba', 137.34000), ('la', 138.91000),
-        ('ce', 140.12000), ('pr', 140.90700), ('nd', 144.24000),
-        ('pm', 145.00000), ('sm', 150.35000), ('eu', 151.96000),
-        ('gd', 157.25000), ('tb', 158.92400), ('dy', 162.50000),
-        ('ho', 164.93000), ('er', 167.26000), ('tm', 168.93400),
-        ('yb', 173.04000), ('lu', 174.99700), ('hf', 178.49000),
-        ('ta', 180.94800), ('w', 183.85000), ('re', 186.20000),
-        ('os', 190.20000), ('ir', 192.20000), ('pt', 195.09000),
-        ('au', 196.96700), ('hg', 200.59000), ('tl', 204.37000),
-        ('pb', 207.19000), ('bi', 208.98000), ('po', 210.00000),
-        ('at', 210.00000), ('rn', 222.00000), ('fr', 223.00000),
-        ('ra', 226.00000), ('ac', 227.00000), ('th', 232.03800),
-        ('pa', 231.00000), ('u', 238.03000), ('np', 237.00000),
-        ('pu', 242.00000), ('am', 243.00000), ('cm', 247.00000),
-        ('bk', 249.00000), ('cf', 251.00000), ('es', 254.00000),
-        ('fm', 253.00000), ('d', 2.01410), ('e', 5.48578e-4)
-    ])
-    return elem_wt
+    return dict(_base_elem_wt())
 
 
 class ReacInfo(CommonEqualityMixin):

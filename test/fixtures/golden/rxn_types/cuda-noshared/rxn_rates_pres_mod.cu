@@ -20,7 +20,7 @@ __device__ void get_rxn_pres_mod (const double T, const double pres, const doubl
   register double X;
 
   register double logT = log(T);
-  register double m = pres / (8.31446210e+03 * T);
+  register double m = pres / (8.31446262e+03 * T);
 
   // reaction 4;
   pres_mod[INDEX(0)] = m + 1.5 * C[INDEX(0)] + 11.0 * C[INDEX(5)] - 0.25 * C[INDEX(8)];
@@ -37,8 +37,8 @@ __device__ void get_rxn_pres_mod (const double T, const double pres, const doubl
 
   // reaction 6;
   thd = m + 1.5 * C[INDEX(0)] + 11.0 * C[INDEX(5)] - 0.36 * C[INDEX(8)];
-  k0 = exp(3.2420178138029655e+01 - (2.2896490201091907e+04 / T));
-  kinf = exp(3.3318335397877441e+01 - (2.4370923526129252e+04 / T));
+  k0 = exp(3.2420178138029655e+01 - (2.2896488774193844e+04 / T));
+  kinf = exp(3.3318335397877441e+01 - (2.4370922007345227e+04 / T));
   Pr = k0 * thd / kinf;
   X = 1.0 / (1.0 + log10(fmax(Pr, 1.0e-300)) * log10(fmax(Pr, 1.0e-300)));
   pres_mod[INDEX(2)] = pow(0.54 * exp(-201.0 / T) + exp(-T / 1024.0), X) * Pr / (1.0 + Pr);

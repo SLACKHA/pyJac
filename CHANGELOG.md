@@ -6,11 +6,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
-Modernization work in progress. Generated source output is unchanged: the
-characterization tests in `test/test_golden_output.py` assert byte-identical
-C and CUDA output against fixtures recorded from 1.0.6.
+Modernization work in progress. The characterization tests in
+`test/test_golden_output.py` assert byte-identical C and CUDA output against
+recorded fixtures, so every refactor here is verified to leave generated source
+untouched. The one deliberate exception is the atomic weight change described
+below, whose effect was confirmed to be limited to molecular weights by
+regenerating with the old table and diffing.
 
 ### Added
+- Reader-equivalence tests comparing the mechanism the Chemkin parser builds
+  against the one Cantera builds from the same source, field by field. These
+  are the safety net for the Cantera 3.x port and are currently strict xfails.
 - Golden-output fixtures and characterization tests covering C and CUDA
   generation, the Adept autodifferentiation variant, CUDA without the
   shared-memory manager, generator determinism, and warning-free compilation
@@ -37,6 +43,15 @@ C and CUDA output against fixtures recorded from 1.0.6.
   inside generation
 
 ### Changed
+- Atomic weights now come from `cantera.Element` rather than a hardcoded table
+  taken from an older IUPAC revision, so a mechanism read through the Chemkin
+  parser and through Cantera describes identical species masses. **This changes
+  generated source**: molecular weights and quantities derived from them shift
+  by up to ~6e-5 relative (for example H2 from 2.01588 to 2.016).
+- The physical constants `RU`, `RU_JOUL`, `RUC` and `PA` now come from Cantera
+  (2018 CODATA) rather than being hardcoded. **This also changes generated
+  source**: the gas constant shifts by ~6e-8 relative, from 8314.4621 to
+  8314.462618.
 - Moved the package to a `src/` layout (`pyjac/` -> `src/pyjac/`) and the test
   suite out of the package to a top-level `test/` directory
 - Tests now import `pyjac` absolutely, so they exercise the installed package

@@ -46,6 +46,28 @@ def golden_dir():
 
 
 @pytest.fixture
+def to_cantera_yaml(tmp_path):
+    """Convert a Chemkin mechanism to Cantera YAML, returning the new path.
+
+    Converting on demand rather than committing a second copy keeps the two
+    readers provably fed from the same source mechanism.
+    """
+    ck2yaml = pytest.importorskip('cantera.ck2yaml')
+
+    def convert(chemkin_path, thermo_path=None):
+        chemkin_path = pathlib.Path(chemkin_path)
+        out_name = tmp_path / (chemkin_path.stem + '.yaml')
+        ck2yaml.convert(str(chemkin_path),
+                        thermo_file=str(thermo_path) if thermo_path else None,
+                        out_name=str(out_name),
+                        permissive=True,
+                        quiet=True)
+        return out_name
+
+    return convert
+
+
+@pytest.fixture
 def c_compiler():
     """Path to a C compiler, skipping the test if none is available."""
     for candidate in ('cc', 'gcc', 'clang'):

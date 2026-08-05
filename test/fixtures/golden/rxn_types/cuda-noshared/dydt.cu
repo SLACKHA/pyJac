@@ -40,24 +40,24 @@ __device__ void dydt (const double t, const double pres, const double * __restri
   double * __restrict__ h = d_mem->h;
   eval_h(y[INDEX(0)], h);
   // rate of change of temperature
-  dy[INDEX(0)] = (-1.0 / (rho * cp_avg)) * ((spec_rates[INDEX(0)] * h[INDEX(0)] * 2.0158800000000001e+00)
-        + (spec_rates[INDEX(1)] * h[INDEX(1)] * 1.0079400000000001e+00)
-        + (spec_rates[INDEX(2)] * h[INDEX(2)] * 1.5999400000000000e+01)
-        + (spec_rates[INDEX(3)] * h[INDEX(3)] * 3.1998799999999999e+01)
-        + (spec_rates[INDEX(4)] * h[INDEX(4)] * 1.7007339999999999e+01)
-        + (spec_rates[INDEX(5)] * h[INDEX(5)] * 1.8015280000000001e+01)
-        + (spec_rates[INDEX(6)] * h[INDEX(6)] * 3.3006740000000001e+01)
-        + (spec_rates[INDEX(7)] * h[INDEX(7)] * 3.4014679999999998e+01));
+  dy[INDEX(0)] = (-1.0 / (rho * cp_avg)) * ((spec_rates[INDEX(0)] * h[INDEX(0)] * 2.0160000000000000e+00)
+        + (spec_rates[INDEX(1)] * h[INDEX(1)] * 1.0080000000000000e+00)
+        + (spec_rates[INDEX(2)] * h[INDEX(2)] * 1.5999000000000001e+01)
+        + (spec_rates[INDEX(3)] * h[INDEX(3)] * 3.1998000000000001e+01)
+        + (spec_rates[INDEX(4)] * h[INDEX(4)] * 1.7007000000000001e+01)
+        + (spec_rates[INDEX(5)] * h[INDEX(5)] * 1.8015000000000001e+01)
+        + (spec_rates[INDEX(6)] * h[INDEX(6)] * 3.3006000000000000e+01)
+        + (spec_rates[INDEX(7)] * h[INDEX(7)] * 3.4014000000000003e+01));
 
   // calculate rate of change of species mass fractions
-  dy[INDEX(1)] = spec_rates[INDEX(0)] * (2.0158800000000001e+00 / rho);
-  dy[INDEX(2)] = spec_rates[INDEX(1)] * (1.0079400000000001e+00 / rho);
-  dy[INDEX(3)] = spec_rates[INDEX(2)] * (1.5999400000000000e+01 / rho);
-  dy[INDEX(4)] = spec_rates[INDEX(3)] * (3.1998799999999999e+01 / rho);
-  dy[INDEX(5)] = spec_rates[INDEX(4)] * (1.7007339999999999e+01 / rho);
-  dy[INDEX(6)] = spec_rates[INDEX(5)] * (1.8015280000000001e+01 / rho);
-  dy[INDEX(7)] = spec_rates[INDEX(6)] * (3.3006740000000001e+01 / rho);
-  dy[INDEX(8)] = spec_rates[INDEX(7)] * (3.4014679999999998e+01 / rho);
+  dy[INDEX(1)] = spec_rates[INDEX(0)] * (2.0160000000000000e+00 / rho);
+  dy[INDEX(2)] = spec_rates[INDEX(1)] * (1.0080000000000000e+00 / rho);
+  dy[INDEX(3)] = spec_rates[INDEX(2)] * (1.5999000000000001e+01 / rho);
+  dy[INDEX(4)] = spec_rates[INDEX(3)] * (3.1998000000000001e+01 / rho);
+  dy[INDEX(5)] = spec_rates[INDEX(4)] * (1.7007000000000001e+01 / rho);
+  dy[INDEX(6)] = spec_rates[INDEX(5)] * (1.8015000000000001e+01 / rho);
+  dy[INDEX(7)] = spec_rates[INDEX(6)] * (3.3006000000000000e+01 / rho);
+  dy[INDEX(8)] = spec_rates[INDEX(7)] * (3.4014000000000003e+01 / rho);
 
 } // end dydt
 
@@ -97,24 +97,24 @@ __device__ void dydt (const double t, const double rho, const double * __restric
   eval_u (y[INDEX(0)], u);
 
   // rate of change of temperature
-  dy[INDEX(0)] = (-1.0 / (rho * cv_avg)) * ((spec_rates[INDEX(0)] * u[INDEX(0)] * 2.0158800000000001e+00)
-        + (spec_rates[INDEX(1)] * u[INDEX(1)] * 1.0079400000000001e+00)
-        + (spec_rates[INDEX(2)] * u[INDEX(2)] * 1.5999400000000000e+01)
-        + (spec_rates[INDEX(3)] * u[INDEX(3)] * 3.1998799999999999e+01)
-        + (spec_rates[INDEX(4)] * u[INDEX(4)] * 1.7007339999999999e+01)
-        + (spec_rates[INDEX(5)] * u[INDEX(5)] * 1.8015280000000001e+01)
-        + (spec_rates[INDEX(6)] * u[INDEX(6)] * 3.3006740000000001e+01)
-        + (spec_rates[INDEX(7)] * u[INDEX(7)] * 3.4014679999999998e+01));
+  dy[INDEX(0)] = (-1.0 / (rho * cv_avg)) * ((spec_rates[INDEX(0)] * u[INDEX(0)] * 2.0160000000000000e+00)
+        + (spec_rates[INDEX(1)] * u[INDEX(1)] * 1.0080000000000000e+00)
+        + (spec_rates[INDEX(2)] * u[INDEX(2)] * 1.5999000000000001e+01)
+        + (spec_rates[INDEX(3)] * u[INDEX(3)] * 3.1998000000000001e+01)
+        + (spec_rates[INDEX(4)] * u[INDEX(4)] * 1.7007000000000001e+01)
+        + (spec_rates[INDEX(5)] * u[INDEX(5)] * 1.8015000000000001e+01)
+        + (spec_rates[INDEX(6)] * u[INDEX(6)] * 3.3006000000000000e+01)
+        + (spec_rates[INDEX(7)] * u[INDEX(7)] * 3.4014000000000003e+01));
 
   // calculate rate of change of species mass fractions
-  dy[INDEX(1)] = spec_rates[INDEX(0)] * (2.0158800000000001e+00 / rho);
-  dy[INDEX(2)] = spec_rates[INDEX(1)] * (1.0079400000000001e+00 / rho);
-  dy[INDEX(3)] = spec_rates[INDEX(2)] * (1.5999400000000000e+01 / rho);
-  dy[INDEX(4)] = spec_rates[INDEX(3)] * (3.1998799999999999e+01 / rho);
-  dy[INDEX(5)] = spec_rates[INDEX(4)] * (1.7007339999999999e+01 / rho);
-  dy[INDEX(6)] = spec_rates[INDEX(5)] * (1.8015280000000001e+01 / rho);
-  dy[INDEX(7)] = spec_rates[INDEX(6)] * (3.3006740000000001e+01 / rho);
-  dy[INDEX(8)] = spec_rates[INDEX(7)] * (3.4014679999999998e+01 / rho);
+  dy[INDEX(1)] = spec_rates[INDEX(0)] * (2.0160000000000000e+00 / rho);
+  dy[INDEX(2)] = spec_rates[INDEX(1)] * (1.0080000000000000e+00 / rho);
+  dy[INDEX(3)] = spec_rates[INDEX(2)] * (1.5999000000000001e+01 / rho);
+  dy[INDEX(4)] = spec_rates[INDEX(3)] * (3.1998000000000001e+01 / rho);
+  dy[INDEX(5)] = spec_rates[INDEX(4)] * (1.7007000000000001e+01 / rho);
+  dy[INDEX(6)] = spec_rates[INDEX(5)] * (1.8015000000000001e+01 / rho);
+  dy[INDEX(7)] = spec_rates[INDEX(6)] * (3.3006000000000000e+01 / rho);
+  dy[INDEX(8)] = spec_rates[INDEX(7)] * (3.4014000000000003e+01 / rho);
 
 } // end dydt
 

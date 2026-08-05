@@ -3,7 +3,7 @@ from setuptools._distutils.ccompiler import CCompiler
 
 from Cython.Distutils import build_ext
 from Cython.Build import cythonize
-import parallel_compiler as pcc
+from pyjac.pywrap import parallel_compiler as pcc
 import numpy
 import os
 

@@ -3,12 +3,13 @@
 from pathlib import Path
 import sys
 import os
+import shutil
 import subprocess
 from string import Template
 
 from ..libgen import generate_library
 
-def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
+def generate_setup(setupfile, home_dir, build_dir, out_dir, libname, setup_path):
     """Helper method to fill in the template .in files
 
     Parameters
@@ -23,6 +24,9 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
         Output directory path
     libname : str
         Library name
+    setup_path : str
+        Path to write the filled-in setup script to. This is kept out of the
+        package directory, which is typically read-only once installed.
 
     Returns
     -------
@@ -38,7 +42,9 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname):
                  'outpath' : out_dir
                  }
     src = src.safe_substitute(file_data)
-    with open(setupfile[:setupfile.rindex('.in')], 'w') as file:
+
+    Path(setup_path).parent.mkdir(parents=True, exist_ok=True)
+    with open(setup_path, 'w') as file:
         file.write(src)
 
 
@@ -85,12 +91,21 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
     """
 
     source_dir = os.path.normpath(source_dir)
-    home_dir = str(Path(__file__).resolve().parent)
+    package_dir = Path(__file__).resolve().parent
 
     if out_dir is None:
         out_dir = os.getcwd()
 
     distutils_build = os.path.join('build', distutils_dir_name('temp'))
+
+    # Cython writes its generated .c next to the .pyx it compiles, so the
+    # wrapper sources are staged into the build directory rather than compiled
+    # in place; the package directory is read-only in a normal installation.
+    home_dir = os.path.join(distutils_build, 'pywrap_src')
+    Path(home_dir).mkdir(parents=True, exist_ok=True)
+    for pattern in ('*.pyx', '*.pxd', '*.c', '*.h', '*.cu', '*.cuh'):
+        for src in package_dir.glob(pattern):
+            shutil.copy2(src, Path(home_dir) / src.name)
 
     shared = False
     ext = '.so' if shared else '.a'
@@ -117,13 +132,14 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         print(f'Language {lang} not recognized')
         sys.exit(-1)
 
-    generate_setup(os.path.join(home_dir, setupfile), home_dir, source_dir,
-                   distutils_build, lib
+    setup_path = os.path.join(distutils_build, setupfile[:setupfile.index('.in')])
+    generate_setup(os.path.join(package_dir, setupfile), home_dir, source_dir,
+                   distutils_build, lib, setup_path
                    )
 
-    python_str = f'python{sys.version_info[0]}.{sys.version_info[1]}'
-
-    subprocess.check_call([python_str, os.path.join(home_dir,
-                           setupfile[:setupfile.index('.in')]),
+    # sys.executable, not a reconstructed pythonX.Y name: the latter resolves
+    # against PATH and so escapes the active virtual environment, where Cython,
+    # NumPy and setuptools are installed.
+    subprocess.check_call([sys.executable, setup_path,
                            'build_ext', '--build-lib', out_dir
                            ])

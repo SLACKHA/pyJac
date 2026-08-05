@@ -1,18 +1,23 @@
 """Tests for pyjac.pywrap.
 
-``parallel_compiler`` and the four ``*_setup.py.in`` templates now use
-``setuptools._distutils`` instead of ``distutils``, which was removed from the
+``parallel_compiler`` and the four ``*_setup.py.in`` templates use
+``setuptools._distutils`` rather than ``distutils``, which was removed from the
 standard library in Python 3.12.
 """
 
 import ast
+import subprocess
 import sys
+import textwrap
 from pathlib import Path
 from string import Template
 
 import pytest
 
-from pyjac.pywrap import parallel_compiler, pywrap_gen
+from pyjac.core.create_jacobian import create_jacobian
+from pyjac.pywrap import generate_wrapper, parallel_compiler, pywrap_gen
+
+from conftest import GOLDEN_MECHS
 
 TEMPLATE_DIR = Path(parallel_compiler.__file__).parent
 TEMPLATES = sorted(TEMPLATE_DIR.glob('*_setup.py.in'))
@@ -52,3 +57,73 @@ def test_template_is_valid_python_once_filled_in(template):
         outpath='/tmp/out', libname='libc_pyjac.a',
     )
     ast.parse(filled, filename=template.name)
+
+
+def test_build_invokes_the_running_interpreter():
+    """The wrapper build must use sys.executable.
+
+    Reconstructing a ``pythonX.Y`` name resolves it against PATH, which escapes
+    the active virtual environment and lands on an interpreter without Cython,
+    NumPy or setuptools installed.
+    """
+    source = Path(pywrap_gen.__file__).read_text()
+    assert 'sys.executable' in source
+    assert 'python{sys.version_info' not in source
+    assert "f'python{" not in source
+
+
+@pytest.mark.parametrize('template', TEMPLATES, ids=lambda p: p.name)
+def test_templates_import_parallel_compiler_absolutely(template):
+    """Templates must not rely on living beside parallel_compiler.
+
+    The filled-in setup script is written to the build directory, so a bare
+    ``import parallel_compiler`` would not resolve.
+    """
+    text = template.read_text()
+    assert 'from pyjac.pywrap import parallel_compiler' in text
+    assert '\nimport parallel_compiler' not in text
+
+
+@pytest.mark.compiler
+@pytest.mark.slow
+def test_generate_wrapper_end_to_end(tmp_path, monkeypatch, c_compiler):
+    """Generate, compile, wrap, import, and call the built module.
+
+    Exercises the whole pipeline: Chemkin input to C, C to a static library,
+    Cython wrapper, and finally the extension module's own entry points.
+    """
+    pytest.importorskip('Cython', reason='building the wrapper requires Cython')
+    pytest.importorskip('setuptools', reason='building the wrapper requires setuptools')
+
+    monkeypatch.chdir(tmp_path)
+    create_jacobian('c', mech_name=str(GOLDEN_MECHS['h2o2']), build_path='out')
+    generate_wrapper('c', 'out', out_dir=str(tmp_path))
+
+    built = list(tmp_path.glob('pyjacob*.so'))
+    assert built, f'no extension module produced; got {list(tmp_path.iterdir())}'
+
+    # the package directory must stay clean -- it is read-only once installed.
+    # Cython emits its .c beside the .pyx it compiles, so the wrapper sources
+    # are staged into the build directory first.
+    stray = [p for p in TEMPLATE_DIR.glob('*_setup.py')]
+    stray += [p for p in TEMPLATE_DIR.glob('*_wrapper.c')]
+    assert not stray, f'wrapper build wrote into the package directory: {stray}'
+
+    script = textwrap.dedent(
+        """
+        import numpy as np, pyjacob
+        y = np.zeros(9); y[0] = 1000.0; y[1] = 0.05; y[2] = 0.2
+        dy = np.zeros(9)
+        pyjacob.py_dydt(0.0, 101325.0, y, dy)
+        jac = np.zeros(81)
+        pyjacob.py_eval_jacobian(0.0, 101325.0, y, jac)
+        assert np.all(np.isfinite(dy)), 'dydt produced non-finite values'
+        assert np.all(np.isfinite(jac)), 'jacobian produced non-finite values'
+        assert np.count_nonzero(jac) > 0, 'jacobian is entirely zero'
+        print('OK')
+        """
+    )
+    result = subprocess.run([sys.executable, '-c', script],
+                            cwd=tmp_path, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert 'OK' in result.stdout

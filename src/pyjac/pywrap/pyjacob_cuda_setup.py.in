@@ -7,7 +7,7 @@ import subprocess
 import numpy
 
 from setuptools._distutils.ccompiler import CCompiler
-import parallel_compiler as pcc
+from pyjac.pywrap import parallel_compiler as pcc
 CCompiler.compile = pcc.parallel_compile
 
 def find_in_path(name, path):

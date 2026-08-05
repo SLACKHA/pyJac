@@ -61,6 +61,12 @@ C and CUDA output against fixtures recorded from 1.0.6.
 - Path parsing now uses `pathlib` rather than `os.path`
 
 ### Fixed
+- `pywrap.generate_wrapper` built the wrapper with a reconstructed `pythonX.Y`
+  name resolved against `PATH`, escaping the active environment and its
+  Cython, NumPy and setuptools. It now uses `sys.executable`.
+- The wrapper build wrote the filled-in setup script and Cython's generated
+  `.c` into the package directory, which is read-only in a normal install.
+  Both now go to the build directory.
 - The Cantera version check rejected every 3.x release and called
   `sys.exit(1)` at import time, making `import pyjac` fail outright
   with modern Cantera. It now compares versions as a tuple and warns

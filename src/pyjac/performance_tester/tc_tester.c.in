@@ -1,0 +1,47 @@
+#include <stdio.h>
+#include "header.h"
+#include "timer.h"
+
+void read_initial_conditions(const char* filename, int NUM, double** y_host, double** variable_host);
+
+int main(int argc, char *argv[])
+{
+
+  char mechfile[100] = "$mechfile";
+  char thermofile[100] = "$thermofile";
+
+  int num_odes = 1;
+  if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
+  {
+      exit(-1);
+  }
+  int num_threads = 1;
+  if (sscanf(argv[2], "%i", &num_threads) !=1 || (num_threads <= 0))
+  {
+    exit(-1);
+  }
+  omp_set_num_threads(num_threads);
+
+  double* y_host;
+  double* var_host;
+
+  read_initial_conditions("$datafile", num_odes, &y_host, &var_host);
+
+  /* Initialize TC library */
+  int withtab = 0;
+  TC_initChem( mechfile, thermofile, withtab, 1.0) ;
+
+  StartTimer();
+  #pragma omp parallel for
+  for(int tid = 0; tid < num_odes; ++tid)
+  {
+      double jac[NSP * NSP] = {0};
+      TC_setThermoPres(var_host[tid]) ;
+      TC_getJacTYNm1anl ( &y_host[tid * NN], NSP, jac ) ;
+  }
+  double runtime = GetTimer();
+  printf("%d,%.15le\n", num_odes, runtime);
+  free(y_host);
+  free(var_host);
+  return 0;
+}

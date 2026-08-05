@@ -1,0 +1,50 @@
+cff-version: 1.2.0
+message: 'If you use this software, please cite it using these metadata.'
+title: pyJac
+abstract: >-
+  Creates C and CUDA analytical Jacobian source code for chemical kinetics
+  ODE systems.
+type: software
+authors:
+  - given-names: Kyle
+    name-particle: E.
+    family-names: Niemeyer
+    email: kyle.niemeyer@oregonstate.edu
+    orcid: 'https://orcid.org/0000-0003-4425-7097'
+    affiliation: Oregon State University
+  - given-names: Nicholas
+    name-particle: J.
+    family-names: Curtis
+    email: arghdos@gmail.com
+    orcid: 'https://orcid.org/0000-0002-0303-4711'
+version: 1.0.6
+doi: 10.5281/zenodo.1182789
+license: MIT
+repository-code: 'https://github.com/SLACKHA/pyJac'
+url: 'https://slackha.github.io/pyJac/'
+keywords:
+  - chemical kinetics
+  - Jacobian
+  - ODE system
+  - combustion
+preferred-citation:
+  type: article
+  title: >-
+    pyJac: Analytical Jacobian generator for chemical kinetics
+  authors:
+    - given-names: Kyle
+      name-particle: E.
+      family-names: Niemeyer
+      orcid: 'https://orcid.org/0000-0003-4425-7097'
+    - given-names: Nicholas
+      name-particle: J.
+      family-names: Curtis
+      orcid: 'https://orcid.org/0000-0002-0303-4711'
+    - given-names: Chih-Jen
+      family-names: Sung
+  journal: Computer Physics Communications
+  volume: 215
+  start: 188
+  end: 203
+  year: 2017
+  doi: 10.1016/j.cpc.2017.02.004

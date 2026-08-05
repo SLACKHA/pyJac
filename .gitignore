@@ -71,6 +71,9 @@ mechs/
 #Figures folder
 Figures/
 
+# Test fixtures are tracked, despite the mechanism-file patterns above
+!test/fixtures/**
+
 # generated wrappers
 pyjacob_wrapper.c
 pytchem_wrapper.c

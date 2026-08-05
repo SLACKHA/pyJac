@@ -1,0 +1,124 @@
+[build-system]
+requires = ['hatchling']
+build-backend = 'hatchling.build'
+
+[project]
+name = 'pyjac'
+dynamic = ['version']
+description = 'Create analytical Jacobian matrix source code for chemical kinetics'
+readme = 'README.md'
+requires-python = '>=3.10'
+license = 'MIT'
+license-files = ['LICENSE']
+authors = [
+    {name = 'Kyle E. Niemeyer', email = 'kyleniemeyer@fastmail.com'},
+    {name = 'Nicholas Curtis', email = 'arghdos@gmail.com'},
+]
+maintainers = [
+    {name = 'Kyle E. Niemeyer', email = 'kyleniemeyer@fastmail.com'},
+]
+keywords = ['chemical kinetics', 'analytical Jacobian', 'combustion']
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Science/Research',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Programming Language :: Python :: 3.14',
+    'Topic :: Scientific/Engineering',
+    'Topic :: Scientific/Engineering :: Physics',
+    'Topic :: Software Development :: Code Generators',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+]
+dependencies = [
+    'numpy>=1.24',
+    'pyyaml>=6.0',
+    'cantera>=3.0',
+]
+
+[project.optional-dependencies]
+# Needed only to build the Python wrapper around generated source (pyjac.pywrap).
+pywrap = ['cython>=3.0', 'setuptools>=64']
+# Needed only for the experimental greedy cache optimizer (-co / --cache-optimizer).
+cache-opt = ['bitarray>=3.0']
+test = ['pytest>=8.0', 'pytest-cov>=5.0']
+docs = [
+    'sphinx>=8.0',
+    'furo>=2024.8.6',
+    'myst-parser>=4.0',
+]
+
+[project.scripts]
+pyjac = 'pyjac.__main__:main'
+
+[project.urls]
+Homepage = 'https://github.com/SLACKHA/pyJac'
+Documentation = 'https://slackha.github.io/pyJac/'
+Repository = 'https://github.com/SLACKHA/pyJac'
+Issues = 'https://github.com/SLACKHA/pyJac/issues'
+Changelog = 'https://github.com/SLACKHA/pyJac/blob/main/CHANGELOG.md'
+
+[tool.hatch.version]
+path = 'src/pyjac/_version.py'
+
+[tool.hatch.build.targets.wheel]
+packages = ['src/pyjac']
+
+[tool.hatch.build.targets.sdist]
+only-include = ['src/pyjac', 'README.md', 'LICENSE', 'pyproject.toml', 'CITATION.cff']
+
+[tool.pytest.ini_options]
+minversion = '8.0'
+testpaths = ['test']
+addopts = '-ra --strict-markers --strict-config'
+markers = [
+    'compiler: requires a working C compiler on PATH',
+    'cuda: requires the CUDA toolkit (nvcc) on PATH',
+    'slow: long-running test',
+]
+
+[tool.coverage.run]
+source = ['pyjac']
+branch = true
+
+[tool.coverage.report]
+exclude_also = [
+    'if TYPE_CHECKING:',
+    'raise NotImplementedError',
+    "if __name__ == .__main__.:",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = 'py310'
+src = ['src', 'test']
+extend-exclude = ['test/fixtures']
+
+[tool.ruff.lint]
+select = [
+    'E',    # pycodestyle errors
+    'F',    # pyflakes
+    'W',    # pycodestyle warnings
+    'I',    # isort
+    'UP',   # pyupgrade
+    'B',    # flake8-bugbear
+    'C4',   # flake8-comprehensions
+]
+ignore = [
+    'E501',  # line length is handled by the formatter
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Generator templates are filled in by string substitution, not imported directly.
+'src/pyjac/pywrap/*.in' = ['ALL']
+
+[tool.ruff.lint.isort]
+known-first-party = ['pyjac']
+
+[tool.ruff.format]
+quote-style = 'single'

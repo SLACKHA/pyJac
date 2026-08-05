@@ -4,6 +4,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [Unreleased]
+
+Modernization work in progress. Generated source output is unchanged: the
+characterization tests in `test/test_golden_output.py` assert byte-identical
+C and CUDA output against fixtures recorded from 1.0.6.
+
+### Added
+- Golden-output fixtures and characterization tests covering C and CUDA
+  generation, generator determinism, and warning-free compilation of the
+  generated C (`test/fixtures/`, `test/test_golden_output.py`)
+- `test/fixtures/mechanisms/rxn_types.inp`, a fixture mechanism exercising
+  third-body, Troe falloff, SRI falloff, PLOG, Chebyshev, duplicate,
+  irreversible, and explicit-reverse reactions
+- `test/regenerate_golden.py` to re-record fixtures when generated output
+  changes intentionally
+- `pyproject.toml` with PEP 621 metadata, optional-dependency extras
+  (`pywrap`, `cache-opt`, `test`, `docs`), and ruff/pytest/coverage config,
+  built with hatchling
+- `.pre-commit-config.yaml` (ruff hooks staged but disabled pending the
+  one-time lint cleanup)
+
+### Changed
+- Replaces CodeMeta files with `CITATION.cff`
+- Moved the package to a `src/` layout (`pyjac/` -> `src/pyjac/`) and the test
+  suite out of the package to a top-level `test/` directory
+- Tests now import `pyjac` absolutely, so they exercise the installed package
+- `requires-python` is now `>=3.10`, the floor set by Cantera 3.x
+- `_version.py` exposes `__version__` as a literal so build backends can read
+  it without importing the package
+
+### Fixed
+- Cantera version check rejected every 3.x release and called `sys.exit(1)` at
+  import time, making `import pyjac` fail outright with modern Cantera. It now
+  compares versions as a tuple and warns instead of exiting.
+
+### Removed
+- `setup.py`, `setup.cfg`, `MANIFEST.in` (superseded by `pyproject.toml`)
+- `conda.recipe/` and `test-environment.yaml`; distribution is now PyPI-only
+- The source distribution no longer carries the test suite, example mechanisms,
+  or documentation sources. Those are development content and remain in the git
+  repository; the sdist now holds only what is needed to install and run pyJac,
+  which took it from 355 KB to 101 KB. The wheel payload is unchanged.
+
+### Known issues (not yet addressed)
+- `pyjac.pywrap.parallel_compiler` and the `pywrap` setup templates still
+  import `distutils`, removed from the stdlib in Python 3.12
+- `pyjac.functional_tester` and `pyjac.performance_tester` still import
+  `cantera.ck2cti`, removed in Cantera 3.0
+- `read_mech_ct` still dispatches on Cantera reaction classes removed in 3.0
+- Fortran and Matlab generation raise `KeyError` on the first write, as
+  `utils.header_ext` defines only `c` and `cuda`; this predates 1.0.6
+- A Chebyshev reaction with two or fewer temperature coefficients generates an
+  out-of-bounds read on `dot_prod` in `jacob.c`
+- A standalone `TCHEB/ ... /` line (not followed by `PCHEB` on the same line)
+  raises `IndexError` in the Chemkin parser
+
 ## [1.0.6] - 2018-02-21
 ### Added
 - DOI for 1.0.4

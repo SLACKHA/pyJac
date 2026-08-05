@@ -1,0 +1,168 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <helper_cuda.h>
+#include "header.cuh"
+#include "timer.h"
+#include "gpu_memory.cuh"
+#include "launch_bounds.cuh"
+
+#ifdef FINITE_DIFF
+__device__
+void eval_jacob (const double, const double, const double *, double *, const mechanism_memory*,
+                       double*);
+#else
+#include "jacob.cuh"
+#endif
+
+__host__
+void read_initial_conditions(const char*, int, double**, double**);
+
+__global__
+#ifdef FINITE_DIFF
+void jac_driver(int NUM, const double* pres, const double* y, const mechanism_memory* d_mem, double* y_temp)
+#else
+void jac_driver(int NUM, const double* pres, const double* y, const mechanism_memory* d_mem)
+#endif
+{
+    if (T_ID < NUM)
+    {
+    #ifdef FINITE_DIFF
+        eval_jacob (0, pres[T_ID], y, d_mem->jac, d_mem, y_temp);
+    #else
+        eval_jacob (0, pres[T_ID], y, d_mem->jac, d_mem);
+    #endif
+    }
+}
+
+inline void memcpy2D_in(double* dst, const int pitch_dst, double const * src, const int pitch_src,
+                                     const int offset, const size_t width, const int height) {
+    for (int i = 0; i < height; ++i)
+    {
+        memcpy(dst, &src[offset], width);
+        dst += pitch_dst;
+        src += pitch_src;
+    }
+}
+
+int main (int argc, char *argv[])
+{
+    int num_odes = 1;
+    if (sscanf(argv[1], "%i", &num_odes) !=1 || (num_odes <= 0))
+    {
+        exit(1);
+    }
+
+    cudaErrorCheck (cudaSetDevice (0) );
+    //reset device
+    cudaErrorCheck( cudaDeviceReset() );
+    //bump up shared mem bank size
+    cudaErrorCheck(cudaDeviceSetSharedMemConfig(cudaSharedMemBankSizeEightByte));
+    //prefer L1 for speed
+    cudaErrorCheck(cudaDeviceSetCacheConfig(cudaFuncCachePreferL1));
+    //determine maximum # of threads for this mechanism
+    //bytes per thread
+    size_t mech_size = required_mechanism_size();
+    size_t free_mem = 0;
+    size_t total_mem = 0;
+    cudaErrorCheck( cudaMemGetInfo (&free_mem, &total_mem) );
+    //conservatively estimate the maximum allowable threads
+    int max_threads = int(floor(0.8 * ((double)free_mem) / ((double)mech_size)));
+    int padded = min(num_odes, max_threads);
+    //padded is next factor of block size up
+    padded = int(ceil(padded / float(TARGET_BLOCK_SIZE)) * TARGET_BLOCK_SIZE);
+    if (padded == 0)
+    {
+        printf("Mechanism is too large to fit into global CUDA memory... exiting.");
+        exit(-1);
+    }
+
+    mechanism_memory * d_mem = 0;
+    mechanism_memory* h_mem = (mechanism_memory*)malloc(sizeof(mechanism_memory));
+
+    double* y_host;
+    double* var_host;
+
+    size_t smem = 0;
+    #ifdef SHARED_SIZE
+        smem = SHARED_SIZE;
+    #endif
+
+    //init gpu memory
+    initialize_gpu_memory(padded, &h_mem, &d_mem);
+
+    #ifdef FINITE_DIFF
+    double* y_gpu_temp = 0;
+    cudaErrorCheck( cudaMalloc(&y_gpu_temp, padded * NSP * sizeof(double)) );
+    #endif
+
+    //padded is the number of threads allowable
+    read_initial_conditions("$datafile", num_odes, &y_host, &var_host);
+    int g_num = (int)ceil(((double)padded) / ((double)TARGET_BLOCK_SIZE));
+    if (g_num == 0)
+        g_num = 1;
+    dim3 dimGrid (g_num, 1 );
+    dim3 dimBlock(TARGET_BLOCK_SIZE, 1);
+    StartTimer();
+    if (padded < num_odes)
+    {
+        double* y_temp = (double*)malloc(padded * NSP * sizeof(double));
+        double* var_temp = (double*)malloc(padded * NSP * sizeof(double));
+        double* jac_temp = (double*)malloc(padded * NSP * NSP * sizeof(double));
+        int num_solved = 0;
+        while (num_solved < num_odes)
+        {
+            int num_cond = min(num_odes - num_solved, padded);
+            //copy our memory into y_temp and pres_temp
+            memcpy2D_in(y_temp, padded, y_host, num_odes,
+                            num_solved, num_cond * sizeof(double), NSP);
+            memcpy(var_temp, &var_host[num_solved], num_cond * sizeof(double));
+            cudaErrorCheck( cudaMemcpy (h_mem->var, var_temp, num_cond * sizeof(double), cudaMemcpyHostToDevice));
+            cudaErrorCheck( cudaMemcpy2D (h_mem->y, padded * sizeof(double), y_temp, padded * sizeof(double),
+                                            num_cond * sizeof(double), NSP, cudaMemcpyHostToDevice));
+            #ifdef FINITE_DIFF
+                jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, h_mem->var, h_mem->y, d_mem, y_gpu_temp);
+            #else
+                jac_driver <<< dimGrid, dimBlock, smem >>> (num_cond, h_mem->var, h_mem->y, d_mem);
+            #endif
+            cudaErrorCheck( cudaMemcpy2D (jac_temp, padded * sizeof(double), h_mem->jac, padded * sizeof(double),
+                                            num_cond * sizeof(double), NSP * NSP, cudaMemcpyDeviceToHost));
+            num_solved += num_cond;
+        }
+        free(y_temp);
+        free(var_temp);
+        free(jac_temp);
+    }
+    else
+    {
+        double* jac_temp = (double*)malloc(padded * NSP * NSP * sizeof(double));
+        cudaErrorCheck( cudaMemcpy (h_mem->var, var_host, padded * sizeof(double), cudaMemcpyHostToDevice));
+        cudaErrorCheck( cudaMemcpy2D(h_mem->y,  padded * sizeof(double), y_host, num_odes * sizeof(double),
+                                                num_odes * sizeof(double), NSP, cudaMemcpyHostToDevice) );
+        #ifdef FINITE_DIFF
+            jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, h_mem->var, h_mem->y, d_mem, y_gpu_temp);
+        #else
+            jac_driver <<< dimGrid, dimBlock, smem >>> (num_odes, h_mem->var, h_mem->y, d_mem);
+        #endif
+        cudaErrorCheck( cudaMemcpy2D (jac_temp, padded * sizeof(double), h_mem->jac, padded * sizeof(double),
+                                            num_odes * sizeof(double), NSP * NSP, cudaMemcpyDeviceToHost));
+        free(jac_temp);
+    }
+    cudaDeviceSynchronize();
+    double runtime = GetTimer();
+    printf("%d,%.15le\n", num_odes, runtime);
+    cudaErrorCheck( cudaPeekAtLastError() );
+    cudaErrorCheck( cudaDeviceSynchronize() );
+#ifdef FINITE_DIFF
+    cudaErrorCheck( cudaFree(y_gpu_temp) );
+#endif
+    free_gpu_memory(&h_mem, &d_mem);
+    free(y_host);
+    free(var_host);
+    free(h_mem);
+    cudaErrorCheck( cudaDeviceReset() );
+    return 0;
+}

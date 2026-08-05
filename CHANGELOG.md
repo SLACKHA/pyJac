@@ -43,6 +43,17 @@ regenerating with the old table and diffing.
   inside generation
 
 ### Changed
+- Ported `read_mech_ct` to the Cantera 3.x API. Dispatch now keys on the
+  reaction's `ReactionRate` type and its `ThirdBody` rather than on the
+  `Reaction` subclasses removed in 3.0, and the reader-equivalence tests hold
+  it to producing the same mechanism as the Chemkin parser.
+- Consolidated the duplicated `is_pdep` predicates and the four inline
+  reaction-type checks into `utils.is_pdep` and `utils.is_plog_or_cheb`.
+- Cantera YAML (`.yaml`/`.yml`) is now the recognised Cantera input format.
+  `.cti` and `.xml` raise `NotImplementedError` pointing at `cti2yaml` and
+  `ctml2yaml`; both formats were removed in Cantera 3.0.
+- Unsupported rate types (Blowers-Masel, Linear-Burke, Tsang, plasma, surface 
+  and user-supplied rates)---now raise `NotImplementedError` naming the type.
 - Atomic weights now come from `cantera.Element` rather than a hardcoded table
   taken from an older IUPAC revision, so a mechanism read through the Chemkin
   parser and through Cantera describes identical species masses. **This changes
@@ -100,6 +111,9 @@ regenerating with the old table and diffing.
   for third-body species, raising `NameError` whenever that branch was reached
 - `performance_tester` compared a list against an int to size its
   thread sweep, raising `TypeError` on Python 3
+- `read_thermo` looped forever at end of file: it tested `line is None`, but
+  `readline()` returns `''` when exhausted. Any non-Chemkin input fed to the
+  Chemkin parser hung instead of erroring.
 - `__main__.main()` ignored a supplied `args` namespace: the entire body sat
   inside `if args is None`, so `main(args)` was a silent no-op. It now returns
   an exit status.
@@ -112,20 +126,6 @@ regenerating with the old table and diffing.
 - The source distribution no longer carries the test suite,
   example mechanisms, or documentation sources. The wheel payload is
   unchanged.
-
-### Known issues (not yet addressed)
-- Six sites still dispatch on the `Reaction` subclasses that Cantera removed in
-  3.0 (`ThreeBodyReaction`, `FalloffReaction`, `ChemicallyActivatedReaction`,
-  `PlogReaction`, `ChebyshevReaction`, `ElementaryReaction`), and raise
-  `AttributeError` when reached:
-  - `core.mech_interpret.read_mech_ct`, the main six-way dispatch
-  - `functional_tester.test.is_pdep`, plus the inline third-body/falloff and
-    PLOG/Chebyshev checks inside `functional_tester.test.test`
-  - `performance_tester.is_pdep`, plus the inline PLOG/Chebyshev check inside
-    `performance_tester.performance_tester`
-
-  The inline checks sit mid-function, so they fail only after a PaSR or timing
-  run has already started rather than up front.
 
 ## [1.0.6] - 2018-02-21
 ### Added

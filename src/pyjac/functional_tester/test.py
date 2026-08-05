@@ -207,24 +207,6 @@ class AutodiffJacob:
         return jacob
 
 
-def is_pdep(rxn):
-    """Check if reaction is traditionally pressure dependent
-
-    Parameters
-    ----------
-    rxn : `ReacInfo`
-        Reaction object of interest
-
-    Returns
-    -------
-    ``True`` if third-body, falloff, or chemically activated reaction.
-    """
-    return (isinstance(rxn, ct.ThreeBodyReaction) or
-            isinstance(rxn, ct.FalloffReaction) or
-            isinstance(rxn, ct.ChemicallyActivatedReaction)
-            )
-
-
 def run_pasr(pasr_input_file, mech_filename, pasr_output_file=None):
     """Run PaSR simulation to get thermochemical data for testing.
 
@@ -1175,7 +1157,7 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
             safe_remove('py_tchem.so')
             generate_wrapper('tchem', build_dir)
 
-    pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
+    pmod = any(utils.is_pdep(rxn) for rxn in gas.reactions())
     rev = any(rxn.reversible for rxn in gas.reactions())
 
     # Now generate data and check results
@@ -1183,25 +1165,19 @@ def test(lang, home_dir, build_dir, mech_filename, therm_filename=None,
     # Need to get reversible reactions and those for which
     # pressure modification applies.
     idx_rev = [i for i, rxn in enumerate(gas.reactions()) if rxn.reversible]
-    idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if is_pdep(rxn)]
+    idx_pmod = [i for i, rxn in enumerate(gas.reactions()) if utils.is_pdep(rxn)]
     # Index of element in idx_pmod that corresponds to reversible reaction
     idx_pmod_rev = [
         i for i, idx in enumerate(idx_pmod) if gas.reaction(idx).reversible
         ]
     # Index of reversible reaction that also has pressure dependent
     # modification
-    idx_rev_pmod = [
-                i for i, idx in enumerate(idx_rev) if
-                isinstance(gas.reaction(idx), ct.ThreeBodyReaction) or
-                isinstance(gas.reaction(idx), ct.FalloffReaction) or
-                isinstance(gas.reaction(idx), ct.ChemicallyActivatedReaction)
-                ]
+    idx_rev_pmod = [i for i, idx in enumerate(idx_rev)
+                    if utils.is_pdep(gas.reaction(idx))]
 
     # Check mechanism for Plog or Chebyshev reactions... if any, can't
     # compare Jacobian to TChem
-    if any([isinstance(rxn, ct.PlogReaction) or
-            isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
-            ]):
+    if any(utils.is_plog_or_cheb(rxn) for rxn in gas.reactions()):
         print('TChem comparison disabled; '
               'not compatible with Plog or Chebyshev reactions.'
               )

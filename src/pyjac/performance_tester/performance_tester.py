@@ -65,31 +65,6 @@ def option_cases(*param_sets):
             yield case
 
 
-def is_pdep(rxn):
-    """Check if reaction is pressure depedent.
-
-    Notes
-    -----
-    Includes traditional pressure dependence: third-body, falloff, and
-    chemically activated bimolecular reactions. Does not include pressure-log
-    or Chebyshev reactions.
-
-    Parameters
-    ----------
-    rxn : `ReacInfo`
-        Reaction object being queried for pressure depedence
-
-    Returns
-    -------
-    ``True`` if `rxn` is pressure dependent
-
-    """
-    return (isinstance(rxn, ct.ThreeBodyReaction) or
-            isinstance(rxn, ct.FalloffReaction) or
-            isinstance(rxn, ct.ChemicallyActivatedReaction)
-            )
-
-
 def check_step_file(filename, steplist):
     """Checks file for existing data, returns number of runs left
 
@@ -324,7 +299,7 @@ def performance_tester(home, work_dir, use_old_opt):
                                        ):
         #get the cantera object
         gas = ct.Solution(os.path.join(work_dir, mech_name, mech_info['mech']))
-        pmod = any([is_pdep(rxn) for rxn in gas.reactions()])
+        pmod = any(utils.is_pdep(rxn) for rxn in gas.reactions())
 
         #ensure directory structure is valid
         os.chdir(os.path.join(work_dir, mech_name))
@@ -393,9 +368,8 @@ def performance_tester(home, work_dir, use_old_opt):
             num_threads = state['num_threads'] or -1
 
 
-            if any([isinstance(rxn, ct.PlogReaction) or
-                isinstance(rxn, ct.ChebyshevReaction) for rxn in gas.reactions()
-                ]) and lang == 'tchem':
+            if lang == 'tchem' and any(
+                    utils.is_plog_or_cheb(rxn) for rxn in gas.reactions()):
                 print('TChem performance evaluation disabled; '
                       'not compatible with Plog or Chebyshev reactions.'
                       )

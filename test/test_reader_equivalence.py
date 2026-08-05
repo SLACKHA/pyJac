@@ -5,13 +5,25 @@
 mechanism both ways and comparing the results checks the Cantera reader against
 a Chemkin reader that is already covered by the golden fixtures.
 
-This is the safety net for the Cantera 3.x port: ``read_mech_ct`` still
-dispatches on `Reaction` subclasses removed in Cantera 3.0, so the comparison
-tests below are strict xfails. They will XPASS once the port lands, which is
-the signal to delete the markers.
+This is the safety net for the Cantera 3.x port.
 
-One difference is expected and tolerated: element names differ in case
-(``AR`` from Chemkin, ``Ar`` from Cantera), since Cantera canonicalises them.
+Several representational differences are expected and normalised away. They
+are all artefacts of how the two input formats describe identical chemistry,
+not disagreements about the chemistry itself:
+
+* Element names differ in case (``AR`` from Chemkin, ``Ar`` from Cantera).
+* Where a species' high- and low-temperature polynomials are identical,
+  ``ck2yaml`` collapses them to a single range by setting the midpoint to the
+  maximum temperature. The same polynomial is evaluated either way.
+* Chemkin writes a reaction with a single specific collider by naming it on
+  both sides (``H+O2+AR<=>HO2+AR``); Cantera stores it as a third-body
+  reaction whose only non-zero efficiency is that species. The rate expression
+  is the same, so the Cantera form is folded back into the explicit form.
+* Chemkin keeps the ``A``/``b``/``E`` written on a PLOG or Chebyshev reaction
+  line; Cantera zeroes them. Neither reader's values are used -- generation
+  reads ``plog_par``/``cheb_par`` for these, and the only two references to
+  ``rxn.A`` in ``rate_subs`` are guarded by ``not (rxn.cheb or rxn.plog)``.
+
 Molecular weights agree exactly, because `chem_utilities.get_elem_wt` sources
 atomic weights from Cantera.
 """
@@ -21,9 +33,11 @@ import copy
 import numpy as np
 import pytest
 
+from pyjac import utils
+from pyjac.core.create_jacobian import create_jacobian
 from pyjac.core.mech_interpret import read_mech, read_mech_ct
 
-from conftest import GOLDEN_MECHS
+from conftest import GOLDEN_MECHS, MECH_DIR
 
 #: Both readers now draw atomic weights from Cantera, so molecular weights,
 #: like the rate parameters, must agree to machine precision.
@@ -56,7 +70,12 @@ def _compare_species(a, b, label):
     if b.mw != _approx(a.mw, RATE_RTOL):
         diffs.append(f'{label} {a.name}: mw {a.mw} != {b.mw}')
 
-    if list(b.Trange) != _approx(list(a.Trange), 1e-10):
+    single_range = list(a.lo) == pytest.approx(list(a.hi), rel=1e-12)
+    trange_a, trange_b = list(a.Trange), list(b.Trange)
+    if single_range:
+        # the midpoint is irrelevant when both polynomials are the same
+        trange_a, trange_b = [trange_a[0], trange_a[2]], [trange_b[0], trange_b[2]]
+    if trange_b != _approx(trange_a, 1e-10):
         diffs.append(f'{label} {a.name}: Trange {a.Trange} != {b.Trange}')
 
     for field in ('lo', 'hi'):
@@ -68,9 +87,37 @@ def _compare_species(a, b, label):
     return diffs
 
 
+def _fold_single_collider(reac):
+    """Return a copy of ``reac`` with a lone third-body collider made explicit.
+
+    Cantera describes ``H+O2+AR<=>HO2+AR`` as a third-body reaction whose only
+    non-zero efficiency is AR. Chemkin names the collider on both sides
+    instead. Rewriting the former into the latter lets the two be compared.
+    """
+    if not reac.thd_body or not reac.thd_body_eff:
+        return reac
+
+    nonzero = [(sp, eff) for sp, eff in reac.thd_body_eff if eff != 0.0]
+    if len(nonzero) != 1 or nonzero[0][1] != 1.0:
+        return reac
+
+    collider = nonzero[0][0]
+    folded = copy.deepcopy(reac)
+    folded.thd_body = False
+    folded.thd_body_eff = []
+    for names, nus in ((folded.reac, folded.reac_nu), (folded.prod, folded.prod_nu)):
+        if collider in names:
+            nus[names.index(collider)] += 1
+        else:
+            names.append(collider)
+            nus.append(1)
+    return folded
+
+
 def _compare_reactions(a, b, label):
     """Return a list of human-readable differences between two `ReacInfo`."""
     diffs = []
+    a, b = _fold_single_collider(a), _fold_single_collider(b)
 
     for field in FLAG_FIELDS:
         if getattr(a, field) != getattr(b, field):
@@ -90,10 +137,11 @@ def _compare_reactions(a, b, label):
         if sorted(av) != sorted(bv):
             diffs.append(f'{label}: {field} {av} != {bv}')
 
-    for field in SCALAR_RATE_FIELDS:
-        av, bv = getattr(a, field), getattr(b, field)
-        if bv != _approx(av, RATE_RTOL):
-            diffs.append(f'{label}: {field} {av} != {bv}')
+    if not (a.plog or a.cheb):
+        for field in SCALAR_RATE_FIELDS:
+            av, bv = getattr(a, field), getattr(b, field)
+            if bv != _approx(av, RATE_RTOL):
+                diffs.append(f'{label}: {field} {av} != {bv}')
 
     for field in LIST_RATE_FIELDS:
         av = [float(v) for v in getattr(a, field)]
@@ -247,11 +295,6 @@ def test_element_weight_overrides_do_not_leak():
 # The comparison this all exists for.
 # --------------------------------------------------------------------------
 
-@pytest.mark.xfail(
-    raises=AttributeError,
-    strict=True,
-    reason='read_mech_ct dispatches on Reaction subclasses removed in Cantera 3.0',
-)
 @pytest.mark.parametrize('mech', sorted(GOLDEN_MECHS))
 def test_readers_describe_the_same_mechanism(mech, to_cantera_yaml):
     """Chemkin and Cantera readers agree on the same source mechanism."""
@@ -266,3 +309,45 @@ def test_readers_describe_the_same_mechanism(mech, to_cantera_yaml):
         f'{mech}: Chemkin and Cantera readers disagree:\n  '
         + '\n  '.join(diffs[:20])
     )
+
+
+# --------------------------------------------------------------------------
+# Rate types pyJac has no formulation for must be refused, not mistranslated.
+# --------------------------------------------------------------------------
+
+def test_unsupported_rate_type_is_rejected():
+    """A Blowers-Masel reaction raises rather than being silently mishandled."""
+    mech = MECH_DIR / 'blowers_masel.yaml'
+    with pytest.raises(NotImplementedError) as excinfo:
+        read_mech_ct(str(mech))
+
+    message = str(excinfo.value)
+    assert 'BlowersMaselRate' in message
+    assert 'Chebyshev' in message, 'error should list the supported rate types'
+
+
+def test_unsupported_rate_types_are_named_consistently():
+    """Every name in the reject list is a real Cantera rate class."""
+    ct = pytest.importorskip('cantera')
+    for name in utils.unsupported_rate_types:
+        assert hasattr(ct, name), f'{name} is not a cantera rate class'
+
+
+def test_supported_rate_types_are_not_in_the_reject_list():
+    """The five forms pyJac does implement must never be rejected."""
+    ct = pytest.importorskip('cantera')
+    supported = ('ArrheniusRate', 'LindemannRate', 'TroeRate', 'SriRate',
+                 'PlogRate', 'ChebyshevRate')
+    for name in supported:
+        assert hasattr(ct, name)
+        assert name not in utils.unsupported_rate_types
+
+
+def test_legacy_cantera_formats_are_refused(tmp_path):
+    """.cti and .xml were removed in Cantera 3.0; say so instead of failing late."""
+    for suffix in ('.cti', '.xml'):
+        legacy = tmp_path / f'mech{suffix}'
+        legacy.write_text('')
+        with pytest.raises(NotImplementedError) as excinfo:
+            create_jacobian('c', mech_name=str(legacy), build_path=str(tmp_path))
+        assert 'cti2yaml' in str(excinfo.value) or 'ctml2yaml' in str(excinfo.value)

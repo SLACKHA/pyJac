@@ -6,11 +6,13 @@ import os
 import errno
 from math import log10, floor
 
+import cantera as ct
+
 __all__ = ['line_start', 'comment', 'langs', 'file_ext', 'restrict',
            'header_ext', 'line_end', 'exp_10_fun', 'array_chars',
            'get_species_mappings', 'get_nu', 'read_str_num', 'split_str',
            'create_dir', 'get_array', 'get_index', 'reassign_species_lists',
-           'is_integer'
+           'is_integer', 'is_pdep', 'is_plog_or_cheb', 'unsupported_rate_type'
            ]
 
 line_start = '  '
@@ -57,6 +59,85 @@ array_chars = dict(c="[{}]", cuda="[INDEX({})]",
                    fortran="({})", matlab="({})"
                    )
 """dict: the characters to format an index into an array per language"""
+
+unsupported_rate_types = frozenset([
+    'BlowersMaselRate',
+    'CustomRate',
+    'ElectronCollisionPlasmaRate',
+    'ExtensibleRate',
+    'InterfaceArrheniusRate',
+    'InterfaceBlowersMaselRate',
+    'LinearBurkeRate',
+    'StickingArrheniusRate',
+    'StickingBlowersMaselRate',
+    'TsangRate',
+    'TwoTempPlasmaRate',
+])
+"""frozenset(`str`): Cantera rate types pyJac has no Jacobian formulation for
+
+Every entry postdates pyJac 1.0.6. They are rejected by name so that a
+mechanism using one fails with an explanation rather than being silently
+mistranslated. See the ``modernization tasks`` entry in ``.todo``.
+"""
+
+
+def is_pdep(rxn):
+    """Check if a Cantera reaction is traditionally pressure dependent.
+
+    Notes
+    -----
+    Covers third-body, falloff, and chemically activated bimolecular
+    reactions. Does not cover pressure-log or Chebyshev reactions, which carry
+    their pressure dependence in the rate expression itself; use
+    `is_plog_or_cheb` for those.
+
+    Parameters
+    ----------
+    rxn : `cantera.Reaction`
+        Reaction being queried for pressure dependence
+
+    Returns
+    -------
+    bool
+        ``True`` if third-body, falloff, or chemically activated
+
+    """
+    return rxn.third_body is not None or isinstance(rxn.rate, ct.FalloffRate)
+
+
+def is_plog_or_cheb(rxn):
+    """Check if a Cantera reaction is pressure-log or Chebyshev.
+
+    Parameters
+    ----------
+    rxn : `cantera.Reaction`
+        Reaction being queried
+
+    Returns
+    -------
+    bool
+        ``True`` if the rate is a `cantera.PlogRate` or `cantera.ChebyshevRate`
+
+    """
+    return isinstance(rxn.rate, (ct.PlogRate, ct.ChebyshevRate))
+
+
+def unsupported_rate_type(rxn):
+    """Return the name of a rate type pyJac cannot handle, else ``None``.
+
+    Parameters
+    ----------
+    rxn : `cantera.Reaction`
+        Reaction being queried
+
+    Returns
+    -------
+    str or None
+        The rate class name if unsupported, otherwise ``None``
+
+    """
+    name = type(rxn.rate).__name__
+    return name if name in unsupported_rate_types else None
 
 # if false, zero values will be assumed to have been set previously (by memset etc.)
 # and can be skipped, to increase efficiency

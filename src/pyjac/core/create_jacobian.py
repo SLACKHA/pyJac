@@ -3483,7 +3483,15 @@ def create_jacobian(lang, mech_name=None, therm_name=None, gas=None, optimize_ca
 
     # Interpret reaction mechanism file, depending on Cantera or
     # Chemkin format.
-    if gas is not None or mech_name.endswith(tuple(['.cti', '.xml'])):
+    if mech_name is not None and mech_name.endswith(('.cti', '.xml')):
+        raise NotImplementedError(
+            f'{mech_name} uses a legacy Cantera format. Both CTI and the XML '
+            'format were removed in Cantera 3.0; convert the mechanism with '
+            '`python -m cantera.cti2yaml` or `python -m cantera.ctml2yaml` '
+            'and pass the resulting YAML file.'
+        )
+
+    if gas is not None or mech_name.endswith(('.yaml', '.yml')):
         elems, specs, reacs = mech.read_mech_ct(mech_name, gas)
     else:
         elems, specs, reacs = mech.read_mech(mech_name, therm_name)

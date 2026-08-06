@@ -51,7 +51,7 @@ def _compile_sources(sources, include_dir, compiler):
                 '-c',
                 str(source),
                 '-o',
-                '/dev/null',
+                str(include_dir / (source.stem + '.o')),
             ],
             capture_output=True,
             text=True,

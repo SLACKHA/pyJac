@@ -85,7 +85,7 @@ def test_two_temperature_chebyshev_compiles_without_warnings(tmp_path, c_compile
                 '-c',
                 str(source),
                 '-o',
-                '/dev/null',
+                str(tmp_path / (source.stem + '.o')),
             ],
             capture_output=True,
             text=True,

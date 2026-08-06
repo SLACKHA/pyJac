@@ -1,49 +1,38 @@
-import sys
+"""Tests for the pyjac.core modules."""
+
+import pytest
+
+from pyjac.core import (
+    CUDAParams,
+    cache_optimizer,
+    chem_utilities,
+    create_jacobian,
+    mech_auxiliary,
+    mech_interpret,
+    rate_subs,
+    shared_memory,
+)
 
 
-class TestCacheOptimizer:
-    """ """
-
-    def test_imported(self):
-        """Ensure cache_optimizer module imported."""
-        assert 'pyjac.core.cache_optimizer' in sys.modules
-
-
-class TestChemUtilities:
-    """ """
-
-    def test_imported(self):
-        """Ensure chem_utilities module imported."""
-        assert 'pyjac.core.chem_utilities' in sys.modules
-
-
-class TestCreateJacobian:
-    """ """
-
-    def test_imported(self):
-        """Ensure create_jacobian module imported."""
-        assert 'pyjac.core.create_jacobian' in sys.modules
+@pytest.mark.parametrize(
+    'module,attribute',
+    [
+        (cache_optimizer, 'optimize_cache'),
+        (chem_utilities, 'get_elem_wt'),
+        (create_jacobian, 'create_jacobian'),
+        (mech_auxiliary, 'write_mechanism_initializers'),
+        (mech_interpret, 'read_mech'),
+        (mech_interpret, 'read_mech_ct'),
+        (rate_subs, 'write_rxn_rates'),
+        (shared_memory, 'shared_memory_manager'),
+        (CUDAParams, 'write_launch_bounds'),
+    ],
+)
+def test_expected_entry_points_exist(module, attribute):
+    assert hasattr(module, attribute), f'{module.__name__} lost {attribute}'
 
 
-class TestMechAuxiliary:
-    """ """
-
-    def test_imported(self):
-        """Ensure mech_auxiliary module imported."""
-        assert 'pyjac.core.mech_auxiliary' in sys.modules
-
-
-class TestRateSubs:
-    """ """
-
-    def test_imported(self):
-        """Ensure rate_subs module imported."""
-        assert 'pyjac.core.rate_subs' in sys.modules
-
-
-class TestSharedMemory:
-    """ """
-
-    def test_imported(self):
-        """Ensure shared_memory module imported."""
-        assert 'pyjac.core.shared_memory' in sys.modules
+def test_physical_constants_are_consistent():
+    """RU_JOUL is RU expressed per mole rather than per kilomole."""
+    assert chem_utilities.RU_JOUL == pytest.approx(chem_utilities.RU / 1000.0)
+    assert chem_utilities.RUC == pytest.approx(chem_utilities.RU / 4.184)

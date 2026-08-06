@@ -110,10 +110,10 @@ def compiler(fstruct):
         print(' '.join(args))
         subprocess.check_call(args)
     except OSError:
-        print(
-            f'Error: Compiler {args[0]} not found, generation of pyjac library failed.'
-        )
-        sys.exit(-1)
+        # this runs in a multiprocessing worker, where sys.exit leaves the
+        # parent's pool.map waiting for a result that never arrives
+        print(f'Error: compiler {args[0]} not found.')
+        return -1
     except subprocess.CalledProcessError:
         print(
             'Error: compilation failed for '

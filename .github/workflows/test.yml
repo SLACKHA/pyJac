@@ -1,0 +1,163 @@
+name: Test
+
+on:
+  push:
+    branches: [main, modernize]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.10', '3.11', '3.12', '3.13', '3.14']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e '.[test,pywrap]'
+
+      # The cache-optimizer tests run a randomized search and dominate the
+      # runtime; they are covered by the full-suite job below.
+      - name: Test
+        run: pytest -m "not slow" --cov=pyjac --cov-report=xml
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.14'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  full-suite:
+    name: Full suite including slow tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e '.[test,pywrap,cache-opt]'
+      - name: Test
+        run: pytest
+
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+      - uses: pre-commit/action@v3.0.1
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+      - name: Build
+        run: python -m pip install build && python -m build
+
+      # A wheel built from the sdist must match one built from the repository,
+      # otherwise the sdist is missing something the build needs.
+      - name: Check the sdist can rebuild the wheel
+        run: |
+          python -m pip install twine
+          twine check dist/*
+          mkdir -p from-sdist && tar xzf dist/*.tar.gz -C from-sdist --strip-components=1
+          (cd from-sdist && python -m build --wheel --outdir ../dist-from-sdist)
+          python - <<'EOF'
+          import pathlib, zipfile
+          def names(pattern):
+              path = next(pathlib.Path(pattern[0]).glob(pattern[1]))
+              with zipfile.ZipFile(path) as z:
+                  return {n for n in z.namelist() if '.dist-info' not in n}
+          direct = names(('dist', '*.whl'))
+          via_sdist = names(('dist-from-sdist', '*.whl'))
+          missing = direct - via_sdist
+          assert not missing, f'sdist cannot reproduce the wheel; missing {sorted(missing)}'
+          print(f'sdist reproduces all {len(direct)} wheel entries')
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: distributions
+          path: dist/
+
+  cuda:
+    name: CUDA ${{ matrix.cuda }} / ${{ matrix.arch }}
+    # Pinned rather than ubuntu-latest: NVIDIA's apt repository path is
+    # distro-version specific.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # CUDA 12 still supports Volta, which is pyJac's default target.
+          - cuda: '12-6'
+            cuda_path: '12.6'
+            arch: sm_70
+          # CUDA 13 dropped Maxwell, Pascal and Volta, so the oldest it accepts
+          # is Turing. This entry is what tells us whether the default needs to
+          # move.
+          - cuda: '13-3'
+            cuda_path: '13.3'
+            arch: sm_75
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          cache: pip
+
+      # Installed from NVIDIA's own apt repository rather than a third-party
+      # action, and only the compiler: the full toolkit is several GB.
+      - name: Install nvcc ${{ matrix.cuda }}
+        run: |
+          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cuda-nvcc-${{ matrix.cuda }}
+          echo "/usr/local/cuda-${{ matrix.cuda_path }}/bin" >> "$GITHUB_PATH"
+
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e '.[test]'
+
+      # There is no GPU on the runner, so the generated CUDA is compiled but
+      # never executed. This catches syntax and API errors, not wrong numbers.
+      # It goes through pyjac.libgen rather than a hand-rolled nvcc loop, so
+      # the build machinery and the --cuda-arch plumbing are exercised too.
+      - name: Generate CUDA sources
+        run: python -m pyjac --lang cuda --input data/h2o2.inp --build_path out-cuda
+
+      - name: Build the CUDA library
+        run: |
+          nvcc --version
+          python -m pyjac.libgen --lang cuda --source_dir out-cuda \
+            --out_dir lib-cuda --obj_dir obj-cuda \
+            --static --cuda-arch ${{ matrix.arch }}
+
+      - name: Confirm the library was produced
+        run: test -f lib-cuda/libcu_pyjac.a && ls -l lib-cuda/

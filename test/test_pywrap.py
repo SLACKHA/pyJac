@@ -6,6 +6,7 @@ standard library in Python 3.12.
 """
 
 import ast
+import importlib.machinery
 import subprocess
 import sys
 import textwrap
@@ -100,7 +101,11 @@ def test_generate_wrapper_end_to_end(tmp_path, monkeypatch, c_compiler):
     create_jacobian('c', mech_name=str(GOLDEN_MECHS['h2o2']), build_path='out')
     generate_wrapper('c', 'out', out_dir=str(tmp_path))
 
-    built = list(tmp_path.glob('pyjacob*.so'))
+    built = [
+        path
+        for suffix in importlib.machinery.EXTENSION_SUFFIXES
+        for path in tmp_path.glob(f'pyjacob*{suffix}')
+    ]
     assert built, f'no extension module produced; got {list(tmp_path.iterdir())}'
 
     # the package directory must stay clean -- it is read-only once installed.

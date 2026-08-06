@@ -31,6 +31,12 @@ regenerating with the old table and diffing.
   `np.random`, so successive runs legitimately differ.
 - Regression tests for Chebyshev parsing and generation, the CLI, the
   unsupported-language guard, and `option_cases`
+- GitHub Actions workflows: a test matrix over Python 3.10-3.14 on Linux,
+  macOS and Windows; a full-suite job including the slow cache-optimizer
+  tests; lint via pre-commit; a build job that checks the sdist can rebuild
+  the wheel; a CUDA job that compiles generated sources through
+  `pyjac.libgen` against both CUDA 12 and 13; and PyPI publishing on release
+  via trusted publishing.
 - `pyproject.toml` with PEP 621 metadata, optional-dependency extras
   (`pywrap`, `cache-opt`, `test`, `docs`), and ruff/pytest/coverage config,
   built with hatchling
@@ -108,6 +114,12 @@ regenerating with the old table and diffing.
 - Path parsing now uses `pathlib` rather than `os.path`
 
 ### Fixed
+- `libgen.compiler` called `sys.exit` from inside a `multiprocessing.Pool`
+  worker when the compiler was missing, so `generate_library` hung waiting on
+  a result that never arrived rather than reporting the missing compiler.
+- Three test modules asserted on `sys.modules` without importing what they
+  checked, so they passed only when another module had imported it first and
+  failed when run alone.
 - `pywrap.generate_wrapper` built the wrapper with a reconstructed `pythonX.Y`
   name resolved against `PATH`, escaping the active environment and its
   Cython, NumPy and setuptools. It now uses `sys.executable`.
@@ -146,6 +158,7 @@ regenerating with the old table and diffing.
   an exit status.
 
 ### Removed
+- `.travis.yml` and `appveyor.yml`, replaced by GitHub Actions
 - `data/h2o2.cti` and `data/h2o2_performance/h2o2.cti`, replaced by YAML
   equivalents; Cantera 3.x cannot read the CTI format
 - `setup.py`, `setup.cfg`, `MANIFEST.in` (superseded by `pyproject.toml`)

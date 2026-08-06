@@ -114,6 +114,8 @@ regenerating with the old table and diffing.
 - Path parsing now uses `pathlib` rather than `os.path`
 
 ### Fixed
+- Removes unused include of `helper_cuda.h` from generated CUDA code,
+  which was removed from the toolkit.
 - `libgen.compiler` called `sys.exit` from inside a `multiprocessing.Pool`
   worker when the compiler was missing, so `generate_library` hung waiting on
   a result that never arrived rather than reporting the missing compiler.

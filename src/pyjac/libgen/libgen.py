@@ -34,7 +34,7 @@ def cmd_lib(lang, shared):
 includes = {
     'c': ['/usr/local/include/'],
     'icc': ['/usr/local/include/'],
-    'cuda': ['/usr/local/cuda/include/', '/usr/local/cuda/samples/common/inc/'],
+    'cuda': ['/usr/local/cuda/include/'],
 }
 
 flags = {

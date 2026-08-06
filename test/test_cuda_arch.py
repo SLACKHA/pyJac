@@ -128,3 +128,45 @@ def test_launch_bounds_written(tmp_path, no_shared):
     regcount = (tmp_path / 'regcount').read_text()
     assert regcount == '128'
     assert int(regcount) <= CUDAParams.MAX_REGISTERS_PER_THREAD
+
+
+def test_generated_cuda_includes_only_toolkit_headers(tmp_path):
+    """Generated CUDA must not reach outside the CUDA toolkit.
+
+    ``helper_cuda.h`` lives in the CUDA samples, which NVIDIA removed from the
+    toolkit and moved to a separate repository. pyJac emitted the include but
+    used nothing from it -- every error check goes through its own
+    ``cudaErrorCheck`` macro, defined in the generated ``gpu_macros.cuh``.
+    """
+    from conftest import GOLDEN_MECHS
+    from pyjac.core.create_jacobian import create_jacobian
+
+    create_jacobian(
+        'cuda', mech_name=str(GOLDEN_MECHS['h2o2']), build_path=str(tmp_path)
+    )
+
+    samples_headers = ('helper_cuda.h', 'helper_functions.h', 'helper_string.h')
+    offenders = []
+    for source in sorted(tmp_path.glob('*.cu*')):
+        text = source.read_text()
+        for header in samples_headers:
+            if header in text:
+                offenders.append(f'{source.name} includes {header}')
+    assert not offenders, (
+        'generated CUDA depends on the separately distributed CUDA samples:\n  '
+        + '\n  '.join(offenders)
+    )
+
+
+def test_error_checking_macro_is_self_contained(tmp_path):
+    """gpu_macros.cuh must define its own error check, not import one."""
+    from conftest import GOLDEN_MECHS
+    from pyjac.core.create_jacobian import create_jacobian
+
+    create_jacobian(
+        'cuda', mech_name=str(GOLDEN_MECHS['h2o2']), build_path=str(tmp_path)
+    )
+
+    macros = (tmp_path / 'gpu_macros.cuh').read_text()
+    assert '#define cudaErrorCheck' in macros
+    assert 'gpuAssert' in macros

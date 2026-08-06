@@ -33,7 +33,6 @@ flags = {
     'cuda': [
         f'-arch={DEFAULT_ARCH}',
         '-I/usr/local/cuda/include/',
-        '-I/usr/local/cuda/samples/common/inc/',
         '-dc',
     ],
     'fortran': '',

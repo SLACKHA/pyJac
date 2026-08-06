@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <helper_cuda.h>
 
 #define GRID_DIM (blockDim.x * gridDim.x)
 #define T_ID (threadIdx.x + blockIdx.x * blockDim.x)

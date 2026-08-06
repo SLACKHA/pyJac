@@ -42,6 +42,17 @@ regenerating with the old table and diffing.
   inside generation
 
 ### Changed
+- The CUDA target architecture is configurable instead of hardcoded to
+  `sm_20`. Fermi support was removed in CUDA 9 (2017), so the CUDA backend
+  could not compile on any current toolkit. It now defaults to `sm_70` and is
+  settable with `--cuda-arch` on `pyjac.libgen` and `pyjac.pywrap`, or the
+  `cuda_arch` argument to `generate_library` and `generate_wrapper`.
+- CUDA register limits updated from Fermi's values to those of compute
+  capability 5.0 and later: 65536 registers per multiprocessor rather than
+  32768, and a 255-register per-thread cap rather than 63. The emitted
+  `regcount` rises from 63 to 128 at the default launch geometry.
+  Shared memory stays at 48 KB, which is still the portable limit for
+  statically declared shared memory on every current architecture.
 - Applied the ruff cleanup and enabled the ruff pre-commit hooks. Every rule in
   the selected set now passes with no ignores beyond `E501`.
 - Narrowed all 18 bare `except:` clauses to the exceptions they are actually
@@ -124,6 +135,9 @@ regenerating with the old table and diffing.
 - Five bare `except:` clauses in `mech_auxiliary` caught the `SystemExit` raised
   by their own `sys.exit(1)`, so a malformed initial-conditions string reported
   "not comma separated" regardless of what was actually wrong with it.
+- `get_register_count` returned a float once the register budget stopped
+  being clamped by an integer literal, so `regcount` would have been written as
+  `128.0` and rejected by nvcc's `-maxrregcount`.
 - `read_thermo` looped forever at end of file: it tested `line is None`, but
   `readline()` returns `''` when exhausted. Any non-Chemkin input fed to the
   Chemkin parser hung instead of erroring.

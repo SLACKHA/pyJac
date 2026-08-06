@@ -20,6 +20,7 @@ from cantera import ck2yaml
 # Local imports
 from .. import utils
 from ..core.create_jacobian import create_jacobian
+from ..core.CUDAParams import DEFAULT_ARCH
 from ..pywrap import generate_wrapper
 from . import partially_stirred_reactor as pasr
 
@@ -30,7 +31,7 @@ cmd_compile = {'c': 'gcc', 'cuda': 'nvcc', 'fortran': 'gfortran'}
 flags = {
     'c': ['-std=c99'],
     'cuda': [
-        '-arch=sm_20',
+        f'-arch={DEFAULT_ARCH}',
         '-I/usr/local/cuda/include/',
         '-I/usr/local/cuda/samples/common/inc/',
         '-dc',
@@ -38,7 +39,7 @@ flags = {
     'fortran': '',
 }
 
-libs = {'c': ['-lm', '-std=c99'], 'cuda': '-arch=sm_20', 'fortran': ''}
+libs = {'c': ['-lm', '-std=c99'], 'cuda': f'-arch={DEFAULT_ARCH}', 'fortran': ''}
 
 
 class ReactorConstPres:

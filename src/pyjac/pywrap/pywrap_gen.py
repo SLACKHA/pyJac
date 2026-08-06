@@ -7,10 +7,13 @@ import sys
 from pathlib import Path
 from string import Template
 
+from ..core.CUDAParams import DEFAULT_ARCH
 from ..libgen import generate_library
 
 
-def generate_setup(setupfile, home_dir, build_dir, out_dir, libname, setup_path):
+def generate_setup(
+    setupfile, home_dir, build_dir, out_dir, libname, setup_path, cuda_arch
+):
     """Helper method to fill in the template .in files
 
     Parameters
@@ -28,6 +31,8 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname, setup_path)
     setup_path : str
         Path to write the filled-in setup script to. This is kept out of the
         package directory, which is typically read-only once installed.
+    cuda_arch : str
+        CUDA compute capability to compile for, e.g. ``sm_80``.
 
     Returns
     -------
@@ -42,6 +47,7 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname, setup_path)
         'buildpath': build_dir,
         'libname': libname,
         'outpath': out_dir,
+        'cudaarch': cuda_arch,
     }
     src = src.safe_substitute(file_data)
 
@@ -72,7 +78,9 @@ def distutils_dir_name(dname):
     )
 
 
-def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
+def generate_wrapper(
+    lang, source_dir, out_dir=None, auto_diff=False, cuda_arch=DEFAULT_ARCH
+):
     """Generates a Python wrapper for the given language and source files
 
     Parameters
@@ -85,6 +93,9 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         Directory path for output files
     auto_diff : Optional[bool]
         Optional; if ``True``, build autodifferentiation library
+    cuda_arch : Optional[str]
+        CUDA compute capability to compile for, e.g. ``sm_80``. Defaults to
+        `CUDAParams.DEFAULT_ARCH`.
 
     Returns
     -------
@@ -120,6 +131,7 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
             out_dir=distutils_build,
             shared=shared,
             auto_diff=auto_diff,
+            cuda_arch=cuda_arch,
         )
         lib = os.path.normpath(lib)
         if shared:
@@ -146,6 +158,7 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         distutils_build,
         lib,
         setup_path,
+        cuda_arch,
     )
 
     # sys.executable, not a reconstructed pythonX.Y name: the latter resolves

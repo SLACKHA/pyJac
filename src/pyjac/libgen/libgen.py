@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 
 from .. import utils
+from ..core.CUDAParams import DEFAULT_ARCH
 
 
 def lib_ext(shared):
@@ -39,7 +40,7 @@ includes = {
 flags = {
     'c': ['-std=c99', '-O3', '-mtune=native'],
     'icc': ['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
-    'cuda': ['-O3', '-arch=sm_20'],
+    'cuda': ['-O3'],
 }
 
 shared_flags = {'c': ['-fPIC'], 'icc': ['-fPIC'], 'cuda': ['-Xcompiler', '"-fPIC"']}
@@ -83,6 +84,8 @@ def compiler(fstruct):
     if fstruct.auto_diff:
         args = ['g++']
     args.extend(flags[fstruct.build_lang])
+    if fstruct.build_lang == 'cuda':
+        args.append(f'-arch={fstruct.cuda_arch}')
     if fstruct.auto_diff:
         args = [x for x in args if 'std=c99' not in x]
 
@@ -253,6 +256,7 @@ class file_struct:
         self.obj_dir = obj_dir
         self.shared = shared
         self.auto_diff = False
+        self.cuda_arch = DEFAULT_ARCH
 
 
 def get_file_list(source_dir, pmod, lang, FD=False, AD=False):
@@ -326,6 +330,7 @@ def generate_library(
     shared=None,
     finite_difference=False,
     auto_diff=False,
+    cuda_arch=DEFAULT_ARCH,
 ):
     """Generate shared/static library for pyJac files.
 
@@ -343,6 +348,9 @@ def generate_library(
         If ``True``, include finite differences
     auto_diff : bool
         If ``True``, include autodifferentiation
+    cuda_arch : Optional[str]
+        CUDA compute capability to compile for, e.g. ``sm_80``. Defaults to
+        `CUDAParams.DEFAULT_ARCH`.
 
     Returns
     -------
@@ -412,6 +420,7 @@ def generate_library(
     ]
     for x in structs:
         x.auto_diff = auto_diff
+        x.cuda_arch = cuda_arch
 
     pool = multiprocessing.Pool()
     results = pool.map(compiler, structs)

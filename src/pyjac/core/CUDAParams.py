@@ -28,10 +28,39 @@ Rates_Unroll = 250
 Max_Lines = 10000
 Max_Spec_Lines = 5000
 
+DEFAULT_ARCH = 'sm_70'
+"""str: default CUDA compute capability to generate code for
+
+Volta, the oldest architecture still supported across current CUDA toolkits.
+Override with ``--cuda-arch`` to match the target hardware; ``native`` compiles
+for the GPU present on the build machine (CUDA 11.5 and later).
+"""
+
+REGISTERS_PER_SM = 65536
+"""int: 32-bit registers per multiprocessor, for compute capability 5.0+
+
+Fermi and Kepler had 32768. Every architecture from Maxwell onward has 65536.
+"""
+
+MAX_REGISTERS_PER_THREAD = 255
+"""int: hardware cap on registers a single thread may use, compute 5.0+
+
+Fermi capped this at 63.
+"""
+
+STATIC_SHARED_BYTES = 49152
+"""int: shared memory per block usable without an explicit opt-in
+
+Compute capability 7.0 and later expose more shared memory than this -- 96 KB
+on Volta, up to 228 KB on Hopper -- but only to kernels that request it through
+``cudaFuncSetAttribute(cudaFuncAttributeMaxDynamicSharedMemorySize, ...)``.
+pyJac declares its shared memory statically, so 48 KB is the portable limit.
+"""
+
 
 def get_L1_size(L1_Preferred):
     """
-    Returns the size (in number of doubles) of the L1 cache for sm_20
+    Returns the size (in number of doubles) of the L1 cache
 
     Parameters
     ----------
@@ -39,14 +68,14 @@ def get_L1_size(L1_Preferred):
         If true, prefer a larger L1 cache over more shared memory (recommended)
     """
     if L1_Preferred:
-        return 49152 / 8  # doubles
+        return STATIC_SHARED_BYTES / 8  # doubles
     else:
         return 16384 / 8  # doubles
 
 
 def get_shared_size(L1_Preferred):
     """
-    Returns the size (in number of doubles) of shared memory for sm_20
+    Returns the size (in number of doubles) of shared memory
 
     Parameters
     ----------
@@ -54,14 +83,17 @@ def get_shared_size(L1_Preferred):
         If true, prefer a larger L1 cache over more shared memory (recommended)
     """
     if not L1_Preferred:
-        return 49152 / 8  # doubles
+        return STATIC_SHARED_BYTES / 8  # doubles
     else:
         return 16384 / 8  # doubles
 
 
 def get_register_count(num_blocks, num_threads):
     """
-    Returns the number of registers available per block for sm_20
+    Returns the number of registers available per thread
+
+    The result is written to the ``regcount`` file for use as nvcc's
+    ``-maxrregcount``, which requires an integer.
 
     Parameters
     ----------
@@ -70,7 +102,8 @@ def get_register_count(num_blocks, num_threads):
     num_threads : int
         The number of threads to target per kernel launch
     """
-    return max(min((32768 / num_blocks) / num_threads, 63), 1)
+    per_thread = REGISTERS_PER_SM // (num_blocks * num_threads)
+    return max(min(per_thread, MAX_REGISTERS_PER_THREAD), 1)
 
 
 def write_launch_bounds(

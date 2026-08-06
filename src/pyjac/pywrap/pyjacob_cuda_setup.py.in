@@ -80,7 +80,7 @@ ext = Extension('cu_pyjacob',
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
-                                    'nvcc': ['-arch=sm_20', '--ptxas-options=-v',
+                                    'nvcc': ['-arch=$cudaarch', '--ptxas-options=-v',
                                     '--compiler-options', "'-fPIC'",
                                     '--ftz=false', '--prec-div=true',
                                     '--prec-sqrt=true', '-m64']},
@@ -118,7 +118,7 @@ def customize_linker_for_nvcc(self):
         obj_filt = [x for x in objects if 'pyjacob.o' in x]
         super('object', obj_filt + ['$libname'], 'cuda_link.o', build_temp,
                 libraries, library_dirs, runtime_library_dirs, export_symbols,
-                debug, ['-arch=sm_20', '--compiler-options', '"-fPIC"', '-dlink'],
+                debug, ['-arch=$cudaarch', '--compiler-options', '"-fPIC"', '-dlink'],
                 extra_postargs, build_temp, target_lang)
 
         #now call the actual link, with the extra dlink object

@@ -3,6 +3,7 @@
 from argparse import ArgumentParser
 
 from .. import utils
+from ..core.CUDAParams import DEFAULT_ARCH
 from .pywrap_gen import generate_wrapper
 
 if __name__ == '__main__':
@@ -33,5 +34,16 @@ if __name__ == '__main__':
         help='The folder to place the generated library in',
     )
 
+    parser.add_argument(
+        '-ca',
+        '--cuda-arch',
+        dest='cuda_arch',
+        type=str,
+        default=DEFAULT_ARCH,
+        help='CUDA compute capability to compile for, e.g. sm_80. Defaults to '
+        f'{DEFAULT_ARCH}; use "native" to target the GPU in the build machine '
+        '(CUDA 11.5 and later). Ignored for non-CUDA languages.',
+    )
+
     args = parser.parse_args()
-    generate_wrapper(args.lang, args.source_dir, args.out_dir)
+    generate_wrapper(args.lang, args.source_dir, args.out_dir, cuda_arch=args.cuda_arch)

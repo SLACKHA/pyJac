@@ -13,19 +13,10 @@ repos:
       - id: mixed-line-ending
       - id: trailing-whitespace
 
-  # Ruff is configured in pyproject.toml ([tool.ruff]) and can be run manually:
-  #
-  #     ruff check src test
-  #     ruff format src test
-  #
-  # The hooks below stay disabled until the one-time cleanup lands. Enabling
-  # them now would rewrite 27 files and auto-fix 735 of 914 findings on the
-  # next commit that touches legacy code, burying real changes in churn.
-  # Uncomment once that cleanup is done, and delete this comment.
-  #
-  # - repo: https://github.com/astral-sh/ruff-pre-commit
-  #   rev: v0.14.5
-  #   hooks:
-  #     - id: ruff-check
-  #       args: [--fix]
-  #     - id: ruff-format
+  # Ruff is configured in pyproject.toml ([tool.ruff]).
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.1
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format

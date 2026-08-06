@@ -1,11 +1,9 @@
 import sys
 
-from pyjac import utils
 
 class TestUtils:
-    """
-    """
+    """ """
+
     def test_imported(self):
-        """Ensure utils module imported.
-        """
+        """Ensure utils module imported."""
         assert 'pyjac.utils' in sys.modules

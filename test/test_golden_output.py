@@ -20,9 +20,8 @@ import subprocess
 
 import pytest
 
-from pyjac.core.create_jacobian import create_jacobian
-
 from conftest import GOLDEN_MECHS, GOLDEN_VARIANTS
+from pyjac.core.create_jacobian import create_jacobian
 
 
 def _generate(mech, lang, dest, **kwargs):
@@ -40,9 +39,19 @@ def _compile_sources(sources, include_dir, compiler):
     for source in sources:
         result = subprocess.run(
             [
-                compiler, '-std=c99', '-O2', '-fPIC',
-                '-Wall', '-Wextra', '-Wno-unused-parameter',
-                '-I', str(include_dir), '-c', str(source), '-o', '/dev/null',
+                compiler,
+                '-std=c99',
+                '-O2',
+                '-fPIC',
+                '-Wall',
+                '-Wextra',
+                '-Wno-unused-parameter',
+                '-I',
+                str(include_dir),
+                '-c',
+                str(source),
+                '-o',
+                '/dev/null',
             ],
             capture_output=True,
             text=True,
@@ -69,7 +78,8 @@ def test_generated_source_matches_golden(mech, variant, tmp_path, golden_dir):
     )
 
     mismatched = [
-        str(rel) for rel in expected_files
+        str(rel)
+        for rel in expected_files
         if (expected_dir / rel).read_bytes() != (tmp_path / rel).read_bytes()
     ]
     assert not mismatched, (
@@ -127,8 +137,9 @@ def test_cache_optimized_generation(mech, tmp_path, c_compiler):
 
     plain, optimized = tmp_path / 'plain', tmp_path / 'optimized'
     _generate(GOLDEN_MECHS[mech], 'c', plain)
-    _generate(GOLDEN_MECHS[mech], 'c', optimized,
-              optimize_cache=True, force_optimize=True)
+    _generate(
+        GOLDEN_MECHS[mech], 'c', optimized, optimize_cache=True, force_optimize=True
+    )
 
     # The optimizer additionally writes its memoized ordering next to the source.
     produced = {rel.name for rel in _relative_files(optimized)} - {'optimized.pickle'}
@@ -138,6 +149,6 @@ def test_cache_optimized_generation(mech, tmp_path, c_compiler):
 
     sources = sorted(optimized.glob('*.c'))
     failures = _compile_sources(sources, optimized, c_compiler)
-    assert not failures, (
-        'cache-optimized C did not compile cleanly:\n' + '\n'.join(failures)
+    assert not failures, 'cache-optimized C did not compile cleanly:\n' + '\n'.join(
+        failures
     )

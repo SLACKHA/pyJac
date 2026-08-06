@@ -1,12 +1,11 @@
-"""Chemkin-format mechanism interpreter module.
-"""
+"""Chemkin-format mechanism interpreter module."""
 
 # Standard libraries
-import sys
+import logging
 import math
 import re
+import sys
 from copy import deepcopy
-import logging
 
 import numpy as np
 
@@ -27,7 +26,8 @@ try:
         logging.warning(
             'Parsing of Cantera mechanisms requires at least version 2.3.0 in '
             'order to access species thermo properties; detected version is '
-            '%s. Cantera-format input will be unavailable.', ct.__version__
+            '%s. Cantera-format input will be unavailable.',
+            ct.__version__,
         )
     else:
         CANTERA_FLAG = True
@@ -37,19 +37,26 @@ except ImportError:
 pre_units = ['moles', 'molecules']
 """list(`str`): Supported units list for pre-exponential factor"""
 
-act_energy_units = ['kelvins', 'evolts', 'cal/mole', 'joules/kmole',
-                    'kcal/mole', 'joules/mole', 'kjoules/mole'
-                    ]
+act_energy_units = [
+    'kelvins',
+    'evolts',
+    'cal/mole',
+    'joules/kmole',
+    'kcal/mole',
+    'joules/mole',
+    'kjoules/mole',
+]
 """list(`str`): Supported units list for activation energy"""
 
-act_energy_fact = dict({'kelvins': 1.0,
-                        'evolts': 11595.,
-                        'cal/mole': 4.184 / chem.RU_JOUL,
-                        'kcal/mole': 4184. / chem.RU_JOUL,
-                        'joules/mole': 1. / chem.RU_JOUL,
-                        'kjoules/mole': 1000.0 / chem.RU_JOUL,
-                        'joules/kmole': 1. / (chem.RU_JOUL * 1000.)
-                        })
+act_energy_fact = {
+    'kelvins': 1.0,
+    'evolts': 11595.0,
+    'cal/mole': 4.184 / chem.RU_JOUL,
+    'kcal/mole': 4184.0 / chem.RU_JOUL,
+    'joules/mole': 1.0 / chem.RU_JOUL,
+    'kjoules/mole': 1000.0 / chem.RU_JOUL,
+    'joules/kmole': 1.0 / (chem.RU_JOUL * 1000.0),
+}
 """dict: Activation energy conversion factor"""
 
 # get local element atomic weight dict
@@ -94,10 +101,12 @@ def read_mech(mech_filename, therm_filename):
             line = file.readline()
 
             # end of file
-            if not line: break
+            if not line:
+                break
 
             # skip blank or commented lines
-            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line): continue
+            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line):
+                continue
 
             # don't convert to lowercase, since thermo
             # needs to match (for Chemkin)
@@ -107,7 +116,8 @@ def read_mech(mech_filename, therm_filename):
 
             # remove any comments from end of line
             ind = line.find('!')
-            if ind > 0: line = line[0:ind]
+            if ind > 0:
+                line = line[0:ind]
 
             # now determine key
             if line[0:4].lower() == 'elem':
@@ -147,19 +157,13 @@ def read_mech(mech_filename, therm_filename):
                         units_E = unit.lower()
                     else:
                         print('Error: unsupported units on REACTION line.')
-                        print('For pre-exponential factor, choose from: ' +
-                              pre_units
-                              )
-                        print('For activation energy, choose from: ' +
-                              act_energy_units
-                              )
+                        print('For pre-exponential factor, choose from: ' + pre_units)
+                        print('For activation energy, choose from: ' + act_energy_units)
                         print('Otherwise leave blank for moles and cal/mole.')
                         sys.exit(1)
 
                 if units_A == 'molecules':
-                    raise NotImplementedError('Molecules units not '
-                                              'supported, sorry.'
-                                              )
+                    raise NotImplementedError('Molecules units not supported, sorry.')
                 continue
             elif line[0:4].lower() == 'ther':
                 # thermo data is in mechanism file
@@ -177,7 +181,8 @@ def read_mech(mech_filename, therm_filename):
                 e_last = ''
                 for e in line_split:
                     if e.isalpha():
-                        if e[0:3] == 'end': continue
+                        if e[0:3] == 'end':
+                            continue
                         if e not in elems:
                             elems.append(e)
                         e_last = e
@@ -189,7 +194,8 @@ def read_mech(mech_filename, therm_filename):
             elif key == 'spec':
                 line_split = line.split()
                 for s in line_split:
-                    if s[0:3] == 'end': continue
+                    if s[0:3] == 'end':
+                        continue
                     if not next((sp for sp in specs if sp.name == s), None):
                         specs.append(chem.SpecInfo(s))
 
@@ -215,17 +221,17 @@ def read_mech(mech_filename, therm_filename):
                         ind = line.index('<=>')
                         reac_rev = True
                         reac_str = line[0:ind].strip()
-                        prod_str = line[ind + 3:].strip()
+                        prod_str = line[ind + 3 :].strip()
                     elif '=>' in line:
                         ind = line.index('=>')
                         reac_rev = False
                         reac_str = line[0:ind].strip()
-                        prod_str = line[ind + 2:].strip()
+                        prod_str = line[ind + 2 :].strip()
                     else:
                         ind = line.index('=')
                         reac_rev = True
                         reac_str = line[0:ind].strip()
-                        prod_str = line[ind + 1:].strip()
+                        prod_str = line[ind + 1 :].strip()
 
                     thd = False
                     pdep = False
@@ -248,15 +254,15 @@ def read_mech(mech_filename, therm_filename):
                         # parentheses and not embedded within parentheses
                         # (e.g., '(+)').
                         # If not, part of species name.
-                        inParen = sub_str[ind1 + 1: ind2].strip()
+                        inParen = sub_str[ind1 + 1 : ind2].strip()
                         if inParen == '+':
                             # '+' embedded within parentheses
-                            sub_str = sub_str[ind2 + 1:]
+                            sub_str = sub_str[ind2 + 1 :]
                         elif inParen[0] == '+':
                             pdep = True
 
                             # either 'm' or a specific species
-                            pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
+                            pdep_sp = sub_str[ind1 + 1 : ind2].replace('+', ' ')
                             pdep_sp = pdep_sp.strip()
 
                             if pdep_sp.lower() == 'm':
@@ -265,14 +271,14 @@ def read_mech(mech_filename, therm_filename):
 
                             # now remove from string
                             ind = reac_str.find(sub_str)
-                            reac_str = (reac_str[0: ind1 + ind] +
-                                        reac_str[ind2 + ind + 1:]
-                                        )
+                            reac_str = (
+                                reac_str[0 : ind1 + ind] + reac_str[ind2 + ind + 1 :]
+                            )
                             break
                         else:
                             # Part of species name, remove from substring
                             # and look at rest of reactant line.
-                            sub_str = sub_str[ind2 + 1:]
+                            sub_str = sub_str[ind2 + 1 :]
 
                     reac_list = reac_str.split('+')
 
@@ -289,14 +295,13 @@ def read_mech(mech_filename, therm_filename):
                         ind = reac_list.index(sp)
 
                         # ensure not last entry
-                        if (ind < len(reac_list) - 1):
+                        if ind < len(reac_list) - 1:
                             spNext = reac_list[ind + 1]
                             if sp[len(sp) - 1] == '(' and spNext[0] == ')':
                                 reac_list[ind] = sp + '+' + spNext
                                 del reac_list[ind + 1]
 
                     for sp in reac_list:
-
                         sp = sp.strip()
 
                         # look for coefficient
@@ -305,7 +310,8 @@ def read_mech(mech_filename, therm_filename):
 
                             # search for first letter
                             for i in range(len(sp)):
-                                if sp[i: i + 1].isalpha(): break
+                                if sp[i : i + 1].isalpha():
+                                    break
 
                             nu = sp[0:i]
                             if '.' in nu:
@@ -346,15 +352,15 @@ def read_mech(mech_filename, therm_filename):
                         # Need to check if '+' is first character inside
                         # parentheses and not embedded within parentheses
                         # (e.g., '(+)'). If not, part of species name.
-                        inParen = sub_str[ind1 + 1: ind2].strip()
+                        inParen = sub_str[ind1 + 1 : ind2].strip()
                         if inParen == '+':
                             # '+' embedded within parentheses
-                            sub_str = sub_str[ind2 + 1:]
+                            sub_str = sub_str[ind2 + 1 :]
                         elif inParen[0] == '+':
                             pdep = True
 
                             # either 'm' or a specific species
-                            pdep_sp = sub_str[ind1 + 1: ind2].replace('+', ' ')
+                            pdep_sp = sub_str[ind1 + 1 : ind2].replace('+', ' ')
                             pdep_sp = pdep_sp.strip()
 
                             if pdep_sp.lower() == 'm':
@@ -363,14 +369,14 @@ def read_mech(mech_filename, therm_filename):
 
                             # now remove from string
                             ind = prod_str.find(sub_str)
-                            prod_str = (prod_str[0: ind1 + ind] +
-                                        prod_str[ind2 + ind + 1:]
-                                        )
+                            prod_str = (
+                                prod_str[0 : ind1 + ind] + prod_str[ind2 + ind + 1 :]
+                            )
                             break
                         else:
                             # Part of species name, remove from substring and
                             # look at rest of product line.
-                            sub_str = sub_str[ind2 + 1:]
+                            sub_str = sub_str[ind2 + 1 :]
 
                     prod_list = prod_str.split('+')
 
@@ -387,14 +393,13 @@ def read_mech(mech_filename, therm_filename):
                         ind = prod_list.index(sp)
 
                         # ensure not last entry
-                        if (ind < len(prod_list) - 1):
+                        if ind < len(prod_list) - 1:
                             spNext = prod_list[ind + 1]
                             if sp[len(sp) - 1] == '(' and spNext[0] == ')':
                                 prod_list[ind] = sp + '+' + spNext
                                 del prod_list[ind + 1]
 
                     for sp in prod_list:
-
                         sp = sp.strip()
 
                         # look for coefficient
@@ -403,7 +408,8 @@ def read_mech(mech_filename, therm_filename):
 
                             # search for first letter
                             for i in range(len(sp)):
-                                if sp[i: i + 1].isalpha(): break
+                                if sp[i : i + 1].isalpha():
+                                    break
 
                             nu = sp[0:i]
                             if '.' in nu:
@@ -445,23 +451,30 @@ def read_mech(mech_filename, therm_filename):
                     if units_A == 'moles':
                         reac_ord = sum(reac_nu)
                         if thd:
-                            reac_A /= 1000. ** reac_ord
+                            reac_A /= 1000.0**reac_ord
                         elif pdep:
                             # Low- (chemically activated bimolecular reaction) or
                             # high-pressure (fall-off reaction) limit parameters
-                            reac_A /= 1000. ** (reac_ord - 1.)
+                            reac_A /= 1000.0 ** (reac_ord - 1.0)
                         else:
                             # Elementary reaction
-                            reac_A /= 1000. ** (reac_ord - 1.)
+                            reac_A /= 1000.0 ** (reac_ord - 1.0)
 
                     # add reaction to list
-                    reac = chem.ReacInfo(reac_rev, reac_spec, reac_nu,
-                                         prod_spec, prod_nu, reac_A, reac_b,
-                                         reac_E
-                                         )
+                    reac = chem.ReacInfo(
+                        reac_rev,
+                        reac_spec,
+                        reac_nu,
+                        prod_spec,
+                        prod_nu,
+                        reac_A,
+                        reac_b,
+                        reac_E,
+                    )
                     reac.thd_body = thd
                     reac.pdep = pdep
-                    if pdep: reac.pdep_sp = pdep_sp
+                    if pdep:
+                        reac.pdep_sp = pdep_sp
 
                     reacs.append(reac)
 
@@ -487,14 +500,14 @@ def read_mech(mech_filename, therm_filename):
                         if units_A == 'moles':
                             reac_ord = sum(reacs[-1].prod_nu)
                             if thd:
-                                par1 /= 1000. ** reac_ord
+                                par1 /= 1000.0**reac_ord
                             elif pdep:
                                 # Low- (chemically activated bimolecular reaction) or
                                 # high-pressure (fall-off reaction) limit parameters
-                                par1 /= 1000. ** (reac_ord - 1.)
+                                par1 /= 1000.0 ** (reac_ord - 1.0)
                             else:
                                 # Elementary reaction
-                                par1 /= 1000. ** (reac_ord - 1.)
+                                par1 /= 1000.0 ** (reac_ord - 1.0)
 
                         # Ensure nonzero reverse coefficients
                         if par1 != 0.0:
@@ -517,7 +530,7 @@ def read_mech(mech_filename, therm_filename):
 
                         # Convert low-pressure pre-exponential factor
                         if units_A == 'moles':
-                            par1 /= 1000. ** sum(reacs[-1].reac_nu)
+                            par1 /= 1000.0 ** sum(reacs[-1].reac_nu)
 
                         reacs[-1].low.append(par1)
                         reacs[-1].low.append(par2)
@@ -536,7 +549,7 @@ def read_mech(mech_filename, therm_filename):
 
                         # Convert high-pressure pre-exponential factor
                         if units_A == 'moles':
-                            par1 /= 1000. ** (sum(reacs[-1].reac_nu) - 2.)
+                            par1 /= 1000.0 ** (sum(reacs[-1].reac_nu) - 2.0)
 
                         reacs[-1].high.append(par1)
                         reacs[-1].high.append(par2)
@@ -553,14 +566,16 @@ def read_mech(mech_filename, therm_filename):
 
                         do_warn = False
                         if par2 == 0:
-                            do_warn=True
+                            do_warn = True
                             par2 = 1e-30
                         if par3 == 0:
-                            do_warn=True
+                            do_warn = True
                             par3 = 1e-30
                         if do_warn:
-                            logging.warning(f'Troe parameters in reaction {len(reacs)} modified to avoid'
-                                ' division by zero!.')
+                            logging.warning(
+                                f'Troe parameters in reaction {len(reacs)} modified to avoid'
+                                ' division by zero!.'
+                            )
 
                         reacs[-1].troe_par.append(par1)
                         reacs[-1].troe_par.append(par2)
@@ -611,28 +626,32 @@ def read_mech(mech_filename, therm_filename):
                         line = line.replace('/', ' ')
                         line_split = line.split()
                         # Convert pressure from atm to Pa
-                        reacs[-1].cheb_plim = [float(line_split[1]) * chem.PA,
-                                               float(line_split[2]) * chem.PA
-                                               ]
+                        reacs[-1].cheb_plim = [
+                            float(line_split[1]) * chem.PA,
+                            float(line_split[2]) * chem.PA,
+                        ]
 
                         # Temperature limits may share the line, or PCHEB may
                         # stand alone.
                         if len(line_split) > 3 and line_split[3].lower() == 'tcheb':
-                            reacs[-1].cheb_tlim = [float(line_split[4]),
-                                                   float(line_split[5])
-                                                   ]
+                            reacs[-1].cheb_tlim = [
+                                float(line_split[4]),
+                                float(line_split[5]),
+                            ]
                     elif aux == 'tch':
                         line = line.replace('/', ' ')
                         line_split = line.split()
-                        reacs[-1].cheb_tlim = [float(line_split[1]),
-                                               float(line_split[2])
-                                               ]
+                        reacs[-1].cheb_tlim = [
+                            float(line_split[1]),
+                            float(line_split[2]),
+                        ]
                         # Pressure limits may share the line, or TCHEB may
                         # stand alone.
                         if len(line_split) > 3 and line_split[3].lower() == 'pcheb':
-                            reacs[-1].cheb_plim = [float(line_split[4]) * chem.PA,
-                                                   float(line_split[5]) * chem.PA
-                                                   ]
+                            reacs[-1].cheb_plim = [
+                                float(line_split[4]) * chem.PA,
+                                float(line_split[5]) * chem.PA,
+                            ]
                     elif aux == 'plo':
                         line = line.replace('/', ' ')
                         line_split = line.split()
@@ -654,7 +673,7 @@ def read_mech(mech_filename, therm_filename):
                         if units_A == 'moles':
                             reac_ord = sum(reacs[-1].reac_nu)
                             # Looks like elementary reaction
-                            pars[1] /= 1000. ** (reac_ord - 1.)
+                            pars[1] /= 1000.0 ** (reac_ord - 1.0)
 
                         reacs[-1].plog_par.append(pars)
                     else:
@@ -672,20 +691,21 @@ def read_mech(mech_filename, therm_filename):
             n = reac.cheb_n_temp
             m = reac.cheb_n_pres
             if len(reac.cheb_par) != n * m:
-                print('Error: incorrect number of CHEB coefficients in '
-                      'reaction ' + repr(idx)
-                      )
+                print(
+                    'Error: incorrect number of CHEB coefficients in '
+                    'reaction ' + repr(idx)
+                )
                 sys.exit(1)
             else:
                 # Convert units of first Chebyshev parameter
                 order = sum(reac.reac_nu)
                 if units_A == 'moles':
-                    reac.cheb_par[0] += math.log10(0.001 ** (order - 1.))
+                    reac.cheb_par[0] += math.log10(0.001 ** (order - 1.0))
 
                 reacs[idx].cheb_par = np.reshape(reac.cheb_par, (n, m))
 
     # check that all species in reactions correspond to a known species
-    spec_names = set(spec.name for spec in specs)
+    spec_names = {spec.name for spec in specs}
     for idx, reac in enumerate(reacs):
         in_rxn = set(reac.reac + reac.prod)
         for spec in in_rxn:
@@ -717,14 +737,15 @@ def read_mech(mech_filename, therm_filename):
             reacs.insert(idx + 1, new_reac)
 
     # Read seperate thermo file if present and needed
-    if any([not sp.mw for sp in specs]):
+    if any(not sp.mw for sp in specs):
         if therm_filename:
             read_thermo(therm_filename, elems, specs)
         else:
-            print('Error: no thermo file specified, but species missing \n'
-                  'data. Either specify file, or ensure complete data in\n'
-                  'mechanism file with THERMO option.'
-                  )
+            print(
+                'Error: no thermo file specified, but species missing \n'
+                'data. Either specify file, or ensure complete data in\n'
+                'mechanism file with THERMO option.'
+            )
             sys.exit(1)
 
     # Check for missing thermo data again
@@ -759,16 +780,17 @@ def read_thermo(filename, elems, specs):
     """
 
     with open(filename) as file:
-
         # loop through intro lines
         while True:
             line = file.readline()
 
             # skip blank or commented lines
-            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line): continue
+            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line):
+                continue
 
             # skip 'thermo' at beginning
-            if 'thermo' in line.lower(): break
+            if 'thermo' in line.lower():
+                break
 
         # next line either has common temperature ranges or first species
         last_line = file.tell()
@@ -791,10 +813,12 @@ def read_thermo(filename, elems, specs):
 
             # break if end of file
             # readline() returns '' at end of file, never None
-            if not line or line[0:3].lower() == 'end': break
+            if not line or line[0:3].lower() == 'end':
+                break
 
             # skip blank/commented line
-            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line): continue
+            if re.search(r'^\s*$', line) or re.search(r'^\s*!', line):
+                continue
 
             # species name, columns 0:18
             spec = line[0:18].strip()
@@ -803,13 +827,11 @@ def read_thermo(filename, elems, specs):
             # columns of shorter species names, so make
             # sure no spaces.
             if spec.find(' ') > 0:
-                spec = spec[0: spec.find(' ')]
+                spec = spec[0 : spec.find(' ')]
 
             # now need to determine if this species is in mechanism
             if next((sp for sp in specs if sp.name == spec), None):
-                sp_ind = next(i for i in range(len(specs))
-                              if specs[i].name == spec
-                              )
+                sp_ind = next(i for i in range(len(specs)) if specs[i].name == spec)
             else:
                 # not in mechanism, read next three lines and continue
                 line = file.readline()
@@ -835,7 +857,8 @@ def read_thermo(filename, elems, specs):
             for e_str in elem_str:
                 e = e_str[0:2].strip()
                 # skip if blank
-                if e == '' or e == '0': continue
+                if e == '' or e == '0':
+                    continue
                 # may need to convert to float first, in case of e.g. "1."
                 e_num = float(e_str[2:].strip())
                 e_num = int(e_num)
@@ -883,7 +906,8 @@ def read_thermo(filename, elems, specs):
             spec.lo[6] = float(coeffs[3])
 
             # stop reading if all species in mechanism accounted for
-            if not next((sp for sp in specs if sp.mw == 0.0), None): break
+            if not next((sp for sp in specs if sp.mw == 0.0), None):
+                break
 
     return None
 
@@ -894,7 +918,7 @@ def read_mech_ct(filename=None, gas=None):
     Parameters
     ----------
     filename : str
-        Reaction mechanism filename (e.g. 'mech.cti'). Optional.
+        Reaction mechanism filename (e.g. 'mech.yaml'). Optional.
     gas : `cantera.Solution` object
         Existing Cantera Solution object to be used. Optional.
 
@@ -912,8 +936,9 @@ def read_mech_ct(filename=None, gas=None):
     """
 
     if not CANTERA_FLAG:
-        print('Error: Cantera not installed. Cannot interpret '
-              'Cantera-format mechanism.')
+        print(
+            'Error: Cantera not installed. Cannot interpret Cantera-format mechanism.'
+        )
         sys.exit(1)
 
     if filename:
@@ -924,7 +949,7 @@ def read_mech_ct(filename=None, gas=None):
 
     # Elements
     elems = gas.element_names
-    for e, wt in zip(elems, gas.atomic_weights):
+    for e, wt in zip(elems, gas.atomic_weights, strict=True):
         if e.lower() not in elem_wt:
             elem_wt[e.lower()] = wt
 
@@ -944,9 +969,7 @@ def read_mech_ct(filename=None, gas=None):
 
         # Species thermodynamic properties
         coeffs = species.thermo.coeffs
-        spec.Trange = [species.thermo.min_temp, coeffs[0],
-                       species.thermo.max_temp
-                       ]
+        spec.Trange = [species.thermo.min_temp, coeffs[0], species.thermo.max_temp]
         if isinstance(species.thermo, ct.NasaPoly2):
             spec.hi = coeffs[1:8]
             spec.lo = coeffs[8:15]
@@ -964,9 +987,11 @@ def read_mech_ct(filename=None, gas=None):
 
     def arrhenius(rate):
         """Arrhenius coefficients in pyJac's internal units."""
-        return (rate.pre_exponential_factor,
-                rate.temperature_exponent,
-                rate.activation_energy * E_fac)
+        return (
+            rate.pre_exponential_factor,
+            rate.temperature_exponent,
+            rate.activation_energy * E_fac,
+        )
 
     def handle_efficiencies(reac, third_body):
         """Copy a `cantera.ThirdBody`'s efficiencies into `reac`.
@@ -1007,14 +1032,24 @@ def read_mech_ct(filename=None, gas=None):
             # Falloff and chemically activated reactions both carry a low- and
             # high-pressure limit; which one is the nominal rate differs.
             if rate.chemically_activated:
-                reac = chem.ReacInfo(rxn.reversible, reactants, reac_nu,
-                                     products, prod_nu,
-                                     *arrhenius(rate.low_rate))
+                reac = chem.ReacInfo(
+                    rxn.reversible,
+                    reactants,
+                    reac_nu,
+                    products,
+                    prod_nu,
+                    *arrhenius(rate.low_rate),
+                )
                 reac.high = list(arrhenius(rate.high_rate))
             else:
-                reac = chem.ReacInfo(rxn.reversible, reactants, reac_nu,
-                                     products, prod_nu,
-                                     *arrhenius(rate.high_rate))
+                reac = chem.ReacInfo(
+                    rxn.reversible,
+                    reactants,
+                    reac_nu,
+                    products,
+                    prod_nu,
+                    *arrhenius(rate.high_rate),
+                )
                 reac.low = list(arrhenius(rate.low_rate))
 
             reac.pdep = True
@@ -1031,22 +1066,27 @@ def read_mech_ct(filename=None, gas=None):
                 if do_warn:
                     logging.warning(
                         'Troe parameters in reaction %d modified to avoid '
-                        'division by zero!.', len(reacs))
+                        'division by zero!.',
+                        len(reacs),
+                    )
             elif isinstance(rate, ct.SriRate):
                 reac.sri = True
                 reac.sri_par = list(rate.falloff_coeffs)
             # a LindemannRate needs neither: pdep with no blending function
 
         elif isinstance(rate, ct.PlogRate):
-            reac = chem.ReacInfo(rxn.reversible, reactants, reac_nu,
-                                 products, prod_nu, 0.0, 0.0, 0.0)
+            reac = chem.ReacInfo(
+                rxn.reversible, reactants, reac_nu, products, prod_nu, 0.0, 0.0, 0.0
+            )
             reac.plog = True
-            reac.plog_par = [[pressure, *arrhenius(arr)]
-                             for pressure, arr in rate.rates]
+            reac.plog_par = [
+                [pressure, *arrhenius(arr)] for pressure, arr in rate.rates
+            ]
 
         elif isinstance(rate, ct.ChebyshevRate):
-            reac = chem.ReacInfo(rxn.reversible, reactants, reac_nu,
-                                 products, prod_nu, 0.0, 0.0, 0.0)
+            reac = chem.ReacInfo(
+                rxn.reversible, reactants, reac_nu, products, prod_nu, 0.0, 0.0, 0.0
+            )
             reac.cheb = True
             reac.cheb_n_temp = rate.n_temperature
             reac.cheb_n_pres = rate.n_pressure
@@ -1060,8 +1100,9 @@ def read_mech_ct(filename=None, gas=None):
             if rate.pre_exponential_factor == 0.0:
                 continue
 
-            reac = chem.ReacInfo(rxn.reversible, reactants, reac_nu,
-                                 products, prod_nu, *arrhenius(rate))
+            reac = chem.ReacInfo(
+                rxn.reversible, reactants, reac_nu, products, prod_nu, *arrhenius(rate)
+            )
 
             if rxn.third_body is not None:
                 reac.thd_body = True

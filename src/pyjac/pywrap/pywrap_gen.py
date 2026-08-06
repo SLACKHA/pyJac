@@ -1,13 +1,14 @@
-"""Module for generating Python wrapper around pyJac code.
-"""
-from pathlib import Path
-import sys
+"""Module for generating Python wrapper around pyJac code."""
+
 import os
 import shutil
 import subprocess
+import sys
+from pathlib import Path
 from string import Template
 
 from ..libgen import generate_library
+
 
 def generate_setup(setupfile, home_dir, build_dir, out_dir, libname, setup_path):
     """Helper method to fill in the template .in files
@@ -36,11 +37,12 @@ def generate_setup(setupfile, home_dir, build_dir, out_dir, libname, setup_path)
     with open(setupfile) as file:
         src = Template(file.read())
 
-    file_data = {'homepath' : home_dir,
-                 'buildpath' : build_dir,
-                 'libname' : libname,
-                 'outpath' : out_dir
-                 }
+    file_data = {
+        'homepath': home_dir,
+        'buildpath': build_dir,
+        'libname': libname,
+        'outpath': out_dir,
+    }
     src = src.safe_substitute(file_data)
 
     Path(setup_path).parent.mkdir(parents=True, exist_ok=True)
@@ -63,11 +65,11 @@ def distutils_dir_name(dname):
     """
     import sys
     import sysconfig
-    f = "{dirname}.{platform}-{version[0]}.{version[1]}"
-    return f.format(dirname=dname,
-                    platform=sysconfig.get_platform(),
-                    version=sys.version_info
-                    )
+
+    f = '{dirname}.{platform}-{version[0]}.{version[1]}'
+    return f.format(
+        dirname=dname, platform=sysconfig.get_platform(), version=sys.version_info
+    )
 
 
 def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
@@ -111,13 +113,17 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
     ext = '.so' if shared else '.a'
     lib = None
     if lang != 'tchem':
-        #first generate the library
-        lib = generate_library(lang, source_dir, out_dir=distutils_build,
-                               shared=shared, auto_diff=auto_diff
-                               )
+        # first generate the library
+        lib = generate_library(
+            lang,
+            source_dir,
+            out_dir=distutils_build,
+            shared=shared,
+            auto_diff=auto_diff,
+        )
         lib = os.path.normpath(lib)
         if shared:
-            lib = lib[lib.index('lib') + len('lib'):lib.index(ext)]
+            lib = lib[lib.index('lib') + len('lib') : lib.index(ext)]
 
     setupfile = None
     if lang == 'c':
@@ -132,14 +138,19 @@ def generate_wrapper(lang, source_dir, out_dir=None, auto_diff=False):
         print(f'Language {lang} not recognized')
         sys.exit(-1)
 
-    setup_path = os.path.join(distutils_build, setupfile[:setupfile.index('.in')])
-    generate_setup(os.path.join(package_dir, setupfile), home_dir, source_dir,
-                   distutils_build, lib, setup_path
-                   )
+    setup_path = os.path.join(distutils_build, setupfile[: setupfile.index('.in')])
+    generate_setup(
+        os.path.join(package_dir, setupfile),
+        home_dir,
+        source_dir,
+        distutils_build,
+        lib,
+        setup_path,
+    )
 
     # sys.executable, not a reconstructed pythonX.Y name: the latter resolves
     # against PATH and so escapes the active virtual environment, where Cython,
     # NumPy and setuptools are installed.
-    subprocess.check_call([sys.executable, setup_path,
-                           'build_ext', '--build-lib', out_dir
-                           ])
+    subprocess.check_call(
+        [sys.executable, setup_path, 'build_ext', '--build-lib', out_dir]
+    )

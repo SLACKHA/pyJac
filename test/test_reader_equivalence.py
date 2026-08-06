@@ -33,11 +33,10 @@ import copy
 import numpy as np
 import pytest
 
+from conftest import GOLDEN_MECHS, MECH_DIR
 from pyjac import utils
 from pyjac.core.create_jacobian import create_jacobian
 from pyjac.core.mech_interpret import read_mech, read_mech_ct
-
-from conftest import GOLDEN_MECHS, MECH_DIR
 
 #: Both readers now draw atomic weights from Cantera, so molecular weights,
 #: like the rate parameters, must agree to machine precision.
@@ -121,15 +120,11 @@ def _compare_reactions(a, b, label):
 
     for field in FLAG_FIELDS:
         if getattr(a, field) != getattr(b, field):
-            diffs.append(
-                f'{label}: {field} {getattr(a, field)} != {getattr(b, field)}'
-            )
+            diffs.append(f'{label}: {field} {getattr(a, field)} != {getattr(b, field)}')
 
     for field in ('reac', 'prod'):
         if sorted(getattr(a, field)) != sorted(getattr(b, field)):
-            diffs.append(
-                f'{label}: {field} {getattr(a, field)} != {getattr(b, field)}'
-            )
+            diffs.append(f'{label}: {field} {getattr(a, field)} != {getattr(b, field)}')
 
     for field in ('reac_nu', 'prod_nu'):
         av = [float(v) for v in getattr(a, field)]
@@ -174,7 +169,7 @@ def _compare_reactions(a, b, label):
         if len(av) != len(bv):
             diffs.append(f'{label}: plog has {len(av)} pressures != {len(bv)}')
         else:
-            for j, (arow, brow) in enumerate(zip(av, bv)):
+            for j, (arow, brow) in enumerate(zip(av, bv, strict=True)):
                 if brow != _approx(arow, RATE_RTOL):
                     diffs.append(f'{label}: plog row {j} {arow} != {brow}')
 
@@ -215,13 +210,13 @@ def compare_mechanisms(first, second):
     if len(specs_a) != len(specs_b):
         diffs.append(f'species count {len(specs_a)} != {len(specs_b)}')
     else:
-        for i, (sa, sb) in enumerate(zip(specs_a, specs_b)):
+        for i, (sa, sb) in enumerate(zip(specs_a, specs_b, strict=True)):
             diffs.extend(_compare_species(sa, sb, f'species[{i}]'))
 
     if len(reacs_a) != len(reacs_b):
         diffs.append(f'reaction count {len(reacs_a)} != {len(reacs_b)}')
     else:
-        for i, (ra, rb) in enumerate(zip(reacs_a, reacs_b)):
+        for i, (ra, rb) in enumerate(zip(reacs_a, reacs_b, strict=True)):
             diffs.extend(_compare_reactions(ra, rb, f'reaction[{i}]'))
     return diffs
 
@@ -230,6 +225,7 @@ def compare_mechanisms(first, second):
 # The comparator itself must be neither vacuous nor over-sensitive.
 # --------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize('mech', sorted(GOLDEN_MECHS))
 def test_comparator_finds_no_differences_against_itself(mech):
     """A mechanism compared with itself reports nothing."""
@@ -237,9 +233,16 @@ def test_comparator_finds_no_differences_against_itself(mech):
     assert compare_mechanisms(parsed, copy.deepcopy(parsed)) == []
 
 
-@pytest.mark.parametrize('field,value', [
-    ('A', 1.5), ('b', 99.0), ('E', 1234.0), ('rev', None), ('dup', None),
-])
+@pytest.mark.parametrize(
+    'field,value',
+    [
+        ('A', 1.5),
+        ('b', 99.0),
+        ('E', 1234.0),
+        ('rev', None),
+        ('dup', None),
+    ],
+)
 def test_comparator_detects_a_changed_reaction_field(field, value):
     """Planting a difference in one reaction is reported."""
     parsed = read_mech(str(GOLDEN_MECHS['h2o2']), None)
@@ -274,7 +277,7 @@ def test_chemkin_molecular_weights_match_cantera(to_cantera_yaml):
 
     _, specs, _ = read_mech(str(GOLDEN_MECHS['h2o2']), None)
     assert [s.name for s in specs] == list(gas.species_names)
-    for spec, expected in zip(specs, gas.molecular_weights):
+    for spec, expected in zip(specs, gas.molecular_weights, strict=True):
         assert spec.mw == expected, f'{spec.name}: {spec.mw} != {expected}'
 
 
@@ -295,6 +298,7 @@ def test_element_weight_overrides_do_not_leak():
 # The comparison this all exists for.
 # --------------------------------------------------------------------------
 
+
 @pytest.mark.parametrize('mech', sorted(GOLDEN_MECHS))
 def test_readers_describe_the_same_mechanism(mech, to_cantera_yaml):
     """Chemkin and Cantera readers agree on the same source mechanism."""
@@ -306,14 +310,14 @@ def test_readers_describe_the_same_mechanism(mech, to_cantera_yaml):
 
     diffs = compare_mechanisms(from_chemkin, from_cantera)
     assert not diffs, (
-        f'{mech}: Chemkin and Cantera readers disagree:\n  '
-        + '\n  '.join(diffs[:20])
+        f'{mech}: Chemkin and Cantera readers disagree:\n  ' + '\n  '.join(diffs[:20])
     )
 
 
 # --------------------------------------------------------------------------
 # Rate types pyJac has no formulation for must be refused, not mistranslated.
 # --------------------------------------------------------------------------
+
 
 def test_unsupported_rate_type_is_rejected():
     """A Blowers-Masel reaction raises rather than being silently mishandled."""
@@ -336,8 +340,14 @@ def test_unsupported_rate_types_are_named_consistently():
 def test_supported_rate_types_are_not_in_the_reject_list():
     """The five forms pyJac does implement must never be rejected."""
     ct = pytest.importorskip('cantera')
-    supported = ('ArrheniusRate', 'LindemannRate', 'TroeRate', 'SriRate',
-                 'PlogRate', 'ChebyshevRate')
+    supported = (
+        'ArrheniusRate',
+        'LindemannRate',
+        'TroeRate',
+        'SriRate',
+        'PlogRate',
+        'ChebyshevRate',
+    )
     for name in supported:
         assert hasattr(ct, name)
         assert name not in utils.unsupported_rate_types

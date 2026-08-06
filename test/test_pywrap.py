@@ -14,10 +14,9 @@ from string import Template
 
 import pytest
 
+from conftest import GOLDEN_MECHS
 from pyjac.core.create_jacobian import create_jacobian
 from pyjac.pywrap import generate_wrapper, parallel_compiler, pywrap_gen
-
-from conftest import GOLDEN_MECHS
 
 TEMPLATE_DIR = Path(parallel_compiler.__file__).parent
 TEMPLATES = sorted(TEMPLATE_DIR.glob('*_setup.py.in'))
@@ -53,8 +52,10 @@ def test_templates_found():
 def test_template_is_valid_python_once_filled_in(template):
     """Each setup template must parse after placeholder substitution."""
     filled = Template(template.read_text()).safe_substitute(
-        homepath='/tmp/home', buildpath='/tmp/build',
-        outpath='/tmp/out', libname='libc_pyjac.a',
+        homepath='/tmp/home',
+        buildpath='/tmp/build',
+        outpath='/tmp/out',
+        libname='libc_pyjac.a',
     )
     ast.parse(filled, filename=template.name)
 
@@ -105,8 +106,8 @@ def test_generate_wrapper_end_to_end(tmp_path, monkeypatch, c_compiler):
     # the package directory must stay clean -- it is read-only once installed.
     # Cython emits its .c beside the .pyx it compiles, so the wrapper sources
     # are staged into the build directory first.
-    stray = [p for p in TEMPLATE_DIR.glob('*_setup.py')]
-    stray += [p for p in TEMPLATE_DIR.glob('*_wrapper.c')]
+    stray = list(TEMPLATE_DIR.glob('*_setup.py'))
+    stray += list(TEMPLATE_DIR.glob('*_wrapper.c'))
     assert not stray, f'wrapper build wrote into the package directory: {stray}'
 
     script = textwrap.dedent(
@@ -123,7 +124,8 @@ def test_generate_wrapper_end_to_end(tmp_path, monkeypatch, c_compiler):
         print('OK')
         """
     )
-    result = subprocess.run([sys.executable, '-c', script],
-                            cwd=tmp_path, capture_output=True, text=True)
+    result = subprocess.run(
+        [sys.executable, '-c', script], cwd=tmp_path, capture_output=True, text=True
+    )
     assert result.returncode == 0, result.stderr
     assert 'OK' in result.stdout

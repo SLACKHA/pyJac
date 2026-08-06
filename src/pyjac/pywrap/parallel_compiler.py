@@ -8,7 +8,7 @@ import multiprocessing
 from multiprocessing.pool import ThreadPool
 
 try:
-    from setuptools._distutils.ccompiler import CCompiler
+    from setuptools._distutils.ccompiler import CCompiler  # noqa: F401
 except ImportError as err:  # pragma: no cover - depends on setuptools layout
     raise ImportError(
         'Building the pyJac Python wrapper requires setuptools, which '
@@ -18,11 +18,19 @@ except ImportError as err:  # pragma: no cover - depends on setuptools layout
 
 N = multiprocessing.cpu_count()
 
+
 # monkey-patch for parallel compilation
-def parallel_compile(self, sources, output_dir=None, macros=None,
-                     include_dirs=None, debug=False, extra_preargs=None,
-                     extra_postargs=None, depends=None
-                     ):
+def parallel_compile(
+    self,
+    sources,
+    output_dir=None,
+    macros=None,
+    include_dirs=None,
+    debug=False,
+    extra_preargs=None,
+    extra_postargs=None,
+    depends=None,
+):
     """Compile source files in parallel.
 
     Parameters
@@ -53,16 +61,17 @@ def parallel_compile(self, sources, output_dir=None, macros=None,
     # these lines are copied from CCompiler.compile directly
     macros, objects, extra_postargs, pp_opts, build = self._setup_compile(
         output_dir, macros, include_dirs, sources, depends, extra_postargs
-        )
+    )
     cc_args = self._get_cc_args(pp_opts, debug, extra_preargs)
 
     # number of parallel compilations
 
     def _single_compile(obj):
-        """Compile single file.
-        """
-        try: src, ext = build[obj]
-        except KeyError: return
+        """Compile single file."""
+        try:
+            src, ext = build[obj]
+        except KeyError:
+            return
         self._compile(obj, src, ext, cc_args, extra_postargs, pp_opts)
 
     # convert to list, imap is evaluated on-demand

@@ -1,6 +1,4 @@
-"""Module containing element dict, species and reaction classes, and constants.
-
-"""
+"""Module containing element dict, species and reaction classes, and constants."""
 
 # Standard libraries
 import functools
@@ -9,21 +7,29 @@ import math
 import cantera as ct
 import numpy as np
 
-__all__ = ['RU', 'RUC', 'RU_JOUL', 'PA', 'get_elem_wt',
-           'ReacInfo', 'SpecInfo', 'calc_spec_smh']
+__all__ = [
+    'RU',
+    'RUC',
+    'RU_JOUL',
+    'PA',
+    'get_elem_wt',
+    'ReacInfo',
+    'SpecInfo',
+    'calc_spec_smh',
+]
 
 # universal gas constants, SI units
 RU = ct.gas_constant  # J/(kmole * K)
-RU_JOUL = ct.gas_constant / 1000.
-RUC = (RU / 4.18400)  # cal/(mole * K)
+RU_JOUL = ct.gas_constant / 1000.0
+RUC = RU / 4.18400  # cal/(mole * K)
 
 # pressure of one standard atmosphere [Pa]
 PA = ct.one_atm
 
 
 class CommonEqualityMixin:
-    """Base class for `ReacInfo` and `SpecInfo` classes for equality comparison
-    """
+    """Base class for `ReacInfo` and `SpecInfo` classes for equality comparison"""
+
     def __eq__(self, other):
         try:
             for key, value in self.__dict__.items():
@@ -33,12 +39,12 @@ class CommonEqualityMixin:
                     if not np.array_equal(value, other.__dict__[key]):
                         return False
                 elif isinstance(value, list):
-                    if not all([any(x == y for y in other.__dict__[key]) for x in value]):
+                    if not all(any(x == y for y in other.__dict__[key]) for x in value):
                         return False
                 elif value != other.__dict__[key]:
                     return False
             return True
-        except Exception as e:
+        except Exception:
             return False
 
     def __ne__(self, other):
@@ -49,10 +55,23 @@ class CommonEqualityMixin:
 #: since they have no stable isotopes. Retained from pyJac's original table so
 #: that mechanisms naming them still parse.
 _UNSTABLE_ELEM_WT = {
-    'tc': 99.0, 'pm': 145.0, 'po': 210.0, 'at': 210.0, 'rn': 222.0,
-    'fr': 223.0, 'ra': 226.0, 'ac': 227.0, 'pa': 231.0, 'np': 237.0,
-    'pu': 242.0, 'am': 243.0, 'cm': 247.0, 'bk': 249.0, 'cf': 251.0,
-    'es': 254.0, 'fm': 253.0,
+    'tc': 99.0,
+    'pm': 145.0,
+    'po': 210.0,
+    'at': 210.0,
+    'rn': 222.0,
+    'fr': 223.0,
+    'ra': 226.0,
+    'ac': 227.0,
+    'pa': 231.0,
+    'np': 237.0,
+    'pu': 242.0,
+    'am': 243.0,
+    'cm': 247.0,
+    'bk': 249.0,
+    'cf': 251.0,
+    'es': 254.0,
+    'fm': 253.0,
 }
 
 #: Chemkin mechanisms use D for deuterium and E for the electron; Cantera
@@ -201,9 +220,9 @@ class ReacInfo(CommonEqualityMixin):
         # Number of pressure values over which fit computed.
         self.cheb_n_pres = 0
         # Pressure limits for Chebyshev fit [Pa]
-        self.cheb_plim = [0.001 * PA, 100. * PA]
+        self.cheb_plim = [0.001 * PA, 100.0 * PA]
         # Temperature limits for Chebyshev fit [K]
-        self.cheb_tlim = [300., 2500.]
+        self.cheb_tlim = [300.0, 2500.0]
         # 2D array of Chebyshev fit coefficients
         self.cheb_par = None
 
@@ -284,16 +303,26 @@ def calc_spec_smh(T, specs):
 
     for sp in specs:
         if T <= sp.Trange[1]:
-            smh = (sp.lo[0] * (Tlog - 1.0) + sp.lo[1] * Thalf + sp.lo[2] *
-                   T2 + sp.lo[3] * T3 + sp.lo[4] * T4 - (sp.lo[5] / T) +
-                   sp.lo[6]
-                   )
+            smh = (
+                sp.lo[0] * (Tlog - 1.0)
+                + sp.lo[1] * Thalf
+                + sp.lo[2] * T2
+                + sp.lo[3] * T3
+                + sp.lo[4] * T4
+                - (sp.lo[5] / T)
+                + sp.lo[6]
+            )
         else:
-            smh = (sp.hi[0] * (Tlog - 1.0) + sp.hi[1] * Thalf + sp.hi[2] *
-                   T2 + sp.hi[3] * T3 + sp.hi[4] * T4 - (sp.hi[5] / T) +
-                   sp.hi[6]
-                   )
+            smh = (
+                sp.hi[0] * (Tlog - 1.0)
+                + sp.hi[1] * Thalf
+                + sp.hi[2] * T2
+                + sp.hi[3] * T3
+                + sp.hi[4] * T4
+                - (sp.hi[5] / T)
+                + sp.hi[6]
+            )
 
         spec_smh.append(smh)
 
-    return (spec_smh)
+    return spec_smh

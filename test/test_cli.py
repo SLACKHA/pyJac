@@ -5,11 +5,10 @@ The parser lives in ``pyjac.__main__``.
 
 import pytest
 
-from pyjac import utils
-from pyjac._version import __version__
-from pyjac.__main__ import build_parser, get_parser
-
 from conftest import GOLDEN_MECHS
+from pyjac import utils
+from pyjac.__main__ import build_parser, get_parser
+from pyjac._version import __version__
 
 UNSUPPORTED = sorted(set(utils.langs) - set(utils.supported_langs))
 
@@ -63,10 +62,18 @@ def test_missing_mechanism_file_exits(capsys, monkeypatch):
 
 def test_missing_thermo_file_exits(capsys, monkeypatch):
     """A supplied but missing thermo database is likewise caught early."""
-    monkeypatch.setattr('sys.argv', [
-        'pyjac', '--lang', 'c', '--input', str(GOLDEN_MECHS['h2o2']),
-        '--thermo', 'does_not_exist.dat',
-    ])
+    monkeypatch.setattr(
+        'sys.argv',
+        [
+            'pyjac',
+            '--lang',
+            'c',
+            '--input',
+            str(GOLDEN_MECHS['h2o2']),
+            '--thermo',
+            'does_not_exist.dat',
+        ],
+    )
     with pytest.raises(SystemExit) as excinfo:
         get_parser()
     assert excinfo.value.code == 2
@@ -75,10 +82,18 @@ def test_missing_thermo_file_exits(capsys, monkeypatch):
 
 def test_valid_arguments_parse(monkeypatch, tmp_path):
     """A well-formed command line produces the expected namespace."""
-    monkeypatch.setattr('sys.argv', [
-        'pyjac', '--lang', 'c', '--input', str(GOLDEN_MECHS['h2o2']),
-        '-b', str(tmp_path),
-    ])
+    monkeypatch.setattr(
+        'sys.argv',
+        [
+            'pyjac',
+            '--lang',
+            'c',
+            '--input',
+            str(GOLDEN_MECHS['h2o2']),
+            '-b',
+            str(tmp_path),
+        ],
+    )
     args = get_parser()
     assert args.lang == 'c'
     assert args.input == str(GOLDEN_MECHS['h2o2'])

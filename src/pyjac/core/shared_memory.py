@@ -1,13 +1,12 @@
-"""Handles shared memory usage to accelerate memory accesses for CUDA
-"""
+"""Handles shared memory usage to accelerate memory accesses for CUDA"""
 
 # Standard libraries
-import os
 from math import floor
 
 # Local imports
 from .. import utils
 from . import CUDAParams
+
 
 class variable:
     """
@@ -15,6 +14,7 @@ class variable:
     dicitonary of the `shared_memory_manager` for identification and
     tracking of `variable` usage for eviction.
     """
+
     def __init__(self, base, index, lang='cuda'):
         """
         Creates a `variable` with given base and index
@@ -40,26 +40,23 @@ class variable:
         return self.base == other.base and self.index == other.index
 
     def reset(self):
-        """Reset the usage count of this `variable`
-        """
+        """Reset the usage count of this `variable`"""
         self.last_use_count = 0
 
     def update(self):
-        """Increment the usage count of this `variable`
-        """
+        """Increment the usage count of this `variable`"""
         self.last_use_count += 1
 
     def to_string(self):
-        """Converts this `variable` to a string representation
-        """
+        """Converts this `variable` to a string representation"""
         if self.index is None:
             return self.base
         return utils.get_array(self.lang, self.base, self.index)
 
 
 class shared_memory_manager:
-    """Manager for GPU shared memory.
-    """
+    """Manager for GPU shared memory."""
+
     def __init__(self, blocks_per_sm=8, num_threads=64, L1_PREFERRED=True):
         """Creates a shared memory manager
 
@@ -101,17 +98,17 @@ class shared_memory_manager:
         `on_eviction` function will be called on each evicted entry.
 
         """
-        key_copy = [x for x in self.shared_dict.keys()]
+        key_copy = list(self.shared_dict.keys())
         for shared_index in key_copy:
             self.evict(shared_index)
 
     def evict_longest_gap(self):
-        """Evicts entry in the internal dictionary the longest without use.
-        """
+        """Evicts entry in the internal dictionary the longest without use."""
         if len(self.shared_dict):
-            ind = max((x for x in self.shared_dict if self.eviction_marking[x]),
-                      key=lambda k: self.shared_dict[k].last_use_count
-                      )
+            ind = max(
+                (x for x in self.shared_dict if self.eviction_marking[x]),
+                key=lambda k: self.shared_dict[k].last_use_count,
+            )
             self.evict(ind)
 
     def evict(self, shared_index):
@@ -190,14 +187,16 @@ class shared_memory_manager:
         None
 
         """
-        file.write(''.join([' ' for i in range(indent)]) +
-                   'extern volatile __shared__ double ' +
-                   self.skeleton.format('') + utils.line_end['cuda']
-                   )
+        file.write(
+            ''.join([' ' for i in range(indent)])
+            + 'extern volatile __shared__ double '
+            + self.skeleton.format('')
+            + utils.line_end['cuda']
+        )
 
-    def load_into_shared(self, file, variables, estimated_usage=None,
-                         indent=2, load=True
-                         ):
+    def load_into_shared(
+        self, file, variables, estimated_usage=None, indent=2, load=True
+    ):
         """The main SMM method, loads/evicts variables based upon estimated
         usage and stagnancy.
 
@@ -221,56 +220,60 @@ class shared_memory_manager:
         List of `bool` to indicate if variables are loaded in shared memory.
 
         """
-        #save old variables
+        # save old variables
         old_index = []
         old_variables = []
         if len(self.shared_dict):
-            old_index, old_variables = zip(*self.shared_dict.items())
+            old_index, old_variables = zip(*self.shared_dict.items(), strict=True)
 
-        #update all the old variables usage counts
+        # update all the old variables usage counts
         for x in old_variables:
             x.update()
 
-        #check for self_eviction
+        # check for self_eviction
         if self.self_eviction_strategy is not None:
             for ind, val in self.shared_dict.items():
-                #if qualifies for self eviction and not in current set
+                # if qualifies for self eviction and not in current set
                 if self.self_eviction_strategy(val) and val not in variables:
                     self.eviction_marking[ind] = True
                 elif val in variables:
                     self.eviction_marking[ind] = False
 
-        #sort by usage if available
+        # sort by usage if available
         if estimated_usage is not None:
-            variables = [(x[1], estimated_usage[x[0]]) for x in
-                         sorted(enumerate(variables),
-                         key=lambda x: estimated_usage[x[0]], reverse=True)
-                         ]
+            variables = [
+                (x[1], estimated_usage[x[0]])
+                for x in sorted(
+                    enumerate(variables),
+                    key=lambda x: estimated_usage[x[0]],
+                    reverse=True,
+                )
+            ]
 
-        #now update for new variables
+        # now update for new variables
         for thevar in variables:
             if estimated_usage is not None:
                 var, usage = thevar
             else:
                 var = thevar
                 usage = None
-            #don't re-add if it's already in
+            # don't re-add if it's already in
             if var not in self.shared_dict.values():
-                #skip barely used ones
+                # skip barely used ones
                 if usage <= 1:
                     continue
-                #if we have something marked for eviction, now's the time
-                if (len(self.shared_dict) >= self.shared_per_thread and
-                    self.eviction_marking.count(True)
-                    ):
+                # if we have something marked for eviction, now's the time
+                if len(
+                    self.shared_dict
+                ) >= self.shared_per_thread and self.eviction_marking.count(True):
                     self.evict_longest_gap()
-                #add it if possible
+                # add it if possible
                 if len(self.shared_dict) < self.shared_per_thread:
                     self.add_to_dictionary(var)
 
         if estimated_usage:
             # add any usage = 1 ones if space
-            for var, usage in variables:
+            for var, _ in variables:
                 if var not in self.shared_dict.values():
                     if len(self.shared_dict) < self.shared_per_thread:
                         self.add_to_dictionary(var)
@@ -278,14 +281,15 @@ class shared_memory_manager:
             # need to write loads for any new vars
             for ind, val in self.shared_dict.items():
                 if val not in old_variables:
-                    file.write(' ' * indent + self.__get_string(ind) +
-                               ' = ' + val.to_string() +
-                               utils.line_end['cuda']
-                               )
+                    file.write(
+                        ' ' * indent
+                        + self.__get_string(ind)
+                        + ' = '
+                        + val.to_string()
+                        + utils.line_end['cuda']
+                    )
 
-        return {k:(v not in old_variables)
-                for k, v in self.shared_dict.items()
-                }
+        return {k: (v not in old_variables) for k, v in self.shared_dict.items()}
 
     def mark_for_eviction(self, variables):
         """Marks variables for possible eviction upon next load_into_shared call
@@ -296,9 +300,7 @@ class shared_memory_manager:
             List of variables to consider for eviction
 
         """
-        self.eviction_marking = [var in variables for var in
-                                 self.shared_dict.values()
-                                 ]
+        self.eviction_marking = [var in variables for var in self.shared_dict.values()]
 
     def __get_string(self, index):
         """Convenience method to get correct GPU shared memory addressing
@@ -317,9 +319,7 @@ class shared_memory_manager:
         if index == 0:
             return self.skeleton.format('threadIdx.x')
         else:
-            return self.skeleton.format('threadIdx.x + '
-                                        f'{index} * blockDim.x'
-                                        )
+            return self.skeleton.format(f'threadIdx.x + {index} * blockDim.x')
 
     def get_index(self, var):
         """Checks to see if a variable is in the internal dictionary.
@@ -338,9 +338,9 @@ class shared_memory_manager:
             Variable found in internal dictionary
 
         """
-        our_ind, our_var = next((val for val in self.shared_dict.items()
-                                if val[1] == var), (None, None)
-                                )
+        our_ind, our_var = next(
+            (val for val in self.shared_dict.items() if val[1] == var), (None, None)
+        )
         return our_ind, our_var
 
     def get_array(self, lang, thevar, index, twod=None):
@@ -369,9 +369,9 @@ class shared_memory_manager:
         var = variable(thevar, index, lang)
         our_ind, our_var = self.get_index(var)
         if our_var is not None:
-            #mark as used
+            # mark as used
             our_var.reset()
-            #and return the shared string
+            # and return the shared string
             name = self.__get_string(our_ind)
         else:
             name = var.to_string()

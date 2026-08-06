@@ -34,8 +34,7 @@ regenerating with the old table and diffing.
 - `pyproject.toml` with PEP 621 metadata, optional-dependency extras
   (`pywrap`, `cache-opt`, `test`, `docs`), and ruff/pytest/coverage config,
   built with hatchling
-- `.pre-commit-config.yaml` (ruff hooks staged but disabled pending the
-  one-time lint cleanup)
+- `.pre-commit-config.yaml`, including the ruff lint and format hooks
 - `--version` / `-v` flag reporting the pyJac version
 - The CLI validates before doing any work: unsupported languages, a missing
   mechanism file, and a missing thermodynamic database all exit through the
@@ -43,6 +42,17 @@ regenerating with the old table and diffing.
   inside generation
 
 ### Changed
+- Applied the ruff cleanup and enabled the ruff pre-commit hooks. Every rule in
+  the selected set now passes with no ignores beyond `E501`.
+- Narrowed all 18 bare `except:` clauses to the exceptions they are actually
+  guarding, and required `zip()` calls to state their strictness.
+- The partially stirred reactor now rejects an odd particle count. Particles are
+  mixed in non-overlapping pairs, so an odd count silently left one unmixed.
+- The functional and performance testers now take Cantera YAML. Both refuse
+  `.cti`/`.xml` with a pointer to Cantera's converters, and the functional
+  tester logs when it converts a Chemkin mechanism. `performance_tester`
+  discovers mechanisms by `.yaml`/`.yml` rather than `.cti`, which it would
+  never have found.
 - Ported `read_mech_ct` to the Cantera 3.x API. Dispatch now keys on the
   reaction's `ReactionRate` type and its `ThirdBody` rather than on the
   `Reaction` subclasses removed in 3.0, and the reader-equivalence tests hold
@@ -52,7 +62,7 @@ regenerating with the old table and diffing.
 - Cantera YAML (`.yaml`/`.yml`) is now the recognised Cantera input format.
   `.cti` and `.xml` raise `NotImplementedError` pointing at `cti2yaml` and
   `ctml2yaml`; both formats were removed in Cantera 3.0.
-- Unsupported rate types (Blowers-Masel, Linear-Burke, Tsang, plasma, surface 
+- Unsupported rate types (Blowers-Masel, Linear-Burke, Tsang, plasma, surface
   and user-supplied rates)---now raise `NotImplementedError` naming the type.
 - Atomic weights now come from `cantera.Element` rather than a hardcoded table
   taken from an older IUPAC revision, so a mechanism read through the Chemkin
@@ -111,6 +121,9 @@ regenerating with the old table and diffing.
   for third-body species, raising `NameError` whenever that branch was reached
 - `performance_tester` compared a list against an int to size its
   thread sweep, raising `TypeError` on Python 3
+- Five bare `except:` clauses in `mech_auxiliary` caught the `SystemExit` raised
+  by their own `sys.exit(1)`, so a malformed initial-conditions string reported
+  "not comma separated" regardless of what was actually wrong with it.
 - `read_thermo` looped forever at end of file: it tested `line is None`, but
   `readline()` returns `''` when exhausted. Any non-Chemkin input fed to the
   Chemkin parser hung instead of erroring.
@@ -119,6 +132,8 @@ regenerating with the old table and diffing.
   an exit status.
 
 ### Removed
+- `data/h2o2.cti` and `data/h2o2_performance/h2o2.cti`, replaced by YAML
+  equivalents; Cantera 3.x cannot read the CTI format
 - `setup.py`, `setup.cfg`, `MANIFEST.in` (superseded by `pyproject.toml`)
 - `conda.recipe/` and `test-environment.yaml`; distribution is now PyPI-only
 - The vestigial `__main__` blocks in `core.create_jacobian` and

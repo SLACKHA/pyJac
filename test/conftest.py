@@ -57,11 +57,13 @@ def to_cantera_yaml(tmp_path):
     def convert(chemkin_path, thermo_path=None):
         chemkin_path = pathlib.Path(chemkin_path)
         out_name = tmp_path / (chemkin_path.stem + '.yaml')
-        ck2yaml.convert(str(chemkin_path),
-                        thermo_file=str(thermo_path) if thermo_path else None,
-                        out_name=str(out_name),
-                        permissive=True,
-                        quiet=True)
+        ck2yaml.convert(
+            str(chemkin_path),
+            thermo_file=str(thermo_path) if thermo_path else None,
+            out_name=str(out_name),
+            permissive=True,
+            quiet=True,
+        )
         return out_name
 
     return convert

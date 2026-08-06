@@ -73,9 +73,9 @@ def get_register_count(num_blocks, num_threads):
     return max(min((32768 / num_blocks) / num_threads, 63), 1)
 
 
-def write_launch_bounds(builddir, blocks_per_sm=8, num_threads=64,
-                        L1_PREFERRED=True, no_shared=False
-                        ):
+def write_launch_bounds(
+    builddir, blocks_per_sm=8, num_threads=64, L1_PREFERRED=True, no_shared=False
+):
     """Creates the launch_bounds.cuh file that may be included by CUDA solvers
 
     Parameters
@@ -97,21 +97,26 @@ def write_launch_bounds(builddir, blocks_per_sm=8, num_threads=64,
     None
 
     """
-    shared_per_block = (int(floor(get_shared_size(L1_PREFERRED) / blocks_per_sm))
-                        if not no_shared
-                        else 0
-                        )
-    with open(os.path.join(builddir, 'launch_bounds.cuh'), "w") as file:
-        file.write('#ifndef LAUNCH_BOUNDS_CUH\n'
-                   '#define LAUNCH_BOUNDS_CUH\n'
-                   f'#define TARGET_BLOCK_SIZE ({num_threads})\n' +
-                   f'#define TARGET_BLOCKS ({blocks_per_sm})\n' +
-                   ('' if no_shared else '//shared memory active\n') +
-                   f'#define SHARED_SIZE ({shared_per_block}' +
-                   ' * sizeof(double))\n' +
-                   ('//Large L1 cache active\n#define PREFERL1\n'
-                    if L1_PREFERRED else '//Large shared memory active\n'
-                    ) + '#endif\n'
-                   )
+    shared_per_block = (
+        int(floor(get_shared_size(L1_PREFERRED) / blocks_per_sm))
+        if not no_shared
+        else 0
+    )
+    with open(os.path.join(builddir, 'launch_bounds.cuh'), 'w') as file:
+        file.write(
+            '#ifndef LAUNCH_BOUNDS_CUH\n'
+            '#define LAUNCH_BOUNDS_CUH\n'
+            f'#define TARGET_BLOCK_SIZE ({num_threads})\n'
+            + f'#define TARGET_BLOCKS ({blocks_per_sm})\n'
+            + ('' if no_shared else '//shared memory active\n')
+            + f'#define SHARED_SIZE ({shared_per_block}'
+            + ' * sizeof(double))\n'
+            + (
+                '//Large L1 cache active\n#define PREFERL1\n'
+                if L1_PREFERRED
+                else '//Large shared memory active\n'
+            )
+            + '#endif\n'
+        )
     with open(os.path.join(builddir, 'regcount'), 'w') as file:
         file.write(f'{get_register_count(blocks_per_sm, num_threads)}')

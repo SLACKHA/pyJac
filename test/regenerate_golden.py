@@ -15,7 +15,6 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent.resolve()))
 
 from conftest import GOLDEN_DIR, GOLDEN_MECHS, GOLDEN_VARIANTS  # noqa: E402
-
 from pyjac.core.create_jacobian import create_jacobian  # noqa: E402
 
 

@@ -10,10 +10,9 @@ import subprocess
 
 import pytest
 
+from conftest import MECH_DIR
 from pyjac.core.create_jacobian import create_jacobian
 from pyjac.core.mech_interpret import read_mech
-
-from conftest import MECH_DIR
 
 CHEB_SMALL = MECH_DIR / 'cheb_small.inp'
 
@@ -54,8 +53,7 @@ def test_two_temperature_coefficients_stay_in_bounds(tmp_path):
     size = declared.pop()
 
     used = {
-        int(n) for n in
-        re.findall(r'(?<!double )(?<!double  )dot_prod\[(\d+)\]', jacob)
+        int(n) for n in re.findall(r'(?<!double )(?<!double  )dot_prod\[(\d+)\]', jacob)
     }
     out_of_bounds = {i for i in used if i >= size}
     assert not out_of_bounds, (
@@ -74,9 +72,20 @@ def test_two_temperature_chebyshev_compiles_without_warnings(tmp_path, c_compile
     for source in sorted(tmp_path.glob('*.c')):
         result = subprocess.run(
             [
-                c_compiler, '-std=c99', '-O2', '-fPIC',
-                '-Wall', '-Wextra', '-Warray-bounds', '-Wno-unused-parameter',
-                '-I', str(tmp_path), '-c', str(source), '-o', '/dev/null',
+                c_compiler,
+                '-std=c99',
+                '-O2',
+                '-fPIC',
+                '-Wall',
+                '-Wextra',
+                '-Warray-bounds',
+                '-Wno-unused-parameter',
+                '-I',
+                str(tmp_path),
+                '-c',
+                str(source),
+                '-o',
+                '/dev/null',
             ],
             capture_output=True,
             text=True,

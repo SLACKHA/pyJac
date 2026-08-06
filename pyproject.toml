@@ -109,6 +109,29 @@ select = [
     'B',    # flake8-bugbear
     'C4',   # flake8-comprehensions
 ]
+
+# Rulesets outside the selection above, and why. `--select ALL` reports roughly
+# 9700 further findings; these are the judgments behind not adopting them, so
+# the question does not have to be re-litigated each time someone runs it.
+#
+# Deliberately not adopted:
+#   Q      quote style is already settled by the formatter (single quotes), so
+#          the rule would only duplicate it -- and it accounts for 4300 of the
+#          9700 on its own
+#   ANN    annotating 14k lines of untyped scientific code is its own project,
+#          with little payoff for a generator whose interfaces are stable
+#   COM    trailing commas: formatter-adjacent preference, no correctness value
+#   S101   bare asserts, almost all in tests, where they are the right thing
+#   CPY    per-file copyright headers; LICENSE covers this
+#
+# Worth adopting, tracked as work rather than enabled now because each needs
+# code changes first:
+#   T201   ~112 bare print() diagnostics that should be logging; parts of the
+#          codebase already log, so it is currently inconsistent
+#   ERA    ~73 commented-out blocks, some of which may document intent
+#   PTH    ~154 os.path calls, pending the pathlib conversion
+#   C901, PLR09xx  generator function complexity; the same work as extracting
+#          the string-producing helpers into testable pieces
 ignore = [
     'E501',  # line length is handled by the formatter
 ]

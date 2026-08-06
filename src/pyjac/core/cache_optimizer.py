@@ -1,32 +1,27 @@
-""" Reorders loads of rate and species subs to optimize cache hits, etc.
-"""
+"""Reorders loads of rate and species subs to optimize cache hits, etc."""
 
 # Standard libraries
+import datetime
 import multiprocessing
-import pickle
 import os
-import itertools
+import pickle
+import time
 
 import numpy as np
-import time
-import datetime
 
 # Local imports
-from .. import utils
 
-#dependencies
+# dependencies
 have_bitarray = False
 try:
     from bitarray import bitarray
+
     have_bitarray = True
-except:
+except ImportError:
     print('bitarray not found, turning off cache-optimization')
 
 
-
-def optimizer_loop(starting_order, mapping, lookback,
-                   improve_cutoff, random_tries
-                   ):
+def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tries):
     """
 
     Parameters
@@ -55,18 +50,18 @@ def optimizer_loop(starting_order, mapping, lookback,
 
     def __get_score(val_mapping, i):
         score = 0
-        #start with a blank mapping, and obtain all distinct species
-        #that participate in the reactions in the range
+        # start with a blank mapping, and obtain all distinct species
+        # that participate in the reactions in the range
         for j in range(max(i - lookback, 0), min(i + lookback + 1, nvar)):
             if i == j:
                 continue
-            #number that the value in question and the range value share
+            # number that the value in question and the range value share
             count = (val_mapping & mapping[order[j]]).count()
-            #number that the value in question does not have, and the
-            #range value does, this represents a potential load
+            # number that the value in question does not have, and the
+            # range value does, this represents a potential load
             count -= (~val_mapping & mapping[order[j]]).count()
 
-            #scale this by the
+            # scale this by the
             score += count / float(abs(i - j))
 
         return score
@@ -74,13 +69,13 @@ def optimizer_loop(starting_order, mapping, lookback,
     def __global_score():
         score = 0
         for i in range(nvar):
-            #get the score
+            # get the score
             count = __get_score(mapping[order[i]], i)
             score += count
 
         return score
 
-    #first move any empty entries to the end
+    # first move any empty entries to the end
     zero_vals = []
     for i in range(nvar):
         if mapping[order[i]].count() == 0:
@@ -89,19 +84,17 @@ def optimizer_loop(starting_order, mapping, lookback,
     nvar = len(order)
     order += zero_vals
 
-    nvar = next((i for i, val in enumerate(order)
-                if mapping[val].count() == 0), nvar
-                )
+    nvar = next((i for i, val in enumerate(order) if mapping[val].count() == 0), nvar)
 
     starting_score = __global_score()
     global_max = starting_score
     global_max_order = order[:]
-    for bottom_outs in range(random_tries):
+    for _bottom_outs in range(random_tries):
         last_improvement = 0
         while last_improvement < improve_cutoff:
             mincount = None
             mininds = None
-            #first scan to see the 'worst' placed reaction
+            # first scan to see the 'worst' placed reaction
             for i in range(nvar):
                 count = __get_score(mapping[order[i]], i)
 
@@ -115,14 +108,14 @@ def optimizer_loop(starting_order, mapping, lookback,
             for min_ind in mininds:
                 maxcount = None
                 maxind = None
-                #we now have the 'worst' location selected
-                #let's find the 'best place to put it'
+                # we now have the 'worst' location selected
+                # let's find the 'best place to put it'
 
                 for i in range(nvar):
                     if i == min_ind:
                         continue
 
-                     #get the score
+                    # get the score
                     count = __get_score(mapping[order[min_ind]], i)
 
                     if maxcount is None or count > maxcount:
@@ -133,10 +126,10 @@ def optimizer_loop(starting_order, mapping, lookback,
 
             best_move = np.argmax([x[1] for x in moves])
             minind, maxcount, maxind = moves[best_move]
-            #now move to the better spot
+            # now move to the better spot
             order.insert(maxind, order.pop(minind))
 
-            #and compute the score
+            # and compute the score
             score = __global_score()
             if score <= starting_score:
                 last_improvement += 1
@@ -147,7 +140,7 @@ def optimizer_loop(starting_order, mapping, lookback,
                 global_max = score
                 global_max_order = order[:]
 
-        #we hit a minimum, let's make a random move see if that helps
+        # we hit a minimum, let's make a random move see if that helps
         ind1 = np.random.randint(len(order))
         ind2 = ind1
         while ind2 == ind1:
@@ -157,15 +150,20 @@ def optimizer_loop(starting_order, mapping, lookback,
     return global_max, global_max_order
 
 
-def optimize_cache(specs, reacs, multi_thread,
-                   force_optimize, build_path,
-                   last_spec, consider_thd=False,
-                   improve_cutoff=20,
-                   rand_init_tries=10000,
-                   lookback_max=2,
-                   rand_restarts_max=5,
-                   max_time=100*60 #100 min
-                   ):
+def optimize_cache(
+    specs,
+    reacs,
+    multi_thread,
+    force_optimize,
+    build_path,
+    last_spec,
+    consider_thd=False,
+    improve_cutoff=20,
+    rand_init_tries=10000,
+    lookback_max=2,
+    rand_restarts_max=5,
+    max_time=100 * 60,  # 100 min
+):
     """Optimize species and reaction orders to improve cache hit rates.
 
     Parameters
@@ -226,38 +224,44 @@ def optimize_cache(specs, reacs, multi_thread,
                 reverse_spec_mapping = pickle.load(file)
                 reverse_rxn_mapping = pickle.load(file)
             same_mech = (
-                all(any(s == sp for sp in specs) for s in old_specs) and
-                len(specs) == len(old_specs) and
-                all(any(r == rxn for rxn in reacs) for r in old_reacs) and
-                len(reacs) == len(old_reacs)
-                )
+                all(any(s == sp for sp in specs) for s in old_specs)
+                and len(specs) == len(old_specs)
+                and all(any(r == rxn for rxn in reacs) for r in old_reacs)
+                and len(reacs) == len(old_reacs)
+            )
             if reverse_spec_mapping[last_spec] != len(specs) - 1:
-                print('Different last species detected, '
-                      f'old species was {specs[fwd_spec_mapping[-1]].name} and new species is {specs[last_spec].name}'
-                      )
+                print(
+                    'Different last species detected, '
+                    f'old species was {specs[fwd_spec_mapping[-1]].name} and new species is {specs[last_spec].name}'
+                )
                 print('Forcing reoptimization...')
                 same_mech = False
 
-        except Exception as e:
-            print('Old optimization file not found, or does not match '
-                  'current mechanism... forcing optimization'
-                  )
+        except Exception:
+            print(
+                'Old optimization file not found, or does not match '
+                'current mechanism... forcing optimization'
+            )
             same_mech = False
         if same_mech:
-            print('Old optimization file matching current mechanism found...'
-                  ' returning previous optimization'
-                  )
+            print(
+                'Old optimization file matching current mechanism found...'
+                ' returning previous optimization'
+            )
             # we have to do the spec_rate_order each time
-            return (old_specs, old_reacs, fwd_spec_mapping, fwd_rxn_mapping,
-                    reverse_spec_mapping, reverse_rxn_mapping
-                    )
+            return (
+                old_specs,
+                old_reacs,
+                fwd_spec_mapping,
+                fwd_rxn_mapping,
+                reverse_spec_mapping,
+                reverse_rxn_mapping,
+            )
 
     nsp = len(specs)
     nr = len(reacs)
 
-    last_name = specs[last_spec].name
-
-    #now generate our mappings
+    # now generate our mappings
     spec_mapping = [bitarray([False for i in range(nr)]) for i in range(nsp)]
 
     reac_mapping = [bitarray([False for i in range(nsp)]) for i in range(nr)]
@@ -284,18 +288,17 @@ def optimize_cache(specs, reacs, multi_thread,
     mapping_list = []
     pool = multiprocessing.Pool(multi_thread if multi_thread else 1)
 
-    lookback_list = np.random.randint(1, high=lookback_max + 1,
-                                      size=rand_init_tries + 1
-                                      )
-    rand_restarts_list = np.random.randint(1, high=rand_restarts_max + 1,
-                                           size=rand_init_tries + 1
-                                           )
-    improve_cutoff_list = np.random.randint(improve_cutoff * 0.5,
-                                            high=improve_cutoff * 1.5,
-                                            size=rand_init_tries + 1
-                                            )
+    lookback_list = np.random.randint(
+        1, high=lookback_max + 1, size=rand_init_tries + 1
+    )
+    rand_restarts_list = np.random.randint(
+        1, high=rand_restarts_max + 1, size=rand_init_tries + 1
+    )
+    improve_cutoff_list = np.random.randint(
+        improve_cutoff * 0.5, high=improve_cutoff * 1.5, size=rand_init_tries + 1
+    )
 
-    fwd_rxn_mapping = [x for x in range(nr)]
+    fwd_rxn_mapping = list(range(nr))
     result_list = []
     if rand_init_tries:
         for i in range(rand_init_tries):
@@ -304,24 +307,29 @@ def optimize_cache(specs, reacs, multi_thread,
             else:
                 mapping_list = np.random.permutation(nr).tolist()
             result_list.append(
-                pool.apply_async(optimizer_loop,
-                                 (mapping_list, copy_mapping(reac_mapping),
-                                  lookback_list[i], improve_cutoff_list[i],
-                                  rand_restarts_list[i]
-                                  )
-                                 )
+                pool.apply_async(
+                    optimizer_loop,
+                    (
+                        mapping_list,
+                        copy_mapping(reac_mapping),
+                        lookback_list[i],
+                        improve_cutoff_list[i],
+                        rand_restarts_list[i],
+                    ),
                 )
+            )
 
     time_start = datetime.datetime.now()
     complete = False
-    while (datetime.datetime.now() - time_start <
-           datetime.timedelta(seconds=max_time)
-           and not complete
-           ):
+    while (
+        datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time)
+        and not complete
+    ):
         time.sleep(30)
         complete = sum(x.ready() for x in result_list)
-        print(f'Reaction Optimization {100. * complete / float(len(result_list))}% complete...'
-              )
+        print(
+            f'Reaction Optimization {100.0 * complete / float(len(result_list))}% complete...'
+        )
         complete = complete == len(result_list)
 
     if not complete:
@@ -329,7 +337,7 @@ def optimize_cache(specs, reacs, multi_thread,
             pool.close()
             pool.terminate()
             pool.join()
-        except:
+        except Exception:
             pass
 
     result_list = [r.get() for r in result_list if r.ready()]
@@ -347,24 +355,29 @@ def optimize_cache(specs, reacs, multi_thread,
                 mapping_list = np.random.permutation(nsp).tolist()
                 mapping_list = [x for x in mapping_list if x != last_spec]
             result_list.append(
-                pool.apply_async(optimizer_loop,
-                                 (mapping_list, copy_mapping(spec_mapping),
-                                  lookback_list[i], improve_cutoff_list[i],
-                                  rand_restarts_list[i]
-                                  )
-                                 )
+                pool.apply_async(
+                    optimizer_loop,
+                    (
+                        mapping_list,
+                        copy_mapping(spec_mapping),
+                        lookback_list[i],
+                        improve_cutoff_list[i],
+                        rand_restarts_list[i],
+                    ),
                 )
+            )
 
     time_start = datetime.datetime.now()
     complete = False
-    while (datetime.datetime.now() - time_start <
-           datetime.timedelta(seconds=max_time)
-           and not complete
-           ):
+    while (
+        datetime.datetime.now() - time_start < datetime.timedelta(seconds=max_time)
+        and not complete
+    ):
         time.sleep(30)
         complete = sum(x.ready() for x in result_list)
-        print(f'Species Optimization {100. * complete / float(len(result_list))}% complete...'
-              )
+        print(
+            f'Species Optimization {100.0 * complete / float(len(result_list))}% complete...'
+        )
         complete = complete == len(result_list)
 
     if not complete:
@@ -372,21 +385,20 @@ def optimize_cache(specs, reacs, multi_thread,
             pool.close()
             pool.terminate()
             pool.join()
-        except:
+        except Exception:
             pass
 
     result_list = [r.get() for r in result_list if r.ready()]
-    fwd_spec_mapping = (result_list[
-                        np.argmax([x[0] for x in result_list])
-                        ][1][:] + [last_spec]
-                        )
+    fwd_spec_mapping = result_list[np.argmax([x[0] for x in result_list])][1][:] + [
+        last_spec
+    ]
 
-    reverse_spec_mapping = [fwd_spec_mapping.index(i)
-                            for i in range(len(fwd_spec_mapping))
-                            ]
-    reverse_rxn_mapping = [fwd_rxn_mapping.index(i)
-                           for i in range(len(fwd_rxn_mapping))
-                           ]
+    reverse_spec_mapping = [
+        fwd_spec_mapping.index(i) for i in range(len(fwd_spec_mapping))
+    ]
+    reverse_rxn_mapping = [
+        fwd_rxn_mapping.index(i) for i in range(len(fwd_rxn_mapping))
+    ]
 
     specs = [specs[i] for i in fwd_spec_mapping]
     reacs = [reacs[i] for i in fwd_rxn_mapping]
@@ -401,6 +413,11 @@ def optimize_cache(specs, reacs, multi_thread,
         pickle.dump(reverse_rxn_mapping, file)
 
     # complete, so now return
-    return (specs, reacs, fwd_spec_mapping, fwd_rxn_mapping,
-            reverse_spec_mapping, reverse_rxn_mapping
-            )
+    return (
+        specs,
+        reacs,
+        fwd_spec_mapping,
+        fwd_rxn_mapping,
+        reverse_spec_mapping,
+        reverse_rxn_mapping,
+    )

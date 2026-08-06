@@ -1,18 +1,13 @@
-"""Module for partially stirred reactor simulations.
-"""
+"""Module for partially stirred reactor simulations."""
 
 # Standard libraries
-import sys
 import itertools
+import sys
 from argparse import ArgumentParser
 
-# More Python 2 compatibility
-if sys.version_info.major == 2:
-    from itertools import izip as zip
-
 # Related modules
-import numpy as np
 import cantera as ct
+import numpy as np
 import yaml
 
 # Parallel processing for reaction substep
@@ -23,9 +18,9 @@ except ImportError:
     print('Warning: multiprocessing not installed')
     parallel = False
 
+
 class Stream:
-    """Class for inlet flow stream into reactor.
-    """
+    """Class for inlet flow stream into reactor."""
 
     def __init__(self, gas, flow):
         """Initializes stream object.
@@ -65,10 +60,9 @@ class Stream:
 
 
 class Particle:
-    """Class for particle in reactor.
-    """
+    """Class for particle in reactor."""
 
-    particle_mass = 0.1 #kg
+    particle_mass = 0.1  # kg
 
     def __init__(self, gas):
         """Initialize particle object with thermochemical state.
@@ -242,7 +236,7 @@ class Particle:
 
         """
         if isinstance(other, (int, float)):
-            return (np.hstack((self.gas.enthalpy_mass, self.gas.Y)) * other)
+            return np.hstack((self.gas.enthalpy_mass, self.gas.Y)) * other
         else:
             return NotImplemented
 
@@ -261,7 +255,7 @@ class Particle:
 
         """
         if isinstance(other, (int, float)):
-            return (np.hstack((self.gas.enthalpy_mass, self.gas.Y)) * other)
+            return np.hstack((self.gas.enthalpy_mass, self.gas.Y)) * other
         else:
             return NotImplemented
 
@@ -356,8 +350,9 @@ class Particle:
         None
 
         """
-        reac = ct.IdealGasConstPressureReactor(self.gas,
-            volume=Particle.particle_mass/self.gas.density)
+        reac = ct.IdealGasConstPressureReactor(
+            self.gas, volume=Particle.particle_mass / self.gas.density
+        )
         netw = ct.ReactorNet([reac])
         netw.advance(netw.time + dt)
 
@@ -418,10 +413,9 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     num_H_cprod = sum(list(cprod_elems.get('H', {0: 0}).values()))
     num_O_cprod = sum(list(cprod_elems.get('O', {0: 0}).values()))
 
-    oxid_state = 4*num_C_cprod + num_H_cprod - 2*num_O_cprod
+    oxid_state = 4 * num_C_cprod + num_H_cprod - 2 * num_O_cprod
     if oxid_state != 0:
-        print('Warning: One or more products of incomplete combustion '
-              'were specified.')
+        print('Warning: One or more products of incomplete combustion were specified.')
 
     # Find the number of H, C, and O atoms in the fuel molecules.
     for sp, el in itertools.product(fuel.keys(), gas.element_names):
@@ -446,42 +440,38 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     # Check that all of the elements specified in the fuel and oxidizer
     # are present in the complete products and vice versa.
     for el in cprod_elems.keys():
-        if ((sum(list(cprod_elems[el].values())) > 0 and
-             fuel_elems[el] == 0 and
-             oxid_elems[el] == 0
-             ) or
-            (sum(list(cprod_elems[el].values())) == 0 and
-             (fuel_elems[el] > 0 or oxid_elems[el] > 0)
-             )
-            ):
-            print('Error: Must specify all elements in the fuel + oxidizer '
-                  'in the complete products and vice-versa')
+        if (
+            sum(list(cprod_elems[el].values())) > 0
+            and fuel_elems[el] == 0
+            and oxid_elems[el] == 0
+        ) or (
+            sum(list(cprod_elems[el].values())) == 0
+            and (fuel_elems[el] > 0 or oxid_elems[el] > 0)
+        ):
+            print(
+                'Error: Must specify all elements in the fuel + oxidizer '
+                'in the complete products and vice-versa'
+            )
             sys.exit(1)
 
     # Compute the amount of oxidizer required to consume all the
     # carbon and hydrogen in the complete products
     if num_C_cprod > 0:
         spec = cprod_elems['C'].keys()
-        ox = sum([cprod_elems['O'][sp]
-                 for sp in spec if cprod_elems['C'][sp] > 0]
-                 )
+        ox = sum([cprod_elems['O'][sp] for sp in spec if cprod_elems['C'][sp] > 0])
         C_multiplier = ox / num_C_cprod
     else:
         C_multiplier = 0
 
     if num_H_cprod > 0:
         spec = cprod_elems['H'].keys()
-        ox = sum([cprod_elems['O'][sp]
-                 for sp in spec if cprod_elems['H'][sp] > 0]
-                 )
+        ox = sum([cprod_elems['O'][sp] for sp in spec if cprod_elems['H'][sp] > 0])
         H_multiplier = ox / num_H_cprod
     else:
         H_multiplier = 0
 
     # Compute how many O atoms are required to oxidize everybody
-    num_O_req = (num_C_fuel * C_multiplier +
-                 num_H_fuel * H_multiplier - num_O_fuel
-                 )
+    num_O_req = num_C_fuel * C_multiplier + num_H_fuel * H_multiplier - num_O_fuel
     O_mult = num_O_req / num_O_oxid
 
     # Find the total number of moles in the fuel + oxidizer mixture
@@ -493,12 +483,12 @@ def equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products):
     # given that a certain portion of the mixture will have been taken
     # up by the additional species, if any.
     for species, ox_amt in oxidizer.items():
-        molefrac = ox_amt * O_mult/total_reactant_moles
+        molefrac = ox_amt * O_mult / total_reactant_moles
         add_spec = ':'.join([species, str(molefrac)])
         reactants = ','.join([reactants, add_spec])
 
     for species, fuel_amt in fuel.items():
-        molefrac = fuel_amt*eq_ratio/total_reactant_moles
+        molefrac = fuel_amt * eq_ratio / total_reactant_moles
         add_spec = ':'.join([species, str(molefrac)])
         reactants = ','.join([reactants, add_spec])
 
@@ -522,9 +512,15 @@ def pairwise(iterable):
     zipped : zip
         Zip with pairs of objects from `iterable`.
 
+    Notes
+    -----
+    Pairs are non-overlapping, so this is not `itertools.pairwise`. The input
+    must hold an even number of items; an odd count would leave the final one
+    unpaired, and therefore unmixed, so it raises instead.
+
     """
     a = iter(iterable)
-    return zip(a, a)
+    return zip(a, a, strict=True)
 
 
 def mix_substep(particles, dt, tau_mix):
@@ -574,7 +570,7 @@ def reaction_worker(part_tup):
     """
     mech, T, P, Y, dt = part_tup
     gas = ct.Solution(mech)
-    gas.TPY = T,P,Y
+    gas.TPY = T, P, Y
     p = Particle(gas)
     p.react(dt)
     return p()
@@ -604,7 +600,7 @@ def reaction_substep(particles, dt, mech):
         pool = multiprocessing.Pool()
         jobs = []
 
-        #set up a new particle runner for each
+        # set up a new particle runner for each
         for p in particles:
             jobs.append([mech, p.gas.T, p.gas.P, p.gas.Y, dt])
         jobs = tuple(jobs)
@@ -612,8 +608,8 @@ def reaction_substep(particles, dt, mech):
 
         pool.close()
         pool.join()
-        #and finally update the states of our particles on the main
-        #thread
+        # and finally update the states of our particles on the main
+        # thread
         for i, p in enumerate(particles):
             p(comp=results[i])
 
@@ -724,11 +720,21 @@ def save_data(idx, time, particles, data):
         data[idx, i, 3:] = mass_frac
 
 
-def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
-                   complete_products=['CO2','H2O','N2'],
-                   num_part=100, tau_res=(10./1000.), tau_mix=(1./1000.),
-                   tau_pair=(1./1000.), num_res=10
-                   ):
+def run_simulation(
+    mech,
+    case,
+    init_temp,
+    pres,
+    eq_ratio,
+    fuel,
+    oxidizer,
+    complete_products=None,
+    num_part=100,
+    tau_res=(10.0 / 1000.0),
+    tau_mix=(1.0 / 1000.0),
+    tau_pair=(1.0 / 1000.0),
+    num_res=10,
+):
     """Perform partially stirred reactor (PaSR) simulation.
 
     Parameters
@@ -782,21 +788,28 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
     time_end = num_res * tau_res
     num_steps = int(time_end / dt_avg)
 
+    if complete_products is None:
+        complete_products = ['CO2', 'H2O', 'N2']
+
+    if num_part % 2:
+        raise ValueError(
+            f'number of particles must be even, got {num_part}. Particles are '
+            'mixed in pairs, so an odd count would leave one unmixed.'
+        )
+
     # Set initial conditions
     gas = ct.Solution(mech)
 
     # Determine reactants
-    reactants = equivalence_ratio(gas, eq_ratio, fuel,
-                                  oxidizer, complete_products
-                                  )
+    reactants = equivalence_ratio(gas, eq_ratio, fuel, oxidizer, complete_products)
 
     # Inlet streams
     if case.lower() == 'premixed':
         # Premixed
-        flow_rates = dict(fuel_air = 0.95, pilot = 0.05)
+        flow_rates = {'fuel_air': 0.95, 'pilot': 0.05}
     elif case.lower() == 'non-premixed':
         # Non-premixed
-        flow_rates = dict(air = 0.85, fuel = 0.05, pilot = 0.1)
+        flow_rates = {'air': 0.85, 'fuel': 0.05, 'pilot': 0.1}
     else:
         print('Error: case needs to be either premixed or non-premixed.')
         sys.exit(1)
@@ -837,7 +850,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 
     # Initialize all particles with pilot composition
     particles = []
-    for i in range(num_part):
+    for _ in range(num_part):
         g = ct.Solution(mech)
         g.TPX = gas.T, gas.P, gas.X
         particles.append(Particle(g))
@@ -861,16 +874,17 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 
     print('Time [ms]  Temperature [K]')
     temp_mean[i_step] = np.mean([p.gas.T for p in particles])
-    print(f'{time*1000.:6.2f}  {temp_mean[i_step]:9.1f}')
+    print(f'{time * 1000.0:6.2f}  {temp_mean[i_step]:9.1f}')
 
     while time < time_end:
         if i_step + 1 >= num_steps:
-            #need to resize arrays
+            # need to resize arrays
             times = np.hstack((times, np.zeros(num_steps + 1)))
             temp_mean = np.hstack((temp_mean, np.zeros(num_steps + 1)))
-            particle_data = np.concatenate((particle_data,
-                np.empty([num_steps + 1, num_part, gas.n_species + 3])),
-                axis=0)
+            particle_data = np.concatenate(
+                (particle_data, np.empty([num_steps + 1, num_part, gas.n_species + 3])),
+                axis=0,
+            )
             num_steps *= 2
 
         if (time + dt_max) > time_end:
@@ -890,7 +904,7 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
         # Set alternate particles to inflow properties
         for i in range(npart_out):
             i_str = inflow(inlet_streams)
-            particles[1 - 2 * (i+1)](inlet_streams[i_str]())
+            particles[1 - 2 * (i + 1)](inlet_streams[i_str]())
 
         # Now perform pairing
         part_pair += 0.5 * num_part * dt / tau_pair
@@ -900,14 +914,14 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
 
         # Rotate particles
         temp_comp = particles[-1]()
-        for i in [i*2 + 1 for i in range(num_pairs - 1)]:
-            #particles[-i] = particles[-(i+2)]
-            particles[-i](particles[-(i+2)])
+        for i in [i * 2 + 1 for i in range(num_pairs - 1)]:
+            # particles[-i] = particles[-(i+2)]
+            particles[-i](particles[-(i + 2)])
         particles[-(num_pairs * 2 - 1)](temp_comp)
 
         # Now loop over mix-react substeps
         dt_sub = dt / num_substeps
-        for i in range(num_substeps):
+        for _ in range(num_substeps):
             mix_substep(particles, dt_sub, tau_mix)
             reaction_substep(particles, dt_sub, mech)
 
@@ -921,11 +935,11 @@ def run_simulation(mech, case, init_temp, pres, eq_ratio, fuel, oxidizer,
         # Save full data
         save_data(i_step, time, particles, particle_data)
 
-        print(f'{time*1000.:6.2f}  {temp_mean[i_step]:9.1f}')
+        print(f'{time * 1000.0:6.2f}  {temp_mean[i_step]:9.1f}')
 
-    times = times[:i_step + 1]
-    temp_mean = temp_mean[:i_step + 1]
-    particle_data = particle_data[:i_step + 1, :, :]
+    times = times[: i_step + 1]
+    temp_mean = temp_mean[: i_step + 1]
+    particle_data = particle_data[: i_step + 1, :, :]
 
     return particle_data
 
@@ -950,8 +964,7 @@ def parse_input_file(input_file):
 
     case = pars.get('case', None)
     if case not in ['premixed', 'non-premixed']:
-        print('Error: case needs to be one of '
-              '"premixed" or "non-premixed".')
+        print('Error: case needs to be one of "premixed" or "non-premixed".')
         sys.exit(1)
 
     if not pars.get('temperature', None):
@@ -972,8 +985,7 @@ def parse_input_file(input_file):
         sys.exit(1)
 
     if not pars.get('oxidizer', None):
-        print('Error: oxidizer species and mole fractions '
-              'need to be specified.')
+        print('Error: oxidizer species and mole fractions need to be specified.')
         sys.exit(1)
 
     if not pars.get('complete products', None):
@@ -984,46 +996,65 @@ def parse_input_file(input_file):
     if not pars.get('number of particles', None):
         pars['number of particles'] = 100
     if not pars.get('residence time', None):
-        pars['residence time'] = 10.e-3
+        pars['residence time'] = 10.0e-3
     if not pars.get('mixing time', None):
-        pars['mixing time'] = 1.e-3
+        pars['mixing time'] = 1.0e-3
     if not pars.get('pairing time', None):
-        pars['pairing time'] = 1.e-3
+        pars['pairing time'] = 1.0e-3
     if not pars.get('number of residence times', None):
         pars['number of residence times'] = 5
 
     return pars
 
 
-if __name__ == "__main__":
-    parser = ArgumentParser(description='Runs partially stirred reactor '
-                                        '(PaSR) simulation.'
-                            )
-    parser.add_argument('-i', '--input',
-                        type=str, required=True,
-                        help='Input file in YAML format for PaSR simulation.'
-                        )
-    parser.add_argument('-m', '--mech',
-                        type=str, required=True,
-                        help='Mechanism input file in either Cantera format.'
-                        )
-    parser.add_argument('-t', '--thermo',
-                        type=str, required=False,
-                        help='Thermodynamic input file, optional.'
-                        )
-    parser.add_argument('-o', '--output',
-                        type=str, default='pasr_output.npy',
-                        help='PaSR results file (.npy).'
-                        )
+if __name__ == '__main__':
+    parser = ArgumentParser(
+        description='Runs partially stirred reactor (PaSR) simulation.'
+    )
+    parser.add_argument(
+        '-i',
+        '--input',
+        type=str,
+        required=True,
+        help='Input file in YAML format for PaSR simulation.',
+    )
+    parser.add_argument(
+        '-m',
+        '--mech',
+        type=str,
+        required=True,
+        help='Mechanism input file in either Cantera format.',
+    )
+    parser.add_argument(
+        '-t',
+        '--thermo',
+        type=str,
+        required=False,
+        help='Thermodynamic input file, optional.',
+    )
+    parser.add_argument(
+        '-o',
+        '--output',
+        type=str,
+        default='pasr_output.npy',
+        help='PaSR results file (.npy).',
+    )
     args = parser.parse_args()
 
     inputs = parse_input_file(args.input)
     particle_data = run_simulation(
-        args.mech, inputs['case'], inputs['temperature'],
-        inputs['pressure'], inputs['equivalence ratio'],
-        inputs['fuel'], inputs['oxidizer'],
-        inputs['complete products'], inputs['number of particles'],
-        inputs['residence time'], inputs['mixing time'],
-        inputs['pairing time'], inputs['number of residence times']
-        )
+        args.mech,
+        inputs['case'],
+        inputs['temperature'],
+        inputs['pressure'],
+        inputs['equivalence ratio'],
+        inputs['fuel'],
+        inputs['oxidizer'],
+        inputs['complete products'],
+        inputs['number of particles'],
+        inputs['residence time'],
+        inputs['mixing time'],
+        inputs['pairing time'],
+        inputs['number of residence times'],
+    )
     np.save(args.output, particle_data)

@@ -1,24 +1,37 @@
-"""Module containing utility functions.
-"""
+"""Module containing utility functions."""
 
 # Standard libraries
-import os
 import errno
-from math import log10, floor
+import os
 
 import cantera as ct
 
-__all__ = ['line_start', 'comment', 'langs', 'file_ext', 'restrict',
-           'header_ext', 'line_end', 'exp_10_fun', 'array_chars',
-           'get_species_mappings', 'get_nu', 'read_str_num', 'split_str',
-           'create_dir', 'get_array', 'get_index', 'reassign_species_lists',
-           'is_integer', 'is_pdep', 'is_plog_or_cheb', 'unsupported_rate_type'
-           ]
+__all__ = [
+    'line_start',
+    'comment',
+    'langs',
+    'file_ext',
+    'restrict',
+    'header_ext',
+    'line_end',
+    'exp_10_fun',
+    'array_chars',
+    'get_species_mappings',
+    'get_nu',
+    'read_str_num',
+    'split_str',
+    'create_dir',
+    'get_array',
+    'get_index',
+    'reassign_species_lists',
+    'is_integer',
+    'is_pdep',
+    'is_plog_or_cheb',
+    'unsupported_rate_type',
+]
 
 line_start = '  '
-comment = dict(c='//', cuda='//',
-               fortran='!', matlab='%'
-               )
+comment = {'c': '//', 'cuda': '//', 'fortran': '!', 'matlab': '%'}
 """dict: comment characters for each language"""
 
 langs = ['c', 'cuda', 'fortran', 'matlab']
@@ -35,44 +48,44 @@ implementation is retained in the tree, but selecting these languages raises
 `NotImplementedError` rather than failing part-way through with a stack trace.
 """
 
-file_ext = dict(c='.c', cuda='.cu', fortran='.f90', matlab='.m')
+file_ext = {'c': '.c', 'cuda': '.cu', 'fortran': '.f90', 'matlab': '.m'}
 """dict: source code file extensions based on language"""
 
-restrict = {'c' : '__restrict__',
-            'cuda' : '__restrict__'}
+restrict = {'c': '__restrict__', 'cuda': '__restrict__'}
 """dict: language-dependent keyword for restrict"""
 
-header_ext = dict(c='.h', cuda='.cuh')
+header_ext = {'c': '.h', 'cuda': '.cuh'}
 """dict: header extensions based on language"""
 
-line_end = dict(c=';\n', cuda=';\n',
-                fortran='\n', matlab=';\n'
-                )
+line_end = {'c': ';\n', 'cuda': ';\n', 'fortran': '\n', 'matlab': ';\n'}
 """dict: line endings dependent on language"""
 
-exp_10_fun = dict(c="pow(10.0, ", cuda='exp10(',
-                  fortran='exp(log(10) * ', matlab='exp(log(10.0) * '
-                  )
+exp_10_fun = {
+    'c': 'pow(10.0, ',
+    'cuda': 'exp10(',
+    'fortran': 'exp(log(10) * ',
+    'matlab': 'exp(log(10.0) * ',
+}
 """dict: exp10 functions for various languages"""
 
-array_chars = dict(c="[{}]", cuda="[INDEX({})]",
-                   fortran="({})", matlab="({})"
-                   )
+array_chars = {'c': '[{}]', 'cuda': '[INDEX({})]', 'fortran': '({})', 'matlab': '({})'}
 """dict: the characters to format an index into an array per language"""
 
-unsupported_rate_types = frozenset([
-    'BlowersMaselRate',
-    'CustomRate',
-    'ElectronCollisionPlasmaRate',
-    'ExtensibleRate',
-    'InterfaceArrheniusRate',
-    'InterfaceBlowersMaselRate',
-    'LinearBurkeRate',
-    'StickingArrheniusRate',
-    'StickingBlowersMaselRate',
-    'TsangRate',
-    'TwoTempPlasmaRate',
-])
+unsupported_rate_types = frozenset(
+    [
+        'BlowersMaselRate',
+        'CustomRate',
+        'ElectronCollisionPlasmaRate',
+        'ExtensibleRate',
+        'InterfaceArrheniusRate',
+        'InterfaceBlowersMaselRate',
+        'LinearBurkeRate',
+        'StickingArrheniusRate',
+        'StickingBlowersMaselRate',
+        'TsangRate',
+        'TwoTempPlasmaRate',
+    ]
+)
 """frozenset(`str`): Cantera rate types pyJac has no Jacobian formulation for
 
 Every entry postdates pyJac 1.0.6. They are rejected by name so that a
@@ -139,8 +152,10 @@ def unsupported_rate_type(rxn):
     name = type(rxn.rate).__name__
     return name if name in unsupported_rate_types else None
 
+
 # if false, zero values will be assumed to have been set previously (by memset etc.)
 # and can be skipped, to increase efficiency
+
 
 def get_species_mappings(num_specs, last_species):
     """
@@ -165,17 +180,17 @@ def get_species_mappings(num_specs, last_species):
     fwd_species_map = list(range(num_specs))
     back_species_map = list(range(num_specs))
 
-    #in the forward mapping process
-    #last_species -> end
-    #all entries after last_species are reduced by one
-    back_species_map[last_species + 1:] = back_species_map[last_species:-1]
+    # in the forward mapping process
+    # last_species -> end
+    # all entries after last_species are reduced by one
+    back_species_map[last_species + 1 :] = back_species_map[last_species:-1]
     back_species_map[last_species] = num_specs - 1
 
-    #in the backwards mapping
-    #end -> last_species
-    #all entries with value >= last_species are increased by one
+    # in the backwards mapping
+    # end -> last_species
+    # all entries with value >= last_species are increased by one
     ind = fwd_species_map.index(last_species)
-    fwd_species_map[ind:-1] = fwd_species_map[ind + 1:]
+    fwd_species_map[ind:-1] = fwd_species_map[ind + 1 :]
     fwd_species_map[-1] = last_species
 
     return fwd_species_map, back_species_map
@@ -198,8 +213,7 @@ def get_nu(isp, rxn):
 
     """
     if isp in rxn.prod and isp in rxn.reac:
-        nu = (rxn.prod_nu[rxn.prod.index(isp)] -
-              rxn.reac_nu[rxn.reac.index(isp)])
+        nu = rxn.prod_nu[rxn.prod.index(isp)] - rxn.reac_nu[rxn.reac.index(isp)]
         # check if net production zero
         if nu == 0:
             return 0
@@ -253,7 +267,7 @@ def split_str(seq, length):
         List of strings of length ``length`` from ``seq``.
 
     """
-    return [seq[i: i + length] for i in range(0, len(seq), length)]
+    return [seq[i : i + length] for i in range(0, len(seq), length)]
 
 
 def create_dir(path):
@@ -302,12 +316,12 @@ def get_array(lang, name, index, twod=None):
 
     """
     if index is None:
-        #a dummy call to see if it's in shared memory
+        # a dummy call to see if it's in shared memory
         return name
 
     if lang in ['fortran', 'matlab']:
         if twod is not None:
-            return name +f'({index + 1}, {twod + 1})'
+            return name + f'({index + 1}, {twod + 1})'
         return name + array_chars[lang].format(index + 1)
     return name + array_chars[lang].format(index)
 
@@ -330,7 +344,6 @@ def get_index(lang, index):
 
     """
 
-    retval = None
     if lang in ['fortran', 'matlab']:
         return str(index + 1)
     if lang in ['c', 'cuda']:
@@ -383,11 +396,11 @@ def is_integer(val):
     """
     try:
         return val.is_integer()
-    except:
+    except AttributeError:
         if isinstance(val, int):
             return True
-        #last ditch effort
+        # last ditch effort
         try:
             return int(val) == float(val)
-        except:
+        except (TypeError, ValueError):
             return False

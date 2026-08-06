@@ -38,21 +38,21 @@ partially stirred reactor (PaSR) module:
 .. code-block:: bash
 
     python -m pyjac.functional_tester.partially_stirred_reactor \
-    --mech data/h2o2.cti --input data/pasr_input.yaml \
+    --mech data/h2o2.yaml --input data/pasr_input.yaml \
     --output h2_pasr_output.npy
 
 Then, functional testing using this data can be performed via:
 
 .. code-block:: bash
 
-    python -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
+    python -m pyjac.functional_tester --mech data/h2o2.yaml --lang c \
     --pasr_output h2_pasr_output.npy
 
 **Alternatively**, you can perform the test using provided example data:
 
 .. code-block:: bash
 
-    python -m pyjac.functional_tester --mech data/h2o2.cti --lang c \
+    python -m pyjac.functional_tester --mech data/h2o2.yaml --lang c \
     --pasr_output data/h2_pasr_output.npy
 
 Detailed error statistics are saved in ``error_arrays.npz``, and overall results
@@ -68,7 +68,7 @@ established, this test can be performed by giving only two arguments: a base
 directory and a number of OpenMP threads to use. The program scans for
 subdirectories in the base directory, looking for the following keys:
 
- * A Cantera mechanism (ending with .cti)
+ * A Cantera mechanism (ending with .yaml)
  * A Chemkin mechanism of the same name (ending with .dat)
  * An (optional) Chemkin thermodynamic file (with "therm" in filename)
    if required. If the thermo file is not specified, the mechanism is assumed
@@ -139,8 +139,8 @@ the GRI-Mech 3.0 model as:
     import cantera as ct
     import numpy as np
 
-    #create gas from original mechanism file gri30.cti
-    gas = ct.Solution('gri30.cti')
+    #create gas from original mechanism file gri30.yaml
+    gas = ct.Solution('gri30.yaml')
     #reorder the gas to match pyJac
     n2_ind = gas.species_index('N2')
     specs = gas.species()[:]
@@ -183,8 +183,8 @@ if we have 1000 states to evaluate:
     import cantera as ct
     import numpy as np
 
-    #create gas from original mechanism file gri30.cti
-    gas = ct.Solution('gri30.cti')
+    #create gas from original mechanism file gri30.yaml
+    gas = ct.Solution('gri30.yaml')
     #reorder the gas to match pyJac
     n2_ind = gas.species_index('N2')
     specs = gas.species()[:]

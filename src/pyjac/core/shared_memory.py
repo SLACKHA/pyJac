@@ -95,7 +95,7 @@ class shared_memory_manager:
         Notes
         -----
         The internal dictionary will be reset, and (if supplied) the
-        `on_eviction` function will be called on each evicted entry.
+        ``on_eviction`` function will be called on each evicted entry.
 
         """
         key_copy = list(self.shared_dict.keys())
@@ -121,7 +121,7 @@ class shared_memory_manager:
 
         Notes
         -----
-        If set, `on_eviction` will be called.
+        If set, ``on_eviction`` will be called.
 
         """
         var = self.shared_dict[shared_index]
@@ -177,8 +177,8 @@ class shared_memory_manager:
 
         Parameters
         ----------
-        file : `File`
-            Open `File` object to write to
+        file : ``file`` object
+            Open ``file`` object to write to
         indent : int, optional
             The number of spaces to use in the indent
 
@@ -202,8 +202,8 @@ class shared_memory_manager:
 
         Parameters
         ----------
-        file : `File`
-            Open `File` object to write to
+        file : ``file`` object
+            Open ``file`` object to write to
         variables : list of `variable`
             List of variables to consider loading
         estimated_usage : list of float, optional

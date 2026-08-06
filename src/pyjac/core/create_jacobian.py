@@ -116,7 +116,7 @@ def write_dr_dy(file, lang, rev_reacs, rxn, rxn_ind, pres_rxn_ind, get_array):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -258,7 +258,7 @@ def write_rates(file, lang, rxn):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -480,7 +480,7 @@ def write_kc(file, lang, specs, rxn):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -652,7 +652,7 @@ def write_dt_comment(file, lang, rxn_ind):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         Open file object
     lang : str
         Programming language
@@ -674,7 +674,7 @@ def write_dy_comment(file, lang, rxn_ind):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         Open file object
     lang : str
         Programming language
@@ -696,7 +696,7 @@ def write_dy_y_finish_comment(file, lang):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         Open file object
     lang : str
         Programming language
@@ -752,7 +752,7 @@ def write_db_dt_def(file, lang, specs, reacs, rev_reacs, dBdT_flag, do_unroll):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : {'c', 'cuda'}
         The programming language
@@ -945,7 +945,7 @@ def write_pr(file, lang, specs, reacs, pdep_reacs, rxn, get_array, last_conc_tem
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -1052,7 +1052,7 @@ def write_troe(file, lang, rxn):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : {'c', 'cuda'}
         The programming language
@@ -1101,7 +1101,7 @@ def write_sri(file, lang):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The programming language
@@ -1278,7 +1278,7 @@ def write_dcp_dt(file, lang, specs):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -1510,7 +1510,7 @@ def write_cheb_ut(file, lang, rxn):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -1597,7 +1597,7 @@ def write_cheb_rxn_dt(
     Parameters
     ----------
 
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -1674,7 +1674,7 @@ def write_plog_rxn_dt(
     Parameters
     ----------
 
-    file : `File`
+    file : ``file`` object
         The open file object to write to
     lang : str
         The Programming language
@@ -1829,7 +1829,7 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
 
     Parameters
     ----------
-    file : `File`
+    file : ``file`` object
         Open file object to write to
     lang : str
         The Programming language
@@ -1916,7 +1916,7 @@ def write_sub_intro(
     this_pdep : bool
         If ``True``, batch contains pressure dependent (falloff/bimolecular) reaction
     have_pres_mod_temp : bool
-        If ``True``, batch requires definition of `pres_mod_temp`
+        If ``True``, batch requires definition of ``pres_mod_temp``
     batch_has_m : bool
         If ``True``, batch requires the overall concentration 'm'
     this_thd : bool
@@ -1928,7 +1928,7 @@ def write_sub_intro(
     this_cheb : bool
         If ``True``, batch contains a Chebyshev reaction
     cheb_dim : int
-        If `this_cheb` is ``True``, the largest Chebyshev dimension required
+        If ``this_cheb`` is ``True``, the largest Chebyshev dimension required
     this_plog : bool
         If ``True``, batch contains a PLOG reaction
     no_shared : bool
@@ -1938,7 +1938,7 @@ def write_sub_intro(
 
     Returns
     -------
-    file : `File` object
+    file : ``file`` object
         Opened Jacobian file
 
     """
@@ -2109,7 +2109,7 @@ def write_dy_intros(path, lang, number, have_jnplus_jplus):
 
     Returns
     -------
-    file : `File`
+    file : ``file`` object
         Jacobian file object
 
     """

@@ -31,6 +31,10 @@ regenerating with the old table and diffing.
   `np.random`, so successive runs legitimately differ.
 - Regression tests for Chebyshev parsing and generation, the CLI, the
   unsupported-language guard, and `option_cases`
+- A docs workflow that builds with warnings as errors and deploys to
+  GitHub Pages after the test suite passes on main. Released docs are
+  published at the site root and development docs at `/dev`.
+  Pull requests build the docs but never deploy.
 - GitHub Actions workflows: a test matrix over Python 3.10-3.14 on Linux,
   macOS and Windows; a full-suite job including the slow cache-optimizer
   tests; lint via pre-commit; a build job that checks the sdist can rebuild
@@ -112,6 +116,14 @@ regenerating with the old table and diffing.
   replaced `is` comparisons against string literals with `==`, and
   switched `logging.warn` to `logging.warning`.
 - Path parsing now uses `pathlib` rather than `os.path`
+- Rewrote `docs/conf.py`, which had not built since Sphinx 5 changed the
+  `intersphinx_mapping` format. It now uses the furo theme and myst-parser,
+  drops alabaster and the removed `autodoc_default_flags`, and links against
+  the Python, NumPy and Cantera inventories. The build is clean under `-W`.
+- Documentation and README updated for the current package: Cantera YAML
+  rather than `.cti` in every example, `pip install` rather than
+  `python setup.py install`, the optional-dependency extras explained, and the
+  retired conda channel removed.
 
 ### Fixed
 - Removes unused include of `helper_cuda.h` from generated CUDA code,

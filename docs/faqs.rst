@@ -47,8 +47,8 @@ updated as:
 .. code-block:: python
 
     import cantera as ct
-    #create gas from original mechanism file `mech.cti`
-    gas = ct.Solution('mech.cti')
+    #create gas from original mechanism file `mech.yaml`
+    gas = ct.Solution('mech.yaml')
     #reorder the gas to match pyJac
     n2_ind = gas.species_index('N2')
     specs = gas.species()[:]
@@ -92,7 +92,7 @@ Note that the ordering issues disucssed in :ref:`ordering` apply here as well.
 .. _units:
 
 What units does pyJac use?
-=========================
+==========================
 
 pyJac uses a default of kilogram, meters and seconds for its unit system.
 This means that pressures are in pascals, temperature in Kelvin, and time in seconds.

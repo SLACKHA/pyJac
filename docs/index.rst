@@ -44,7 +44,7 @@ Citation
 Up-to-date information about citing **pyJac** can be found within the
 `CITATION.md`_ file.
 
-.. _CITATION.md: https://github.com/slackha/pyJac/blob/master/CITATION.md
+.. _CITATION.md: https://github.com/SLACKHA/pyJac/blob/main/CITATION.md
 
 See also
 --------
@@ -62,13 +62,9 @@ Get in touch
 
 - Please report bugs, suggest feature ideas, and browse the source code `on GitHub`_.
 - There, new contributors can also find `a guide to contributing`_.
-- Additionally, you may join our `user group`_ for further support and to be notified of new releases, features, etc.
-- You can also contact Kyle `on Twitter`_.
 
-.. _on GitHub: https://github.com/slackha/pyJac
-.. _a guide to contributing: https://github.com/slackha/pyJac/blob/master/CONTRIBUTING.md
-.. _user group: https://groups.io/g/slackha-users
-.. _on Twitter: http://twitter.com/kyleniemeyer
+.. _on GitHub: https://github.com/SLACKHA/pyJac
+.. _a guide to contributing: https://github.com/SLACKHA/pyJac/blob/main/CONTRIBUTING.md
 
 
 License

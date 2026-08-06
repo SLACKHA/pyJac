@@ -49,13 +49,10 @@ Up-to-date information about citing **pyJac** can be found within the
 See also
 --------
 
-- The published `pyJac v1 paper`_
-- Kyle Niemeyer, Nick Curtis, and Chih-Jen Sung's `WSSCI Fall 2015 paper`_ introducing
-- The associated `WSSCI Fall 2015 slides`_
-
-.. _pyJac v1 paper: https://arxiv.org/abs/1605.03262
-.. _WSSCI Fall 2015 paper: https://dx.doi.org/10.6084/m9.figshare.2075515.v1
-.. _WSSCI Fall 2015 slides: http://www.slideshare.net/kyleniemeyer/initial-investigation-of-pyjac-an-analytical-jacobian-generator-for-chemical-kinetics
+pyJac is described in full, with derivations, validation and performance
+results, by Niemeyer et al. :cite:`Niemeyer2017`. The published article is paywalled; the
+accepted version is openly available as
+`arXiv:1605.03262 <https://arxiv.org/abs/1605.03262>`_.
 
 Get in touch
 ------------
@@ -72,4 +69,7 @@ License
 
 **pyJac** is available under the open-source `MIT License`__.
 
-__ https://raw.githubusercontent.com/kyleniemeyer/pyJac/master/LICENSE
+__ https://raw.githubusercontent.com/kyleniemeyer/pyJac/main/LICENSE
+
+.. bibliography::
+   :filter: docname in docnames

@@ -51,6 +51,7 @@ docs = [
     'sphinx>=8.0',
     'furo>=2024.8.6',
     'myst-parser>=4.0',
+    'sphinxcontrib-bibtex>=2.6',
 ]
 
 [project.scripts]

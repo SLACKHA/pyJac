@@ -116,10 +116,7 @@ regenerating with the old table and diffing.
   replaced `is` comparisons against string literals with `==`, and
   switched `logging.warn` to `logging.warning`.
 - Path parsing now uses `pathlib` rather than `os.path`
-- Rewrote `docs/conf.py`, which had not built since Sphinx 5 changed the
-  `intersphinx_mapping` format. It now uses the furo theme and myst-parser,
-  drops alabaster and the removed `autodoc_default_flags`, and links against
-  the Python, NumPy and Cantera inventories. The build is clean under `-W`.
+- Rewrote documentation configuration to work with current Sphinx.
 - Documentation and README updated for the current package: Cantera YAML
   rather than `.cti` in every example, `pip install` rather than
   `python setup.py install`, the optional-dependency extras explained, and the

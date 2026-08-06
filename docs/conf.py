@@ -16,9 +16,20 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
     'myst_parser',
+    'sphinxcontrib.bibtex',
 ]
 
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+
+# -- citations -------------------------------------------------------------
+
+bibtex_bibfiles = ['refs.bib']
+bibtex_default_style = 'unsrt'
+
+# The same suppressions pyMARS uses. Docutils warns about citation targets it
+# does not own, and bibtex warns when one entry is cited from more than one
+# page; neither indicates a problem, and the build runs with -W.
+suppress_warnings = ['ref.citation', 'bibtex.duplicate_citation']
 
 # `any` lets single-backtick references resolve against any domain, which is
 # what the existing prose assumes.

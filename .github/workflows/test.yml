@@ -106,7 +106,7 @@ jobs:
           path: dist/
 
   cuda:
-    name: CUDA ${{ matrix.cuda }} / ${{ matrix.arch }}
+    name: CUDA ${{ matrix.cuda_path }}
     # Pinned rather than ubuntu-latest: NVIDIA's apt repository path is
     # distro-version specific.
     runs-on: ubuntu-24.04
@@ -114,16 +114,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # CUDA 12 still supports Volta, which is pyJac's default target.
           - cuda: '12-6'
             cuda_path: '12.6'
-            arch: sm_70
-          # CUDA 13 dropped Maxwell, Pascal and Volta, so the oldest it accepts
-          # is Turing. This entry is what tells us whether the default needs to
-          # move.
+            # Volta is pyJac's current default and CUDA 12 still accepts it.
+            required_archs: sm_70 sm_75 sm_80 sm_90
+            optional_archs: sm_50 sm_60
           - cuda: '13-3'
             cuda_path: '13.3'
-            arch: sm_75
+            required_archs: sm_75 sm_80 sm_90
+            # sm_70 is here to settle whether pyJac's default still builds on
+            # a current toolkit: CUDA 13.0 removed offline compilation support
+            # for Maxwell, Pascal and Volta, and offline is exactly what this
+            # job does. The Blackwell-and-later targets are probes -- nvcc
+            # reports what it really supports in the step below.
+            optional_archs: sm_70 sm_100 sm_103 sm_120 sm_121 sm_130
 
     steps:
       - uses: actions/checkout@v4
@@ -134,7 +138,7 @@ jobs:
 
       # Installed from NVIDIA's own apt repository rather than a third-party
       # action, and only the compiler: the full toolkit is several GB.
-      - name: Install nvcc ${{ matrix.cuda }}
+      - name: Install nvcc ${{ matrix.cuda_path }}
         run: |
           wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
           sudo dpkg -i cuda-keyring_1.1-1_all.deb
@@ -145,19 +149,52 @@ jobs:
       - name: Install
         run: python -m pip install --upgrade pip && pip install -e '.[test]'
 
+      # Authoritative, rather than a list we would have to maintain by hand.
+      - name: Report what this toolkit supports
+        run: |
+          nvcc --version
+          echo '--- architectures nvcc can target ---'
+          nvcc --list-gpu-arch
+
       # There is no GPU on the runner, so the generated CUDA is compiled but
       # never executed. This catches syntax and API errors, not wrong numbers.
-      # It goes through pyjac.libgen rather than a hand-rolled nvcc loop, so
-      # the build machinery and the --cuda-arch plumbing are exercised too.
+      # The build goes through pyjac.libgen rather than a hand-rolled nvcc
+      # loop, so the build machinery and --cuda-arch plumbing are exercised.
       - name: Generate CUDA sources
         run: python -m pyjac --lang cuda --input data/h2o2.inp --build_path out-cuda
 
-      - name: Build the CUDA library
+      - name: Build for each architecture
         run: |
-          nvcc --version
-          python -m pyjac.libgen --lang cuda --source_dir out-cuda \
-            --out_dir lib-cuda --obj_dir obj-cuda \
-            --static --cuda-arch ${{ matrix.arch }}
+          summary=""
+          status=0
+          for arch in ${{ matrix.required_archs }} ${{ matrix.optional_archs }}; do
+            case " ${{ matrix.required_archs }} " in
+              *" $arch "*) kind=required ;;
+              *)           kind=optional ;;
+            esac
 
-      - name: Confirm the library was produced
-        run: test -f lib-cuda/libcu_pyjac.a && ls -l lib-cuda/
+            rm -rf lib-cuda obj-cuda
+            if python -m pyjac.libgen --lang cuda --source_dir out-cuda \
+                 --out_dir lib-cuda --obj_dir obj-cuda \
+                 --static --cuda-arch "$arch" > "build-$arch.log" 2>&1 \
+               && test -f lib-cuda/libcu_pyjac.a; then
+              summary="$summary\n| $arch | $kind | built |"
+            else
+              summary="$summary\n| $arch | $kind | FAILED |"
+              echo "::group::$arch ($kind) failed"
+              tail -25 "build-$arch.log"
+              echo "::endgroup::"
+              if [ "$kind" = required ]; then status=1; fi
+            fi
+          done
+
+          {
+            echo "### CUDA ${{ matrix.cuda_path }}"
+            echo
+            echo "| arch | kind | result |"
+            echo "| --- | --- | --- |"
+            printf "%b\n" "$summary"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          printf "%b\n" "$summary"
+          exit $status

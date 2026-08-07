@@ -14,6 +14,23 @@ below, whose effect was confirmed to be limited to molecular weights by
 regenerating with the old table and diffing.
 
 ### Added
+- Numerical validation of the generated code against Cantera, described in
+  `docs/validation.rst`. `test/test_rate_validation.py` compiles the generated
+  rate subroutines and compares concentrations, per-reaction forward rates of
+  progress, and net production rates; `test/test_jacobian_validation.py` does
+  the same for the Jacobian, against a reference built in
+  `test/jacobian_reference.py` from Cantera's analytic kinetics derivatives
+  plus the constant-pressure chain rule. Together they cover h2o2, the
+  all-reaction-types fixture, and GRI-Mech 3.0, and agree to ~1e-9 and ~2e-10
+  respectively. This checks correctness rather than stability.
+- Unit tests for the expression-building helpers, in
+  `test/test_rate_expressions.py`. Emitted rate expressions are evaluated and
+  compared against `A T**b exp(-E/T)` rather than matched as text, and
+  `get_thermo_expression` is checked against Cantera's thermodynamic data for
+  every GRI-Mech species over both temperature ranges.
+- Tests for the `pyjac.utils` helpers, including a property test that the
+  species mappings are inverse permutations for every species count and every
+  choice of eliminated species.
 - Reader-equivalence tests comparing the mechanism the Chemkin parser builds
   against the one Cantera builds from the same source, field by field. These
   are the safety net for the Cantera 3.x port and are currently strict xfails.
@@ -52,6 +69,13 @@ regenerating with the old table and diffing.
   inside generation
 
 ### Changed
+- Consolidated the four duplicated species loops in `write_chem_utils` into
+  `_write_thermo_loop` and a pure `get_thermo_expression`, which builds
+  enthalpy, internal energy, cv and cp from two flags rather than four
+  near-identical blocks, and the `eval_conc`/`eval_conc_rho` bodies into
+  `_write_conc_body`, parameterised on which of density and pressure is
+  supplied. Both reject an unknown property or quantity rather than falling
+  through to a default.
 - The CUDA target architecture is configurable instead of hardcoded to
   `sm_20`. Fermi support was removed in CUDA 9 (2017), so the CUDA backend
   could not compile on any current toolkit. It now defaults to `sm_70` and is
@@ -123,6 +147,28 @@ regenerating with the old table and diffing.
   retired conda channel removed.
 
 ### Fixed
+- The eliminated species' contribution to `d(dT/dt)/dT` was overwritten rather
+  than accumulated. That species has no Jacobian entry, so its running total is
+  kept in a scratch variable, and the choice between assignment and
+  accumulation consulted a flag that was never set for it; each contribution
+  overwrote the previous one and only the last survived. **This changes
+  computed Jacobians.** On GRI-Mech 3.0, 26 contributions collapsed to one and
+  the entry was wrong by 0.74% at 1800 K, while every other entry of the matrix
+  was correct to 2e-10 and `dT/dt` itself was correct throughout. Only
+  mechanisms whose eliminated species reacts are affected, which with the
+  default choice of N2 means any mechanism with NOx chemistry; mechanisms
+  closed on an actual inert species such as Ar were always correct.
+- `rxn_rate_const` dropped the temperature dependence of a rate with a negative
+  pre-exponential, a negative whole-number temperature exponent and no
+  activation energy, emitting `A` where `A T**b` was meant, because the
+  repeated-multiplication path iterated over an empty range. The two sign
+  branches also disagreed on how to detect a whole exponent. No mechanism in
+  the test suite reaches this combination, so no generated output changes.
+- `get_cheb_rate` read past the end of a Chebyshev fit carrying a single
+  temperature or pressure coefficient, which Cantera accepts: it emitted a
+  `Tred * dot_prod[1]` term for a one-row fit, producing an out-of-bounds read
+  in the generated code, and raised `IndexError` on a one-column fit.
+- `get_sri_dt` described Troe falloff in its docstring rather than SRI.
 - Removes unused include of `helper_cuda.h` from generated CUDA code,
   which was removed from the toolkit.
 - `libgen.compiler` called `sys.exit` from inside a `multiprocessing.Pool`

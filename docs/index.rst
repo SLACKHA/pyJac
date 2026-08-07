@@ -25,6 +25,7 @@ Documentation
    :maxdepth: 1
 
    overview
+   validation
    faqs
    examples
    installing

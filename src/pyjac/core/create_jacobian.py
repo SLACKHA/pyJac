@@ -326,7 +326,7 @@ def write_rates(file, lang, rxn):
         )
 
 
-def write_dr_dy_species(
+def get_dr_dy_species(
     lang, specs, rxn, pres_rxn_ind, j_sp, sp_j, rxn_ind, rev_reacs, get_array
 ):
     """Returns string for evaluation of the (non-pressure dependent part) of the
@@ -1155,9 +1155,9 @@ def get_pdep_dt(lang, rxn, rev_reacs, rxn_ind, pres_rxn_ind, get_array):
     )
 
     if rxn.sri:
-        jline += write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf)
+        jline += get_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf)
     elif rxn.troe:
-        jline += write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf)
+        jline += get_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf)
 
     jline += ') * '
 
@@ -1175,8 +1175,8 @@ def get_pdep_dt(lang, rxn, rev_reacs, rxn_ind, pres_rxn_ind, get_array):
     return jline
 
 
-def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
-    """Writes section of line for temperature partial derivative of Troe falloff.
+def get_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
+    """Returns section of line for temperature partial derivative of SRI falloff.
 
     Parameters
     ----------
@@ -1221,8 +1221,8 @@ def write_sri_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
     return jline
 
 
-def write_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
-    """Writes section of line for temperature partial derivative of Troe falloff.
+def get_troe_dt(lang, rxn, beta_0minf, E_0minf, k0kinf):
+    """Returns section of line for temperature partial derivative of Troe falloff.
 
     Parameters
     ----------
@@ -2860,7 +2860,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
 
             # now loop through each species
             for j_sp, sp_j in enumerate(specs[:-1]):
-                dr_dyj = write_dr_dy_species(
+                dr_dyj = get_dr_dy_species(
                     lang,
                     specs,
                     rxn,

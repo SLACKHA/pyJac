@@ -49,7 +49,7 @@ def rxn_rate_const(A, b, E):
         \exp \left( \log A - T_a / T \right)
         & \text{if } \beta = 0 \text{ and } T_a \neq 0 \\
         A \prod^b T	& \text{if } T_a = 0 \text{ and }
-        b \in \mathbb{Z} \text{ (integers) }
+        b \in \mathbb{Z}^{+} \text{ (positive integers) }
         \end{cases}
 
     References
@@ -73,9 +73,9 @@ def rxn_rate_const(A, b, E):
                 line += str(A)
             else:
                 # b != 0
-                if isinstance(b, int):
+                if utils.is_integer(b) and b > 0:
                     line += str(A)
-                    for _i in range(b):
+                    for _i in range(int(b)):
                         line += ' * T'
                 else:
                     line += f'exp({logA:.16e}'
@@ -107,7 +107,7 @@ def rxn_rate_const(A, b, E):
                 line += str(A)
             else:
                 # b != 0
-                if utils.is_integer(b):
+                if utils.is_integer(b) and b > 0:
                     line += str(A)
                     for _i in range(int(b)):
                         line += ' * T'
@@ -241,6 +241,44 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     line_list = [utils.line_start + line + utils.line_end[lang] for line in line_list]
 
     return ''.join(line_list)
+
+
+def get_nasa_arrays(sp, nu, factor=1.0):
+    """Returns NASA polynomial coefficients scaled for an equilibrium constant.
+
+    The coefficients of both temperature ranges are rearranged into the form
+    used by the reverse rate expression and scaled by the species'
+    stoichiometric coefficient.
+
+    Parameters
+    ----------
+    sp : `chem_utilities.SpecInfo`
+        Species whose thermodynamic coefficients are used.
+    nu : float
+        Stoichiometric coefficient of the species in the reaction.
+    factor : float, optional
+        Sign applied to ``nu``; -1.0 for reactants, 1.0 for products.
+
+    Returns
+    -------
+    lo_array, hi_array : list of float
+        Scaled coefficients for the low- and high-temperature ranges.
+
+    """
+    arrays = []
+    for coeffs in (sp.lo, sp.hi):
+        scaled = [nu * factor] + [
+            coeffs[6],
+            coeffs[0],
+            coeffs[0] - 1.0,
+            coeffs[1] / 2.0,
+            coeffs[2] / 6.0,
+            coeffs[3] / 12.0,
+            coeffs[4] / 20.0,
+            coeffs[5],
+        ]
+        arrays.append([x * scaled[0] for x in [scaled[1] - scaled[2]] + scaled[3:]])
+    return arrays[0], arrays[1]
 
 
 def write_rxn_rates(
@@ -541,35 +579,6 @@ def write_rxn_rates(
     rrange = (0, len(reacs)) if not do_unroll else (0, CUDAParams.Rates_Unroll)
     write_sub_intro(file, not do_unroll, rrange[0], rrange[1])
 
-    def __get_arrays(sp, factor=1.0):
-        # put together all our coeffs
-        lo_array = [nu * factor] + [
-            sp.lo[6],
-            sp.lo[0],
-            sp.lo[0] - 1.0,
-            sp.lo[1] / 2.0,
-            sp.lo[2] / 6.0,
-            sp.lo[3] / 12.0,
-            sp.lo[4] / 20.0,
-            sp.lo[5],
-        ]
-
-        lo_array = [x * lo_array[0] for x in [lo_array[1] - lo_array[2]] + lo_array[3:]]
-
-        hi_array = [nu * factor] + [
-            sp.hi[6],
-            sp.hi[0],
-            sp.hi[0] - 1.0,
-            sp.hi[1] / 2.0,
-            sp.hi[2] / 6.0,
-            sp.hi[3] / 12.0,
-            sp.hi[4] / 20.0,
-            sp.hi[5],
-        ]
-
-        hi_array = [x * hi_array[0] for x in [hi_array[1] - hi_array[2]] + hi_array[3:]]
-        return lo_array, hi_array
-
     for i_rxn in range(len(reacs)):
         if do_unroll and i_rxn == next_file:
             file_store = file
@@ -709,7 +718,7 @@ def write_rxn_rates(
                         )
                         sys.exit()
 
-                    lo_array, hi_array = __get_arrays(sp)
+                    lo_array, hi_array = get_nasa_arrays(sp, nu)
 
                     if sp.Trange[1] not in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array
@@ -744,7 +753,7 @@ def write_rxn_rates(
                         )
                         sys.exit()
 
-                    lo_array, hi_array = __get_arrays(sp, factor=-1.0)
+                    lo_array, hi_array = get_nasa_arrays(sp, nu, factor=-1.0)
 
                     if sp.Trange[1] not in coeffs:
                         coeffs[sp.Trange[1]] = lo_array, hi_array

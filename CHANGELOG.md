@@ -78,9 +78,14 @@ regenerating with the old table and diffing.
   through to a default.
 - The CUDA target architecture is configurable instead of hardcoded to
   `sm_20`. Fermi support was removed in CUDA 9 (2017), so the CUDA backend
-  could not compile on any current toolkit. It now defaults to `sm_70` and is
+  could not compile on any current toolkit. It now defaults to `sm_75` and is
   settable with `--cuda-arch` on `pyjac.libgen` and `pyjac.pywrap`, or the
   `cuda_arch` argument to `generate_library` and `generate_wrapper`.
+  Turing is the oldest architecture that compiles offline on every tested
+  toolkit: CUDA 13 dropped offline compilation for Maxwell, Pascal and Volta,
+  so `sm_70` builds under CUDA 12.6 but fails under 13.3. Targets older than
+  the default remain available through `--cuda-arch` on a toolkit that still
+  accepts them.
 - CUDA register limits updated from Fermi's values to those of compute
   capability 5.0 and later: 65536 registers per multiprocessor rather than
   32768, and a 255-register per-thread cap rather than 63. The emitted

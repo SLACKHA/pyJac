@@ -28,10 +28,14 @@ Rates_Unroll = 250
 Max_Lines = 10000
 Max_Spec_Lines = 5000
 
-DEFAULT_ARCH = 'sm_70'
+DEFAULT_ARCH = 'sm_75'
 """str: default CUDA compute capability to generate code for
 
-Volta, the oldest architecture still supported across current CUDA toolkits.
+Turing, the oldest architecture that compiles offline on every CUDA toolkit
+pyJac is tested against. CUDA 13 dropped offline compilation for Volta, so
+``sm_70`` builds on 12.x but fails on 13.x; ``sm_75`` is the floor common to
+both.
+
 Override with ``--cuda-arch`` to match the target hardware; ``native`` compiles
 for the GPU present on the build machine (CUDA 11.5 and later).
 """

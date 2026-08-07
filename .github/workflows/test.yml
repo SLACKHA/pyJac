@@ -123,20 +123,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # sm_75 is pyJac's default: the oldest architecture that compiles
+          # offline on both toolkits, so it is required on each. CUDA 13
+          # dropped offline compilation for Maxwell, Pascal and Volta, which
+          # is exactly what this job does -- there is no GPU on the runner --
+          # so sm_50, sm_60 and sm_70 are required on 12.6 and absent from
+          # 13.3.
           - cuda: '12-6'
             cuda_path: '12.6'
-            # Volta is pyJac's current default and CUDA 12 still accepts it.
             required_archs: sm_70 sm_75 sm_80 sm_90
             optional_archs: sm_50 sm_60
           - cuda: '13-3'
             cuda_path: '13.3'
             required_archs: sm_75 sm_80 sm_90
-            # sm_70 is here to settle whether pyJac's default still builds on
-            # a current toolkit: CUDA 13.0 removed offline compilation support
-            # for Maxwell, Pascal and Volta, and offline is exactly what this
-            # job does. The Blackwell-and-later targets are probes -- nvcc
-            # reports what it really supports in the step below.
-            optional_archs: sm_70 sm_100 sm_103 sm_120 sm_121 sm_130
+            # Blackwell and later are probes; nvcc reports what it actually
+            # supports in the step below, which is the authority on whether a
+            # failure here means "broken" or "not a real architecture".
+            optional_archs: sm_100 sm_103 sm_120 sm_121
 
     steps:
       - uses: actions/checkout@v4

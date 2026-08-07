@@ -2804,14 +2804,23 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                     nu = utils.get_nu(k_sp, rxn)
                     if nu == 0:
                         continue
+                    # The eliminated species has no entry in the Jacobian, so
+                    # its running total lives in J_nplusone and is tracked by
+                    # its own flag. touched is indexed over real Jacobian
+                    # entries, and touched[num_s] is a different one.
+                    is_last_species = k_sp + 1 == num_s
+                    already_written = (
+                        J_nplusone_touched if is_last_species else touched[k_sp + 1]
+                    )
+
                     if lang in ['c', 'cuda']:
                         j_str = (
                             '{}J_nplusone'.format('*' if do_unroll else '')
-                            if k_sp + 1 == num_s
+                            if is_last_species
                             else get_array(lang, 'jac', k_sp + 1)
                         )
                         line += j_str + ' {}= {}j_temp{} * {:.16e}'.format(
-                            '+' if touched[k_sp + 1] else '',
+                            '+' if already_written else '',
                             '' if nu == 1 else ('-' if nu == -1 else ''),
                             f' * {float(nu)}' if nu != 1 and nu != -1 else '',
                             sp_k.mw,
@@ -2822,13 +2831,13 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                         # indexed)
                         j_str = (
                             'J_nplusone'
-                            if k_sp + 1 == num_s
+                            if is_last_species
                             else get_array(lang, 'jac', k_sp + 1, twod=0)
                         )
                         line += (
                             j_str
                             + ' = '
-                            + (j_str + ' + ' if touched[k_sp + 1] else '')
+                            + (j_str + ' + ' if already_written else '')
                             + ' {}j_temp{} * {:.16e}'.format(
                                 '' if nu == 1 else ('-' if nu == -1 else ''),
                                 f' * {float(nu)}' if nu != 1 and nu != -1 else '',

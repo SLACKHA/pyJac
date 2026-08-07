@@ -1,6 +1,8 @@
 # pyJac
 
 [![DOI](https://zenodo.org/badge/19829533.svg)](https://zenodo.org/badge/latestdoi/19829533)
+![CI](https://github.com/SLACKHA/pyJac/actions/workflows/test.yml/badge.svg)
+[![Coverage Status](https://coveralls.io/repos/github/SLACKHA/pyJac/badge.svg?branch=main)](https://coveralls.io/github/SLACKHA/pyJac)
 [![Code of Conduct](https://img.shields.io/badge/code%20of%20conduct-contributor%20covenant-green.svg)](http://contributor-covenant.org/version/1/4/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 [![PyPI](https://img.shields.io/pypi/v/pyjac)](https://pypi.org/project/pyjac/)

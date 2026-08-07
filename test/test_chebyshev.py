@@ -7,14 +7,33 @@ listed "Test Jacobian with PLOG and CHEB reactions" as never done.
 
 import re
 import subprocess
+import types
 
+import numpy as np
 import pytest
 
 from conftest import MECH_DIR
 from pyjac.core.create_jacobian import create_jacobian
 from pyjac.core.mech_interpret import read_mech
+from pyjac.core.rate_subs import get_cheb_rate
 
 CHEB_SMALL = MECH_DIR / 'cheb_small.inp'
+
+
+def make_chebyshev(n_temp, n_pres):
+    """A stand-in carrying only the fields get_cheb_rate reads."""
+    return types.SimpleNamespace(
+        cheb_n_temp=n_temp,
+        cheb_n_pres=n_pres,
+        cheb_tlim=[300.0, 2000.0],
+        cheb_plim=[1000.0, 1.0e6],
+        cheb_par=np.arange(1.0, n_temp * n_pres + 1.0).reshape(n_temp, n_pres),
+    )
+
+
+def highest_index(source, array):
+    """Largest index at which ``array`` is read in the emitted source."""
+    return max((int(n) for n in re.findall(rf'{array}\[(\d+)\]', source)), default=-1)
 
 
 def test_standalone_tcheb_line_parses():
@@ -61,6 +80,39 @@ def test_two_temperature_coefficients_stay_in_bounds(tmp_path):
         f'but the array is declared with size {size}'
     )
     assert 'kf = dot_prod[1]' in jacob
+
+
+@pytest.mark.parametrize('n_pres', [1, 2, 4])
+@pytest.mark.parametrize('n_temp', [1, 2, 6])
+def test_rate_expression_stays_within_the_fit(n_temp, n_pres):
+    """dot_prod is never read past the number of temperature coefficients.
+
+    Cantera accepts a Chebyshev fit with a single temperature or pressure
+    coefficient, so pyJac has to emit something valid for it. The rate
+    expression unconditionally added a ``Tred * dot_prod[1]`` term and a
+    ``Pred * cheb_par[i, 1]`` term, which read past the end of a
+    single-coefficient fit.
+    """
+    source = get_cheb_rate('c', make_chebyshev(n_temp, n_pres))
+
+    assert highest_index(source, 'dot_prod') < n_temp, (
+        f'a {n_temp} x {n_pres} fit indexes dot_prod past its last entry'
+    )
+    if n_temp == 1:
+        assert 'Tred *' not in source, 'no temperature term fits in a 1-row fit'
+    if n_pres == 1:
+        assert 'Pred *' not in source, 'no pressure term fits in a 1-column fit'
+
+
+@pytest.mark.parametrize(('n_temp', 'n_pres'), [(6, 4), (2, 3)])
+def test_rate_expression_uses_every_coefficient(n_temp, n_pres):
+    """An ordinary fit still consumes its whole coefficient matrix."""
+    rxn = make_chebyshev(n_temp, n_pres)
+    source = get_cheb_rate('c', rxn)
+
+    for value in rxn.cheb_par.flatten():
+        assert f'{value:.8e}' in source, f'coefficient {value} never used'
+    assert highest_index(source, 'dot_prod') == n_temp - 1
 
 
 @pytest.mark.compiler

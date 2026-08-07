@@ -1880,7 +1880,7 @@ def write_dt_completion(file, lang, specs, J_nplusone_touched, get_array):
     file.write(line)
 
 
-def write_sub_intro(
+def _write_sub_intro(
     path,
     lang,
     number,
@@ -2673,7 +2673,7 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 if cheb:
                     dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
                 # write the specific evaluator for this reaction
-                file = write_sub_intro(
+                file = _write_sub_intro(
                     os.path.join(path, 'jacobs'),
                     lang,
                     jac_count,

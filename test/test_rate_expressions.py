@@ -8,12 +8,21 @@ not that it is spelled a particular way. The golden fixtures already pin
 spelling.
 """
 
+import io
 import math
+import pathlib
 import types
 
+import cantera as ct_module
 import pytest
 
-from pyjac.core.rate_subs import get_nasa_arrays, rxn_rate_const
+from pyjac.core import chem_utilities as chem
+from pyjac.core.rate_subs import (
+    _write_conc_body,
+    get_nasa_arrays,
+    get_thermo_expression,
+    rxn_rate_const,
+)
 
 #: Temperatures at which emitted rate expressions are checked.
 TEMPERATURES = [300.0, 1000.0, 2500.0]
@@ -153,6 +162,172 @@ def test_nasa_arrays_does_not_mutate_species():
     get_nasa_arrays(species, 2.0, factor=-1.0)
     assert species.lo == LOW_COEFFS
     assert species.hi == HIGH_COEFFS
+
+
+@pytest.fixture(scope='module')
+def gri30_species():
+    """pyJac's and Cantera's view of the same species, paired up.
+
+    Read from the mechanism Cantera bundles so both sides come from one file
+    and no format conversion sits between them.
+    """
+    ct = pytest.importorskip('cantera')
+    from pyjac.core.mech_interpret import read_mech_ct
+
+    path = pathlib.Path(ct.__file__).parent / 'data' / 'gri30.yaml'
+    if not path.is_file():
+        pytest.skip('cantera does not bundle gri30.yaml')
+
+    _, specs, _ = read_mech_ct(str(path))
+    return ct.Solution(str(path)), specs
+
+
+#: Cantera's mass-specific property corresponding to each pyJac array.
+CANTERA_PROPERTY = {
+    'h': 'enthalpy_mass',
+    'u': 'int_energy_mass',
+    'cp': 'cp_mass',
+    'cv': 'cv_mass',
+}
+
+
+@pytest.mark.parametrize('prop', ['h', 'u', 'cp', 'cv'])
+@pytest.mark.parametrize(
+    'use_high_range', [False, True], ids=['low range', 'high range']
+)
+def test_thermo_expression_matches_cantera(prop, use_high_range, gri30_species):
+    """The emitted polynomial must reproduce Cantera's thermodynamic data.
+
+    Checks the arithmetic of the NASA polynomial itself: a wrong coefficient
+    index or a wrong divisor would still generate compilable code and still
+    produce byte-stable output, so only a value comparison catches it.
+    """
+    gas, specs = gri30_species
+
+    for species in specs:
+        low_temperature, mid_temperature, high_temperature = species.Trange
+        if use_high_range:
+            temperature = 0.5 * (mid_temperature + high_temperature)
+            coeffs = species.hi
+        else:
+            temperature = 0.5 * (low_temperature + mid_temperature)
+            coeffs = species.lo
+
+        expression = get_thermo_expression(prop, coeffs)
+        emitted = chem.RU / species.mw * evaluate(expression, temperature)
+
+        gas.TPX = temperature, ct_module.one_atm, {species.name: 1.0}
+        expected = getattr(gas, CANTERA_PROPERTY[prop])
+
+        assert emitted == pytest.approx(expected, rel=1e-10, abs=1e-6), (
+            f'{prop} of {species.name} at {temperature:.1f} K'
+        )
+
+
+def test_thermo_expression_rejects_unknown_property():
+    """A typo must fail loudly rather than silently emitting cp."""
+    with pytest.raises(ValueError, match='unknown thermodynamic property'):
+        get_thermo_expression('s', [1.0] * 7)
+
+
+@pytest.mark.parametrize(('integrated', 'direct'), [('h', 'cp'), ('u', 'cv')])
+def test_integrated_properties_carry_the_extra_term(integrated, direct):
+    """h and u include the constant of integration; cp and cv do not.
+
+    That constant is the only coefficient the two families differ on, and it
+    adds one level to the nesting.
+    """
+    coeffs = [2.0, 3.0, 6.0, 12.0, 20.0, 7.0, 11.0]
+    constant = f'{coeffs[5]:.16e}'
+
+    integrated_expression = get_thermo_expression(integrated, coeffs)
+    direct_expression = get_thermo_expression(direct, coeffs)
+
+    assert constant in integrated_expression
+    assert constant not in direct_expression
+    assert integrated_expression.count('T * (') == direct_expression.count('T * (') + 1
+
+
+@pytest.mark.parametrize(('offset', 'plain'), [('u', 'h'), ('cv', 'cp')])
+def test_offset_properties_subtract_one(offset, plain):
+    """u = h - RT and cv = cp - R both reduce to subtracting one from a0."""
+    coeffs = [2.0, 3.0, 6.0, 12.0, 20.0, 7.0, 11.0]
+    assert ' - 1.0' in get_thermo_expression(offset, coeffs)
+    assert ' - 1.0' not in get_thermo_expression(plain, coeffs)
+
+
+def render_conc_body(given, num_species=4, lang='c'):
+    """Return the concentration subroutine body as text."""
+    specs = [
+        types.SimpleNamespace(mw=2.0 + index, name=f'S{index}')
+        for index in range(num_species)
+    ]
+    buffer = io.StringIO()
+    _write_conc_body(buffer, lang, specs, given=given)
+    return buffer.getvalue()
+
+
+def test_conc_body_computes_whichever_quantity_was_not_given():
+    """Each form solves for the quantity it was not handed, and only that one."""
+    from_pressure = render_conc_body('pressure')
+    from_density = render_conc_body('density')
+
+    assert '*rho = pres *' in from_pressure
+    assert '*pres = rho *' not in from_pressure
+
+    assert '*pres = rho *' in from_density
+    assert '*rho = pres *' not in from_density
+
+
+def test_conc_body_dereferences_density_only_when_it_is_an_output():
+    """Density is a pointer where it is computed and a value where it is given."""
+    from_pressure = render_conc_body('pressure')
+    from_density = render_conc_body('density')
+
+    assert '(*rho) * ' in from_pressure
+    assert '(*rho)' not in from_density
+    assert ' = rho * ' in from_density
+
+
+def test_conc_body_forms_differ_only_over_density_and_pressure():
+    """Everything outside the two known differences must stay in step.
+
+    This is what the shared helper buys: the mass fraction, average molecular
+    weight and concentration arithmetic cannot drift between the two
+    subroutines, because there is only one copy of them.
+    """
+    from_pressure = render_conc_body('pressure').splitlines()
+    from_density = render_conc_body('density').splitlines()
+
+    assert len(from_pressure) == len(from_density)
+    differing = [
+        (one, other)
+        for one, other in zip(from_pressure, from_density, strict=True)
+        if one != other
+    ]
+    assert differing, 'the two forms should not be identical'
+    about_density_or_pressure = ('rho', 'pres', 'density')
+    for one, other in differing:
+        for line in (one, other):
+            assert any(token in line for token in about_density_or_pressure), (
+                f'the two forms differ on a line unrelated to density or '
+                f'pressure: {line!r}'
+            )
+
+
+@pytest.mark.parametrize('given', ['pressure', 'density'])
+def test_conc_body_writes_one_concentration_per_species(given):
+    """Every species gets a concentration, including the one solved for last."""
+    num_species = 5
+    body = render_conc_body(given, num_species=num_species)
+    for index in range(num_species):
+        assert f'conc[{index}]' in body, f'no concentration written for species {index}'
+
+
+def test_conc_body_rejects_unknown_quantity():
+    """A typo must fail loudly rather than silently picking the pressure form."""
+    with pytest.raises(ValueError, match="expected 'pressure' or 'density'"):
+        render_conc_body('temperature')
 
 
 @pytest.mark.parametrize('temperature', TEMPERATURES)

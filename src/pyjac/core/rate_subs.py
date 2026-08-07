@@ -183,10 +183,10 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     line_list.append('cheb_temp_1 = Pred')
     # start pressure dot product
     for i in range(rxn.cheb_n_temp):
-        line_list.append(
-            utils.get_array(lang, 'dot_prod', i)
-            + f'= {rxn.cheb_par[i, 0]:.8e} + Pred * {rxn.cheb_par[i, 1]:.8e}'
-        )
+        line = utils.get_array(lang, 'dot_prod', i) + f'= {rxn.cheb_par[i, 0]:.8e}'
+        if rxn.cheb_n_pres > 1:
+            line += f' + Pred * {rxn.cheb_par[i, 1]:.8e}'
+        line_list.append(line)
 
     # finish pressure dot product
     update_one = True
@@ -212,12 +212,10 @@ def get_cheb_rate(lang, rxn, write_defns=True):
     line_list.append('cheb_temp_0 = 1')
     line_list.append('cheb_temp_1 = Tred')
     # finally, do the temperature portion
-    line_list.append(
-        'kf = '
-        + utils.get_array(lang, 'dot_prod', 0)
-        + ' + Tred * '
-        + utils.get_array(lang, 'dot_prod', 1)
-    )
+    line = 'kf = ' + utils.get_array(lang, 'dot_prod', 0)
+    if rxn.cheb_n_temp > 1:
+        line += ' + Tred * ' + utils.get_array(lang, 'dot_prod', 1)
+    line_list.append(line)
 
     update_one = True
     for i in range(2, rxn.cheb_n_temp):
@@ -372,7 +370,7 @@ def write_rxn_rates(
         if not do_unroll:
             smm.write_init(file, indent=2)
 
-    def write_header(lang, rate_count):
+    def _write_header(lang, rate_count):
         """Writes reaction rate header file.
 
         Parameters
@@ -416,7 +414,7 @@ def write_rxn_rates(
             )
             file.write('#endif\n')
 
-    def write_sub_intro(file, defines, start, end, rate_count=None):
+    def _write_sub_intro(file, defines, start, end, rate_count=None):
         """Write introduction to reaction rate subroutine.
 
         Parameters
@@ -577,7 +575,7 @@ def write_rxn_rates(
             file.write('\n')
 
     rrange = (0, len(reacs)) if not do_unroll else (0, CUDAParams.Rates_Unroll)
-    write_sub_intro(file, not do_unroll, rrange[0], rrange[1])
+    _write_sub_intro(file, not do_unroll, rrange[0], rrange[1])
 
     for i_rxn in range(len(reacs)):
         if do_unroll and i_rxn == next_file:
@@ -589,7 +587,7 @@ def write_rxn_rates(
                 'w',
             )
             next_file = min(len(reacs), i_rxn + CUDAParams.Rates_Unroll)
-            write_sub_intro(file, True, i_rxn + 1, next_file, rate_count)
+            _write_sub_intro(file, True, i_rxn + 1, next_file, rate_count)
             rate_count += 1
         file.write(
             utils.line_start
@@ -901,7 +899,7 @@ def write_rxn_rates(
             file.write('\n')
             file.write('#endif\n')
         for i in range(rate_count):
-            write_header(lang, i)
+            _write_header(lang, i)
         with open(os.path.join(path, 'rates', f'rate_list_{lang}'), 'w') as file:
             file.write(
                 ' '.join(
@@ -1591,6 +1589,202 @@ def write_spec_rates(
     return seen
 
 
+#: Properties obtained by integrating :math:`c_p / R`, which contributes the
+#: constant of integration and divides each coefficient by its order.
+INTEGRATED_PROPS = ('h', 'u')
+
+#: Properties that subtract the gas constant: :math:`u = h - RT` and
+#: :math:`c_v = c_p - R`. In the reduced polynomial both amount to
+#: subtracting one from the leading coefficient.
+OFFSET_PROPS = ('u', 'cv')
+
+#: Every property write_chem_utils emits a subroutine for.
+THERMO_PROPS = ('h', 'u', 'cv', 'cp')
+
+
+def get_thermo_expression(prop, coeffs):
+    """Returns a species thermodynamic property as a polynomial in temperature.
+
+    The result is in Horner form and must be scaled by :math:`R / W` by the
+    caller.
+
+    Parameters
+    ----------
+    prop : str
+        Property to evaluate, one of ``'h'``, ``'u'``, ``'cv'``, ``'cp'``.
+    coeffs : list of float
+        NASA polynomial coefficients for a single temperature range.
+
+    Returns
+    -------
+    str
+        Parenthesised expression in ``T``.
+
+    """
+    if prop not in THERMO_PROPS:
+        raise ValueError(f'unknown thermodynamic property {prop!r}')
+
+    leading = f'{coeffs[0]:.16e}'
+    if prop in OFFSET_PROPS:
+        leading += ' - 1.0'
+
+    if prop in INTEGRATED_PROPS:
+        terms = [
+            f'{coeffs[5]:.16e}',
+            leading,
+            f'{coeffs[1] / 2.0:.16e}',
+            f'{coeffs[2] / 3.0:.16e}',
+            f'{coeffs[3] / 4.0:.16e}',
+            f'{coeffs[4] / 5.0:.16e}',
+        ]
+    else:
+        terms = [
+            leading,
+            f'{coeffs[1]:.16e}',
+            f'{coeffs[2]:.16e}',
+            f'{coeffs[3]:.16e}',
+            f'{coeffs[4]:.16e}',
+        ]
+
+    expression = f'{terms[-2]} + {terms[-1]} * T'
+    for term in reversed(terms[:-2]):
+        expression = f'{term} + T * ({expression})'
+    return f'({expression})'
+
+
+def _write_thermo_loop(file, lang, specs, prop):
+    """Writes the per-species evaluation of one thermodynamic property.
+
+    Each species branches on its NASA polynomial temperature range.
+    """
+    for isp, sp in enumerate(specs):
+        line = f'  if (T <= {sp.Trange[1]})'
+        if lang in ['c', 'cuda']:
+            line += ' {\n'
+        elif lang == 'fortran':
+            line += ' then\n'
+        elif lang == 'matlab':
+            line += '\n'
+        file.write(line)
+
+        scale = f' = {chem.RU / sp.mw:.16e} * '
+        file.write(
+            '    '
+            + utils.get_array(lang, prop, isp)
+            + scale
+            + get_thermo_expression(prop, sp.lo)
+            + utils.line_end[lang]
+        )
+
+        if lang in ['c', 'cuda']:
+            file.write('  } else {\n')
+        elif lang in ['fortran', 'matlab']:
+            file.write('  else\n')
+
+        file.write(
+            '    '
+            + utils.get_array(lang, prop, isp)
+            + scale
+            + get_thermo_expression(prop, sp.hi)
+            + utils.line_end[lang]
+        )
+
+        if lang in ['c', 'cuda']:
+            file.write('  }\n\n')
+        elif lang == 'fortran':
+            file.write('  end if\n\n')
+        elif lang == 'matlab':
+            file.write('  end\n\n')
+
+
+def _write_conc_body(file, lang, specs, given):
+    """Writes the body shared by ``eval_conc`` and ``eval_conc_rho``.
+
+    Both subroutines recover the final species' mass fraction, average the
+    molecular weight, and convert mass fractions to molar concentrations. They
+    differ only in which of density and pressure is supplied; the other is
+    computed from it. That also settles how density is spelled, since it is an
+    output pointer in one case and an input value in the other.
+
+    Parameters
+    ----------
+    file : file object
+        Open file to write the subroutine body to.
+    lang : str
+        Programming language.
+    specs : list of `chem_utilities.SpecInfo`
+        Species in the mechanism.
+    given : str
+        Quantity the subroutine is handed, ``'pressure'`` or ``'density'``.
+        The other is computed from it.
+
+    """
+    if given not in ('pressure', 'density'):
+        raise ValueError(f"expected 'pressure' or 'density', got {given!r}")
+
+    from_density = given == 'density'
+    rho = 'rho' if from_density else '(*rho)'
+
+    # Get mass fraction of last species
+    file.write('  // mass fraction of final species\n')
+    line = '  *y_N = 1.0 - ('
+    isfirst = True
+    for isp in range(len(specs[:-1])):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '               '
+
+        if not isfirst:
+            line += ' + '
+
+        line += utils.get_array(lang, 'y', isp)
+
+        isfirst = False
+    line += ')'
+    file.write(line + utils.line_end[lang])
+
+    # calculation of mw avg
+    line = '  *mw_avg = '
+    isfirst = True
+    for isp, sp in enumerate(specs[:-1]):
+        if len(line) > 70:
+            line += '\n'
+            file.write(line)
+            line = '     '
+
+        if not isfirst:
+            line += ' + '
+        line += '(' + utils.get_array(lang, 'y', isp) + f' * {1.0 / sp.mw:.16e})'
+
+        isfirst = False
+    line += f' + ((*y_N) * {1.0 / specs[-1].mw:.16e})'
+    line += utils.line_end[lang]
+    file.write(line)
+    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
+
+    # whichever of density and pressure was not supplied
+    if from_density:
+        file.write('  // pressure\n')
+        line = f'  *pres = rho * {chem.RU:.8e} * T / (*mw_avg)'
+    else:
+        file.write('  // mass-averaged density\n')
+        line = f'  *rho = pres * (*mw_avg) / ({chem.RU:.8e} * T)'
+    file.write(line + utils.line_end[lang])
+
+    # calculation of species molar concentrations
+    for isp, sp in enumerate(specs[:-1]):
+        line = utils.line_start + utils.get_array(lang, 'conc', isp)
+        line += ' = '
+        line += f'{rho} * ' + utils.get_array(lang, 'y', isp)
+        line += f' * {1.0 / sp.mw:.16e}' + utils.line_end[lang]
+        file.write(line)
+    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
+    line += f' = {rho} * (*y_N) * '
+    line += f'{1.0 / specs[-1].mw:.16e}' + utils.line_end[lang]
+    file.write(line + '\n')
+
+
 def write_chem_utils(path, lang, specs, auto_diff):
     """Write subroutine to evaluate species thermodynamic properties.
 
@@ -1689,62 +1883,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
         line += 'function conc = eval_conc (T, pres, y, y_N, mw_avg, rho, conc)\n\n'
     file.write(line)
 
-    isfirst = True
-    # Get mass fraction of last species
-    file.write('  // mass fraction of final species\n')
-    line = '  *y_N = 1.0 - ('
-    for isp in range(len(specs[:-1])):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst:
-            line += ' + '
-
-        line += utils.get_array(lang, 'y', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # calculation of mw avg
-    line = '  *mw_avg = '
-    isfirst = True
-    for isp, sp in enumerate(specs[:-1]):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '     '
-
-        if not isfirst:
-            line += ' + '
-        line += '(' + utils.get_array(lang, 'y', isp) + f' * {1.0 / sp.mw:.16e})'
-
-        isfirst = False
-    line += f' + ((*y_N) * {1.0 / specs[-1].mw:.16e})'
-    line += utils.line_end[lang]
-    file.write(line)
-    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
-
-    # calculation of density
-    file.write('  // mass-averaged density\n')
-    line = f'  *rho = pres * (*mw_avg) / ({chem.RU:.8e} * T)'
-    file.write(line + utils.line_end[lang])
-
-    # calculation of species molar concentrations
-
-    # loop through species
-    for isp, sp in enumerate(specs[:-1]):
-        line = utils.line_start + utils.get_array(lang, 'conc', isp)
-        line += ' = '
-        line += '(*rho) * ' + utils.get_array(lang, 'y', isp)
-        line += f' * {1.0 / sp.mw:.16e}' + utils.line_end[lang]
-        file.write(line)
-    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
-    line += ' = (*rho) * (*y_N) * '
-    line += f'{1.0 / specs[-1].mw:.16e}' + utils.line_end[lang]
-    file.write(line + '\n')
+    _write_conc_body(file, lang, specs, given='pressure')
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_conc\n\n')
@@ -1779,64 +1918,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
         )
     file.write(line)
 
-    # Get mass fraction of last species
-    file.write('  // mass fraction of final species\n')
-    line = '  *y_N = 1.0 - ('
-    isfirst = True
-    for isp in range(len(specs[:-1])):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '               '
-
-        if not isfirst:
-            line += ' + '
-
-        line += utils.get_array(lang, 'y', isp)
-
-        isfirst = False
-    line += ')'
-    file.write(line + utils.line_end[lang])
-
-    # calculation of mw avg
-    line = '  *mw_avg = '
-    isfirst = True
-    for isp, sp in enumerate(specs[:-1]):
-        if len(line) > 70:
-            line += '\n'
-            file.write(line)
-            line = '     '
-
-        if not isfirst:
-            line += ' + '
-        line += '(' + utils.get_array(lang, 'y', isp) + f' * {1.0 / sp.mw:.16e})'
-
-        isfirst = False
-    line += f' + ((*y_N) * {1.0 / specs[-1].mw:.16e})'
-    line += utils.line_end[lang]
-    file.write(line)
-    file.write('  *mw_avg = 1.0 / *mw_avg;\n')
-
-    # calculation of pressure
-    file.write('  // pressure\n')
-    line = f'  *pres = rho * {chem.RU:.8e} * T / (*mw_avg)'
-    file.write(line + utils.line_end[lang])
-
-    # calculation of species molar concentrations
-
-    # loop through species
-    for isp, sp in enumerate(specs[:-1]):
-        line = utils.line_start + utils.get_array(lang, 'conc', isp)
-        line += ' = '
-        line += 'rho * ' + utils.get_array(lang, 'y', isp)
-        line += f' * {1.0 / sp.mw:.16e}' + utils.line_end[lang]
-        file.write(line)
-    line = utils.line_start + utils.get_array(lang, 'conc', len(specs) - 1)
-    line += ' = rho * (*y_N) * '
-    line += f'{1.0 / specs[-1].mw:.16e}' + utils.line_end[lang]
-    file.write(line)
-
-    file.write('\n')
+    _write_conc_body(file, lang, specs, given='density')
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_conc\n\n')
@@ -1864,53 +1946,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     file.write(line)
 
     # loop through species
-    for isp, sp in enumerate(specs):
-        line = f'  if (T <= {sp.Trange[1]})'
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'h', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.lo[5]:.16e} + T * ('
-            + f'{sp.lo[0]:.16e} + T * ('
-            + f'{sp.lo[1] / 2.0:.16e} + T * ('
-            + f'{sp.lo[2] / 3.0:.16e} + T * ('
-            + f'{sp.lo[3] / 4.0:.16e} + '
-            + f'{sp.lo[4] / 5.0:.16e} * T)))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'h', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.hi[5]:.16e} + T * ('
-            + f'{sp.hi[0]:.16e} + T * ('
-            + f'{sp.hi[1] / 2.0:.16e} + T * ('
-            + f'{sp.hi[2] / 3.0:.16e} + T * ('
-            + f'{sp.hi[3] / 4.0:.16e} + '
-            + f'{sp.hi[4] / 5.0:.16e} * T)))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
+    _write_thermo_loop(file, lang, specs, 'h')
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_h\n\n')
@@ -1938,53 +1974,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     file.write(line)
 
     # loop through species
-    for isp, sp in enumerate(specs):
-        line = f'  if (T <= {sp.Trange[1]})'
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'u', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.lo[5]:.16e} + T * ('
-            + f'{sp.lo[0]:.16e} - 1.0 + T * ('
-            + f'{sp.lo[1] / 2.0:.16e} + T * ('
-            + f'{sp.lo[2] / 3.0:.16e} + T * ('
-            + f'{sp.lo[3] / 4.0:.16e} + '
-            + f'{sp.lo[4] / 5.0:.16e} * T)))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'u', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.hi[5]:.16e} + T * ('
-            + f'{sp.hi[0]:.16e} - 1.0 + T * ('
-            + f'{sp.hi[1] / 2.0:.16e} + T * ('
-            + f'{sp.hi[2] / 3.0:.16e} + T * ('
-            + f'{sp.hi[3] / 4.0:.16e} + '
-            + f'{sp.hi[4] / 5.0:.16e} * T)))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
+    _write_thermo_loop(file, lang, specs, 'u')
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_u\n\n')
@@ -2014,51 +2004,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     file.write(line)
 
     # loop through species
-    for isp, sp in enumerate(specs):
-        line = f'  if (T <= {sp.Trange[1]})'
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'cv', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.lo[0]:.16e} - 1.0 + T * ('
-            + f'{sp.lo[1]:.16e} + T * ('
-            + f'{sp.lo[2]:.16e} + T * ('
-            + f'{sp.lo[3]:.16e} + '
-            + f'{sp.lo[4]:.16e} * T))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'cv', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.hi[0]:.16e} - 1.0 + T * ('
-            + f'{sp.hi[1]:.16e} + T * ('
-            + f'{sp.hi[2]:.16e} + T * ('
-            + f'{sp.hi[3]:.16e} + '
-            + f'{sp.hi[4]:.16e} * T))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
+    _write_thermo_loop(file, lang, specs, 'cv')
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_cv\n\n')
@@ -2088,51 +2034,7 @@ def write_chem_utils(path, lang, specs, auto_diff):
     file.write(line)
 
     # loop through species
-    for isp, sp in enumerate(specs):
-        line = f'  if (T <= {sp.Trange[1]})'
-        if lang in ['c', 'cuda']:
-            line += ' {\n'
-        elif lang == 'fortran':
-            line += ' then\n'
-        elif lang == 'matlab':
-            line += '\n'
-        file.write(line)
-
-        line = '    ' + utils.get_array(lang, 'cp', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.lo[0]:.16e} + T * ('
-            + f'{sp.lo[1]:.16e} + T * ('
-            + f'{sp.lo[2]:.16e} + T * ('
-            + f'{sp.lo[3]:.16e} + '
-            + f'{sp.lo[4]:.16e} * T))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  } else {\n')
-        elif lang in ['fortran', 'matlab']:
-            file.write('  else\n')
-
-        line = '    ' + utils.get_array(lang, 'cp', isp)
-        line += (
-            f' = {chem.RU / sp.mw:.16e} * '
-            + f'({sp.hi[0]:.16e} + T * ('
-            + f'{sp.hi[1]:.16e} + T * ('
-            + f'{sp.hi[2]:.16e} + T * ('
-            + f'{sp.hi[3]:.16e} + '
-            + f'{sp.hi[4]:.16e} * T))))'
-            + utils.line_end[lang]
-        )
-        file.write(line)
-
-        if lang in ['c', 'cuda']:
-            file.write('  }\n\n')
-        elif lang == 'fortran':
-            file.write('  end if\n\n')
-        elif lang == 'matlab':
-            file.write('  end\n\n')
+    _write_thermo_loop(file, lang, specs, 'cp')
 
     if lang in ['c', 'cuda']:
         file.write('} // end eval_cp\n\n')

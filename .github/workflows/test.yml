@@ -139,7 +139,7 @@ jobs:
             # Blackwell and later are probes; nvcc reports what it actually
             # supports in the step below, which is the authority on whether a
             # failure here means "broken" or "not a real architecture".
-            optional_archs: sm_100 sm_103 sm_120 sm_121
+            optional_archs: sm_100 sm_103 sm_110 sm_120 sm_121
 
     steps:
       - uses: actions/checkout@v4

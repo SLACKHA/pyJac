@@ -221,8 +221,17 @@ def to_yaml(chemkin_path, out_dir):
     return out_name
 
 
-def assert_agrees(worst):
-    """Hold each quantity to the same bar as the C validation."""
+def assert_agrees(worst, label):
+    """Hold each quantity to the same bar as the C validation.
+
+    The measured values are printed, not just checked, because how closely the
+    GPU reproduces Cantera is the result being sought here rather than an
+    implementation detail. Run with -s to see them.
+    """
+    print(f'\n  {label}: generated CUDA against Cantera')
+    for name, value in sorted(worst.items()):
+        print(f'    {name:<24} {value:.3e}')
+
     bad = []
     for label, value in sorted(worst.items()):
         limit = {
@@ -247,7 +256,7 @@ def test_cuda_matches_cantera(name, tmp_path, cuda_arch):
     """
     chemkin = GOLDEN_MECHS['h2o2'] if name == 'h2o2' else MECH_DIR / 'rxn_types.inp'
     worst = build_and_compare(chemkin, to_yaml(chemkin, tmp_path), tmp_path, cuda_arch)
-    assert_agrees(worst)
+    assert_agrees(worst, name)
 
 
 @pytest.mark.cuda
@@ -264,4 +273,4 @@ def test_cuda_matches_cantera_at_scale(tmp_path, cuda_arch):
     if not mech.is_file():
         pytest.skip('cantera does not bundle gri30.yaml')
     worst = build_and_compare(mech, mech, tmp_path, cuda_arch)
-    assert_agrees(worst)
+    assert_agrees(worst, 'gri30')

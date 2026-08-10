@@ -23,6 +23,13 @@ regenerating with the old table and diffing.
   plus the constant-pressure chain rule. Together they cover h2o2, the
   all-reaction-types fixture, and GRI-Mech 3.0, and agree to ~1e-9 and ~2e-10
   respectively. This checks correctness rather than stability.
+- `test/test_cuda_validation.py`, which evaluates generated CUDA kernels on a
+  GPU and compares against the same Cantera reference the C validation uses,
+  at the same tolerances. Skipped unless both nvcc and a GPU are present. The
+  CUDA backend had only ever been checked for compiling.
+- A test that builds the CUDA Python wrapper, which needs nvcc but not a GPU,
+  run by the CUDA jobs in CI. Those jobs previously built only through
+  `pyjac.libgen`, leaving the wrapper templates uncovered.
 - Unit tests for the expression-building helpers, in
   `test/test_rate_expressions.py`. Emitted rate expressions are evaluated and
   compared against `A T**b exp(-E/T)` rather than matched as text, and
@@ -152,6 +159,27 @@ regenerating with the old table and diffing.
   retired conda channel removed.
 
 ### Fixed
+- The CUDA Python wrapper could not be built on any toolkit released in the
+  last several years. Four independent causes, each hidden behind the one
+  before it: the setup template located and required the toolkit's `samples`
+  directory, dropped by NVIDIA after CUDA 11.5 and needed only for the
+  `helper_cuda.h` include already removed from generated code; host compiler
+  flags from Python's build configuration, which now include
+  `-fno-strict-overflow` and `-Wsign-compare`, were passed straight to nvcc,
+  which rejects rather than ignores them; only `linker_so` was rewritten for
+  nvcc, while distutils builds the command for a C++ extension from
+  `linker_so_cxx`, added later and left holding raw host flags; and the
+  interpreter's own `-Wl,--rpath=...` needs `-Xlinker`, since nvcc splits a
+  `-Xcompiler` argument on commas and gcc understands neither `-Wl` nor
+  `--rpath=...` alone. Nothing covered this path: the CUDA job in CI built
+  through `pyjac.libgen`, which compiles generated sources directly and never
+  touches the wrapper templates.
+- Generated CUDA declared `dot_prod` twice in `eval_jacob` for any mechanism
+  with a Chebyshev reaction, once to pass into `eval_rxn_rates` and once for
+  the Jacobian's own use, so it did not compile. **This changes generated
+  CUDA**: the duplicate declaration is gone. The C backend is unaffected,
+  where the second declaration is a local array and the first is never
+  emitted.
 - The eliminated species' contribution to `d(dT/dt)/dT` was overwritten rather
   than accumulated. That species has no Jacobian entry, so its running total is
   kept in a scratch variable, and the choice between assignment and

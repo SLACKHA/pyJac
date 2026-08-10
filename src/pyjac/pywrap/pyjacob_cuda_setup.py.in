@@ -132,8 +132,13 @@ ext = Extension('cu_pyjacob',
                 # this syntax is specific to this build system
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
+                # --disable-optimizer-constants matches pyjac.libgen: a large
+                # mechanism overruns the constant bank ptxas promotes literals
+                # into, and the device link fails outright on some
+                # architectures. See the note in libgen.flags.
                 extra_compile_args={'gcc': [],
                                     'nvcc': ['-arch=$cudaarch', '--ptxas-options=-v',
+                                    '-Xptxas', '--disable-optimizer-constants',
                                     '--compiler-options', "'-fPIC'",
                                     '--ftz=false', '--prec-div=true',
                                     '--prec-sqrt=true', '-m64']},

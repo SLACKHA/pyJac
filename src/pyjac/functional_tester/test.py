@@ -591,6 +591,40 @@ class cpyjac_evaluator:
         pass
 
 
+def mechanism_counts(build_dir, filename):
+    """Returns array sizes the generated mechanism uses, from its header.
+
+    Read from the generated source rather than counted from the Cantera
+    object, because the two disagree. A reaction written with an explicit
+    collider, such as ``H+O2+O2<=>HO2+O2``, is a three-body reaction to
+    Cantera, while the Chemkin reader folds the collider into the rate
+    expression and emits no pressure-modification entry for it. Sizing a
+    buffer from Cantera's count therefore does not match what the compiled
+    code writes into it.
+
+    Parameters
+    ----------
+    build_dir : str
+        Directory holding the generated source.
+    filename : str
+        Name of the generated mechanism header.
+
+    Returns
+    -------
+    dict
+        Mapping of macro name to value, for the counts defined in the header.
+
+    """
+    counts = {}
+    pattern = re.compile(r'#define\s+(NSP|FWD_RATES|REV_RATES|PRES_MOD_RATES)\s+(\d+)')
+    with open(os.path.join(build_dir, filename)) as file:
+        for line in file:
+            match = pattern.search(line)
+            if match:
+                counts[match.group(1)] = int(match.group(2))
+    return counts
+
+
 class cupyjac_evaluator(cpyjac_evaluator):
     """Class for CUDA-based pyJac Jacobian matrix evaluator"""
 
@@ -697,8 +731,9 @@ class cupyjac_evaluator(cpyjac_evaluator):
         if not self.cache_opt:
             self.fwd_spec_map = np.arange(gas.n_species)
 
-        self.num_rev = np.array([rxn.reversible for rxn in gas.reactions()]).sum()
-        self.num_pdep = np.array([utils.is_pdep(rxn) for rxn in gas.reactions()]).sum()
+        counts = mechanism_counts(build_dir, 'mechanism.cuh')
+        self.num_rev = counts['REV_RATES']
+        self.num_pdep = counts['PRES_MOD_RATES']
         self.cuda_state = state_data[:, 1:]
 
         self.nsp = gas.n_species

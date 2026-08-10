@@ -40,7 +40,14 @@ includes = {
 flags = {
     'c': ['-std=c99', '-O3', '-mtune=native'],
     'icc': ['-std=c99', '-O3', '-xhost', '-fp-model', 'precise', '-ipo'],
-    'cuda': ['-O3'],
+    # ptxas promotes frequently used literals into a constant bank with a
+    # fixed budget, which a large mechanism exhausts: linking GRI-Mech 3.0 for
+    # sm_70 fails with "uses too much data for compiler-generated constants",
+    # and nvcc names this flag as the remedy. Generated kernels carry rate
+    # coefficients for every reaction inline, so the promotion has far more
+    # candidates than it is sized for. The same mechanism links without the
+    # flag on sm_90, so the budget varies by architecture.
+    'cuda': ['-O3', '-Xptxas', '--disable-optimizer-constants'],
 }
 
 shared_flags = {'c': ['-fPIC'], 'icc': ['-fPIC'], 'cuda': ['-Xcompiler', '"-fPIC"']}

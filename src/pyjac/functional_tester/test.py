@@ -395,6 +395,21 @@ class cpyjac_evaluator:
             [np.where(self.back_pdep_map == x)[0][0] for x in range(pdep_reacs)]
         )
 
+        # Those maps are built from Cantera's reactions, which do not always
+        # correspond one-to-one with the generated code's: a reaction written
+        # with an explicit collider is pressure-dependent to Cantera, while the
+        # Chemkin reader folds the collider into the rate expression and emits
+        # no pressure-modification entry for it. The maps exist only to undo a
+        # reordering of the reactions, so where the reactions were not
+        # reordered there is nothing to undo, and an identity sized from the
+        # generated mechanism is both correct and the right length.
+        if np.array_equal(self.fwd_rxn_map, np.arange(n_reac)):
+            counts = mechanism_counts(build_dir, filename)
+            self.fwd_rev_rxn_map = np.arange(counts['REV_RATES'])
+            self.back_rev_rxn_map = np.arange(counts['REV_RATES'])
+            self.fwd_pdep_map = np.arange(counts['PRES_MOD_RATES'])
+            self.back_pdep_map = np.arange(counts['PRES_MOD_RATES'])
+
         self.back_dydt_map = np.array([0] + [x + 1 for x in self.back_spec_map])
 
     def __init__(self, build_dir, gas, module_name='pyjacob', filename='mechanism.h'):

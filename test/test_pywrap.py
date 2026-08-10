@@ -171,3 +171,66 @@ def test_generate_cuda_wrapper_builds(tmp_path, monkeypatch):
     stray = list(TEMPLATE_DIR.glob('*_setup.py'))
     stray += list(TEMPLATE_DIR.glob('*_wrapper.c'))
     assert not stray, f'wrapper build wrote into the package directory: {stray}'
+
+
+def load_flag_forwarder():
+    """Extract forward_host_flags from the CUDA template without running it.
+
+    The template calls locate_cuda() at import, which needs a toolkit, so the
+    function is pulled out and exec'd on its own.
+    """
+    text = (TEMPLATE_DIR / 'pyjacob_cuda_setup.py.in').read_text()
+    tree = ast.parse(text)
+    node = next(
+        n
+        for n in tree.body
+        if isinstance(n, ast.FunctionDef) and n.name == 'forward_host_flags'
+    )
+    namespace = {}
+    exec(ast.unparse(node), namespace)  # noqa: S102 - this repository's own source
+    return namespace['forward_host_flags']
+
+
+def test_host_only_link_flags_are_forwarded_to_the_host_compiler():
+    """nvcc rejects host compiler flags rather than ignoring them.
+
+    The link command is built from Python's own build configuration, so it
+    carries whatever the interpreter was compiled with. Recent CPython
+    contributes -fno-strict-overflow and -Wsign-compare, neither of which nvcc
+    accepts; they have to arrive via -Xcompiler.
+    """
+    forward_host_flags = load_flag_forwarder()
+
+    result = forward_host_flags(
+        [
+            '/usr/local/cuda/bin/nvcc',
+            '-fno-strict-overflow',
+            '-Wsign-compare',
+            '-DNDEBUG',
+            '-O3',
+            '-Wall',
+            '-fPIC',
+            '-shared',
+            '-L/somewhere/lib',
+            '-pthread',
+        ]
+    )
+
+    # the compiler stays first, and what nvcc understands is passed straight on
+    assert result[0] == '/usr/local/cuda/bin/nvcc'
+    for kept in ('-DNDEBUG', '-O3', '-shared', '-L/somewhere/lib'):
+        assert kept in result
+        assert result[result.index(kept) - 1] != '-Xcompiler'
+
+    # everything host-specific is handed over instead of passed directly
+    for handed_over in (
+        '-fno-strict-overflow',
+        '-Wsign-compare',
+        '-Wall',
+        '-fPIC',
+        '-pthread',
+    ):
+        assert handed_over in result, f'{handed_over} was dropped entirely'
+        assert result[result.index(handed_over) - 1] == '-Xcompiler', (
+            f'{handed_over} would be passed straight to nvcc'
+        )

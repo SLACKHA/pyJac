@@ -43,7 +43,6 @@ __device__ void eval_jacob (const double t, const double pres, const double * __
   double X = 0.0;
   double Tred, Pred;
   double cheb_temp_0, cheb_temp_1;
-  double * __restrict__ dot_prod = d_mem->dot_prod;
   double kf2;
   register double rho_inv = 1.0 / rho;
   double * __restrict__ dBdT = d_mem->dBdT;

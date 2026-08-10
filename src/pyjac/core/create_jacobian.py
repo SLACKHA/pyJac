@@ -2556,16 +2556,14 @@ def write_jacobian(path, lang, specs, reacs, seen_sp, smm=None):
                 + 'double cheb_temp_0, cheb_temp_1'
                 + utils.line_end[lang]
             )
-            dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
-            file.write(
-                utils.line_start
-                + (
-                    f'double dot_prod[{dim}]'
-                    if lang == 'c'
-                    else f'double * {utils.restrict[lang]} dot_prod = d_mem->dot_prod'
+            # CUDA already has dot_prod. It is declared further up so it can be
+            # passed into eval_rxn_rates, and both declarations land in the
+            # same function, so repeating it here does not compile.
+            if lang == 'c':
+                dim = max(rxn.cheb_n_temp for rxn in reacs if rxn.cheb)
+                file.write(
+                    utils.line_start + f'double dot_prod[{dim}]' + utils.line_end[lang]
                 )
-                + utils.line_end[lang]
-            )
 
         if any(rxn.plog for rxn in reacs):
             file.write(utils.line_start + 'double kf2' + utils.line_end[lang])

@@ -55,6 +55,30 @@ def locate_cuda():
 CUDA = locate_cuda()
 
 
+def forward_host_flags(flags):
+    """Rewrite a link command so nvcc can accept it.
+
+    The linker flags come from Python's own build configuration, so they are
+    written for the host compiler: recent CPython contributes
+    -fno-strict-overflow and -Wsign-compare, and distributions add more. nvcc
+    rejects those outright rather than ignoring them, so anything host-specific
+    has to be handed over with -Xcompiler instead of passed directly.
+
+    Forwarded one flag at a time rather than as a comma-separated list, since
+    a flag may legitimately contain a comma.
+    """
+    direct = []
+    forwarded = []
+    for flag in flags:
+        if flag.startswith('-f') or flag.startswith('-W') or flag == '-pthread':
+            forwarded.append(flag)
+        else:
+            direct.append(flag)
+    for flag in forwarded:
+        direct += ['-Xcompiler', flag]
+    return direct
+
+
 # Obtain the numpy include directory.  This logic works across numpy versions.
 try:
     numpy_include = numpy.get_include()
@@ -111,9 +135,9 @@ def customize_linker_for_nvcc(self):
         self.linker_so = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.linker_so]
         self.linker_exe = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.linker_exe]
         self.compiler_cxx = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.compiler_cxx]
-        self.linker_so = [x for x in self.linker_so if not '-pthread' in x]
-        self.linker_exe = [x for x in self.linker_exe if not '-pthread' in x]
-        self.compiler_cxx = [x for x in self.compiler_cxx if not '-pthread' in x]
+        self.linker_so = forward_host_flags(self.linker_so)
+        self.linker_exe = forward_host_flags(self.linker_exe)
+        self.compiler_cxx = forward_host_flags(self.compiler_cxx)
 
         #some more shenanegains to generate the dlink
         linker_so_save = self.linker_so[:]

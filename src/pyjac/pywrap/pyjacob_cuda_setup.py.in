@@ -202,10 +202,15 @@ def customize_linker_for_nvcc(self):
         for name, value in shared_save.items():
             setattr(self, name, value[:])
 
+        # The shared link needs the architecture as well. Without it nvcc uses
+        # its own default -- sm_52 on CUDA 12, sm_75 on CUDA 13 -- and nvlink
+        # then looks for that architecture inside objects built for the one
+        # actually asked for, warning that it is missing.
         super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o'), '$libname'],
             output_filename, output_dir,
             libraries, library_dirs, [], export_symbols,
-            debug, extra_preargs, (extra_postargs or []) + rpath, build_temp, target_lang)
+            debug, list(extra_preargs or []) + ['-arch=$cudaarch'],
+            (extra_postargs or []) + rpath, build_temp, target_lang)
 
         #restore
         for name, value in defaults.items():

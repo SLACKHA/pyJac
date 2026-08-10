@@ -139,12 +139,21 @@ def customize_linker_for_nvcc(self):
         self.linker_exe = forward_host_flags(self.linker_exe)
         self.compiler_cxx = forward_host_flags(self.compiler_cxx)
 
+        # Runtime library directories are rendered as -Wl,--rpath=... by
+        # distutils itself, inside the call below, so they cannot be caught by
+        # forward_host_flags above. nvcc rejects them. The device link has no
+        # use for a runtime search path at all, and the shared link needs the
+        # same thing expressed with -Xlinker.
+        rpath = []
+        for directory in runtime_library_dirs or []:
+            rpath += ['-Xlinker', '--rpath=' + directory]
+
         #some more shenanegains to generate the dlink
         linker_so_save = self.linker_so[:]
         self.linker_so = [x for x in self.linker_so if not '-shared' in x]
         obj_filt = [x for x in objects if 'pyjacob.o' in x]
         super('object', obj_filt + ['$libname'], 'cuda_link.o', build_temp,
-                libraries, library_dirs, runtime_library_dirs, export_symbols,
+                libraries, library_dirs, [], export_symbols,
                 debug, ['-arch=$cudaarch', '--compiler-options', '"-fPIC"', '-dlink'],
                 extra_postargs, build_temp, target_lang)
 
@@ -153,8 +162,8 @@ def customize_linker_for_nvcc(self):
 
         super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o'), '$libname'],
             output_filename, output_dir,
-            libraries, library_dirs, runtime_library_dirs, export_symbols,
-            debug, extra_preargs, extra_postargs, build_temp, target_lang)
+            libraries, library_dirs, [], export_symbols,
+            debug, extra_preargs, (extra_postargs or []) + rpath, build_temp, target_lang)
 
         #restore
         self.linker_so = default_linker_so[:]

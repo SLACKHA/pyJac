@@ -213,6 +213,7 @@ def test_host_only_link_flags_are_forwarded_to_the_host_compiler():
             '-shared',
             '-L/somewhere/lib',
             '-pthread',
+            '-Wl,--rpath=/somewhere/lib',
         ]
     )
 
@@ -229,8 +230,37 @@ def test_host_only_link_flags_are_forwarded_to_the_host_compiler():
         '-Wall',
         '-fPIC',
         '-pthread',
+        '-Wl,--rpath=/somewhere/lib',
     ):
         assert handed_over in result, f'{handed_over} was dropped entirely'
         assert result[result.index(handed_over) - 1] == '-Xcompiler', (
             f'{handed_over} would be passed straight to nvcc'
         )
+
+
+def test_every_linker_list_is_rewritten_for_nvcc():
+    """All of distutils' linker lists are rewritten, not just linker_so.
+
+    Which list distutils builds the link command from depends on the
+    extension's language. This one declares C++, so the command comes from
+    compiler_cxx plus the linker portion of linker_so_cxx. Rewriting only
+    linker_so left that portion handing raw host flags to nvcc, which rejects
+    them.
+    """
+    text = (TEMPLATE_DIR / 'pyjacob_cuda_setup.py.in').read_text()
+    names = None
+    for node in ast.walk(ast.parse(text)):
+        if isinstance(node, ast.Assign) and any(
+            getattr(target, 'id', None) == 'LINKER_LISTS' for target in node.targets
+        ):
+            names = set(ast.literal_eval(node.value))
+    assert names is not None, 'LINKER_LISTS is gone; the rewrite may be incomplete'
+
+    required = {
+        'linker_so',
+        'linker_exe',
+        'linker_so_cxx',
+        'linker_exe_cxx',
+        'compiler_cxx',
+    }
+    assert required <= names, f'not rewritten for nvcc: {sorted(required - names)}'

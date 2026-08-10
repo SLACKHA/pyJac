@@ -120,10 +120,18 @@ def customize_linker_for_nvcc(self):
     same as below, but link w/ NVCC
     """
 
+    # Every list distutils might build a link command from. The _cxx variants
+    # are the ones that matter here: this extension declares language='c++',
+    # so distutils composes the command from compiler_cxx plus the linker
+    # portion of linker_so_cxx. Rewriting only linker_so leaves that portion
+    # holding raw host flags, which nvcc rejects. They are absent on older
+    # setuptools, hence the getattr.
+    LINKER_LISTS = ('linker_so', 'linker_exe', 'linker_so_cxx',
+                    'linker_exe_cxx', 'compiler_cxx')
+
     #save references
-    default_linker_so = self.linker_so[:]
-    default_link_exe = self.linker_exe[:]
-    default_compiler_cxx = self.compiler_cxx[:]
+    defaults = {name: getattr(self, name)[:]
+                for name in LINKER_LISTS if getattr(self, name, None)}
     super = self.link
 
     def link(target_desc, objects,
@@ -132,12 +140,10 @@ def customize_linker_for_nvcc(self):
              export_symbols=None, debug=0, extra_preargs=None,
              extra_postargs=None, build_temp=None, target_lang=None):
 
-        self.linker_so = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.linker_so]
-        self.linker_exe = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.linker_exe]
-        self.compiler_cxx = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x for x in self.compiler_cxx]
-        self.linker_so = forward_host_flags(self.linker_so)
-        self.linker_exe = forward_host_flags(self.linker_exe)
-        self.compiler_cxx = forward_host_flags(self.compiler_cxx)
+        for name in defaults:
+            command = [CUDA['nvcc'] if 'gcc' in x or 'g++' in x else x
+                       for x in getattr(self, name)]
+            setattr(self, name, forward_host_flags(command))
 
         # Runtime library directories are rendered as -Wl,--rpath=... by
         # distutils itself, inside the call below, so they cannot be caught by
@@ -149,8 +155,12 @@ def customize_linker_for_nvcc(self):
             rpath += ['-Xlinker', '--rpath=' + directory]
 
         #some more shenanegains to generate the dlink
-        linker_so_save = self.linker_so[:]
-        self.linker_so = [x for x in self.linker_so if not '-shared' in x]
+        # -shared has to come out of whichever list ends up supplying it; the
+        # device link produces a relocatable object, not a shared library.
+        shared_save = {name: getattr(self, name)[:] for name in defaults}
+        for name in defaults:
+            setattr(self, name,
+                    [x for x in getattr(self, name) if not '-shared' in x])
         obj_filt = [x for x in objects if 'pyjacob.o' in x]
         super('object', obj_filt + ['$libname'], 'cuda_link.o', build_temp,
                 libraries, library_dirs, [], export_symbols,
@@ -158,7 +168,8 @@ def customize_linker_for_nvcc(self):
                 extra_postargs, build_temp, target_lang)
 
         #now call the actual link, with the extra dlink object
-        self.linker_so = linker_so_save[:]
+        for name, value in shared_save.items():
+            setattr(self, name, value[:])
 
         super(target_desc, objects + [os.path.join(build_temp, 'cuda_link.o'), '$libname'],
             output_filename, output_dir,
@@ -166,9 +177,8 @@ def customize_linker_for_nvcc(self):
             debug, extra_preargs, (extra_postargs or []) + rpath, build_temp, target_lang)
 
         #restore
-        self.linker_so = default_linker_so[:]
-        self.linker_exe  = default_link_exe[:]
-        self.compiler_cxx = default_compiler_cxx[:]
+        for name, value in defaults.items():
+            setattr(self, name, value[:])
 
     self.link = link
 

@@ -58,25 +58,51 @@ CUDA = locate_cuda()
 def forward_host_flags(flags):
     """Rewrite a link command so nvcc can accept it.
 
-    The linker flags come from Python's own build configuration, so they are
-    written for the host compiler: recent CPython contributes
-    -fno-strict-overflow and -Wsign-compare, and distributions add more. nvcc
-    rejects those outright rather than ignoring them, so anything host-specific
-    has to be handed over with -Xcompiler instead of passed directly.
+    The flags come from Python's own build configuration, so they are written
+    for the host toolchain: recent CPython contributes -fno-strict-overflow
+    and -Wsign-compare, and the interpreter's own runtime search path arrives
+    as -Wl,--rpath=... . nvcc rejects all of these rather than ignoring them.
 
-    Forwarded one flag at a time rather than as a comma-separated list, since
-    a flag may legitimately contain a comma.
+    Host compiler flags are handed over with -Xcompiler, one per flag, because
+    nvcc treats a -Xcompiler argument as a comma-separated list.
+
+    That same splitting is why linker flags need -Xlinker rather than
+    -Xcompiler: -Wl,--rpath=DIR passed through -Xcompiler arrives at gcc as
+    two arguments, -Wl and --rpath=DIR, and gcc understands neither alone.
+    -Wl,a,b is gcc's spelling for handing a and b to the linker, so each part
+    becomes its own -Xlinker.
     """
     direct = []
     forwarded = []
     for flag in flags:
-        if flag.startswith('-f') or flag.startswith('-W') or flag == '-pthread':
-            forwarded.append(flag)
+        if flag.startswith('-Wl,'):
+            for part in flag[len('-Wl,'):].split(','):
+                if part:
+                    forwarded += ['-Xlinker', part]
+        elif flag.startswith('-f') or flag.startswith('-W') or flag == '-pthread':
+            forwarded += ['-Xcompiler', flag]
         else:
             direct.append(flag)
-    for flag in forwarded:
-        direct += ['-Xcompiler', flag]
-    return direct
+    return direct + forwarded
+
+
+def strip_linker_options(command):
+    """Remove -Xlinker pairs from a command.
+
+    The device link produces a relocatable device object rather than a shared
+    library, so linker options such as a runtime search path have nothing to
+    act on there.
+    """
+    kept = []
+    drop_next = False
+    for item in command:
+        if drop_next:
+            drop_next = False
+        elif item == '-Xlinker':
+            drop_next = True
+        else:
+            kept.append(item)
+    return kept
 
 
 # Obtain the numpy include directory.  This logic works across numpy versions.
@@ -159,8 +185,8 @@ def customize_linker_for_nvcc(self):
         # device link produces a relocatable object, not a shared library.
         shared_save = {name: getattr(self, name)[:] for name in defaults}
         for name in defaults:
-            setattr(self, name,
-                    [x for x in getattr(self, name) if not '-shared' in x])
+            trimmed = [x for x in getattr(self, name) if not '-shared' in x]
+            setattr(self, name, strip_linker_options(trimmed))
         obj_filt = [x for x in objects if 'pyjacob.o' in x]
         super('object', obj_filt + ['$libname'], 'cuda_link.o', build_temp,
                 libraries, library_dirs, [], export_symbols,

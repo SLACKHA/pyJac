@@ -230,12 +230,25 @@ def test_host_only_link_flags_are_forwarded_to_the_host_compiler():
         '-Wall',
         '-fPIC',
         '-pthread',
-        '-Wl,--rpath=/somewhere/lib',
     ):
         assert handed_over in result, f'{handed_over} was dropped entirely'
         assert result[result.index(handed_over) - 1] == '-Xcompiler', (
             f'{handed_over} would be passed straight to nvcc'
         )
+
+    # -Wl,X is how gcc spells "hand X to the linker". It cannot go through
+    # -Xcompiler, because nvcc splits that argument on commas and gcc would
+    # then see -Wl and --rpath=... as two options it does not recognise.
+    assert '-Wl,--rpath=/somewhere/lib' not in result
+    assert result[result.index('--rpath=/somewhere/lib') - 1] == '-Xlinker'
+
+    # nothing handed to the host compiler may contain a comma, for the same
+    # splitting reason
+    for index, item in enumerate(result[:-1]):
+        if item == '-Xcompiler':
+            assert ',' not in result[index + 1], (
+                f'nvcc would split {result[index + 1]!r} on its commas'
+            )
 
 
 def test_every_linker_list_is_rewritten_for_nvcc():

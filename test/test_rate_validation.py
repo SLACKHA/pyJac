@@ -18,7 +18,7 @@ import textwrap
 
 import pytest
 
-from conftest import GOLDEN_MECHS, MECH_DIR
+from conftest import GOLDEN_MECHS, MECH_DIR, read_comparison
 
 #: Agreement required between pyJac and Cantera, relative.
 #:
@@ -113,7 +113,11 @@ _COMPARE = textwrap.dedent("""
         fwd[idx_pmod] *= pmod
         record('forward rates of progress', fwd, gas.forward_rates_of_progress)
 
-    json.dump(worst, sys.stdout)
+    # Written to a file rather than stdout: pyJac's readers print to stdout on
+    # some inputs, and mixing that with the result makes the failure look like
+    # malformed JSON instead of whatever actually went wrong.
+    with open(sys.argv[5], 'w') as handle:
+        json.dump(worst, handle)
 """)
 
 
@@ -136,6 +140,7 @@ def _build_and_compare(chemkin, cantera_yaml, tmp_path, monkeypatch, states=STAT
     create_jacobian('c', mech_name=source, build_path=str(build))
     generate_wrapper('c', str(build), out_dir=str(tmp_path))
 
+    written = tmp_path / 'comparison.json'
     result = subprocess.run(
         [
             sys.executable,
@@ -145,15 +150,13 @@ def _build_and_compare(chemkin, cantera_yaml, tmp_path, monkeypatch, states=STAT
             str(build),
             json.dumps(states),
             source,
+            str(written),
         ],
         cwd=tmp_path,
         capture_output=True,
         text=True,
     )
-    assert result.returncode == 0, (
-        f'comparison failed:\n{result.stdout}\n{result.stderr}'
-    )
-    return json.loads(result.stdout)
+    return read_comparison(written, result)
 
 
 def _assert_agrees(worst, expected_quantities):

@@ -18,7 +18,12 @@ try:
 
     have_bitarray = True
 except ImportError:
-    print('bitarray not found, turning off cache-optimization')
+    # Reported by the caller that asks for cache optimization, not here. This
+    # module is imported unconditionally, so announcing a missing optional
+    # dependency at import time reaches every user, including the ones who
+    # never wanted the feature -- and writing it to stdout corrupts anything
+    # parsing pyJac's output.
+    pass
 
 
 def optimizer_loop(starting_order, mapping, lookback, improve_cutoff, random_tries):

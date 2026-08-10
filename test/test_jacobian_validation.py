@@ -18,7 +18,7 @@ import textwrap
 
 import pytest
 
-from conftest import GOLDEN_MECHS, MECH_DIR
+from conftest import GOLDEN_MECHS, MECH_DIR, read_comparison
 
 #: Agreement required, measured against the largest entry of the matrix.
 #:
@@ -106,7 +106,11 @@ _COMPARE = textwrap.dedent("""
         worst_matrix = max(worst_matrix, difference.max() / np.abs(want).max())
         worst_corner = max(worst_corner, corner)
 
-    json.dump({'matrix': worst_matrix, 'temperature': worst_corner}, sys.stdout)
+    # Written to a file rather than stdout: pyJac's readers print to stdout on
+    # some inputs, and mixing that with the result makes the failure look like
+    # malformed JSON instead of whatever actually went wrong.
+    with open(sys.argv[4], 'w') as handle:
+        json.dump({'matrix': worst_matrix, 'temperature': worst_corner}, handle)
 """)
 
 
@@ -132,6 +136,7 @@ def build_and_compare(source, cantera_yaml, work_dir):
     environment = dict(os.environ)
     environment['PYTHONPATH'] = str(pathlib.Path(__file__).parent)
 
+    written = work_dir / 'comparison.json'
     result = subprocess.run(
         [
             sys.executable,
@@ -140,16 +145,14 @@ def build_and_compare(source, cantera_yaml, work_dir):
             str(cantera_yaml),
             str(build),
             json.dumps(STATES),
+            str(written),
         ],
         cwd=work_dir,
         capture_output=True,
         text=True,
         env=environment,
     )
-    assert result.returncode == 0, (
-        f'comparison failed:\n{result.stdout}\n{result.stderr}'
-    )
-    return json.loads(result.stdout)
+    return read_comparison(written, result)
 
 
 def to_yaml(chemkin_path, out_dir):

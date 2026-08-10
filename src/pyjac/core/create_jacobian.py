@@ -5,6 +5,7 @@
 import math
 import os
 import sys
+import warnings
 
 # Local imports
 from .. import utils
@@ -3609,6 +3610,12 @@ def create_jacobian(
         )
         last_spec = len(specs) - 1
 
+    if optimize_cache and not cache.have_bitarray:
+        warnings.warn(
+            'cache optimization was requested but bitarray is not installed; '
+            'generating without it. Install the cache-opt extra to enable it.',
+            stacklevel=2,
+        )
     optimize_cache = optimize_cache and cache.have_bitarray
     if optimize_cache:
         (

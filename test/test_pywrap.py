@@ -7,6 +7,7 @@ standard library in Python 3.12.
 
 import ast
 import importlib.machinery
+import shutil
 import subprocess
 import sys
 import textwrap
@@ -16,6 +17,7 @@ from string import Template
 import pytest
 
 from conftest import GOLDEN_MECHS
+from pyjac.core import CUDAParams
 from pyjac.core.create_jacobian import create_jacobian
 from pyjac.pywrap import generate_wrapper, parallel_compiler, pywrap_gen
 
@@ -134,3 +136,38 @@ def test_generate_wrapper_end_to_end(tmp_path, monkeypatch, c_compiler):
     )
     assert result.returncode == 0, result.stderr
     assert 'OK' in result.stdout
+
+
+@pytest.mark.cuda
+@pytest.mark.compiler
+@pytest.mark.slow
+def test_generate_cuda_wrapper_builds(tmp_path, monkeypatch):
+    """The CUDA wrapper builds against a current toolkit.
+
+    Only nvcc is needed, not a GPU, so this runs anywhere the toolkit is
+    installed. Nothing covered this before: the end-to-end test above is C
+    only, and the CUDA job in CI goes through ``pyjac.libgen``, which compiles
+    generated sources directly and never touches the wrapper templates. That
+    left the templates free to keep requiring things the toolkit had dropped.
+    """
+    if shutil.which('nvcc') is None:
+        pytest.skip('nvcc not on PATH')
+    pytest.importorskip('Cython', reason='building the wrapper requires Cython')
+    pytest.importorskip('setuptools', reason='building the wrapper requires setuptools')
+
+    monkeypatch.chdir(tmp_path)
+    create_jacobian('cuda', mech_name=str(GOLDEN_MECHS['h2o2']), build_path='out')
+    generate_wrapper(
+        'cuda', 'out', out_dir=str(tmp_path), cuda_arch=CUDAParams.DEFAULT_ARCH
+    )
+
+    built = [
+        path
+        for suffix in importlib.machinery.EXTENSION_SUFFIXES
+        for path in tmp_path.glob(f'cu_pyjacob*{suffix}')
+    ]
+    assert built, f'no CUDA extension module produced; got {list(tmp_path.iterdir())}'
+
+    stray = list(TEMPLATE_DIR.glob('*_setup.py'))
+    stray += list(TEMPLATE_DIR.glob('*_wrapper.c'))
+    assert not stray, f'wrapper build wrote into the package directory: {stray}'

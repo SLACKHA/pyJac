@@ -40,10 +40,13 @@ def locate_cuda():
                 'located in your $PATH. Either add it to your path, or set $CUDAHOME')
         home = os.path.dirname(os.path.dirname(nvcc))
 
+    # The toolkit no longer ships the samples; they moved to a separate
+    # repository after CUDA 11.5. Nothing here needs them -- the only header
+    # ever taken from them was helper_cuda.h, which the generated code no
+    # longer includes.
     cudaconfig = {'home':home, 'nvcc':nvcc,
                   'include': pjoin(home, 'include'),
-                  'lib64': pjoin(home, 'lib64'),
-                  'samples': pjoin(home, 'samples', 'common', 'inc')}
+                  'lib64': pjoin(home, 'lib64')}
     for k, v in cudaconfig.items():
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
@@ -84,7 +87,7 @@ ext = Extension('cu_pyjacob',
                                     '--compiler-options', "'-fPIC'",
                                     '--ftz=false', '--prec-div=true',
                                     '--prec-sqrt=true', '-m64']},
-                include_dirs = [numpy_include, CUDA['include'], CUDA['samples']] + includes
+                include_dirs = [numpy_include, CUDA['include']] + includes
                 )
 
 
